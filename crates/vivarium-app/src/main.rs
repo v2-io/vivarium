@@ -48,8 +48,14 @@ fn main() {
         .run();
 }
 
-fn spawn_camera(mut commands: Commands) {
+fn spawn_camera(mut commands: Commands, sim: Res<Sim>) {
     commands.spawn(Camera2d);
+    info!(
+        "vivarium: spawned camera; {} agents in a {:.0}x{:.0} world",
+        sim.0.agents.len(),
+        sim.0.bound * 2.0,
+        sim.0.bound * 2.0,
+    );
 }
 
 /// Advance the world exactly one fixed step.

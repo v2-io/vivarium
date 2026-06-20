@@ -4,26 +4,15 @@ version = "0.0.0"
 edition.workspace = true
 license.workspace = true
 
+# `bevy` runs with full default features on purpose. An earlier version trimmed
+# them to shave compile time, but the trimmed set silently dropped `bevy_log`
+# (no startup diagnostics) and broke gizmo rendering — a black window with no
+# output. For a recreational project, "it works and tells you what it's doing"
+# beats a faster clean rebuild. Trim again only with a verified reason, and test
+# the window after each removal.
+#
+# The dependency arrow points one way on purpose: the app knows about the core;
+# the core knows nothing about the app.
 [dependencies]
 vivarium-core = { path = "../vivarium-core" }
-
-# One *view* over the simulation. The dependency arrow points this way on
-# purpose: the app knows about the core; the core knows nothing about the app.
-#
-# `default-features = false` + an explicit feature list keeps the first compile
-# (and every clean rebuild) from dragging in 3D, glTF, and other subsystems this
-# 2D debug view will never touch. Add features back as real needs appear.
-[dependencies.bevy]
-version = "0.18"
-default-features = false
-features = [
-    "bevy_winit",        # windowing
-    "bevy_window",
-    "bevy_render",       # GPU rendering
-    "bevy_core_pipeline",
-    "bevy_sprite",       # 2D sprites — for the later art view
-    "bevy_gizmos",       # immediate-mode debug shapes — the current view
-    "x11",               # Linux fallback; harmless on macOS
-    "wayland",
-    "multi_threaded",
-]
+bevy = "0.18"
