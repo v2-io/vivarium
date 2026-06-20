@@ -21,7 +21,8 @@ features = [
     "bevy_window",
     "bevy_render",       # GPU rendering
     "bevy_core_pipeline",
-    "bevy_sprite",       # 2D sprites — our debug rectangles
+    "bevy_sprite",       # 2D sprites — for the later art view
+    "bevy_gizmos",       # immediate-mode debug shapes — the current view
     "x11",               # Linux fallback; harmless on macOS
     "wayland",
     "multi_threaded",
