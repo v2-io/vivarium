@@ -1,0 +1,24 @@
+# Workspace root.
+#
+# The split below is the load-bearing architectural decision (DESIGN.md §"core
+# knows nothing about rendering"): `vivarium-core` is the simulation and has NO
+# rendering dependency; `vivarium-app` is one *view* over it. Future views — a
+# headless trajectory logger, a logozoetic (language) interface an agent plays
+# through — are peers of `vivarium-app`, never children of it. Keep that wall
+# intact: if `vivarium-core` ever gains a `bevy` dependency, something has gone
+# wrong.
+[workspace]
+resolver = "2"
+members = ["crates/vivarium-core", "crates/vivarium-app"]
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+
+# Bevy is heavy to compile from scratch. These profile tweaks make iteration
+# bearable without sacrificing release perf. (Standard Bevy guidance.)
+[profile.dev]
+opt-level = 1          # our own crates: light opt, fast rebuilds
+
+[profile.dev.package."*"]
+opt-level = 3          # dependencies (Bevy et al.): optimized, compiled once
