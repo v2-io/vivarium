@@ -103,20 +103,28 @@ impl VivariumWorld {
     }
 
     /// Fill an entire block in one call: the materials of every voxel in the
-    /// box `[origin, origin + size)`, returned as one byte per voxel (material
-    /// id; air is 0). Index order is **x fastest, then y, then z** —
-    /// `i = x + size.x * (y + size.y * z)` — which the generator script mirrors.
+    /// box, returned as one byte per voxel (material id; air is 0). Index order
+    /// is **x fastest, then y, then z** — `i = x + size.x * (y + size.y * z)` —
+    /// which the generator script mirrors.
     ///
-    /// This is the hot path of the Godot voxel view: godot_voxel calls it once
-    /// per chunk, from worker threads. It takes `&self` and only *reads* core
-    /// (pure generation + an immutable edit-overlay lookup), so concurrent calls
-    /// are sound. Bulk-returning the block keeps the FFI crossing count at one
-    /// per chunk instead of one per voxel — the difference the spike is meant to
-    /// measure.
+    /// `lod` is the level-of-detail the engine is asking for: at `lod = n` each
+    /// output cell stands for a `2^n`-voxel cube, so we *point-sample* the world
+    /// at stride `2^n` (cell → world `origin + cell * 2^n`). This is the seam
+    /// that decouples **intrinsic** voxel resolution (what the world *is*) from
+    /// **view** resolution (how finely it's drawn at this distance) — the engine
+    /// asks for coarse data far away, fine data near. Point-sampling is the
+    /// cheapest correct choice for our heightmap world: solidity is monotonic in
+    /// depth, so a coarse sample never punches false holes (it can alias a thin
+    /// ridge, which a dominant-material downsample would fix later if needed).
+    ///
+    /// This is the hot path: godot_voxel calls it once per chunk, from worker
+    /// threads. It takes `&self` and only *reads* core, so concurrent calls are
+    /// sound; bulk-returning keeps the FFI crossing count at one per chunk.
     #[func]
-    fn generate_block(&self, origin: Vector3i, size: Vector3i) -> PackedByteArray {
+    fn generate_block(&self, origin: Vector3i, size: Vector3i, lod: i32) -> PackedByteArray {
         let w = self.world.read().unwrap();
         let vol = &w.volume;
+        let stride = 1 << lod.max(0);
         let mut out = PackedByteArray::new();
         out.resize((size.x * size.y * size.z) as usize);
         let slice = out.as_mut_slice();
@@ -124,7 +132,11 @@ impl VivariumWorld {
         for z in 0..size.z {
             for y in 0..size.y {
                 for x in 0..size.x {
-                    let v = vol.voxel(origin.x + x, origin.y + y, origin.z + z);
+                    let v = vol.voxel(
+                        origin.x + x * stride,
+                        origin.y + y * stride,
+                        origin.z + z * stride,
+                    );
                     slice[i] = v.0 as u8;
                     i += 1;
                 }

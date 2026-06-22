@@ -42,10 +42,15 @@ restart Godot.
 - **Full pipeline working:** core → gdext bridge → godot_voxel threaded chunk
   generation → VoxelMesherCubes → rendered Minecraft-like terrain, first-person
   fly + raycast dig/place, edits persisted in core and remeshed live.
-- **Resolution:** runtime `detail` (voxels/unit). detail 4 at a 512-voxel view
-  (128 physical units) renders finer/smoother terrain at a vsync-pegged 120 FPS.
-- **Not yet:** smooth/LOD meshing for far view at high detail, agent visuals,
-  the Bevy half of the comparison, the written findings doc.
+- **Resolution:** runtime `detail` (voxels/unit), default 4.
+- **LOD working:** `VoxelLodTerrain` renders distant terrain coarse, so the view
+  reaches 2048 voxels (512 physical units at detail 4) at a vsync-pegged 120 FPS
+  — ~4× the non-LOD reach. The generator's `lod` arg threads into
+  `generate_block`, which point-samples core at stride 2^lod: **view resolution
+  is decoupled from intrinsic resolution.** (Edits don't yet propagate into the
+  coarse far view — out of scope for now; see DESIGN.md detail→abstract.)
+- **Not yet:** agent visuals, the Bevy half of the comparison, the written
+  findings doc.
 
 ## Findings (the things that cost time — read before changing the view)
 
@@ -60,10 +65,12 @@ restart Godot.
   streaming/rendering — terrain never appears. So 1 voxel == 1 Godot unit at all
   resolutions; a finer world is a physically larger one, viewed as a local
   bubble. The camera/movement work in voxel space and scale with `detail`.
-- **Blocky cubes have no LOD**, so view distance is the hard perf lever; a full
-  physical view at high detail (e.g. 110×8 voxels) hangs the engine. Hence the
-  view cap. The real answer for far + fine is multi-fidelity/LOD or smooth
-  (Transvoxel) meshing — `DESIGN.md`'s fidelity invariant.
+- **LOD: use `VoxelLodTerrain`, not `VoxelTerrain`.** The plain grid
+  (`VoxelTerrain`) has no LOD, so view distance is a hard perf wall (a large
+  view at high detail hangs the engine). `VoxelLodTerrain`'s octree meshes far
+  terrain coarse and — despite the docs leaning smooth/Transvoxel —
+  `VoxelMesherCubes` works with it. Gotcha: `VoxelLodTerrain` rejects
+  `material_override`; use `terrain.set_material(mat)` (single arg).
 
 ## Layout
 

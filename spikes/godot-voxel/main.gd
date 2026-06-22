@@ -26,17 +26,14 @@ const PALETTE := {
 # How far (in *physical* world units) terrain streams around the camera. Voxel
 # view distance is this × detail, so detail is what makes this expensive — the
 # whole point of the resolution sweep.
-const PHYSICAL_VIEW := 200.0
-
-# Hard cap on voxel view distance. FINDING: VoxelMesherCubes terrain has no LOD,
-# so a full physical view at high detail (e.g. 110×8 = 880 voxels) asks for an
-# astronomical chunk count and the engine hangs. Capping trades physical view
-# radius for resolution — at detail 8 you get a detailed ~32-unit bubble rather
-# than a fine world to the horizon. The proper fix is multi-fidelity / LOD
-# (DESIGN.md) or smooth/Transvoxel meshing; noted for the findings.
-# 512 voxels = 128 physical units at detail 4; held 120 FPS (vsync-capped) in
-# testing, so it's a comfortable default. Override with VIVARIUM_VIEWCAP.
-const VOXEL_VIEW_CAP_DEFAULT := 512
+# LOD config for VoxelLodTerrain. lod_distance is how far full-detail LOD0
+# reaches from the viewer; each coarser level reaches twice as far again. With
+# LOD the view distance can be large because far terrain is cheap (coarse).
+const LOD_COUNT := 6
+const LOD_DISTANCE := 64.0
+# Max view distance in voxels (physical reach = this / detail). 2048 with LOD is
+# cheap where 2048 without LOD hung the engine. Override with VIVARIUM_VIEWCAP.
+const VIEW_DISTANCE_DEFAULT := 2048
 
 var world: Object     # VivariumWorld (Rust bridge)
 var terrain: Object   # VoxelTerrain (kept for the automated dig self-test)
@@ -73,19 +70,32 @@ func _ready() -> void:
 	var gen = load("res://generator.gd").new()
 	gen.world = world
 
-	terrain = VoxelTerrain.new()
+	_view_distance = VIEW_DISTANCE_DEFAULT
+	var cap_env := OS.get_environment("VIVARIUM_VIEWCAP")
+	if cap_env != "":
+		_view_distance = int(cap_env)
+
+	# VoxelLodTerrain: an octree that stores/streams voxels at multiple levels of
+	# detail, so distant terrain is meshed coarse and we can see *much* farther
+	# for the same cost. This decouples view resolution from intrinsic resolution
+	# — the engine asks our generator for coarse blocks far away (see the `lod`
+	# arg threaded into generate_block). NOTE: still no node scaling (a
+	# non-identity transform breaks streaming); 1 voxel == 1 Godot unit.
+	terrain = VoxelLodTerrain.new()
 	terrain.mesher = mesher
 	terrain.generator = gen
-	# NOTE: we do NOT scale the VoxelTerrain node. FINDING: a non-identity
-	# transform on VoxelTerrain breaks its streaming/rendering (terrain never
-	# appears). So 1 voxel == 1 Godot unit at every resolution; a finer world is
-	# simply a physically larger world, and the camera views a local bubble of it
-	# (granularity is relative to the bubble, which is what we want to feel).
+	terrain.lod_count = LOD_COUNT
+	terrain.lod_distance = LOD_DISTANCE       # how far LOD0 (full detail) reaches
+	terrain.view_distance = _view_distance
+	add_child(terrain)
+	# VoxelLodTerrain rejects material_override (Node3D's); it manages its own
+	# mesh instances. It takes a single terrain material via set_material(). For
+	# cubes-palette the vertex colours are baked into the mesh, so the material
+	# just needs to use them as albedo.
 	var mat := StandardMaterial3D.new()
 	mat.vertex_color_use_as_albedo = true
-	terrain.material_override = mat
-	add_child(terrain)
-	_trace("terrain added (scale=%s)" % str(terrain.scale))
+	terrain.set_material(mat)
+	_trace("terrain added")
 
 	# First-person fly camera (player.gd), in voxel/world coordinates (1:1).
 	var sh: int = world.surface_height(0, 0)
@@ -98,13 +108,8 @@ func _ready() -> void:
 	cam.look_at(Vector3(0, sh, 0), Vector3.UP)
 	cam.resync()                                 # carry that heading into yaw/pitch
 
-	# A VoxelViewer tells the terrain where to stream chunks. view_distance is in
-	# voxels, so scale by detail to hold a constant physical view radius.
-	var cap := VOXEL_VIEW_CAP_DEFAULT
-	var cap_env := OS.get_environment("VIVARIUM_VIEWCAP")
-	if cap_env != "":
-		cap = int(cap_env)
-	_view_distance = mini(int(PHYSICAL_VIEW * detail), cap)
+	# A VoxelViewer tells the terrain where to stream chunks (and at which LOD,
+	# by distance). view_distance matches the terrain's.
 	var viewer := VoxelViewer.new()
 	viewer.view_distance = _view_distance
 	cam.add_child(viewer)
@@ -128,8 +133,9 @@ func _ready() -> void:
 	# renders without a human watching.
 	_trace("scene built, viewer.view_distance=%d" % viewer.view_distance)
 	if OS.get_environment("VIVARIUM_AUTOSHOT") != "":
-		# Finer worlds have far more voxels to mesh; give the threads more time.
-		get_tree().create_timer(4.0 + detail).timeout.connect(_capture_and_quit)
+		# LOD over a large view distance has a lot to stream initially; give the
+		# threads time before the vista shot.
+		get_tree().create_timer(10.0 + detail).timeout.connect(_capture_and_quit)
 	else:
 		print("[vivarium] interactive (detail %d): WASD move, mouse look, " % detail,
 			"Space/Shift up/down, Ctrl=fast, LMB dig, RMB place, Esc frees mouse")
@@ -156,11 +162,12 @@ func _carve_test() -> void:
 
 func _capture_and_quit() -> void:
 	_trace("capture: start")
-	# Move in close and overhead so the crater (radius/depth ~2·detail) is
-	# unmistakable in the shot. All in voxel/world units (1:1).
+	# Elevated vista looking out across the world, so the LOD falloff (fine near,
+	# coarse far) is visible, with the dug crater at the origin in the foreground.
+	# All in voxel/world units (1:1).
 	var sh: int = world.surface_height(0, 0)
-	cam.position = Vector3(2 * detail + 8, sh + 3 * detail + 6, 2 * detail + 8)
-	cam.look_at(Vector3(0, sh - 2 * detail, 0), Vector3.UP)
+	cam.position = Vector3(0, sh + 12 * detail, -20 * detail)
+	cam.look_at(Vector3(0, sh + 2 * detail, 80 * detail), Vector3.UP)
 	_carve_test()
 	_trace("carve done; fps=%.1f, view_distance=%d voxels (%d physical), detail=%d"
 		% [Engine.get_frames_per_second(), _view_distance, _view_distance / detail, detail])

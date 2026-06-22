@@ -16,11 +16,12 @@ func _get_used_channels_mask() -> int:
 	return 1 << VoxelBuffer.CHANNEL_COLOR
 
 func _generate_block(buffer: VoxelBuffer, origin: Vector3i, lod: int) -> void:
-	if world == null or lod != 0:
+	if world == null:
 		return
 	var size: Vector3i = buffer.get_size()
-	# One FFI crossing for the whole chunk; the rest is in-process set_voxel.
-	var data: PackedByteArray = world.generate_block(origin, size)
+	# One FFI crossing for the whole chunk; core point-samples at stride 2^lod so
+	# distant blocks come back coarse (view resolution decoupled from intrinsic).
+	var data: PackedByteArray = world.generate_block(origin, size, lod)
 	var i := 0
 	for z in size.z:
 		for y in size.y:
