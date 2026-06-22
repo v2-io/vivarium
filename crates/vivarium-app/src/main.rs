@@ -75,10 +75,12 @@ fn draw_world(sim: Res<Sim>, mut gizmos: Gizmos) {
         Color::srgb(0.25, 0.27, 0.32),
     );
 
+    // Top-down (x, z) projection of the now-3D world; height (y) is dropped.
+    // This stays a quick sanity view — the voxel spikes are the real 3D views.
     for agent in &world.agents {
         gizmos.circle_2d(
-            Isometry2d::from_translation(Vec2::new(agent.pos[0], agent.pos[1])),
-            7.0,
+            Isometry2d::from_translation(Vec2::new(agent.pos[0], agent.pos[2])),
+            1.5,
             need_color(agent.need),
         );
     }

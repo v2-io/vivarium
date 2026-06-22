@@ -20,11 +20,18 @@
 //!     rewritten without touching the simulation — the BotW-2D-prototype
 //!     insight, made structural.
 //!
-//! This is a *seed* — a few wandering agents with a single scalar need — chosen
-//! to be the smallest thing that visibly *lives* on screen. It is not the
-//! agent model; the ASF/AAT two-layer mind (DESIGN.md) replaces `Agent::step`
-//! when we get there. Treat everything here as scaffolding for motion, not as a
-//! commitment to mechanics.
+//! This is a *seed* — a few wandering agents with a single scalar need, walking
+//! the surface of a volumetric world — chosen to be the smallest thing that
+//! visibly *lives* on screen. It is not the agent model; the ASF/AAT two-layer
+//! mind (DESIGN.md) replaces `Agent::step` when we get there. Treat everything
+//! here as scaffolding for motion, not as a commitment to mechanics.
+//!
+//! The world is 3D — see [`voxel`] for the volumetric substrate and the
+//! reasoning behind storing the world as `seed + sparse edits`.
+
+pub mod voxel;
+
+use voxel::Volume;
 
 /// A small, fast, fully-deterministic PRNG (SplitMix64).
 ///
@@ -66,14 +73,19 @@ impl Rng {
     }
 }
 
-/// One inhabitant. For now: a position, a velocity, and a single scalar `need`
-/// in `[0, 1]` standing in for the whole interior life an ASF agent will later
+/// One inhabitant. A 3D position and velocity, plus a single scalar `need` in
+/// `[0, 1]` standing in for the whole interior life an ASF agent will later
 /// have. Keeping it to one scalar makes the eventual jump to the formal
 /// fast-layer state legible by contrast.
+///
+/// The agent wanders in the horizontal (`x`,`z`) plane and is held on the
+/// terrain surface in `y` — it walks the ground rather than flying. Gravity,
+/// jumping, and real locomotion are deliberately absent: this is motion to look
+/// at, not a physics commitment.
 #[derive(Clone, Debug)]
 pub struct Agent {
-    pub pos: [f32; 2],
-    pub vel: [f32; 2],
+    pub pos: [f32; 3],
+    pub vel: [f32; 3],
     pub need: f32,
 }
 
@@ -83,8 +95,12 @@ pub struct Agent {
 pub struct World {
     pub seed: u64,
     pub step_count: u64,
-    /// Half-extent of the square play area; agents live in `[-bound, bound]²`.
+    /// Half-extent of the square play area in the horizontal plane; agents
+    /// wander within `[-bound, bound]²` in `x`/`z`. The volume itself is
+    /// unbounded — this only fences the wandering agents so they stay in view.
     pub bound: f32,
+    /// The volumetric world the agents walk on (see [`voxel::Volume`]).
+    pub volume: Volume,
     pub agents: Vec<Agent>,
     rng: Rng,
 }
@@ -93,15 +109,20 @@ impl World {
     /// Build the initial world deterministically from a seed.
     pub fn new(seed: u64, n_agents: usize) -> Self {
         let mut rng = Rng::new(seed);
-        let bound = 300.0;
+        let volume = Volume::new(seed);
+        let bound = 64.0;
         let agents = (0..n_agents)
-            .map(|_| Agent {
-                pos: [rng.next_signed() * bound, rng.next_signed() * bound],
-                vel: [rng.next_signed() * 40.0, rng.next_signed() * 40.0],
-                need: rng.next_f32(),
+            .map(|_| {
+                let x = rng.next_signed() * bound;
+                let z = rng.next_signed() * bound;
+                Agent {
+                    pos: [x, surface_y(&volume, x, z), z],
+                    vel: [rng.next_signed() * 8.0, 0.0, rng.next_signed() * 8.0],
+                    need: rng.next_f32(),
+                }
             })
             .collect();
-        Self { seed, step_count: 0, bound, agents, rng }
+        Self { seed, step_count: 0, bound, volume, agents, rng }
     }
 
     /// Advance the world by one fixed step of `dt` seconds.
@@ -113,22 +134,23 @@ impl World {
     /// what changes here, and nothing outside this crate needs to know.
     pub fn step(&mut self, dt: f32) {
         for a in &mut self.agents {
-            a.vel[0] += self.rng.next_signed() * 6.0;
-            a.vel[1] += self.rng.next_signed() * 6.0;
+            // Wander in the horizontal plane only; `y` is dictated by the ground.
+            a.vel[0] += self.rng.next_signed() * 2.0;
+            a.vel[2] += self.rng.next_signed() * 2.0;
 
             // Gentle speed cap so the wander stays watchable.
-            let speed = (a.vel[0] * a.vel[0] + a.vel[1] * a.vel[1]).sqrt();
-            let max = 60.0;
+            let speed = (a.vel[0] * a.vel[0] + a.vel[2] * a.vel[2]).sqrt();
+            let max = 12.0;
             if speed > max {
                 a.vel[0] *= max / speed;
-                a.vel[1] *= max / speed;
+                a.vel[2] *= max / speed;
             }
 
             a.pos[0] += a.vel[0] * dt;
-            a.pos[1] += a.vel[1] * dt;
+            a.pos[2] += a.vel[2] * dt;
 
-            // Reflect off the square boundary.
-            for axis in 0..2 {
+            // Reflect off the square boundary (x and z only).
+            for axis in [0, 2] {
                 if a.pos[axis] > self.bound {
                     a.pos[axis] = self.bound;
                     a.vel[axis] = -a.vel[axis].abs();
@@ -138,11 +160,24 @@ impl World {
                 }
             }
 
+            // Snap to the terrain surface: the agent walks the ground. (No
+            // smoothing — the surface is continuous enough that this reads as
+            // walking, not teleporting. Smooth it when it looks wrong, not before.)
+            a.pos[1] = surface_y(&self.volume, a.pos[0], a.pos[2]);
+
             // Need oscillates slowly; later this becomes real ASF dynamics.
             a.need = (a.need + dt * 0.05).fract();
         }
         self.step_count += 1;
     }
+}
+
+/// The `y` an agent's feet rest at, standing on the column under `(x, z)`. One
+/// voxel above the surface so the agent sits *on* the ground, not embedded in
+/// it; falls back to sea level for the (currently impossible) empty column.
+fn surface_y(volume: &Volume, x: f32, z: f32) -> f32 {
+    let h = volume.surface_height(x.round() as i32, z.round() as i32);
+    h.map_or(voxel::SEA_LEVEL as f32, |h| h as f32 + 1.0)
 }
 
 #[cfg(test)]
@@ -167,16 +202,19 @@ mod tests {
         }
     }
 
-    /// Agents must never escape the play area.
+    /// Agents must never escape the horizontal play area, and must stay glued to
+    /// the terrain surface in `y`.
     #[test]
-    fn agents_stay_in_bounds() {
+    fn agents_stay_in_bounds_and_on_the_ground() {
         let mut w = World::new(42, 32);
         for _ in 0..2000 {
             w.step(1.0 / 30.0);
         }
         for a in &w.agents {
             assert!(a.pos[0].abs() <= w.bound + 1e-3);
-            assert!(a.pos[1].abs() <= w.bound + 1e-3);
+            assert!(a.pos[2].abs() <= w.bound + 1e-3);
+            let expected_y = surface_y(&w.volume, a.pos[0], a.pos[2]);
+            assert_eq!(a.pos[1], expected_y, "agent left the ground");
         }
     }
 }
