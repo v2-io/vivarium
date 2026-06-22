@@ -114,17 +114,35 @@ func _ready() -> void:
 	viewer.view_distance = _view_distance
 	cam.add_child(viewer)
 
+	# Overcast: soft, dim, slightly cool key light so nothing casts hard shadows.
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-55, -45, 0)
+	sun.light_energy = 0.6
+	sun.light_color = Color(0.95, 0.96, 1.0)
 	add_child(sun)
 
 	var we := WorldEnvironment.new()
 	var env := Environment.new()
+	# Desaturated overcast-grey sky; strong ambient fill so the flat-lit, foggy
+	# world stays legible without a sun.
+	var sky_color := Color(0.66, 0.68, 0.71)
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.53, 0.72, 0.95)
+	env.background_color = sky_color
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(1, 1, 1)
-	env.ambient_light_energy = 0.45
+	env.ambient_light_color = Color(0.86, 0.88, 0.92)
+	env.ambient_light_energy = 0.7
+
+	# Depth fog: opacity rises linearly with distance (FOG_MODE_DEPTH, curve 1.0),
+	# tinted to the overcast sky. Pulled in *close* — fully grey by ~40 units of
+	# detail — so only the hill in front of you reads clearly and everything
+	# beyond dissolves into the murk (this also hides the LOD transition).
+	env.fog_enabled = true
+	env.fog_mode = Environment.FOG_MODE_DEPTH
+	env.fog_light_color = sky_color
+	env.fog_sky_affect = 0.0          # leave the sky itself clear
+	env.fog_depth_begin = float(6 * detail)
+	env.fog_depth_end = float(40 * detail)
+	env.fog_depth_curve = 1.0         # linear: opacity ∝ distance
 	we.environment = env
 	add_child(we)
 
@@ -162,19 +180,18 @@ func _carve_test() -> void:
 
 func _capture_and_quit() -> void:
 	_trace("capture: start")
-	# Elevated vista looking out across the world, so the LOD falloff (fine near,
-	# coarse far) is visible, with the dug crater at the origin in the foreground.
-	# All in voxel/world units (1:1).
+	# Low, near-ground camera looking forward, so the near terrain emerges from
+	# the fog and everything beyond dissolves into the overcast murk. All in
+	# voxel/world units (1:1).
 	var sh: int = world.surface_height(0, 0)
-	cam.position = Vector3(0, sh + 12 * detail, -20 * detail)
-	cam.look_at(Vector3(0, sh + 2 * detail, 80 * detail), Vector3.UP)
+	cam.position = Vector3(0, sh + 5 * detail, -26 * detail)
+	cam.look_at(Vector3(0, sh + 2 * detail, 60 * detail), Vector3.UP)
 	_carve_test()
 	_trace("carve done; fps=%.1f, view_distance=%d voxels (%d physical), detail=%d"
 		% [Engine.get_frames_per_second(), _view_distance, _view_distance / detail, detail])
-	# Let the remesh settle before grabbing the frame.
-	for _i in 4:
-		await get_tree().process_frame
-	_trace("capturing image")
+	# Let the remesh settle (and FPS recover) before grabbing the frame.
+	await get_tree().create_timer(2.0).timeout
+	_trace("capturing image; steady fps=%.1f" % Engine.get_frames_per_second())
 	var img := get_viewport().get_texture().get_image()
 	var path := "user://terrain_shot.png"
 	img.save_png(path)
