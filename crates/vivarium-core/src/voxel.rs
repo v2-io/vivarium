@@ -92,6 +92,21 @@ pub const WORLD_HEIGHT: i32 = 128;
 /// to stand at the edge of. Purely a worldgen choice.
 pub const SEA_LEVEL: i32 = 24;
 
+/// World resolution: how many voxels span one "world unit" of terrain feature.
+///
+/// `detail = 1` is the base grid the constants above are written in. Raising it
+/// makes the *same* hills and lakes out of proportionally smaller, more numerous
+/// voxels — `detail = 8` is 8× finer in each axis, so ~512× the voxels for the
+/// same physical world. Generation stays a pure function of `(seed, detail,
+/// coords)`; the constants above are simply multiplied through. Heightmap
+/// continuity is preserved (the noise is sampled in unit space, then scaled up),
+/// so finer just means smoother, not noisier.
+///
+/// This is the knob the Bevy/Godot spike sweeps to probe the rendering perf
+/// ceiling. A *view* renders voxels at `1/detail` of a world unit so the world
+/// looks the same physical size at any resolution.
+pub type Detail = i32;
+
 /// The world as a volumetric field. Cheap to clone (the overlay is the only
 /// heap state) — clone it to snapshot, diff two of them to study a trajectory,
 /// exactly like the rest of [`crate::World`].
@@ -101,6 +116,8 @@ pub struct Volume {
     /// world seed so that changing agent dynamics never silently reshapes the
     /// ground, and vice versa.
     seed: u64,
+    /// Voxels per world unit (see [`Detail`]). `1` is the base grid.
+    detail: Detail,
     /// The only materialized state: voxels changed away from what the seed
     /// would generate. Ordered for deterministic replay; sparse so the cost is
     /// proportional to how much the world has been *touched*, not its size.
@@ -108,10 +125,35 @@ pub struct Volume {
 }
 
 impl Volume {
+    /// Base-resolution world (`detail = 1`).
     pub fn new(seed: u64) -> Self {
+        Self::with_detail(seed, 1)
+    }
+
+    /// World at a chosen voxel resolution (see [`Detail`]). `detail` is clamped
+    /// to at least `1`.
+    pub fn with_detail(seed: u64, detail: Detail) -> Self {
         // Decorrelate the terrain stream from any other use of the world seed.
         let mut r = Rng::new(seed);
-        Self { seed: r.next_u64(), edits: BTreeMap::new() }
+        Self { seed: r.next_u64(), detail: detail.max(1), edits: BTreeMap::new() }
+    }
+
+    /// Voxels per world unit. A view scales rendered voxels by `1 / detail`.
+    #[inline]
+    pub fn detail(&self) -> Detail {
+        self.detail
+    }
+
+    /// Top of the world in voxels at this resolution.
+    #[inline]
+    pub fn world_height(&self) -> i32 {
+        WORLD_HEIGHT * self.detail
+    }
+
+    /// Waterline in voxels at this resolution.
+    #[inline]
+    pub fn sea_level(&self) -> i32 {
+        SEA_LEVEL * self.detail
     }
 
     /// The voxel at `(x, y, z)`: an edit if one exists there, otherwise whatever
@@ -162,20 +204,23 @@ impl Volume {
     /// `(seed, x, y, z)` — the heart of the "infinite, exact, reproducible"
     /// abstraction tier.
     fn generated(&self, x: i32, y: i32, z: i32) -> Voxel {
-        if y < 0 || y >= WORLD_HEIGHT {
+        if y < 0 || y >= self.world_height() {
             return Voxel::AIR;
         }
+        let sea = self.sea_level();
         let h = self.terrain_height(x, z);
         if y > h {
             // Above ground: water up to sea level, else air.
-            return if y <= SEA_LEVEL { Voxel::WATER } else { Voxel::AIR };
+            return if y <= sea { Voxel::WATER } else { Voxel::AIR };
         }
         if y == h {
             // The surface skin. Below the waterline it is dirt (lakebed), above
             // it is grass — a cheap, legible bit of texture for the eye.
-            return if h < SEA_LEVEL { Voxel::DIRT } else { Voxel::GRASS };
+            return if h < sea { Voxel::DIRT } else { Voxel::GRASS };
         }
-        if y > h - 4 {
+        // Soil is a fixed *physical* depth (4 world units), so it scales with
+        // resolution; below it is stone.
+        if y > h - 4 * self.detail {
             Voxel::DIRT
         } else {
             Voxel::STONE
@@ -184,8 +229,12 @@ impl Volume {
 
     /// Terrain surface height at `(x, z)` — value noise on an integer lattice,
     /// smoothed and scaled into rolling hills. Deterministic and continuous, so
-    /// neighbouring columns differ by at most a voxel or two and the mesher gets
-    /// coherent surfaces rather than noise.
+    /// neighbouring columns differ by at most a voxel or two (per world unit) and
+    /// the mesher gets coherent surfaces rather than noise.
+    ///
+    /// The noise is sampled in *unit* space (`coord / detail`) and the result
+    /// scaled back up by `detail`, so a finer world reproduces the same hills out
+    /// of more, smaller voxels rather than inventing higher-frequency detail.
     fn terrain_height(&self, x: i32, z: i32) -> i32 {
         // One octave is enough for a spike; add octaves here if the hills read
         // as too smooth once you can walk them.
@@ -193,8 +242,9 @@ impl Volume {
         const AMPLITUDE: f32 = 18.0;
         const BASE: f32 = 28.0; // mean ground height, a few voxels above sea
 
-        let n = self.value_noise(x as f32 * FREQ, z as f32 * FREQ);
-        (BASE + n * AMPLITUDE).round() as i32
+        let d = self.detail as f32;
+        let n = self.value_noise(x as f32 / d * FREQ, z as f32 / d * FREQ);
+        ((BASE + n * AMPLITUDE) * d).round() as i32
     }
 
     /// 2D value noise in `[-1, 1]`. Bilinear interpolation of per-lattice-point
@@ -308,6 +358,36 @@ mod tests {
         for x in 1..200 {
             let h = v.surface_height(x, 0).unwrap();
             assert!((h - prev).abs() <= 3, "height jump of {} at x={}", h - prev, x);
+            prev = h;
+        }
+    }
+
+    #[test]
+    fn detail_scales_the_same_world_proportionally() {
+        // A finer world is the *same* terrain in more, smaller voxels — not a
+        // different shape. The same physical point should sit at ~detail× the
+        // height, within rounding.
+        let v1 = Volume::new(0xC0FFEE);
+        let v8 = Volume::with_detail(0xC0FFEE, 8);
+        assert_eq!(v8.detail(), 8);
+        assert_eq!(v8.sea_level(), 8 * v1.sea_level());
+        assert_eq!(v8.world_height(), 8 * v1.world_height());
+        for x1 in [-30, 0, 17, 50] {
+            let h1 = v1.surface_height(x1, 0).unwrap();
+            let h8 = v8.surface_height(x1 * 8, 0).unwrap();
+            assert!((h8 - 8 * h1).abs() <= 8, "h1={h1} h8={h8} at x1={x1}");
+        }
+    }
+
+    #[test]
+    fn fine_terrain_is_smooth_per_voxel() {
+        // At detail 8 the slope is spread over 8× the voxels, so adjacent voxels
+        // differ by at most ~1 — the finer world reads as smoother, not noisier.
+        let v = Volume::with_detail(7, 8);
+        let mut prev = v.surface_height(0, 0).unwrap();
+        for x in 1..400 {
+            let h = v.surface_height(x, 0).unwrap();
+            assert!((h - prev).abs() <= 2, "jump {} at x={}", h - prev, x);
             prev = h;
         }
     }

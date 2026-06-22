@@ -8,37 +8,71 @@ settle the engine question empirically. See `DESIGN.md` and the
 ## Running
 
 ```bash
-# 1. Build the Rust bridge and copy the cdylib into bin/.
+# 1. Fetch the godot_voxel addon (~105 MB, git-ignored, pinned by sha256).
+./fetch-voxel-addon.sh
+
+# 2. Build the Rust bridge, copy + re-sign the cdylib into bin/.
 ./sync-lib.sh                 # debug; `./sync-lib.sh release` for release
 
-# 2. First time only (per machine): let Godot scan the .gdextension so the
-#    VivariumWorld class registers. This writes .godot/extension_list.cfg.
+# 3. First time only (per machine): let Godot scan the .gdextensions so the
+#    VivariumWorld + Voxel* classes register (writes .godot/extension_list.cfg).
 godot --headless --editor --quit --path .   # may print a MoltenVK backtrace on
-                                            # macOS headless — harmless; the
-                                            # extension list is still written.
+                                            # macOS headless — harmless.
 
-# 3. Run it.
-godot --headless --path . --quit-after 3    # prints the bridge self-check
-godot --path .                              # windowed (for the eventual walk)
+# 4. Run it (windowed).
+godot --path .
 ```
 
-If you change Rust code, re-run `./sync-lib.sh` and restart Godot. `reloadable`
-is on in `vivarium.gdextension`, so the editor can hot-reload in many cases.
+Controls: WASD move · mouse look · Space/Shift up/down · Ctrl = fast ·
+**LMB dig · RMB place** · Esc frees the mouse.
+
+If you change Rust code, re-run `./sync-lib.sh` (it re-signs — see Findings) and
+restart Godot.
+
+### Env knobs
+
+| Var | Default | Effect |
+|-----|---------|--------|
+| `VIVARIUM_DETAIL` | `4` | voxels per world unit; higher = finer voxels (see Findings) |
+| `VIVARIUM_VIEWCAP` | `512` | max voxel view distance (physical view = this ÷ detail) |
+| `VIVARIUM_AUTOSHOT` | unset | if set: build scene, carve a test crater, screenshot to `user://terrain_shot.png`, quit. For agent verification. |
 
 ## State
 
-- **Bridge (read + write seam): working.** `VivariumWorld` exposes
-  `voxel_at`, `surface_height`, `dig`, `place`, `step`, `agent_count`,
-  `agent_position` to Godot, and `ready()` prints a live-core self-check.
-- **Not yet:** godot_voxel terrain rendering from core, first-person controller,
-  raycast dig/place, the screenshot+perf harness.
+- **Full pipeline working:** core → gdext bridge → godot_voxel threaded chunk
+  generation → VoxelMesherCubes → rendered Minecraft-like terrain, first-person
+  fly + raycast dig/place, edits persisted in core and remeshed live.
+- **Resolution:** runtime `detail` (voxels/unit). detail 4 at a 512-voxel view
+  (128 physical units) renders finer/smoother terrain at a vsync-pegged 120 FPS.
+- **Not yet:** smooth/LOD meshing for far view at high detail, agent visuals,
+  the Bevy half of the comparison, the written findings doc.
+
+## Findings (the things that cost time — read before changing the view)
+
+- **Re-sign the dylib after copying (Apple Silicon).** Overwriting a loaded,
+  code-signed `.dylib` in place invalidates its signature and the kernel
+  SIGKILLs Godot on `dlopen` ("Code Signature Invalid"), with *no* output.
+  `sync-lib.sh` does `rm` + `cp` + ad-hoc `codesign` to avoid this.
+- **gdext needs `experimental-threads`** because godot_voxel generates on worker
+  threads. The bridge holds the `World` behind a `RwLock` and every method takes
+  `&self`, so concurrent reads (generation) and a write (dig) never alias.
+- **Do NOT scale the VoxelTerrain node.** A non-identity transform breaks its
+  streaming/rendering — terrain never appears. So 1 voxel == 1 Godot unit at all
+  resolutions; a finer world is a physically larger one, viewed as a local
+  bubble. The camera/movement work in voxel space and scale with `detail`.
+- **Blocky cubes have no LOD**, so view distance is the hard perf lever; a full
+  physical view at high detail (e.g. 110×8 voxels) hangs the engine. Hence the
+  view cap. The real answer for far + fine is multi-fidelity/LOD or smooth
+  (Transvoxel) meshing — `DESIGN.md`'s fidelity invariant.
 
 ## Layout
 
 | Path | What |
 |------|------|
-| `project.godot` | Godot project config |
-| `vivarium.gdextension` | tells Godot to load the Rust cdylib from `bin/` |
-| `main.tscn` | scene whose root is the Rust `VivariumWorld` node |
-| `sync-lib.sh` | build the bridge + copy the cdylib into `bin/` |
+| `project.godot` / `vivarium.gdextension` | project + Rust-bridge extension config |
+| `addons/zylann.voxel/` | godot_voxel addon (git-ignored; `fetch-voxel-addon.sh`) |
+| `main.tscn` / `main.gd` | scene built in code (terrain, palette, camera, light) |
+| `generator.gd` | custom VoxelGenerator sourcing each chunk from core |
+| `player.gd` | first-person fly camera + raycast dig/place |
+| `sync-lib.sh` / `fetch-voxel-addon.sh` | build+sign the bridge / fetch the addon |
 | `bin/` | the copied cdylib (git-ignored, a build product) |

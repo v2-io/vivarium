@@ -67,7 +67,13 @@ impl INode for VivariumWorld {
     fn init(base: Base<Node>) -> Self {
         // Same seed/agent-count as the Bevy debug view, so the two spikes look
         // at literally the same world and the comparison is apples-to-apples.
-        Self { world: RwLock::new(World::new(0x00C0_FFEE, 24)), base }
+        // Voxel resolution is env-tunable (VIVARIUM_DETAIL, default 8) so the
+        // perf sweep needs no recompile.
+        let detail = std::env::var("VIVARIUM_DETAIL")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(4);
+        Self { world: RwLock::new(World::with_detail(0x00C0_FFEE, 24, detail)), base }
     }
 
     /// A loud self-check that the FFI seam is alive: read real facts out of core
@@ -76,9 +82,10 @@ impl INode for VivariumWorld {
         let w = self.world.read().unwrap();
         let h = w.volume.surface_height(0, 0).unwrap_or(-1);
         godot_print!(
-            "[vivarium] bridge live — seed {:#x}, {} agents; surface at (0,0) is y={}, \
-             voxel just below is material {}",
+            "[vivarium] bridge live — seed {:#x}, detail {} (voxels/unit), {} agents; \
+             surface at (0,0) is voxel y={}, material {}",
             w.seed,
+            w.volume.detail(),
             w.agents.len(),
             h,
             w.volume.voxel(0, h, 0).0,
@@ -131,6 +138,14 @@ impl VivariumWorld {
     #[func]
     fn surface_height(&self, x: i32, z: i32) -> i32 {
         self.world.read().unwrap().volume.surface_height(x, z).unwrap_or(-1)
+    }
+
+    /// Voxels per world unit (see `vivarium_core::voxel::Detail`). The view
+    /// renders voxels at `1 / this` so the world looks the same physical size at
+    /// any resolution, and converts physical↔voxel coordinates with it.
+    #[func]
+    fn voxels_per_unit(&self) -> i32 {
+        self.world.read().unwrap().volume.detail()
     }
 
     /// Remove the voxel at `(x, y, z)` (set it to air) and persist the edit in

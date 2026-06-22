@@ -106,11 +106,19 @@ pub struct World {
 }
 
 impl World {
-    /// Build the initial world deterministically from a seed.
+    /// Build the initial world deterministically from a seed, at base voxel
+    /// resolution (`detail = 1`).
     pub fn new(seed: u64, n_agents: usize) -> Self {
+        Self::with_detail(seed, n_agents, 1)
+    }
+
+    /// Build the world at a chosen voxel resolution (see [`voxel::Detail`]). The
+    /// agents' wander area scales with `detail` so they roam a comparable
+    /// *physical* region regardless of resolution.
+    pub fn with_detail(seed: u64, n_agents: usize, detail: voxel::Detail) -> Self {
         let mut rng = Rng::new(seed);
-        let volume = Volume::new(seed);
-        let bound = 64.0;
+        let volume = Volume::with_detail(seed, detail);
+        let bound = 64.0 * volume.detail() as f32;
         let agents = (0..n_agents)
             .map(|_| {
                 let x = rng.next_signed() * bound;
@@ -177,7 +185,7 @@ impl World {
 /// it; falls back to sea level for the (currently impossible) empty column.
 fn surface_y(volume: &Volume, x: f32, z: f32) -> f32 {
     let h = volume.surface_height(x.round() as i32, z.round() as i32);
-    h.map_or(voxel::SEA_LEVEL as f32, |h| h as f32 + 1.0)
+    h.map_or(volume.sea_level() as f32, |h| h as f32 + 1.0)
 }
 
 #[cfg(test)]

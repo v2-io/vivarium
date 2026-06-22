@@ -22,11 +22,14 @@ const PLACE_MATERIAL := 1     # STONE, for now
 
 var _yaw := 0.0
 var _pitch := 0.0
+var _unit := 1     # voxels per world unit; movement/reach scale with it
 
 func _ready() -> void:
 	# Skip mouse capture in automated screenshot runs (no human to drive it).
 	if OS.get_environment("VIVARIUM_AUTOSHOT") == "":
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if world != null:
+		_unit = world.voxels_per_unit()
 	resync()
 
 # Re-read yaw/pitch from the current rotation. Called by main.gd after it aims
@@ -61,7 +64,9 @@ func _process(delta: float) -> void:
 	if Input.is_key_pressed(KEY_SPACE): dir += Vector3.UP
 	if Input.is_key_pressed(KEY_SHIFT): dir += Vector3.DOWN
 	if dir != Vector3.ZERO:
-		var speed := MOVE_SPEED * (FAST_MULT if Input.is_key_pressed(KEY_CTRL) else 1.0)
+		# Scale by resolution so a finer (physically larger) world traverses at a
+		# comparable felt speed.
+		var speed := MOVE_SPEED * _unit * (FAST_MULT if Input.is_key_pressed(KEY_CTRL) else 1.0)
 		position += dir.normalized() * speed * delta
 
 func _edit(is_dig: bool) -> void:
@@ -69,7 +74,15 @@ func _edit(is_dig: bool) -> void:
 		return
 	var vt = terrain.get_voxel_tool()
 	vt.channel = VoxelBuffer.CHANNEL_COLOR
-	var hit = vt.raycast(global_position, -global_transform.basis.z, REACH)
+	# The terrain is scaled by 1/detail, and VoxelTool works in the terrain's
+	# local (voxel) space — so convert the camera ray out of world space.
+	# `terrain` is an untyped Object, so these return Variant — use plain `=`
+	# (not `:=`, which needs an inferable static type).
+	var inv = terrain.global_transform.affine_inverse()
+	var local_origin = inv * global_position
+	var local_dir = (inv.basis * (-global_transform.basis.z)).normalized()
+	var detail: int = world.voxels_per_unit()
+	var hit = vt.raycast(local_origin, local_dir, REACH * detail)
 	if hit == null:
 		return
 	if is_dig:
