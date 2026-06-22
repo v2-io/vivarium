@@ -1,0 +1,18 @@
+; vivarium — Godot voxel-view spike.
+;
+; One of two throwaway view adapters (Bevy vs Godot) over vivarium-core, built
+; to settle the engine question empirically (see the spike/voxel-view branch and
+; DESIGN.md). The simulation lives in Rust; this project is only a way of looking
+; at it. The Rust bridge is loaded as a GDExtension (see vivarium.gdextension).
+
+config_version=5
+
+[application]
+
+config/name="vivarium — godot voxel spike"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.7")
+
+[debug]
+
+settings/stdout/print_fps=false

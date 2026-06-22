@@ -1,0 +1,20 @@
+# vivarium-godot — a *view* over vivarium-core, rendered through Godot.
+#
+# This crate is one of the Bevy-vs-Godot spike adapters (DESIGN.md / the
+# spike/voxel-view branch). Like vivarium-app it is a peer of the simulation,
+# never its owner: it depends on vivarium-core but vivarium-core must never
+# depend on it. It compiles to a cdylib that Godot loads as a GDExtension.
+[package]
+name = "vivarium-godot"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# gdext (godot-rust). 0.5.x targets Godot 4.x; GDExtension forward-compat means
+# an extension built here loads on the installed 4.7 (runtime >= API version).
+godot = "0.5.3"
+vivarium-core = { path = "../vivarium-core" }

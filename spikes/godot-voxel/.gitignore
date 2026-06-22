@@ -1,0 +1,4 @@
+# Godot's import/cache dir, regenerated on open.
+/.godot/
+# The cdylib is a build product copied in by sync-lib.sh; never commit it.
+/bin/

@@ -1,0 +1,18 @@
+; Loads the Rust bridge (crates/vivarium-godot) into Godot.
+;
+; The compiled cdylib lives in the cargo target dir; a small sync step copies it
+; into bin/ here so the library path stays inside res:// (Godot does not reliably
+; resolve res://../ outside the project). See the build helper: ./sync-lib.sh.
+
+[configuration]
+
+entry_symbol = "gdext_rust_init"
+compatibility_minimum = 4.2
+reloadable = true
+
+[libraries]
+
+macos.debug = "res://bin/libvivarium_godot.dylib"
+macos.release = "res://bin/libvivarium_godot.dylib"
+linux.debug = "res://bin/libvivarium_godot.so"
+linux.release = "res://bin/libvivarium_godot.so"

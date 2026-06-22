@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://bv1vivariumspike0"]
+
+; Root is the Rust-defined VivariumWorld node (registered by the GDExtension).
+; Its ready() prints a self-check proving the FFI seam is live; the voxel terrain
+; and first-person controller get added as children once the bridge is verified.
+[node name="VivariumWorld" type="VivariumWorld"]
