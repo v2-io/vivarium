@@ -74,6 +74,36 @@ impl VivariumWorld {
         self.world.volume.voxel(x, y, z).0 as i32
     }
 
+    /// Fill an entire block in one call: the materials of every voxel in the
+    /// box `[origin, origin + size)`, returned as one byte per voxel (material
+    /// id; air is 0). Index order is **x fastest, then y, then z** —
+    /// `i = x + size.x * (y + size.y * z)` — which the generator script mirrors.
+    ///
+    /// This is the hot path of the Godot voxel view: godot_voxel calls it once
+    /// per chunk, from worker threads. It takes `&self` and only *reads* core
+    /// (pure generation + an immutable edit-overlay lookup), so concurrent calls
+    /// are sound. Bulk-returning the block keeps the FFI crossing count at one
+    /// per chunk instead of one per voxel — the difference the spike is meant to
+    /// measure.
+    #[func]
+    fn generate_block(&self, origin: Vector3i, size: Vector3i) -> PackedByteArray {
+        let vol = &self.world.volume;
+        let mut out = PackedByteArray::new();
+        out.resize((size.x * size.y * size.z) as usize);
+        let slice = out.as_mut_slice();
+        let mut i = 0;
+        for z in 0..size.z {
+            for y in 0..size.y {
+                for x in 0..size.x {
+                    let v = vol.voxel(origin.x + x, origin.y + y, origin.z + z);
+                    slice[i] = v.0 as u8;
+                    i += 1;
+                }
+            }
+        }
+        out
+    }
+
     /// Topmost solid `y` in the generated column at `(x, z)`, or `-1` if empty.
     /// Lets the camera/controller spawn the player on the ground.
     #[func]

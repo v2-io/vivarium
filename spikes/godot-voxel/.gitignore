@@ -2,3 +2,5 @@
 /.godot/
 # The cdylib is a build product copied in by sync-lib.sh; never commit it.
 /bin/
+# godot_voxel addon binaries (~105 MB); re-fetched by fetch-voxel-addon.sh.
+/addons/

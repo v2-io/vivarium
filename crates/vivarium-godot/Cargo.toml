@@ -16,5 +16,13 @@ crate-type = ["cdylib"]
 [dependencies]
 # gdext (godot-rust). 0.5.x targets Godot 4.x; GDExtension forward-compat means
 # an extension built here loads on the installed 4.7 (runtime >= API version).
-godot = "0.5.3"
+#
+# experimental-threads: godot_voxel generates chunks on worker threads and calls
+# our generator (VivariumWorld::generate_block) from them. Without this feature
+# gdext panics on any cross-thread access to its objects. generate_block is a
+# shared &self read, so concurrent generation is sound; the one rule it imposes
+# is that &mut self methods (step/dig/place) must not run while generation is in
+# flight, or gdext's cell will (correctly) flag the aliasing. Coordinating that
+# is a real item for the spike findings.
+godot = { version = "0.5.3", features = ["experimental-threads"] }
 vivarium-core = { path = "../vivarium-core" }
