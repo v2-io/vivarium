@@ -227,51 +227,83 @@ impl Volume {
         }
     }
 
-    /// Terrain surface height at `(x, z)` — value noise on an integer lattice,
-    /// smoothed and scaled into rolling hills. Deterministic and continuous, so
-    /// neighbouring columns differ by at most a voxel or two (per world unit) and
-    /// the mesher gets coherent surfaces rather than noise.
+    /// Terrain surface height at `(x, z)` — fractal (FBM) Perlin noise, scaled
+    /// into rolling hills with finer detail layered on top. Deterministic.
     ///
     /// The noise is sampled in *unit* space (`coord / detail`) and the result
     /// scaled back up by `detail`, so a finer world reproduces the same hills out
     /// of more, smaller voxels rather than inventing higher-frequency detail.
     fn terrain_height(&self, x: i32, z: i32) -> i32 {
-        // One octave is enough for a spike; add octaves here if the hills read
-        // as too smooth once you can walk them.
-        const FREQ: f32 = 1.0 / 24.0; // larger denominator => broader hills
-        const AMPLITUDE: f32 = 18.0;
-        const BASE: f32 = 28.0; // mean ground height, a few voxels above sea
+        // Base octave gives broad hills; successive octaves add finer relief.
+        const FREQ: f32 = 1.0 / 40.0; // larger denominator => broader base hills
+        const AMPLITUDE: f32 = 22.0;
+        const BASE: f32 = 30.0; // mean ground height, a few voxels above sea
+        const OCTAVES: u32 = 4;
 
         let d = self.detail as f32;
-        let n = self.value_noise(x as f32 / d * FREQ, z as f32 / d * FREQ);
+        let n = self.fbm(x as f32 / d * FREQ, z as f32 / d * FREQ, OCTAVES);
         ((BASE + n * AMPLITUDE) * d).round() as i32
     }
 
-    /// 2D value noise in `[-1, 1]`. Bilinear interpolation of per-lattice-point
-    /// pseudo-random values, with a smoothstep on the fractional coordinate so
-    /// the result is visually smooth (no lattice creases).
-    fn value_noise(&self, x: f32, z: f32) -> f32 {
-        let x0 = x.floor();
-        let z0 = z.floor();
-        let fx = smoothstep(x - x0);
-        let fz = smoothstep(z - z0);
-        let (xi, zi) = (x0 as i64, z0 as i64);
-
-        let v00 = self.lattice(xi, zi);
-        let v10 = self.lattice(xi + 1, zi);
-        let v01 = self.lattice(xi, zi + 1);
-        let v11 = self.lattice(xi + 1, zi + 1);
-
-        let bottom = lerp(v00, v10, fx);
-        let top = lerp(v01, v11, fx);
-        lerp(bottom, top, fz) * 2.0 - 1.0
+    /// Fractal Brownian motion: sum `octaves` of Perlin noise, each at twice the
+    /// frequency and half the amplitude of the last (lacunarity 2, persistence
+    /// ½). Normalised back to roughly `[-1, 1]`. This is what turns a single
+    /// smooth swell into hills-with-texture.
+    fn fbm(&self, x: f32, z: f32, octaves: u32) -> f32 {
+        let mut sum = 0.0;
+        let mut amp = 1.0;
+        let mut freq = 1.0;
+        let mut norm = 0.0;
+        for _ in 0..octaves {
+            sum += amp * self.perlin2d(x * freq, z * freq);
+            norm += amp;
+            amp *= 0.5;
+            freq *= 2.0;
+        }
+        sum / norm
     }
 
-    /// A stable pseudo-random value in `[0, 1)` for an integer lattice point.
-    /// Hashes `(seed, xi, zi)` through the same SplitMix64 mix the world PRNG
-    /// uses, so the noise field is reproducible and shares the determinism
+    /// 2D gradient (Perlin) noise in roughly `[-1, 1]`. At each integer lattice
+    /// corner a pseudo-random unit gradient is dotted with the offset to the
+    /// sample point; the four corner values are interpolated with Perlin's
+    /// quintic fade. Unlike value noise, the zero-crossings fall *on* the lattice
+    /// and the slopes are gradient-driven, giving the more natural ridged look.
+    fn perlin2d(&self, x: f32, z: f32) -> f32 {
+        let x0 = x.floor();
+        let z0 = z.floor();
+        let xf = x - x0;
+        let zf = z - z0;
+        let (xi, zi) = (x0 as i64, z0 as i64);
+
+        let g00 = self.gradient(xi, zi);
+        let g10 = self.gradient(xi + 1, zi);
+        let g01 = self.gradient(xi, zi + 1);
+        let g11 = self.gradient(xi + 1, zi + 1);
+
+        // Dot each corner gradient with the vector from that corner to (x, z).
+        let d00 = g00.0 * xf + g00.1 * zf;
+        let d10 = g10.0 * (xf - 1.0) + g10.1 * zf;
+        let d01 = g01.0 * xf + g01.1 * (zf - 1.0);
+        let d11 = g11.0 * (xf - 1.0) + g11.1 * (zf - 1.0);
+
+        let u = fade(xf);
+        let v = fade(zf);
+        let a = lerp(d00, d10, u);
+        let b = lerp(d01, d11, u);
+        // 2D Perlin lands within ±√2/2; scale to roughly [-1, 1].
+        lerp(a, b, v) * std::f32::consts::SQRT_2
+    }
+
+    /// A stable unit gradient for an integer lattice point, chosen from 8
+    /// directions by hashing `(seed, xi, zi)` through the same SplitMix64 mix the
+    /// world PRNG uses — so the field is reproducible and shares the determinism
     /// guarantee rather than introducing a second, unaudited source of state.
-    fn lattice(&self, xi: i64, zi: i64) -> f32 {
+    fn gradient(&self, xi: i64, zi: i64) -> (f32, f32) {
+        const G: f32 = std::f32::consts::FRAC_1_SQRT_2;
+        const GRADS: [(f32, f32); 8] = [
+            (1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0),
+            (G, G), (-G, G), (G, -G), (-G, -G),
+        ];
         let mut h = self.seed;
         for w in [xi as u64, zi as u64] {
             h ^= w.wrapping_mul(0x9E37_79B9_7F4A_7C15);
@@ -279,7 +311,7 @@ impl Volume {
             h = (h ^ (h >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
             h ^= h >> 31;
         }
-        (h >> 40) as f32 / (1u32 << 24) as f32
+        GRADS[(h & 7) as usize]
     }
 }
 
@@ -288,12 +320,12 @@ fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + (b - a) * t
 }
 
-/// Hermite smoothstep `3t² − 2t³`, mapping `[0,1]→[0,1]` with zero slope at the
-/// ends — the standard trick that turns blocky bilinear interpolation into
-/// visually smooth noise.
+/// Perlin's quintic fade `6t⁵ − 15t⁴ + 10t³`: an ease curve with zero first *and*
+/// second derivative at the ends, so interpolated noise has no visible creases
+/// at lattice boundaries (the improvement over plain cubic smoothstep).
 #[inline]
-fn smoothstep(t: f32) -> f32 {
-    t * t * (3.0 - 2.0 * t)
+fn fade(t: f32) -> f32 {
+    t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
 }
 
 #[cfg(test)]
@@ -351,11 +383,14 @@ mod tests {
 
     #[test]
     fn terrain_is_continuous() {
-        // Adjacent columns should not differ wildly — the mesher and any walking
-        // agent rely on the surface being walkable, not a cliff per voxel.
-        let v = Volume::new(99);
+        // At the play resolution (detail 4+) adjacent voxels should not differ
+        // wildly — the mesher and any walking agent rely on the surface being
+        // walkable, not a cliff per voxel. (At detail 1 the FBM octaves put real
+        // relief into each unit step, which is expected; continuity is a
+        // per-voxel property and so is asserted at the resolution we render.)
+        let v = Volume::with_detail(99, 4);
         let mut prev = v.surface_height(0, 0).unwrap();
-        for x in 1..200 {
+        for x in 1..800 {
             let h = v.surface_height(x, 0).unwrap();
             assert!((h - prev).abs() <= 3, "height jump of {} at x={}", h - prev, x);
             prev = h;

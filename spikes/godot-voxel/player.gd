@@ -25,8 +25,12 @@ var _pitch := 0.0
 var _unit := 1     # voxels per world unit; movement/reach scale with it
 
 func _ready() -> void:
-	# Skip mouse capture in automated screenshot runs (no human to drive it).
-	if OS.get_environment("VIVARIUM_AUTOSHOT") == "":
+	if OS.get_environment("VIVARIUM_AUTOSHOT") != "":
+		# Automated screenshot run: main.gd owns the camera for a fixed vista, so
+		# disable this controller entirely — otherwise stray input moves the shot.
+		set_process(false)
+		set_process_input(false)
+	else:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	if world != null:
 		_unit = world.voxels_per_unit()
