@@ -18,6 +18,8 @@
 //! the voxel terrain rendering and first-person controller land on top of this
 //! once the seam itself is proven to work.
 
+use std::sync::RwLock;
+
 use godot::prelude::*;
 use vivarium_core::voxel::Voxel;
 use vivarium_core::World;
@@ -34,10 +36,29 @@ const FIXED_HZ: f32 = 30.0;
 
 /// The simulation, wrapped as a Godot node so a scene can hold it as the single
 /// source of truth. Every other node reads the world through this one.
+///
+/// ## Why the `RwLock`, and why every method takes `&self`
+///
+/// godot_voxel meshes chunks on worker threads and calls [`Self::generate_block`]
+/// from them, concurrently, while the main thread issues edits ([`Self::dig`] /
+/// [`Self::place`]) and steps. Two problems stack here:
+///
+///  - gdext forbids cross-thread access to its objects unless the
+///    `experimental-threads` feature is on (it is — see Cargo.toml);
+///  - even with that, a `&mut self` method (an edit) running while `&self`
+///    methods (generation) run on other threads is an aliasing violation that
+///    gdext's cell correctly rejects.
+///
+/// The fix keeps *core* pure and single-threaded — the lock is a *view* concern,
+/// so it lives here, not in `vivarium-core`. The `World` sits behind a `RwLock`;
+/// generation takes read locks (any number, in parallel), edits take the write
+/// lock (briefly exclusive). Because the lock provides the interior mutability,
+/// *every* method below takes `&self` — gdext only ever sees shared borrows, so
+/// there is no exclusive-borrow conflict regardless of thread timing.
 #[derive(GodotClass)]
 #[class(base=Node)]
 struct VivariumWorld {
-    world: World,
+    world: RwLock<World>,
     base: Base<Node>,
 }
 
@@ -46,21 +67,21 @@ impl INode for VivariumWorld {
     fn init(base: Base<Node>) -> Self {
         // Same seed/agent-count as the Bevy debug view, so the two spikes look
         // at literally the same world and the comparison is apples-to-apples.
-        Self { world: World::new(0x00C0_FFEE, 24), base }
+        Self { world: RwLock::new(World::new(0x00C0_FFEE, 24)), base }
     }
 
     /// A loud self-check that the FFI seam is alive: read real facts out of core
     /// and print them. If this appears in Godot's output, the bridge works.
     fn ready(&mut self) {
-        let v = &self.world.volume;
-        let h = v.surface_height(0, 0).unwrap_or(-1);
+        let w = self.world.read().unwrap();
+        let h = w.volume.surface_height(0, 0).unwrap_or(-1);
         godot_print!(
             "[vivarium] bridge live — seed {:#x}, {} agents; surface at (0,0) is y={}, \
              voxel just below is material {}",
-            self.world.seed,
-            self.world.agents.len(),
+            w.seed,
+            w.agents.len(),
             h,
-            v.voxel(0, h, 0).0,
+            w.volume.voxel(0, h, 0).0,
         );
     }
 }
@@ -71,7 +92,7 @@ impl VivariumWorld {
     /// mesher needs; godot_voxel's custom generator will call this per cell.
     #[func]
     fn voxel_at(&self, x: i32, y: i32, z: i32) -> i32 {
-        self.world.volume.voxel(x, y, z).0 as i32
+        self.world.read().unwrap().volume.voxel(x, y, z).0 as i32
     }
 
     /// Fill an entire block in one call: the materials of every voxel in the
@@ -87,7 +108,8 @@ impl VivariumWorld {
     /// measure.
     #[func]
     fn generate_block(&self, origin: Vector3i, size: Vector3i) -> PackedByteArray {
-        let vol = &self.world.volume;
+        let w = self.world.read().unwrap();
+        let vol = &w.volume;
         let mut out = PackedByteArray::new();
         out.resize((size.x * size.y * size.z) as usize);
         let slice = out.as_mut_slice();
@@ -108,22 +130,24 @@ impl VivariumWorld {
     /// Lets the camera/controller spawn the player on the ground.
     #[func]
     fn surface_height(&self, x: i32, z: i32) -> i32 {
-        self.world.volume.surface_height(x, z).unwrap_or(-1)
+        self.world.read().unwrap().volume.surface_height(x, z).unwrap_or(-1)
     }
 
     /// Remove the voxel at `(x, y, z)` (set it to air) and persist the edit in
     /// core. Returns the material that was there, so the view can spawn the
     /// right debris/particle. This is the write half of the seam.
     #[func]
-    fn dig(&mut self, x: i32, y: i32, z: i32) -> i32 {
-        self.world.volume.set_voxel(x, y, z, Voxel::AIR).0 as i32
+    fn dig(&self, x: i32, y: i32, z: i32) -> i32 {
+        self.world.write().unwrap().volume.set_voxel(x, y, z, Voxel::AIR).0 as i32
     }
 
     /// Place `material` at `(x, y, z)`, persisted in core. Returns the previous
     /// material.
     #[func]
-    fn place(&mut self, x: i32, y: i32, z: i32, material: i32) -> i32 {
+    fn place(&self, x: i32, y: i32, z: i32, material: i32) -> i32 {
         self.world
+            .write()
+            .unwrap()
             .volume
             .set_voxel(x, y, z, Voxel(material as u16))
             .0 as i32
@@ -132,21 +156,21 @@ impl VivariumWorld {
     /// Advance the simulation one fixed step. Called from a fixed-rate timer in
     /// the scene, not every frame, to preserve determinism.
     #[func]
-    fn step(&mut self) {
-        self.world.step(1.0 / FIXED_HZ);
+    fn step(&self) {
+        self.world.write().unwrap().step(1.0 / FIXED_HZ);
     }
 
     /// Number of agents — used by the view to size its pool of agent visuals.
     #[func]
     fn agent_count(&self) -> i32 {
-        self.world.agents.len() as i32
+        self.world.read().unwrap().agents.len() as i32
     }
 
     /// World-space position of agent `i` as a Godot `Vector3`. Core stores
     /// `[x, y, z]`; this is the one place that layout is translated to Godot's.
     #[func]
     fn agent_position(&self, i: i32) -> Vector3 {
-        let p = self.world.agents[i as usize].pos;
+        let p = self.world.read().unwrap().agents[i as usize].pos;
         Vector3::new(p[0], p[1], p[2])
     }
 }

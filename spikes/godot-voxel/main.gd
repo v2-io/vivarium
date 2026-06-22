@@ -18,7 +18,9 @@ const PALETTE := {
 	4: Color(0.20, 0.45, 0.85),    # WATER
 }
 
-var world: Object  # VivariumWorld (Rust bridge)
+var world: Object     # VivariumWorld (Rust bridge)
+var terrain: Object   # VoxelTerrain (kept for the automated dig self-test)
+var cam: Camera3D     # the player camera (repositioned for the dig close-up)
 
 func _ready() -> void:
 	world = ClassDB.instantiate("VivariumWorld")
@@ -36,7 +38,7 @@ func _ready() -> void:
 	var gen = load("res://generator.gd").new()
 	gen.world = world
 
-	var terrain := VoxelTerrain.new()
+	terrain = VoxelTerrain.new()
 	terrain.mesher = mesher
 	terrain.generator = gen
 	var mat := StandardMaterial3D.new()
@@ -44,13 +46,16 @@ func _ready() -> void:
 	terrain.material_override = mat
 	add_child(terrain)
 
-	# Camera looking at the origin column from above and to the side.
+	# First-person fly camera (player.gd), aimed at the origin column to start.
 	var sh: int = world.surface_height(0, 0)
-	var look := Vector3(0, sh, 0)
-	var cam := Camera3D.new()
+	cam = Camera3D.new()
+	cam.set_script(load("res://player.gd"))
+	cam.world = world
+	cam.terrain = terrain
 	cam.position = Vector3(50, sh + 35, 50)
-	add_child(cam)               # must be in-tree before look_at()
-	cam.look_at(look, Vector3.UP)
+	add_child(cam)                               # in-tree before look_at()
+	cam.look_at(Vector3(0, sh, 0), Vector3.UP)
+	cam.resync()                                 # carry that heading into yaw/pitch
 
 	# A VoxelViewer is what tells the terrain where to stream chunks in.
 	var viewer := VoxelViewer.new()
@@ -71,10 +76,43 @@ func _ready() -> void:
 	we.environment = env
 	add_child(we)
 
-	# Give the streaming threads a few seconds, then capture and quit.
-	get_tree().create_timer(4.0).timeout.connect(_capture_and_quit)
+	# Interactive by default. In an automated run (VIVARIUM_AUTOSHOT set) give the
+	# streaming threads a few seconds, then screenshot and quit — used to verify
+	# renders without a human watching.
+	if OS.get_environment("VIVARIUM_AUTOSHOT") != "":
+		get_tree().create_timer(4.0).timeout.connect(_capture_and_quit)
+	else:
+		print("[vivarium] interactive: WASD move, mouse look, Space/Shift up/down, ",
+			"Ctrl=fast, LMB dig, RMB place, Esc frees mouse")
+
+# Carve a small crater at the origin through the same path the player uses
+# (core edit + VoxelTool remesh), so the automated screenshot proves the dig
+# path end to end, not just static generation.
+func _carve_test() -> void:
+	var vt = terrain.get_voxel_tool()
+	vt.channel = VoxelBuffer.CHANNEL_COLOR
+	var sh: int = world.surface_height(0, 0)
+	# Prove the core edit persisted (not just the visual).
+	print("[vivarium] before dig: voxel(0,%d,0)=%d" % [sh, world.voxel_at(0, sh, 0)])
+	for dx in range(-3, 4):
+		for dz in range(-3, 4):
+			for dy in range(0, 5):
+				var p := Vector3i(dx, sh - dy, dz)
+				world.dig(p.x, p.y, p.z)
+				vt.set_voxel(p, 0)
+	print("[vivarium] after dig:  voxel(0,%d,0)=%d (0 = air; core edit persisted)"
+		% [sh, world.voxel_at(0, sh, 0)])
 
 func _capture_and_quit() -> void:
+	# Move in close and overhead so the crater is unmistakable in the shot.
+	var sh: int = world.surface_height(0, 0)
+	cam.position = Vector3(9, sh + 11, 9)
+	cam.look_at(Vector3(0, sh - 2, 0), Vector3.UP)
+	_carve_test()
+	# Let the remesh settle before grabbing the frame.
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
 	var img := get_viewport().get_texture().get_image()
 	var path := "user://terrain_shot.png"
 	img.save_png(path)
