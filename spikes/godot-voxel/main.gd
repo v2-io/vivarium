@@ -123,11 +123,15 @@ func _ready() -> void:
 
 	var we := WorldEnvironment.new()
 	var env := Environment.new()
-	# Desaturated overcast-grey sky; strong ambient fill so the flat-lit, foggy
-	# world stays legible without a sun.
-	var sky_color := Color(0.66, 0.68, 0.71)
+	# Bright, desaturated overcast sky. Distance haze fades terrain *up* toward
+	# this light grey (the natural overcast look) rather than down into gloom, so
+	# lit terrain dissolves into it seamlessly — no horizon. Linear tonemapping
+	# (below) makes the colour render exactly as set, not darkened.
+	var sky_color := Color(0.80, 0.82, 0.84)
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = sky_color
+	# Render colours as authored (no filmic/AgX darkening of the flat sky).
+	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color(0.86, 0.88, 0.92)
 	env.ambient_light_energy = 0.7
@@ -139,9 +143,11 @@ func _ready() -> void:
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_DEPTH
 	env.fog_light_color = sky_color
-	env.fog_sky_affect = 0.0          # leave the sky itself clear
-	env.fog_depth_begin = float(6 * detail)
-	env.fog_depth_end = float(40 * detail)
+	# Fog the sky too, fully — so the whole sky becomes the same fog colour the
+	# distant terrain dissolves into. Both end up one uniform grey: no horizon.
+	env.fog_sky_affect = 1.0
+	env.fog_depth_begin = float(14 * detail)
+	env.fog_depth_end = float(90 * detail)   # fully sky-coloured by here -> no horizon
 	env.fog_depth_curve = 1.0         # linear: opacity ∝ distance
 	we.environment = env
 	add_child(we)
