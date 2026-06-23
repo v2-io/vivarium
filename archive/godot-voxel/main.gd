@@ -70,6 +70,20 @@ func _ready() -> void:
 	# Fixed window/viewport size so screenshots are consistent and comparable
 	# with the Bevy spike (the project.godot setting wasn't taking reliably).
 	get_window().size = Vector2i(1152, 648)
+
+	# Mesher throughput: godot_voxel meshes/generates on a worker pool, distance-
+	# prioritized. Default is ~half the cores (8 of 16 here), which leaves the queue
+	# draining slowly when you outrun it. Give it most of the box (reserve ~2 for the
+	# main + render threads). Tune with VIVARIUM_THREADS. Must be set before the
+	# terrain starts streaming.
+	var engine = Engine.get_singleton("VoxelEngine")
+	if engine != null:
+		var threads := maxi(2, OS.get_processor_count() - 2)
+		var threads_env := OS.get_environment("VIVARIUM_THREADS")
+		if threads_env != "":
+			threads = int(threads_env)
+		engine.set_thread_count(threads)
+		_trace("voxel mesher threads=%d (of %d cores)" % [threads, OS.get_processor_count()])
 	world = ClassDB.instantiate("VivariumWorld")
 	world.name = "VivariumWorld"
 	add_child(world)
@@ -114,6 +128,24 @@ func _ready() -> void:
 	terrain.lod_count = lod_count
 	terrain.lod_distance = lod_distance       # how far LOD0 (full detail) reaches
 	terrain.view_distance = _view_distance
+
+	# --- LOD responsiveness under fast motion (Joseph 2026-06-23) -------------
+	# Slow-and-steady prioritizes well; "whipping around" leaves the thing in
+	# front macro while something distant refines. Two causes, two levers:
+	#
+	#  1. The octree LOD-subdivision *decision* runs on the main thread by default
+	#     (threaded_update_enabled=false). At single-digit FPS the main thread is
+	#     the bottleneck, so the "this near chunk should be finer now" verdict
+	#     lands several frames late. Move it to a worker thread so subdivision
+	#     keeps pace with the viewer. Off with VIVARIUM_THREADED_UPDATE=0.
+	terrain.threaded_update_enabled = OS.get_environment("VIVARIUM_THREADED_UPDATE") != "0"
+	#  2. Soft LOD cross-fade so a late refinement dissolves in rather than popping
+	#     (purely cosmetic, but it's the visible half of the complaint).
+	var fade := 0.25
+	var fade_env := OS.get_environment("VIVARIUM_LOD_FADE")
+	if fade_env != "":
+		fade = float(fade_env)
+	terrain.lod_fade_duration = fade
 	add_child(terrain)
 	# VoxelLodTerrain rejects material_override (Node3D's); it manages its own
 	# mesh instances. It takes a single terrain material via set_material(). For
@@ -122,6 +154,16 @@ func _ready() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.vertex_color_use_as_albedo = true
 	terrain.set_material(mat)
+
+	# VIVARIUM_DEBUG_LOD=1: draw the octree LOD boxes + flash mesh updates, so the
+	# "near stays macro while distant refines" behaviour is *visible* while flying
+	# (the thing that's otherwise hard to test). Colour = LOD level; a box that
+	# flashes is a mesh being (re)built — watch whether near boxes refine before
+	# far ones when you whip the camera around.
+	if OS.get_environment("VIVARIUM_DEBUG_LOD") == "1":
+		terrain.debug_draw_enabled = true
+		terrain.debug_draw_octree_bounds = true
+		terrain.debug_draw_mesh_updates = true
 	_trace("terrain added")
 
 	# First-person fly camera (player.gd), in voxel/world coordinates (1:1).
@@ -143,6 +185,16 @@ func _ready() -> void:
 	# by distance). view_distance matches the terrain's.
 	var viewer := VoxelViewer.new()
 	viewer.view_distance = _view_distance
+	# We fly *over* a surface, so the full-height column (ratio 1.0 = mesh chunks
+	# 32 k voxels above and below) is almost all wasted budget that should go to
+	# near-surface refinement. Squash the vertical reach. Tune with VIVARIUM_VRATIO;
+	# raise it if looking down deep shafts/oceans ever starves. (8.2 km world, so
+	# 0.3 × 32 k ≈ 4.9 km vertical reach — ample for surface flight.)
+	var vratio := 0.3
+	var vratio_env := OS.get_environment("VIVARIUM_VRATIO")
+	if vratio_env != "":
+		vratio = float(vratio_env)
+	viewer.view_distance_vertical_ratio = vratio
 	cam.add_child(viewer)
 
 	# Soft overcast key light. Enough energy that block faces shade by their
