@@ -13,9 +13,11 @@
 use std::sync::Arc;
 
 use bevy::ecs::message::MessageWriter;
+use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::pbr::{DistanceFog, FogFalloff};
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
+use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 use bevy_voxel_world::custom_meshing::{CHUNK_SIZE_F, CHUNK_SIZE_U};
 // padded_chunk_shape_uniform and the VoxelWorld* / LodLevel / WorldVoxel types
 // all come through the prelude.
@@ -128,7 +130,7 @@ fn main() {
         .insert_resource(ClearColor(SKY))
         .add_plugins(VoxelWorldPlugin::with_config(VivWorld::default()))
         .add_systems(Startup, setup)
-        .add_systems(Update, (drift_camera, maybe_screenshot))
+        .add_systems(Update, (fly_camera, edit_voxels, maybe_screenshot))
         .run();
 }
 
@@ -163,11 +165,92 @@ fn setup(mut commands: Commands) {
     });
 }
 
-/// Drift the camera slowly so a screenshot shows the world in motion-free but
-/// non-trivial framing. Replaced by a real fly controller next.
-fn drift_camera(time: Res<Time>, mut q: Query<&mut Transform, With<VoxelWorldCamera<VivWorld>>>) {
-    if let Ok(mut t) = q.single_mut() {
-        t.translation.x += time.delta_secs() * 8.0;
+/// First-person fly controller: mouse-look + WASD (Space/Shift up-down, Ctrl
+/// fast), mirroring the Godot spike. Left-click grabs the cursor; Esc frees it.
+/// Disabled under autoshot so the verification camera stays put.
+fn fly_camera(
+    keys: Res<ButtonInput<KeyCode>>,
+    buttons: Res<ButtonInput<MouseButton>>,
+    motion: Res<AccumulatedMouseMotion>,
+    time: Res<Time>,
+    mut cursor_q: Query<&mut CursorOptions, With<PrimaryWindow>>,
+    mut q: Query<&mut Transform, With<VoxelWorldCamera<VivWorld>>>,
+) {
+    if std::env::var("VIVARIUM_AUTOSHOT").is_ok() {
+        return;
+    }
+    let Ok(mut cursor) = cursor_q.single_mut() else { return };
+    if buttons.just_pressed(MouseButton::Left) {
+        cursor.grab_mode = CursorGrabMode::Locked;
+        cursor.visible = false;
+    }
+    if keys.just_pressed(KeyCode::Escape) {
+        cursor.grab_mode = CursorGrabMode::None;
+        cursor.visible = true;
+    }
+
+    let Ok(mut transform) = q.single_mut() else { return };
+
+    if cursor.grab_mode == CursorGrabMode::Locked && motion.delta != Vec2::ZERO {
+        let (mut yaw, mut pitch, _) = transform.rotation.to_euler(EulerRot::YXZ);
+        yaw -= motion.delta.x * 0.003;
+        pitch = (pitch - motion.delta.y * 0.003).clamp(-1.5, 1.5);
+        transform.rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
+    }
+
+    let mut dir = Vec3::ZERO;
+    let fwd = *transform.forward();
+    let right = *transform.right();
+    if keys.pressed(KeyCode::KeyW) {
+        dir += fwd;
+    }
+    if keys.pressed(KeyCode::KeyS) {
+        dir -= fwd;
+    }
+    if keys.pressed(KeyCode::KeyD) {
+        dir += right;
+    }
+    if keys.pressed(KeyCode::KeyA) {
+        dir -= right;
+    }
+    if keys.pressed(KeyCode::Space) {
+        dir += Vec3::Y;
+    }
+    if keys.pressed(KeyCode::ShiftLeft) {
+        dir -= Vec3::Y;
+    }
+    if dir != Vec3::ZERO {
+        let speed = if keys.pressed(KeyCode::ControlLeft) { 160.0 } else { 50.0 };
+        transform.translation += dir.normalize() * speed * time.delta_secs();
+    }
+}
+
+/// Dig (left) / place (right) the voxel the camera is looking at, via
+/// bevy_voxel_world's raycast + set_voxel. The edit lands in the voxel world's
+/// own store; mirroring it back into core (as the Godot bridge does) is a parity
+/// item, but the *feel* is what this is for.
+fn edit_voxels(
+    buttons: Res<ButtonInput<MouseButton>>,
+    cam_q: Query<&GlobalTransform, With<VoxelWorldCamera<VivWorld>>>,
+    mut voxel_world: VoxelWorld<VivWorld>,
+) {
+    if std::env::var("VIVARIUM_AUTOSHOT").is_ok() {
+        return;
+    }
+    let dig = buttons.just_pressed(MouseButton::Left);
+    let place = buttons.just_pressed(MouseButton::Right);
+    if !dig && !place {
+        return;
+    }
+    let Ok(gt) = cam_q.single() else { return };
+    let Ok(dir) = Dir3::new(gt.forward().into()) else { return };
+    let ray = Ray3d::new(gt.translation(), dir);
+    if let Some(hit) = voxel_world.raycast(ray, &|(_pos, _vox)| true) {
+        if dig {
+            voxel_world.set_voxel(hit.voxel_pos(), WorldVoxel::Air);
+        } else if let Some(normal) = hit.normal {
+            voxel_world.set_voxel(hit.voxel_pos() + normal.as_ivec3(), WorldVoxel::Solid(1));
+        }
     }
 }
 
