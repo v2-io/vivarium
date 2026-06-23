@@ -1,0 +1,4 @@
+# Third-party reference material: read locally, do not vendor into vivarium history.
+geology/StreamPowerErosion/
+# Papers: kept locally for reading; licensing/binary — not committed.
+geology/pdfs/
