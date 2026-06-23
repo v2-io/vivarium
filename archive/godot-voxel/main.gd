@@ -30,31 +30,36 @@ const PALETTE := {
 # whole point of the resolution sweep.
 # LOD config for VoxelLodTerrain. The octree fills a sphere of radius
 # `view_distance` around the viewer; `lod_distance` is the radius kept at FULL
-# detail (LOD0), and each coarser level roughly doubles the reach again, so total
-# reach ≈ lod_distance × 2^(lod_count-1).
+# detail (LOD0), and each coarser level roughly doubles the reach again.
 #
-# CORRECTION (2026-06-23): an earlier pass cranked lod_distance to 1024 to "see
-# far". That was the wrong lever — per zylann's docs you extend the view with more
-# LOD *levels*, keeping lod_distance modest. A huge lod_distance forces an enormous
-# full-detail shell, which (a) swamps the mesh budget and (b) makes each block
-# cascade through many coarse→fine remeshes chasing an oversized target — the
-# incoherent "remesh the same area at one LOD then immediately another while
-# neighbours wait" churn. So: modest lod_distance, more lod_count for the SAME
-# 32 768-voxel reach (128 × 2^8 = 32 768). Bigger full-detail near-shell costs more
-# but holds detail farther — raise VIVARIUM_LOD_DIST (e.g. 256) if near-distance
-# terrain feels too coarse; that's the detail↔cost dial.
+# EMPIRICAL (2026-06-23): these values — lod_distance 1024, lod_count 7 — are the
+# best-performing config we found by *flying it*, and they are restored here after
+# two attempts to "improve" them regressed. The story is worth keeping because the
+# obvious reasoning was wrong:
+#   - zylann's docs say extend reach with more LOD *levels*, keeping lod_distance
+#     modest. Followed literally (lod_distance 128, lod_count 9) it felt and looked
+#     WORSE: more LOD levels → more total blocks in the no-occlusion sphere → far
+#     longer to develop, and it spent itself rendering occluded/behind-camera
+#     terrain. Observation overruled the doc-derived model.
+#   - the big full-detail shell (1024) costs more in theory, but in practice it
+#     develops the near field fast and stays there, which is what reads as "good".
+# So: trust the felt result. If you re-tune, change ONE knob and fly it; do not
+# reason your way to a new default. The fast-camera "giant near blocks" artifact
+# is a known, accepted cost of this config — chasing it is what caused the
+# regressions (see git log around this date).
 #
-# Caveat this revival exposed: the octree loads SPHERICALLY by distance with no
-# frustum/occlusion culling — it meshes chunks behind you and behind mountains as
-# eagerly as the one in view. A smaller view_distance is the only lever for that
-# from the public API. (A real data point for the engine comparison.)
+# Caveat this revival exposed (sourced, not a tuning choice): the octree loads
+# SPHERICALLY by distance with NO frustum/occlusion culling — it meshes chunks
+# behind you and behind mountains as eagerly as the one in view. Smaller
+# view_distance is the only lever for that from the public API. A real limitation
+# to weigh in the Bevy-vs-Godot decision.
 #
 # All env-overridable so the reach can be swept without editing the file:
 #   VIVARIUM_VIEWCAP    view distance in voxels   (default 32768 → spans the land)
-#   VIVARIUM_LOD_DIST   LOD0 full-detail radius   (default 128)
-#   VIVARIUM_LOD_COUNT  octree levels             (default 9 → reaches the view cap)
-const LOD_COUNT_DEFAULT := 9
-const LOD_DISTANCE_DEFAULT := 128.0
+#   VIVARIUM_LOD_DIST   LOD0 full-detail radius   (default 1024)
+#   VIVARIUM_LOD_COUNT  octree levels             (default 7)
+const LOD_COUNT_DEFAULT := 7
+const LOD_DISTANCE_DEFAULT := 1024.0
 const VIEW_DISTANCE_DEFAULT := 32768
 
 var world: Object     # VivariumWorld (Rust bridge)
