@@ -71,19 +71,17 @@ func _ready() -> void:
 	# with the Bevy spike (the project.godot setting wasn't taking reliably).
 	get_window().size = Vector2i(1152, 648)
 
-	# Mesher throughput: godot_voxel meshes/generates on a worker pool, distance-
-	# prioritized. Default is ~half the cores (8 of 16 here), which leaves the queue
-	# draining slowly when you outrun it. Give it most of the box (reserve ~2 for the
-	# main + render threads). Tune with VIVARIUM_THREADS. Must be set before the
-	# terrain starts streaming.
-	var engine = Engine.get_singleton("VoxelEngine")
-	if engine != null:
-		var threads := maxi(2, OS.get_processor_count() - 2)
-		var threads_env := OS.get_environment("VIVARIUM_THREADS")
-		if threads_env != "":
-			threads = int(threads_env)
-		engine.set_thread_count(threads)
-		_trace("voxel mesher threads=%d (of %d cores)" % [threads, OS.get_processor_count()])
+	# Mesher thread count. NOTE (2026-06-23): raising this to cores-2 (14/16)
+	# REGRESSED overall performance — oversubscribing the mesher pool (each worker
+	# calls back into Rust through the FFI/RwLock per chunk) starved the main +
+	# render threads. So we now leave the engine default (≈half the cores) UNLESS
+	# VIVARIUM_THREADS is set, and even then sweep upward cautiously.
+	var threads_env := OS.get_environment("VIVARIUM_THREADS")
+	if threads_env != "":
+		var engine = Engine.get_singleton("VoxelEngine")
+		if engine != null:
+			engine.set_thread_count(int(threads_env))
+			_trace("voxel mesher threads=%s (of %d cores)" % [threads_env, OS.get_processor_count()])
 	world = ClassDB.instantiate("VivariumWorld")
 	world.name = "VivariumWorld"
 	add_child(world)
@@ -133,19 +131,18 @@ func _ready() -> void:
 	# Slow-and-steady prioritizes well; "whipping around" leaves the thing in
 	# front macro while something distant refines. Two causes, two levers:
 	#
-	#  1. The octree LOD-subdivision *decision* runs on the main thread by default
-	#     (threaded_update_enabled=false). At single-digit FPS the main thread is
-	#     the bottleneck, so the "this near chunk should be finer now" verdict
-	#     lands several frames late. Move it to a worker thread so subdivision
-	#     keeps pace with the viewer. Off with VIVARIUM_THREADED_UPDATE=0.
-	terrain.threaded_update_enabled = OS.get_environment("VIVARIUM_THREADED_UPDATE") != "0"
-	#  2. Soft LOD cross-fade so a late refinement dissolves in rather than popping
-	#     (purely cosmetic, but it's the visible half of the complaint).
-	var fade := 0.25
+	#  1. threaded_update_enabled moves the octree LOD-subdivision *decision* off the
+	#     main thread. In theory that helps when the main thread is the bottleneck —
+	#     but enabling it (2026-06-23) ADDED visible artifacts (cross-thread
+	#     inconsistency), so it's OFF by default now. Opt in with
+	#     VIVARIUM_THREADED_UPDATE=1 to A/B it.
+	terrain.threaded_update_enabled = OS.get_environment("VIVARIUM_THREADED_UPDATE") == "1"
+	#  2. LOD cross-fade. Steadies a developed area (no jostle), but mid-transition
+	#     it renders two LODs (overdraw) — cost exactly while you're moving. So OFF
+	#     by default (engine default 0.0); set VIVARIUM_LOD_FADE=0.25 to try it.
 	var fade_env := OS.get_environment("VIVARIUM_LOD_FADE")
 	if fade_env != "":
-		fade = float(fade_env)
-	terrain.lod_fade_duration = fade
+		terrain.lod_fade_duration = float(fade_env)
 	add_child(terrain)
 	# VoxelLodTerrain rejects material_override (Node3D's); it manages its own
 	# mesh instances. It takes a single terrain material via set_material(). For
@@ -185,16 +182,14 @@ func _ready() -> void:
 	# by distance). view_distance matches the terrain's.
 	var viewer := VoxelViewer.new()
 	viewer.view_distance = _view_distance
-	# We fly *over* a surface, so the full-height column (ratio 1.0 = mesh chunks
-	# 32 k voxels above and below) is almost all wasted budget that should go to
-	# near-surface refinement. Squash the vertical reach. Tune with VIVARIUM_VRATIO;
-	# raise it if looking down deep shafts/oceans ever starves. (8.2 km world, so
-	# 0.3 × 32 k ≈ 4.9 km vertical reach — ample for surface flight.)
-	var vratio := 0.3
+	# Flying over a surface, the full-height column (ratio 1.0 = mesh 32 k voxels
+	# up and down) is mostly wasted budget — squashing it *should* be a pure win,
+	# but bundled with the other changes (2026-06-23) the net was a regression and
+	# it wasn't isolated, so default is left at the engine's 1.0 until measured
+	# alone. Set VIVARIUM_VRATIO=0.3 to try it (lower = less vertical reach).
 	var vratio_env := OS.get_environment("VIVARIUM_VRATIO")
 	if vratio_env != "":
-		vratio = float(vratio_env)
-	viewer.view_distance_vertical_ratio = vratio
+		viewer.view_distance_vertical_ratio = float(vratio_env)
 	cam.add_child(viewer)
 
 	# Soft overcast key light. Enough energy that block faces shade by their
