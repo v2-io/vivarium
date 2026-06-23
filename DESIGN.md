@@ -234,6 +234,12 @@ research-earned resolution); render voxels add sub-grid detail noise. Full surve
 the scale ladder, and the open multi-domain-granularity question:
 [`ref/geology/NOTES.md`](ref/geology/NOTES.md).
 
+**Implemented & walkable (2026-06-23):** FBM scale-free prior → MFD stream-power
+incision → Davy-Lague deposition (`D = G·Qs/A`) → slope-aware detail noise, in
+`vivarium-core` (`geo.rs` + `voxel.rs`). Emergent dendritic valleys with graded,
+non-pooled outlets; deterministic; ~6 s world-gen. The tectonic-uplift tier (the
+principled source the FBM prior stands in for) is still deferred.
+
 ## Rendering to the horizon — the LOD architecture (decided 2026-06-23)
 
 At 0.5 m voxels, `bevy_voxel_world` (fixed 32-voxel chunks, mesh-decimation-only
@@ -248,3 +254,9 @@ is a **heightfield** (accepted trade — near stays fully volumetric/diggable);
 because the core is a pure function we *regenerate* the far field deterministically
 rather than caching it. Full decision record, options, and verification:
 [`ref/rendering/NOTES.md`](ref/rendering/NOTES.md).
+
+**v1 implemented (2026-06-23):** `spikes/bevy-voxel` renders near full-detail
+diggable voxels + a self-built far-terrain mesh sampled from `surface_height` —
+walkable, you stand in an eroded valley and see the massif and coast to the
+horizon. Open: the near/far seam, a blocky far-shader + unified palette, and v2
+clipmap rings for unbounded reach.

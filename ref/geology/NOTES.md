@@ -420,6 +420,56 @@ implicit erosion solve. *Then* voxel-sampling (NOTES §8 step 4). The spike's re
 job — prove the deterministic pipeline works and surface the exact named
 limitation — is done.
 
+## 8c. Current state (2026-06-23) — real-scale emergent pipeline, walkable
+
+Past the toy spike (§8b). The world is now anchored to real dimensions and the
+geology is emergent and defensible end to end, rendered first-person with a
+horizon. The pipeline, all in `vivarium-core` (`voxel.rs` + `geo.rs`),
+deterministic and tested:
+
+```
+  FBM scale-free prior   →   MFD stream-power      →   Davy-Lague deposition   →   slope-aware
+  (placeholder for the       incision (carves          (D = G·Qs/A; grades        detail noise
+   tectonic tier; the        dendritic valleys,        slack outlets, builds      (textures flanks,
+   unbiased prior before     ridges between)           floodplains, no pools)     leaves floors smooth)
+   the real hierarchy)
+```
+
+- **Scale anchor:** 0.5 m voxel (`METERS_PER_VOXEL`); world 8.2 km tall, sea at
+  3 km; erosion tier at 16 m cells over a ~12 km region; render voxels materialize
+  from it. (NOTES §0a.)
+- **Seed = FBM as the scale-free maximum-entropy prior** (Joseph's framing):
+  honest unbiased proto-relief, base wavelength < region so several massifs show;
+  a *labelled placeholder* for the deferred tectonic-uplift tier (the principled
+  source of *where* ranges sit).
+- **MFD routing** (`accumulate_drainage`) dissolved the D8 grid anisotropy → natural
+  dendritic dissection. Incision is the implicit n=1 stream-power solve.
+- **Deposition done right** (`geo::deposit`): Davy & Lague `D = G·Qs/A` — *rates,
+  not a volume-vs-capacity threshold* (that mismatch was a real bug that erased
+  valleys; see history). Emergent: net incision in steep channels, deposition
+  only in slack reaches → graded outlets, valleys intact. G = 0.5, swept by
+  hillshade. **Operator-split** from the implicit incision — a defensible first
+  take; the unconditionally-stable fully-coupled form is implicit Davy-Lague
+  (Yuan et al. 2019), the eventual upgrade (we don't have that PDF — fetch to do
+  it rigorously).
+- **Detail noise is fidelity-respecting** (DESIGN.md invariant): scaled by a
+  per-node roughness from local slope, so flat valley floors stay smooth (no
+  sub-grid pools) and steep flanks get texture.
+- Rendering: see `ref/rendering/NOTES.md` (near-voxel + far-terrain-mesh hybrid v1).
+- World-gen ~6 s (one-time), bit-deterministic, 14 lib tests green.
+
+**Verification lesson (learned the hard way):** low-angle hillshades *over-sell*
+shallow relief (they made an eroded dome look like canyons) and overhead-at-12 km
+*under-sells* (real ridges look tiny). Verify with overhead light + true-metre
+cross-sections + **in-engine first-person** — that last is the only honest verdict.
+
+**Open / next (none blocking):**
+- Implicit Davy-Lague (Yuan 2019) for unconditional stability + full E/D coupling.
+- The **tectonic-uplift tier** — the principled replacement for the FBM prior
+  (Euler-pole plates → uplift field → *where* ranges are). Still deferred (§0a).
+- Climate tier (wind-march orographic → precip → biomes; §4), not yet built.
+- Conservative-refinement / detail→abstract invariant (§7) still open.
+
 ## 9. Source ledger → relata
 
 Spine seeded into `relata` this session (verified critical-path): galin-2019,

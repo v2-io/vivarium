@@ -5,6 +5,16 @@
 > **RATIFIED by Joseph 2026-06-23**: the staged hybrid below, starting at v1
 > (self-built far heightfield backdrop), with the heightfield-far trade accepted
 > for v1/v2. Sources + verification flags inline.
+>
+> **v1 IMPLEMENTED (2026-06-23).** `spikes/bevy-voxel` now renders near full-detail
+> diggable voxels (`bevy_voxel_world`, spawn radius 16 ≈ 256 m) plus a self-built
+> coarse far-terrain mesh (`spawn_far_terrain`) sampled from `surface_height` —
+> the whole landform to the horizon, in-world first-person, deterministic, no new
+> dependency. Walkable; you stand in an eroded valley and see the massif + coast
+> behind it. **Open:** the near/far seam (blocky voxels vs smooth far mesh), a
+> stepped/blocky far-shader + unified palette, and v2 (camera-centred clipmap
+> rings) for unbounded/planet reach. v3 (volumetric far) only if distant
+> overhangs ever matter.
 
 ## The problem, and why it is a *renderer* problem, not an *approach* problem
 
