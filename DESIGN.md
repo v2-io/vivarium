@@ -223,3 +223,28 @@ Bevy (Rust), for reasons specific to *this* project's axes, not graphics:
   built), the detail→abstract edit-propagation problem, and art. The Bevy view
   is not yet at visual parity with the dialed-in Godot look (palette + overcast
   fog were Godot-side polish not yet ported).
+
+## Geology & real-scale anchor (2026-06-23)
+
+The world is now anchored to **real dimensions** — finest voxel = **0.5 m** — and
+shaped by a **geological abstraction tier**: tectonics/erosion/climate simulated
+slowly at world-creation, emitting fields the local Cartesian voxel world is
+materialized from. The fluvial-erosion tier runs at ~16 m cells (the one
+research-earned resolution); render voxels add sub-grid detail noise. Full survey,
+the scale ladder, and the open multi-domain-granularity question:
+[`ref/geology/NOTES.md`](ref/geology/NOTES.md).
+
+## Rendering to the horizon — the LOD architecture (decided 2026-06-23)
+
+At 0.5 m voxels, `bevy_voxel_world` (fixed 32-voxel chunks, mesh-decimation-only
+LOD) **cannot reach a kilometre horizon** — verified in its source; this is the
+wall the spike hit. Decision: keep Bevy, but render the distance with **our own
+view over our own field** (the core/view wall, used in earnest). Staged —
+**v1**: a self-built coarse far-terrain *mesh* sampled from `surface_height`
+(in-world 3D backdrop, not a map), behind the near diggable voxels; **v2**:
+geometry clipmaps for unbounded/planet reach; **v3**: volumetric far (octree LOD
+or SVDAG raymarch) only if distant overhangs/caves prove to matter. The far field
+is a **heightfield** (accepted trade — near stays fully volumetric/diggable);
+because the core is a pure function we *regenerate* the far field deterministically
+rather than caching it. Full decision record, options, and verification:
+[`ref/rendering/NOTES.md`](ref/rendering/NOTES.md).
