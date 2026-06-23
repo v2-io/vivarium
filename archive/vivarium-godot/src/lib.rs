@@ -140,6 +140,20 @@ impl VivariumWorld {
         let w = self.world.read().unwrap();
         let vol = &w.volume;
         let stride = 1 << lod.max(0);
+        // Vertical half-cell offset: the engine renders each sample as a cube
+        // extending *upward* by `stride` from its min corner, so corner-sampling
+        // (`y*stride`) puts the topmost solid cube's top face up to `stride-1`
+        // voxels ABOVE the true surface — a systematic upward bias that grows with
+        // LOD and shows as bright "bulge" steps where a coarse LOD meets a finer one
+        // (the LOD seams). Sampling the cube's vertical CENTER (`+ stride/2`) makes
+        // the solid/air threshold straddle the surface, cutting the worst-case error
+        // from `stride` to `±stride/2` and removing the one-directional bulge.
+        // Horizontal is left at the corner on purpose: coarse and fine LODs then
+        // still sample the same columns at shared boundaries (centering x/z would
+        // trade the vertical seam for a half-cell horizontal one). LOD0 (stride 1)
+        // is unaffected — `stride/2 == 0`. Monotonic-depth solidity is preserved, so
+        // no false holes.
+        let y_off = stride >> 1;
         let mut out = PackedByteArray::new();
         out.resize((size.x * size.y * size.z) as usize);
         let slice = out.as_mut_slice();
@@ -149,7 +163,7 @@ impl VivariumWorld {
                 for x in 0..size.x {
                     let v = vol.voxel(
                         origin.x + x * stride,
-                        origin.y + y * stride,
+                        origin.y + y * stride + y_off,
                         origin.z + z * stride,
                     );
                     slice[i] = v.0 as u8;
