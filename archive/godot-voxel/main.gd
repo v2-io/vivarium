@@ -70,6 +70,29 @@ var _view_distance: int = 0
 
 var _trace_file: FileAccess
 
+# --- Telemetry & repeatable benchmark (2026-06-23) -------------------------------
+# We spent a long stretch judging LOD/streaming by feel and could not tell a
+# regression from "noticing an old artifact" from "an actual improvement". The cure
+# is measurement: a live readout while flying, and a *scripted, identical* flight so
+# two configs produce comparable numbers instead of impressions. Engaged by env:
+#   VIVARIUM_TELEMETRY=1  on-screen live readout (also on in bench mode)
+#   VIVARIUM_BENCH=1      fly a fixed deterministic path, log CSV, quit
+#   VIVARIUM_BENCH_SECS   bench duration (default 30)
+# CSV lands at user://telemetry.csv (path printed at exit). One row per sample.
+const TELEMETRY_HZ := 2.0           # samples/sec (CSV + label refresh)
+var _telemetry_on := false
+var _bench := false
+var _bench_secs := 30.0
+var _bench_t := 0.0                 # elapsed *path* time (sum of delta) — frame-rate
+                                    # independent, so both runs visit the same
+                                    # viewpoint at the same timestamp.
+var _sample_accum := 0.0
+var _worst_ms := 0.0                # worst frame in the current sample window
+var _csv: FileAccess
+var _label: Label
+var _bench_eye0: Vector3            # path is defined relative to the start pose
+var _bench_yaw0: float
+
 # Flushed-per-line trace to user://trace.log, so progress is visible even when
 # the process is killed (stdout is block-buffered off a tty and lost on SIGKILL).
 func _trace(msg: String) -> void:
@@ -266,6 +289,26 @@ func _ready() -> void:
 	# streaming threads a few seconds, then screenshot and quit — used to verify
 	# renders without a human watching.
 	_trace("scene built, viewer.view_distance=%d" % viewer.view_distance)
+
+	# Telemetry / benchmark wiring (see the block by the member vars).
+	_bench = OS.get_environment("VIVARIUM_BENCH") == "1"
+	_telemetry_on = _bench or OS.get_environment("VIVARIUM_TELEMETRY") == "1"
+	if _bench:
+		var secs_env := OS.get_environment("VIVARIUM_BENCH_SECS")
+		if secs_env != "":
+			_bench_secs = float(secs_env)
+		# The scripted path is defined relative to the camera's start pose, so it
+		# flies the same shape regardless of where we spawn.
+		_bench_eye0 = cam.position
+		_bench_yaw0 = cam.rotation.y
+		cam.set_process(false)        # take the controls; drive the camera ourselves
+		cam.set_process_input(false)
+		_setup_csv()
+	elif _telemetry_on:
+		_setup_csv()
+	if _telemetry_on:
+		_setup_label()
+
 	if OS.get_environment("VIVARIUM_AUTOSHOT") != "":
 		# A whole-landmass view distance has a *lot* to stream initially; give the
 		# mesher threads generous time before the vista shot. Env-tunable so a
@@ -275,6 +318,8 @@ func _ready() -> void:
 		if settle_env != "":
 			settle = float(settle_env)
 		get_tree().create_timer(settle).timeout.connect(_capture_and_quit)
+	elif _bench:
+		print("[vivarium] BENCH: flying a fixed %ds path; telemetry -> user://telemetry.csv" % int(_bench_secs))
 	else:
 		print("[vivarium] interactive (detail %d): WASD move, mouse look, " % detail,
 			"Space/Shift up/down, Ctrl=fast, LMB dig, RMB place, Esc frees mouse")
@@ -322,4 +367,111 @@ func _capture_and_quit() -> void:
 	var path := "user://terrain_shot.png"
 	img.save_png(path)
 	print("[vivarium] SHOT_PATH=", ProjectSettings.globalize_path(path))
+	get_tree().quit()
+
+# --- Telemetry & benchmark ------------------------------------------------------
+
+func _process(delta: float) -> void:
+	if not _telemetry_on:
+		return
+	# Worst frame in the current window — the smoothed FPS hides the hitches that
+	# are the actual complaint, so we surface the worst separately.
+	var ms := delta * 1000.0
+	if ms > _worst_ms:
+		_worst_ms = ms
+
+	if _bench:
+		_bench_t += delta
+		_drive_bench_camera(_bench_t, delta)
+
+	_sample_accum += delta
+	if _sample_accum >= 1.0 / TELEMETRY_HZ:
+		_emit_sample(_bench_t if _bench else Time.get_ticks_msec() / 1000.0)
+		_sample_accum = 0.0
+		_worst_ms = 0.0
+
+	if _bench and _bench_t >= _bench_secs:
+		_finish_bench()
+
+# Deterministic stress path: cruise straight, hard 180° whip-around (the regime
+# that exposed the LOD churn), then cruise the new heading. Yaw is a pure function
+# of path-time; position integrates a constant forward speed and follows the
+# ground. Identical every run, so two configs are directly comparable.
+func _drive_bench_camera(t: float, delta: float) -> void:
+	const V := 300.0          # voxels/sec cruise (~150 m/s at detail 2)
+	const WHIP_START := 10.0
+	const WHIP_DUR := 3.0
+	var yaw := _bench_yaw0
+	if t > WHIP_START:
+		var w: float = clampf((t - WHIP_START) / WHIP_DUR, 0.0, 1.0)
+		yaw = _bench_yaw0 + PI * w        # smooth 180° turn over WHIP_DUR seconds
+	cam.rotation = Vector3(-0.15, yaw, 0.0)   # slight downward pitch, level roll
+	var fwd := Vector3(-sin(yaw), 0.0, -cos(yaw))   # Godot forward is -Z at yaw 0
+	cam.position += fwd * V * delta
+	# Terrain-follow: hold a fixed eye height above the moving ground.
+	var gh: int = world.surface_height(int(cam.position.x), int(cam.position.z))
+	if gh > 0:
+		cam.position.y = gh + 40.0
+
+func _emit_sample(t: float) -> void:
+	var fps := Engine.get_frames_per_second()
+	var draw := int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
+	var vmem_mb := Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0
+	var st: Dictionary = terrain.get_statistics()
+	var q_tot := 0
+	var q_mesh := 0
+	var q_gen := 0
+	var e = Engine.get_singleton("VoxelEngine")
+	if e != null:
+		var es: Dictionary = e.get_stats()
+		if es.has("tasks"):
+			q_mesh = int(es["tasks"].get("meshing", 0))
+			q_gen = int(es["tasks"].get("generation", 0))
+		if es.has("thread_pools") and es["thread_pools"].has("general"):
+			q_tot = int(es["thread_pools"]["general"].get("tasks", 0))
+	var mesh_blocks: int = terrain.debug_get_mesh_block_count()
+	var data_blocks: int = terrain.debug_get_data_block_count()
+	var dropped := int(st.get("dropped_block_meshs", 0))
+	var blocked := int(st.get("blocked_lods", 0))
+
+	if _csv != null:
+		_csv.store_line("%.2f,%.1f,%.1f,%d,%d,%d,%d,%d,%d,%d,%d,%.1f" % [
+			t, fps, _worst_ms, draw, mesh_blocks, data_blocks,
+			q_tot, q_mesh, q_gen, dropped, blocked, vmem_mb])
+		_csv.flush()
+	if _label != null:
+		_label.text = ("t=%5.1fs   fps=%4.1f   worst=%5.1f ms\n" +
+			"mesh blocks=%d   data blocks=%d\n" +
+			"queue  total=%d  mesh=%d  gen=%d\n" +
+			"dropped mesh=%d   blocked lod=%d\n" +
+			"draw calls=%d   vmem=%.0f MB") % [
+			t, fps, _worst_ms, mesh_blocks, data_blocks,
+			q_tot, q_mesh, q_gen, dropped, blocked, draw, vmem_mb]
+
+func _setup_csv() -> void:
+	_csv = FileAccess.open("user://telemetry.csv", FileAccess.WRITE)
+	if _csv != null:
+		_csv.store_line("t,fps,worst_ms,draw_calls,mesh_blocks,data_blocks,q_total,q_mesh,q_gen,dropped_mesh,blocked_lod,vmem_mb")
+		_csv.flush()
+
+func _setup_label() -> void:
+	_label = Label.new()
+	_label.position = Vector2(12, 12)
+	# White text with a dark outline so it reads over both bright terrain and sky.
+	_label.add_theme_color_override("font_color", Color.WHITE)
+	_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	_label.add_theme_constant_override("outline_size", 6)
+	add_child(_label)
+
+var _bench_done := false
+func _finish_bench() -> void:
+	if _bench_done:
+		return
+	_bench_done = true
+	if _csv != null:
+		_csv.flush()
+		_csv.close()
+	var p := ProjectSettings.globalize_path("user://telemetry.csv")
+	print("[vivarium] BENCH done (%.0fs). CSV=%s" % [_bench_secs, p])
+	_trace("bench done -> " + p)
 	get_tree().quit()
