@@ -13,6 +13,82 @@
 
 ---
 
+## 0a. Scale & dimensions — the anchor (DECIDED 2026-06-22: 0.5 m voxel)
+
+The first thing that must be pinned, because everything else is derived from it
+and the first erosion spike went wrong precisely by skipping it: **what is a
+voxel in metres?** The codebase had "world units" and a `detail` knob but *no
+metres* — so the spike eroded what was effectively a ~700 m tabletop at ~2 m
+cells and produced ankle-high "mountains." Real geology lives at km relief over
+tens-to-hundreds of km. The fix is a real-dimension anchor + a tiered hierarchy
+whose resolutions are *orders of magnitude* apart, not the 4× the `detail` knob
+gave.
+
+**Anchor: finest voxel = 0.5 m** (Joseph, 2026-06-22). A person is ~3–4 voxels;
+materials/items/agent-bodies have real extent; tractable near-field cost.
+
+**Derived vertical layout** (proposed, concrete — adjust freely):
+- World vertical extent ≈ **16,384 voxels ≈ 8.2 km** (pure-function world, no
+  array, so a tall world is free; the mesher only materializes near the surface).
+- Sea level ≈ 6,000 voxels (≈3 km up from the bedrock floor), leaving ~5 km of
+  possible peak above sea (10,000 voxels) and ~3 km below for ocean + crust
+  (caves, strata, ore).
+- A 3 km mountain = 6,000 voxels tall; an Alps/Rockies-class range reads as a
+  genuine wall, not a bump.
+
+**The tier ladder** (each resolution from a research finding, not invented):
+
+| Tier | Cell | Domain | ≈cells across | Decouple vs voxel | Produces |
+|---|---|---|---|---|---|
+| Tectonics / planet | ~3 km | planet (small world ~600 km radius, ~3,770 km circ.) | ~1,250 | 6,000× | Euler-pole plates → uplift field, macro-climate |
+| Fluvial erosion (regional) | ~16 m (= 32 voxels) | region tile ~100 km | ~6,250 (~39 M nodes) | 32× | drainage networks, valleys, ridgelines |
+| Render voxel (local) | **0.5 m** | near-agent patch, sub-km–km | thousands | 1× | walk/dig surface; materialized from above + detail noise |
+
+- 16 m erosion cells come straight from CAESAR-Lisflood (§2): first-order
+  drainage is lost beyond ~22–24 m. ~39 M nodes/region is within FastScape's
+  stated 10⁸-node reach (Braun & Willett) — a feasible **offline, world-creation**
+  sim, run per-region lazily and kept consistent with the tectonic uplift it
+  sits in.
+- voxel→planet spans **~7.5 orders of magnitude** (0.5 m to 3.77 M m). That span
+  *is* the world-LOD problem DESIGN.md names; it is not optional polish.
+
+**How much of each tier to build (the mandate's real question):**
+- *Tectonics* — a coarse, plausible Euler-pole plate sim → uplift field. Cheap,
+  one-time, defensible. Build modestly.
+- *Erosion* — FastScape stream-power at ~16 m, per-region, with D∞ routing. The
+  validated core (the spike proved determinism); this is the
+  recognizable-mountains-and-drainage engine. Build properly.
+- *Climate* — wind-march orographic → precip → biomes, coupled to elevation.
+  Cheap, emergent. After erosion.
+- *Voxel materialization* — sample the regional field + sub-grid detail noise;
+  the conservative-refinement gap (§7) is real but a simple-noise start is fine.
+
+**Provisionality — which numbers are earned, which are placeholders (read this).**
+Only the **erosion tier's ~16 m cell is research-derived**: it is the *critical
+granularity* for the fluvial models we actually studied (CAESAR-Lisflood §2 —
+first-order drainage lost beyond ~22–24 m). Treat that as a firm constraint *for
+stream-power erosion*. Everything else — the **0.5 m render voxel**, the 8.2 km
+vertical extent, the ~3 km tectonic cell, the very *number and placement* of
+tiers — is anchored by erosion + plausibility alone, and we have **not** yet
+researched the other game dynamics that will have their own critical scales:
+fluids/CFD, fire/temperature diffusion, structural/material simulation,
+combat/projectiles, item and body granularity, and the ASF agent embodiment
+itself. Any of those could demand a *finer* render voxel, a *different* sampling,
+or an *additional* hierarchy level the erosion lens can't see. So: the erosion
+granularity is settled; the rest of the ladder is the best current hypothesis and
+is expected to be revised as each new dynamic is studied. (Flagged for the
+session wrap-up: state the erosion-critical granularity as established, and state
+the multi-domain granularity question as explicitly open.)
+
+**Reconciliation: the existing code is toy-scale and must be re-anchored.**
+`voxel.rs` constants (`WORLD_HEIGHT = 128`, `SEA_LEVEL = 24`, FBM `AMPLITUDE 22`)
+and `Volume::eroded` (1-unit erosion cells, ~700 m domain) predate this anchor.
+The *seam* is right — coarse field → bilinear → voxels is exactly
+abstraction→detail — but the magnitudes are ~2–3 orders off. Re-anchoring (define
+`METERS_PER_VOXEL = 0.5`, set world height/sea in metres, move erosion to ~16 m
+cells over a ~100 km region with km-relief) is the next implementation step, not
+another parameter tweak.
+
 ## 0. The headline: six independent sweeps converged on one pipeline
 
 Five research agents (tectonics, erosion, climate, voxel-reduction, PCG-since-
