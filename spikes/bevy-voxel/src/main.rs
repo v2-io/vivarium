@@ -41,9 +41,25 @@ struct VivWorld {
     volume: Arc<Volume>,
 }
 
+/// World-unit half-extent of the eroded landmass. Comfortably exceeds the view
+/// distance (fog ends at ~110 world units) so the open-sea edge is never in
+/// frame; beyond it the world is ocean.
+const EROSION_HALF_EXTENT: i32 = 176;
+/// Erosion epochs run once at startup. Trades a second or two of world-creation
+/// time for landscape maturity (this is the slow abstraction tier).
+const EROSION_EPOCHS: u32 = 45;
+
 impl Default for VivWorld {
     fn default() -> Self {
-        Self { volume: Arc::new(Volume::with_detail(SEED, DETAIL)) }
+        // The slow tier: shape the terrain by uplift + stream-power erosion before
+        // the first frame. Deterministic from SEED. Logged because it is the one
+        // visibly non-instant step at launch.
+        eprintln!(
+            "vivarium: generating eroded world (seed {SEED:#x}, {EROSION_EPOCHS} epochs)…"
+        );
+        let volume = Volume::eroded(SEED, DETAIL, EROSION_HALF_EXTENT, EROSION_EPOCHS);
+        eprintln!("vivarium: world ready.");
+        Self { volume: Arc::new(volume) }
     }
 }
 
@@ -141,12 +157,13 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands) {
+fn setup(mut commands: Commands, world: Res<VivWorld>) {
     // Fresh diagnostics log per run.
     let _ = std::fs::write("/tmp/bevy_diag.log", "");
 
-    // Spawn the camera on the surface column above the origin.
-    let surface = Volume::with_detail(SEED, DETAIL).surface_height(0, 0).unwrap_or(120);
+    // Spawn the camera on the surface column above the origin — read from the
+    // already-built eroded world, not a fresh one (erosion is paid for once).
+    let surface = world.volume.surface_height(0, 0).unwrap_or(120);
     let eye = Vec3::new(40.0, surface as f32 + 30.0, 40.0);
     let look = Vec3::new(0.0, surface as f32, 0.0);
 
