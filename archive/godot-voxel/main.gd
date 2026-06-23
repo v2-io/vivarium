@@ -28,25 +28,33 @@ const PALETTE := {
 # How far (in *physical* world units) terrain streams around the camera. Voxel
 # view distance is this × detail, so detail is what makes this expensive — the
 # whole point of the resolution sweep.
-# LOD config for VoxelLodTerrain. lod_distance is how far full-detail LOD0
-# reaches from the viewer; each coarser level reaches twice as far again. With
-# LOD the view distance can be large because far terrain is cheap (coarse).
-# Geology-scale LOD, pushed for *maximum view distance* (Joseph 2026-06-23: first
-# see the real landscape shape across the whole landmass; FPS/load can be dismal).
-# The eroded world is ~24,000 voxels (12 km) across. VoxelLodTerrain reach is
-# roughly lod_distance × 2^(lod_count-1); the coarsest voxel is 2^(lod_count-1)
-# voxels, so for a given reach a *larger* lod_distance with *fewer* levels keeps
-# distant terrain finer (less of the giant-block stepping). The open question this
-# revival tests: how far does Godot's native octree reach before it falls over —
-# where bevy_voxel_world needed a separate backdrop mesh (spawn_far_terrain).
+# LOD config for VoxelLodTerrain. The octree fills a sphere of radius
+# `view_distance` around the viewer; `lod_distance` is the radius kept at FULL
+# detail (LOD0), and each coarser level roughly doubles the reach again, so total
+# reach ≈ lod_distance × 2^(lod_count-1).
 #
-# All three are env-overridable so the reach can be swept without editing the file
-# (GDScript reloads instantly anyway, but env keeps runs reproducible/logged):
-#   VIVARIUM_VIEWCAP    view distance in voxels   (default 32768 → spans + margin)
-#   VIVARIUM_LOD_DIST   LOD0 full-detail reach    (default 1024)
-#   VIVARIUM_LOD_COUNT  octree levels             (default 7)
-const LOD_COUNT_DEFAULT := 7
-const LOD_DISTANCE_DEFAULT := 1024.0
+# CORRECTION (2026-06-23): an earlier pass cranked lod_distance to 1024 to "see
+# far". That was the wrong lever — per zylann's docs you extend the view with more
+# LOD *levels*, keeping lod_distance modest. A huge lod_distance forces an enormous
+# full-detail shell, which (a) swamps the mesh budget and (b) makes each block
+# cascade through many coarse→fine remeshes chasing an oversized target — the
+# incoherent "remesh the same area at one LOD then immediately another while
+# neighbours wait" churn. So: modest lod_distance, more lod_count for the SAME
+# 32 768-voxel reach (128 × 2^8 = 32 768). Bigger full-detail near-shell costs more
+# but holds detail farther — raise VIVARIUM_LOD_DIST (e.g. 256) if near-distance
+# terrain feels too coarse; that's the detail↔cost dial.
+#
+# Caveat this revival exposed: the octree loads SPHERICALLY by distance with no
+# frustum/occlusion culling — it meshes chunks behind you and behind mountains as
+# eagerly as the one in view. A smaller view_distance is the only lever for that
+# from the public API. (A real data point for the engine comparison.)
+#
+# All env-overridable so the reach can be swept without editing the file:
+#   VIVARIUM_VIEWCAP    view distance in voxels   (default 32768 → spans the land)
+#   VIVARIUM_LOD_DIST   LOD0 full-detail radius   (default 128)
+#   VIVARIUM_LOD_COUNT  octree levels             (default 9 → reaches the view cap)
+const LOD_COUNT_DEFAULT := 9
+const LOD_DISTANCE_DEFAULT := 128.0
 const VIEW_DISTANCE_DEFAULT := 32768
 
 var world: Object     # VivariumWorld (Rust bridge)
