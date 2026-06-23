@@ -13,6 +13,13 @@ config/name="vivarium — godot voxel spike"
 run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.7")
 
+[display]
+
+; Fixed window size so verification screenshots are consistent and comparable
+; with the Bevy spike.
+window/size/viewport_width=1152
+window/size/viewport_height=648
+
 [debug]
 
 settings/stdout/print_fps=false

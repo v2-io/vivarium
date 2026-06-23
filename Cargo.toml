@@ -9,7 +9,7 @@
 # wrong.
 [workspace]
 resolver = "2"
-members = ["crates/vivarium-core", "crates/vivarium-app", "crates/vivarium-godot"]
+members = ["crates/vivarium-core", "crates/vivarium-app", "crates/vivarium-godot", "spikes/bevy-voxel"]
 
 [workspace.package]
 edition = "2021"

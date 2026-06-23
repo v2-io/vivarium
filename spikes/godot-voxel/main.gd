@@ -15,12 +15,14 @@ extends Node3D
 
 # vivarium material id -> colour. Index must match vivarium_core::voxel::Voxel.
 # Air (0) is transparent so the cubes mesher leaves it empty.
+# Muted, earthy palette — desaturated so the terrain reads as natural rock/soil
+# rather than cartoon-bright, and so the grass/dirt contour banding is subtler.
 const PALETTE := {
 	0: Color(0, 0, 0, 0),          # AIR
-	1: Color(0.50, 0.50, 0.52),    # STONE
-	2: Color(0.55, 0.40, 0.25),    # DIRT
-	3: Color(0.32, 0.70, 0.27),    # GRASS
-	4: Color(0.20, 0.45, 0.85),    # WATER
+	1: Color(0.52, 0.51, 0.50),    # STONE
+	2: Color(0.46, 0.39, 0.31),    # DIRT
+	3: Color(0.44, 0.52, 0.36),    # GRASS (sage/olive)
+	4: Color(0.40, 0.52, 0.60),    # WATER
 }
 
 # How far (in *physical* world units) terrain streams around the camera. Voxel
@@ -53,6 +55,9 @@ func _trace(msg: String) -> void:
 
 func _ready() -> void:
 	_trace("ready: start")
+	# Fixed window/viewport size so screenshots are consistent and comparable
+	# with the Bevy spike (the project.godot setting wasn't taking reliably).
+	get_window().size = Vector2i(1152, 648)
 	world = ClassDB.instantiate("VivariumWorld")
 	world.name = "VivariumWorld"
 	add_child(world)
@@ -114,11 +119,13 @@ func _ready() -> void:
 	viewer.view_distance = _view_distance
 	cam.add_child(viewer)
 
-	# Overcast: soft, dim, slightly cool key light so nothing casts hard shadows.
+	# Soft overcast key light. Enough energy that block faces shade by their
+	# orientation (top vs side vs angled) — the face-to-face contrast that gives
+	# voxel terrain form — but no hard shadows, keeping the diffuse overcast mood.
 	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-55, -45, 0)
-	sun.light_energy = 0.6
-	sun.light_color = Color(0.95, 0.96, 1.0)
+	sun.rotation_degrees = Vector3(-50, -40, 0)
+	sun.light_energy = 1.4
+	sun.light_color = Color(0.96, 0.97, 1.0)
 	add_child(sun)
 
 	var we := WorldEnvironment.new()
@@ -134,7 +141,7 @@ func _ready() -> void:
 	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color(0.86, 0.88, 0.92)
-	env.ambient_light_energy = 0.7
+	env.ambient_light_energy = 0.45
 
 	# Depth fog: opacity rises linearly with distance (FOG_MODE_DEPTH, curve 1.0),
 	# tinted to the overcast sky. Pulled in *close* — fully grey by ~40 units of
@@ -149,6 +156,16 @@ func _ready() -> void:
 	env.fog_depth_begin = float(14 * detail)
 	env.fog_depth_end = float(90 * detail)   # fully sky-coloured by here -> no horizon
 	env.fog_depth_curve = 1.0         # linear: opacity ∝ distance
+
+	# Screen-space ambient occlusion: darkens the creases between blocks, which
+	# is the depth cue that makes voxel terrain read as sculpted rather than flat
+	# (under overcast/diffuse light, AO does the form-giving a sun would). Radius
+	# is in world units (= voxels), tuned to block-scale crevices.
+	env.ssao_enabled = true
+	env.ssao_radius = 2.0
+	env.ssao_intensity = 5.0
+	env.ssao_power = 1.5
+	env.ssao_detail = 0.5
 	we.environment = env
 	add_child(we)
 
@@ -186,12 +203,11 @@ func _carve_test() -> void:
 
 func _capture_and_quit() -> void:
 	_trace("capture: start")
-	# Low, near-ground camera looking forward, so the near terrain emerges from
-	# the fog and everything beyond dissolves into the overcast murk. All in
-	# voxel/world units (1:1).
+	# Overhead vista matching the Bevy spike's framing, close enough that block
+	# self-shadowing (SSAO) reads. All in voxel/world units (1:1).
 	var sh: int = world.surface_height(0, 0)
-	cam.position = Vector3(0, sh + 5 * detail, -26 * detail)
-	cam.look_at(Vector3(0, sh + 2 * detail, 60 * detail), Vector3.UP)
+	cam.position = Vector3(40, sh + 30, 40)
+	cam.look_at(Vector3(0, sh, 0), Vector3.UP)
 	_carve_test()
 	_trace("carve done; fps=%.1f, view_distance=%d voxels (%d physical), detail=%d"
 		% [Engine.get_frames_per_second(), _view_distance, _view_distance / detail, detail])

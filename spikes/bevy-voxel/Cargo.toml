@@ -1,0 +1,19 @@
+# vivarium-bevy-voxel — the Bevy half of the engine spike.
+#
+# Mirror of spikes/godot-voxel: the same deterministic vivarium-core world,
+# rendered through bevy_voxel_world instead of godot_voxel, so the two can be
+# compared on the same terrain. Like every view, it depends on the core but the
+# core never depends on it.
+[package]
+name = "vivarium-bevy-voxel"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+bevy = "0.18"
+# bevy_voxel_world 0.16 targets Bevy 0.18. Provides chunked meshing, streaming,
+# LOD, raycasting, and a custom voxel-source delegate — the Bevy analogue of the
+# godot_voxel addon.
+bevy_voxel_world = "0.16"
+vivarium-core = { path = "../../crates/vivarium-core" }
