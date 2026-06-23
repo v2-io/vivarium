@@ -12,6 +12,7 @@
 
 use std::sync::Arc;
 
+use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
 use bevy::ecs::message::MessageWriter;
 use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::pbr::{DistanceFog, FogFalloff};
@@ -50,8 +51,12 @@ impl VoxelWorldConfig for VivWorld {
     type MaterialIndex = u8;
     type ChunkUserBundle = ();
 
+    // Conservative spawn radius. FINDING: 32 loaded ~40k chunk-entities while
+    // flying and caused worsening stutter (see /tmp/bevy_diag.log analysis); 16
+    // (~Godot's effective view) keeps the working set an order of magnitude
+    // smaller, and distance fog hides the edge.
     fn spawning_distance(&self) -> u32 {
-        32
+        16
     }
 
     fn min_despawn_distance(&self) -> u32 {
@@ -107,12 +112,13 @@ impl VoxelWorldConfig for VivWorld {
     ) -> LodLevel {
         let camera_chunk = (camera_position / CHUNK_SIZE_F).floor();
         let distance = chunk_position.as_vec3().distance(camera_chunk);
-        // LOD value doubles as the sample stride.
-        if distance < 8.0 {
+        // LOD value doubles as the sample stride. Tightened so only the nearest
+        // chunks are full-res and the rest coarsen fast — far fewer fine meshes.
+        if distance < 4.0 {
             1
-        } else if distance < 16.0 {
+        } else if distance < 8.0 {
             2
-        } else if distance < 28.0 {
+        } else if distance < 12.0 {
             4
         } else {
             8
@@ -127,14 +133,18 @@ impl VoxelWorldConfig for VivWorld {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .insert_resource(ClearColor(SKY))
         .add_plugins(VoxelWorldPlugin::with_config(VivWorld::default()))
         .add_systems(Startup, setup)
-        .add_systems(Update, (fly_camera, edit_voxels, maybe_screenshot))
+        .add_systems(Update, (fly_camera, edit_voxels, log_diagnostics, maybe_screenshot))
         .run();
 }
 
 fn setup(mut commands: Commands) {
+    // Fresh diagnostics log per run.
+    let _ = std::fs::write("/tmp/bevy_diag.log", "");
+
     // Spawn the camera on the surface column above the origin.
     let surface = Volume::with_detail(SEED, DETAIL).surface_height(0, 0).unwrap_or(120);
     let eye = Vec3::new(40.0, surface as f32 + 30.0, 40.0);
@@ -163,6 +173,46 @@ fn setup(mut commands: Commands) {
         brightness: 600.0,
         affects_lightmapped_meshes: true,
     });
+}
+
+/// Once a second, log frame health + total entity count to /tmp/bevy_diag.log
+/// (and stdout). The entity count is the key signal: if it climbs without bound
+/// as you fly, chunks/meshes are accumulating (despawn not keeping up) — which
+/// would explain stutter that worsens over time. `worst_frame` captures the
+/// nastiest hitch in each interval, which the smoothed FPS hides.
+fn log_diagnostics(
+    time: Res<Time>,
+    diags: Res<DiagnosticsStore>,
+    entities: Query<()>,
+    mut last: Local<f32>,
+    mut worst_dt: Local<f32>,
+) {
+    let dt = time.delta_secs();
+    if dt > *worst_dt {
+        *worst_dt = dt;
+    }
+    let t = time.elapsed_secs();
+    if t - *last < 1.0 {
+        return;
+    }
+    *last = t;
+    let fps = diags
+        .get(&FrameTimeDiagnosticsPlugin::FPS)
+        .and_then(|d| d.smoothed())
+        .unwrap_or(0.0);
+    let line = format!(
+        "{:6.1}s  fps={:5.1}  worst_frame={:6.1}ms  entities={}\n",
+        t,
+        fps,
+        *worst_dt * 1000.0,
+        entities.iter().count(),
+    );
+    *worst_dt = 0.0;
+    print!("[diag] {line}");
+    use std::io::Write;
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("/tmp/bevy_diag.log") {
+        let _ = f.write_all(line.as_bytes());
+    }
 }
 
 /// First-person fly controller: mouse-look + WASD (Space/Shift up-down, Ctrl
@@ -220,7 +270,8 @@ fn fly_camera(
         dir -= Vec3::Y;
     }
     if dir != Vec3::ZERO {
-        let speed = if keys.pressed(KeyCode::ControlLeft) { 160.0 } else { 50.0 };
+        // Matched to the Godot spike (MOVE_SPEED 24 × detail 4 = 96, ×3 fast).
+        let speed = if keys.pressed(KeyCode::ControlLeft) { 288.0 } else { 96.0 };
         transform.translation += dir.normalize() * speed * time.delta_secs();
     }
 }
