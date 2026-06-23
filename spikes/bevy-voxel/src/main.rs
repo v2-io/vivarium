@@ -48,9 +48,10 @@ struct VivWorld {
 /// (Kept modest so startup stays ~2–3 s; a bigger world wants the O(n) erosion
 /// stack — see `geo`.)
 const EROSION_REGION_HALF_M: i32 = 6_000;
-/// Erosion epochs run once at startup. Trades a couple of seconds of
-/// world-creation time for landscape maturity (the slow abstraction tier).
-const EROSION_EPOCHS: u32 = 30;
+/// Erosion epochs run once at startup. Enough maturity for the dendritic
+/// ridge-and-valley network to develop (MFD routing); trades a few seconds of
+/// world-creation time for it (the slow abstraction tier).
+const EROSION_EPOCHS: u32 = 70;
 
 impl Default for VivWorld {
     fn default() -> Self {

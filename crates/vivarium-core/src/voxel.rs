@@ -232,12 +232,15 @@ impl Volume {
             }
         }
 
-        // Gentle erosion at the real cell size, draining to sea level (metres).
+        // Erosion at the real cell size, draining to sea level (metres). Strong
+        // enough — now that MFD routing has dissolved the D8 grid bias — to carve
+        // a real dendritic ridge-and-valley network into the continental relief,
+        // not just a few gashes. (Tuned by hillshade sweep; see ref/geology.)
         let params = crate::geo::ErosionParams {
             nx,
             cell_size: cell,
-            uplift: 1.5,   // m/epoch — a touch of tectonic forcing, not mountain-building
-            k: 0.0009,     // erodibility tuned to carve, not raze, km relief (see sweep)
+            uplift: 2.0, // m/epoch
+            k: 0.02,     // erodibility — dissects with MFD without razing the relief
             m: 0.5,
             max_slope: 1.2, // talus repose ~50° — steep mountain flanks allowed
             epochs,
@@ -351,10 +354,35 @@ impl Volume {
         let d = self.detail as f32;
         let (xm, zm) = (x as f32 / d, z as f32 / d);
         let h_m = match &self.eroded {
-            Some(e) => e.sample(xm, zm),
+            // Macro form from the erosion tier, plus sub-grid detail relief so the
+            // 0.5 m voxels read as real ground, not a staircase quantization of a
+            // smooth ramp (see [`Self::detail_relief`]).
+            Some(e) => e.sample(xm, zm) + self.detail_relief(xm, zm),
             None => self.fbm_height_world(xm, zm),
         };
         (h_m * d).round() as i32
+    }
+
+    /// Sub-erosion-grid relief, in **metres**, added on top of the eroded macro
+    /// field. This is the render-voxel tier of the scale ladder (NOTES §0a): the
+    /// erosion tier resolves the landscape only to ~16 m, so without this a real
+    /// slope materializes as a smooth ramp that *quantizes into terraces* at 0.5 m
+    /// — exactly the artifact a first-person view exposes that a macro hillshade
+    /// hides. A few octaves of fractal roughness at the tens-of-metres scale give
+    /// the surface walkable texture (knolls, gullies, broken ground) and break the
+    /// 16 m grid periodicity.
+    ///
+    /// It is **zero-mean**, so it does not shift the macro elevation — the
+    /// materialized detail stays statistically consistent with the abstraction it
+    /// refines (DESIGN.md's fidelity invariant; a first, simple-noise take on the
+    /// conservative-refinement gap, NOTES §7). Coordinates are offset so this
+    /// stream is decorrelated from the continental FBM.
+    fn detail_relief(&self, xm: f32, zm: f32) -> f32 {
+        const FREQ: f32 = 1.0 / 220.0; // ~220 m base wavelength
+        const AMPLITUDE: f32 = 28.0; // metres of roughness about the macro slope
+        const OCTAVES: u32 = 5; // down to ~14 m features — the erosion-cell scale
+        const OFFSET: f32 = 9173.0; // decorrelate from the macro relief stream
+        self.fbm((xm + OFFSET) * FREQ, (zm + OFFSET) * FREQ, OCTAVES) * AMPLITUDE
     }
 
     /// Continuous terrain height in **metres** (detail-independent) from the raw
@@ -372,6 +400,14 @@ impl Volume {
         const BASE: f32 = 3_200.0; // metres — just above sea level (3 km)
         const OCTAVES: u32 = 6;
         BASE + self.fbm(xu * FREQ, zu * FREQ, OCTAVES) * AMPLITUDE
+    }
+
+    /// The uneroded **continental** relief height in metres at a metre position —
+    /// the macro abstraction *before* erosion and detail noise. Exposed so
+    /// world-creation tools (and erosion-tuning sweeps) can reconstruct the exact
+    /// initial condition `eroded` starts from.
+    pub fn continental_height_m(&self, x_m: f32, z_m: f32) -> f32 {
+        self.fbm_height_world(x_m, z_m)
     }
 
     /// Fractal Brownian motion: sum `octaves` of Perlin noise, each at twice the

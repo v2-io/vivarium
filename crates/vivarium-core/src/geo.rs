@@ -223,7 +223,7 @@ impl Heightfield {
             self.fill_depressions(&outlets);
             let receivers = self.receivers(&outlets);
             let order = self.elevation_order();
-            self.accumulate_drainage(&receivers, &order);
+            self.accumulate_drainage(&order);
             self.incise(params, &receivers, &order);
             self.talus(params);
         }
@@ -383,18 +383,59 @@ impl Heightfield {
         order
     }
 
-    /// Step 4 — drainage area. Each cell starts with its own area; walking the
-    /// order from high to low, every cell pours its accumulated area into its
-    /// receiver. One pass, exact, deterministic.
-    fn accumulate_drainage(&mut self, recv: &[usize], order: &[usize]) {
+    /// Step 4 — drainage area by **multiple-flow-direction** (MFD) accumulation.
+    /// Walking high→low, each cell distributes its accumulated area across *all*
+    /// downslope neighbours, weighted by slopeᵖ. Unlike single-flow-direction
+    /// (D8), which sends all flow to one of 8 compass neighbours and so imprints a
+    /// grid-aligned drainage network (the rib artifact), MFD spreads flow along
+    /// the true gradient, dissolving the axis/diagonal bias into natural dendritic
+    /// dissection. Still O(n) in the elevation order, still fully deterministic
+    /// (fixed neighbour order, fixed processing order).
+    ///
+    /// `incise` still cuts toward the single steepest receiver (the implicit
+    /// stream-power solve needs a tree); MFD only governs the *area* `A` that
+    /// feeds `K·Aᵐ·Sⁿ` — which is what dominates where channels form, so this is
+    /// where breaking the grid bias matters most.
+    fn accumulate_drainage(&mut self, order: &[usize]) {
+        const P: f32 = 1.1; // flow-partition exponent (Quinn et al.); >1 sharpens channels
+        let nx = self.nx;
         let cell_area = self.cell_size * self.cell_size;
         for d in self.drainage.iter_mut() {
             *d = cell_area;
         }
+        // High → low: a cell's full upslope contribution is gathered before it is
+        // processed (everything higher came earlier), then handed downslope.
         for &i in order.iter().rev() {
-            let r = recv[i];
-            if r != i {
-                self.drainage[r] += self.drainage[i];
+            let (x, y) = (i % nx, i / nx);
+            let hi = self.h[i];
+            let mut weights = [0.0f32; 8];
+            let mut total = 0.0f32;
+            for (k, (dx, dy)) in NEIGHBORS.iter().enumerate() {
+                let (nxp, nyp) = (x as i32 + dx, y as i32 + dy);
+                if nxp < 0 || nyp < 0 || nxp >= nx as i32 || nyp >= nx as i32 {
+                    continue;
+                }
+                let j = nyp as usize * nx + nxp as usize;
+                let drop = hi - self.h[j];
+                if drop > 0.0 {
+                    let dist = if *dx != 0 && *dy != 0 {
+                        self.cell_size * std::f32::consts::SQRT_2
+                    } else {
+                        self.cell_size
+                    };
+                    let w = (drop / dist).powf(P);
+                    weights[k] = w;
+                    total += w;
+                }
+            }
+            if total > 0.0 {
+                let amount = self.drainage[i];
+                for (k, (dx, dy)) in NEIGHBORS.iter().enumerate() {
+                    if weights[k] > 0.0 {
+                        let j = (y as i32 + dy) as usize * nx + (x as i32 + dx) as usize;
+                        self.drainage[j] += amount * (weights[k] / total);
+                    }
+                }
             }
         }
     }
