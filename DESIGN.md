@@ -204,13 +204,22 @@ Bevy (Rust), for reasons specific to *this* project's axes, not graphics:
   on existing sprite sheets and keeping the art *pipeline* simple even while the
   art *result* is indulged.
 
-## Where things actually stand (2026-06-20)
+## Where things actually stand (2026-06-22)
 
-- Cargo workspace scaffolded: `vivarium-core` (dependency-free deterministic sim,
-  bit-identical-replay test passing) + `vivarium-app` (thin Bevy 0.18 debug view,
-  agents drawn as gizmo circles tinted by a scalar `need`).
+- `vivarium-core`: a **deterministic 3D voxel world** — `seed + sparse edits` (no
+  materialized array), Perlin/FBM terrain with emergent micro-relief, voxel
+  resolution as a runtime `detail` knob, and **view-resolution decoupled from
+  intrinsic resolution** (LOD by stride-sampling). Still dependency-free;
+  bit-identical replay + edit-replay tested.
+- **Engine resolved → Bevy** (`bevy_voxel_world`), via a head-to-head spike
+  against `godot_voxel` built to feature parity over the same core (terrain, LOD,
+  fog, fly + dig/place). Reasoning + confounds in
+  [`spikes/FINDINGS.md`](spikes/FINDINGS.md). Godot spike archived under
+  `archive/`. Live view: `spikes/bevy-voxel/`.
 - The three early decisions (view-as-peer wall, determinism-as-ontology, shared
-  fidelity invariant) are reflected in the structure; everything else is open and
-  meant to follow curiosity.
-- Not yet built, and intentionally not pre-decided: real world-gen, voxels/LOD,
-  any agent cognition beyond placeholder wandering, the logozoetic interface, art.
+  fidelity invariant) held up under real use and are reflected in the structure.
+- Still ahead: the **ASF agent layer** (the two-layer mind + cognitive-LOD seam —
+  the real bet), the **logozoetic interface** (UDON-based; decided, not yet
+  built), the detail→abstract edit-propagation problem, and art. The Bevy view
+  is not yet at visual parity with the dialed-in Godot look (palette + overcast
+  fog were Godot-side polish not yet ported).
