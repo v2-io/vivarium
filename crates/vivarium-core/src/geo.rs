@@ -128,16 +128,18 @@ pub struct ErosionParams {
     /// than only draining off the grid edge. `None` keeps the from-scratch
     /// behaviour: the outer ring is the only base level.
     pub sea_level: Option<f32>,
-    /// **Sediment transport capacity** coefficient `Kt` (`0` = pure detachment,
-    /// the old behaviour). When `> 0`, the model is no longer purely incisional:
-    /// each reach can carry only `Kt·Aᵐ·S` of sediment, and where that capacity
-    /// drops below the load it has picked up — slack, low-gradient reaches near
-    /// base level — the excess **deposits**. This is what grades lower valleys to
-    /// a smooth, monotonic profile and builds floodplains / alluvial fills, rather
-    /// than leaving the bumpy floors that pool water exactly where rivers should
-    /// run cleanest. (Transport-limited geomorphology; the behaviour CAESAR-Lisflood
-    /// models and the reason real outlets are graded, not chains of pools.)
-    pub transport_k: f32,
+    /// **Deposition efficiency `G`** (dimensionless; `0` = pure detachment, the
+    /// old incision-only behaviour). The Davy & Lague (2009) deposition law: a
+    /// reach lays down sediment at rate `D = G·Qs/A`, where `Qs` is the sediment
+    /// flux it carries and `A` its drainage area (so `Qs/A` is a length-rate and
+    /// `G` is a pure number — the settling/transport efficiency). Because
+    /// deposition scales with the *flux it is already carrying* rather than an
+    /// arbitrary capacity threshold, it concentrates exactly where erosion has
+    /// gone quiet — slack reaches near base level — grading valley floors and
+    /// building floodplains, **without** filling the steep upland channels (which
+    /// keep net-incising). Higher `G` ⇒ more sediment settles before reaching the
+    /// sea. (The mechanism behind CAESAR-Lisflood / FastScape-with-deposition.)
+    pub deposition: f32,
 }
 
 impl Default for ErosionParams {
@@ -152,7 +154,7 @@ impl Default for ErosionParams {
             epochs: 60,
             dt: 1.0,
             sea_level: None,
-            transport_k: 0.0, // pure detachment unless a caller opts into deposition
+            deposition: 0.0, // pure detachment unless a caller opts into deposition
         }
     }
 }
@@ -237,7 +239,7 @@ impl Heightfield {
             self.accumulate_drainage(&order);
             // Snapshot before incision so the deposition pass knows how much
             // sediment each cell produced this epoch.
-            let pre_incision = if params.transport_k > 0.0 {
+            let pre_incision = if params.deposition > 0.0 {
                 Some(self.h.clone())
             } else {
                 None
@@ -493,21 +495,26 @@ impl Heightfield {
         }
     }
 
-    /// Step 5b — **transport-limited deposition.** Routes the sediment this
-    /// epoch's incision produced downstream along the single-flow tree; each reach
-    /// carries at most `Kt·Aᵐ·S`, and where the load exceeds capacity — slack,
-    /// low-gradient reaches near base level — the excess is laid down, grading the
-    /// valley floor to a smooth monotonic descent and building floodplains /
-    /// alluvial fills. This is the fix for "pools where rivers should run
-    /// cleanest": deposition is strongest exactly where gradient is lowest.
-    /// Deterministic (fixed downstream order + neighbour geometry); deposition is
-    /// applied at a fraction per epoch so the floor grades gradually rather than
-    /// overshooting — the stable way to run an explicit deposition pass.
+    /// Step 5b — **deposition (Davy & Lague 2009).** Routes the sediment this
+    /// epoch's incision produced downstream along the single-flow tree and lays it
+    /// down at the dimensionally-honest rate `D = G·Qs/A`: `Qs` is the sediment
+    /// *volume* the reach carries, `A` its drainage area, so `Qs/A` is a height and
+    /// `G` (`params.deposition`) is a pure number. Because deposition scales with
+    /// the load already being carried — not an arbitrary capacity — it stays small
+    /// in steep upland channels (which keep net-incising) and grows where the
+    /// channel slackens and `Qs` has piled up: slack reaches near base level. That
+    /// is what grades valley floors and outlets to a smooth descent (no pools)
+    /// while leaving the dendritic valley network intact.
+    ///
+    /// Operator-split from the (stable, implicit) incision: a defensible first
+    /// take. The fully-coupled, unconditionally-stable form is the implicit
+    /// Davy-Lague solve (Yuan et al. 2019); a clean upgrade when wanted.
+    /// Deterministic: fixed downstream order and neighbour geometry.
     fn deposit(&mut self, params: &ErosionParams, recv: &[usize], order: &[usize], before: &[f32]) {
-        const DEPOSIT_RATE: f32 = 0.5;
         let nx = self.nx;
         let area = self.cell_size * self.cell_size;
-        // Sediment each cell produced by incision this epoch (positive only).
+        let g = params.deposition;
+        // Sediment volume each cell produced by this epoch's incision.
         let mut qs = vec![0.0f32; nx * nx];
         for i in 0..nx * nx {
             let eroded = before[i] - self.h[i];
@@ -515,27 +522,19 @@ impl Heightfield {
                 qs[i] = eroded * area;
             }
         }
-        // High → low: gather load, deposit the over-capacity excess, carry the rest.
+        // High → low: each cell has, by the time it is reached, gathered all the
+        // flux from its (higher) donors. Deposit `G·Qs/A` as a height, conserve the
+        // rest downstream; sediment reaching an outlet is lost to the sea.
         for &i in order.iter().rev() {
+            let a = self.drainage[i].max(area); // drainage area, ≥ one cell
+            let deposit_h = g * qs[i] / a; // Davy-Lague: a true height (Qs vol / A area)
+            let deposit_vol = (deposit_h * area).min(qs[i]); // can't lay down more than carried
+            self.h[i] += deposit_vol / area;
+            qs[i] -= deposit_vol;
             let r = recv[i];
-            if r == i {
-                continue; // outlet — remaining sediment leaves to the sea
+            if r != i {
+                qs[r] += qs[i];
             }
-            let (x, y) = (i % nx, i / nx);
-            let (rx, ry) = (r % nx, r / nx);
-            let dist = if x != rx && y != ry {
-                self.cell_size * std::f32::consts::SQRT_2
-            } else {
-                self.cell_size
-            };
-            let slope = ((self.h[i] - self.h[r]) / dist).max(0.0);
-            let capacity = params.transport_k * self.drainage[i].powf(params.m) * slope;
-            if qs[i] > capacity {
-                let deposited = (qs[i] - capacity) * DEPOSIT_RATE;
-                self.h[i] += deposited / area;
-                qs[i] -= deposited;
-            }
-            qs[r] += qs[i];
         }
     }
 

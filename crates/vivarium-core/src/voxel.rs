@@ -256,10 +256,13 @@ impl Volume {
             nx,
             cell_size: cell,
             uplift: 2.0, // m/epoch
-            k: 0.02,     // erodibility — dissects with MFD without razing the relief
+            k: 0.03,     // erodibility — strong enough (with MFD) for a dramatic dendritic network
             m: 0.5,
-            max_slope: 1.2,    // talus repose ~50° — steep mountain flanks allowed
-            transport_k: 0.05, // deposition: grade slack lower reaches, no pooled floors
+            max_slope: 1.2, // talus repose ~50° — steep mountain flanks allowed
+            // Davy-Lague deposition `G` (dimensionless): grades slack lower reaches
+            // and outlets without filling the upland valleys (see geo::deposit).
+            // Swept by hillshade — valleys stay sharp even at G=1; 0.5 is balanced.
+            deposition: 0.5,
             epochs,
             dt: 1.0,
             sea_level: Some(SEA_LEVEL as f32),
