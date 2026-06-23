@@ -31,11 +31,23 @@ const PALETTE := {
 # LOD config for VoxelLodTerrain. lod_distance is how far full-detail LOD0
 # reaches from the viewer; each coarser level reaches twice as far again. With
 # LOD the view distance can be large because far terrain is cheap (coarse).
-const LOD_COUNT := 6
-const LOD_DISTANCE := 64.0
-# Max view distance in voxels (physical reach = this / detail). 2048 with LOD is
-# cheap where 2048 without LOD hung the engine. Override with VIVARIUM_VIEWCAP.
-const VIEW_DISTANCE_DEFAULT := 2048
+# Geology-scale LOD, pushed for *maximum view distance* (Joseph 2026-06-23: first
+# see the real landscape shape across the whole landmass; FPS/load can be dismal).
+# The eroded world is ~24,000 voxels (12 km) across. VoxelLodTerrain reach is
+# roughly lod_distance × 2^(lod_count-1); the coarsest voxel is 2^(lod_count-1)
+# voxels, so for a given reach a *larger* lod_distance with *fewer* levels keeps
+# distant terrain finer (less of the giant-block stepping). The open question this
+# revival tests: how far does Godot's native octree reach before it falls over —
+# where bevy_voxel_world needed a separate backdrop mesh (spawn_far_terrain).
+#
+# All three are env-overridable so the reach can be swept without editing the file
+# (GDScript reloads instantly anyway, but env keeps runs reproducible/logged):
+#   VIVARIUM_VIEWCAP    view distance in voxels   (default 32768 → spans + margin)
+#   VIVARIUM_LOD_DIST   LOD0 full-detail reach    (default 1024)
+#   VIVARIUM_LOD_COUNT  octree levels             (default 7)
+const LOD_COUNT_DEFAULT := 7
+const LOD_DISTANCE_DEFAULT := 1024.0
+const VIEW_DISTANCE_DEFAULT := 32768
 
 var world: Object     # VivariumWorld (Rust bridge)
 var terrain: Object   # VoxelTerrain (kept for the automated dig self-test)
@@ -75,10 +87,20 @@ func _ready() -> void:
 	var gen = load("res://generator.gd").new()
 	gen.world = world
 
+	# Reach/LOD knobs — env overrides the defaults so the field of view can be
+	# swept run-to-run without editing this file.
 	_view_distance = VIEW_DISTANCE_DEFAULT
 	var cap_env := OS.get_environment("VIVARIUM_VIEWCAP")
 	if cap_env != "":
 		_view_distance = int(cap_env)
+	var lod_distance := LOD_DISTANCE_DEFAULT
+	var lod_dist_env := OS.get_environment("VIVARIUM_LOD_DIST")
+	if lod_dist_env != "":
+		lod_distance = float(lod_dist_env)
+	var lod_count := LOD_COUNT_DEFAULT
+	var lod_count_env := OS.get_environment("VIVARIUM_LOD_COUNT")
+	if lod_count_env != "":
+		lod_count = int(lod_count_env)
 
 	# VoxelLodTerrain: an octree that stores/streams voxels at multiple levels of
 	# detail, so distant terrain is meshed coarse and we can see *much* farther
@@ -89,8 +111,8 @@ func _ready() -> void:
 	terrain = VoxelLodTerrain.new()
 	terrain.mesher = mesher
 	terrain.generator = gen
-	terrain.lod_count = LOD_COUNT
-	terrain.lod_distance = LOD_DISTANCE       # how far LOD0 (full detail) reaches
+	terrain.lod_count = lod_count
+	terrain.lod_distance = lod_distance       # how far LOD0 (full detail) reaches
 	terrain.view_distance = _view_distance
 	add_child(terrain)
 	# VoxelLodTerrain rejects material_override (Node3D's); it manages its own
@@ -103,14 +125,18 @@ func _ready() -> void:
 	_trace("terrain added")
 
 	# First-person fly camera (player.gd), in voxel/world coordinates (1:1).
+	# Geology-scale framing mirrors the Bevy spike (spikes/bevy-voxel setup): stand
+	# just above the ground at the region centre and gaze *outward and slightly
+	# down* across the landmass toward the far massifs — not down at one's feet.
 	var sh: int = world.surface_height(0, 0)
 	cam = Camera3D.new()
 	cam.set_script(load("res://player.gd"))
 	cam.world = world
 	cam.terrain = terrain
-	cam.position = Vector3(60, sh + 45, 60)
+	cam.far = float(_view_distance) + 8192.0   # don't clip the far terrain
+	cam.position = Vector3(0, sh + 12, 0)        # ~6 m eye height at detail 2
 	add_child(cam)                               # in-tree before look_at()
-	cam.look_at(Vector3(0, sh, 0), Vector3.UP)
+	cam.look_at(Vector3(800, sh - 60, 300), Vector3.UP)   # outward across the terrain
 	cam.resync()                                 # carry that heading into yaw/pitch
 
 	# A VoxelViewer tells the terrain where to stream chunks (and at which LOD,
@@ -147,14 +173,21 @@ func _ready() -> void:
 	# tinted to the overcast sky. Pulled in *close* — fully grey by ~40 units of
 	# detail — so only the hill in front of you reads clearly and everything
 	# beyond dissolves into the murk (this also hides the LOD transition).
-	env.fog_enabled = true
+	# Fog drowns the whole-landmass vista in grey (it's tuned to dissolve the far
+	# edge, but at 16 km everything is "far"). Toggle off with VIVARIUM_FOG=0 when
+	# the goal is to read the real terrain shape rather than an atmospheric mood.
+	env.fog_enabled = OS.get_environment("VIVARIUM_FOG") != "0"
 	env.fog_mode = Environment.FOG_MODE_DEPTH
 	env.fog_light_color = sky_color
 	# Fog the sky too, fully — so the whole sky becomes the same fog colour the
 	# distant terrain dissolves into. Both end up one uniform grey: no horizon.
 	env.fog_sky_affect = 1.0
-	env.fog_depth_begin = float(14 * detail)
-	env.fog_depth_end = float(90 * detail)   # fully sky-coloured by here -> no horizon
+	# Geology scale: the toy-world fog (grey by ~90 units) hid everything in a
+	# 12 km landmass. Pull it out to atmospheric distance so near valleys read
+	# crisp, far massifs haze blue-grey, and the LOD/streaming edge dissolves
+	# rather than ending in a hard line. In voxels (1:1 with metres at detail 2).
+	env.fog_depth_begin = 1500.0
+	env.fog_depth_end = float(_view_distance)   # dissolve by the view edge
 	env.fog_depth_curve = 1.0         # linear: opacity ∝ distance
 
 	# Screen-space ambient occlusion: darkens the creases between blocks, which
@@ -174,9 +207,14 @@ func _ready() -> void:
 	# renders without a human watching.
 	_trace("scene built, viewer.view_distance=%d" % viewer.view_distance)
 	if OS.get_environment("VIVARIUM_AUTOSHOT") != "":
-		# LOD over a large view distance has a lot to stream initially; give the
-		# threads time before the vista shot.
-		get_tree().create_timer(10.0 + detail).timeout.connect(_capture_and_quit)
+		# A whole-landmass view distance has a *lot* to stream initially; give the
+		# mesher threads generous time before the vista shot. Env-tunable so a
+		# bigger reach can wait longer.
+		var settle := 25.0
+		var settle_env := OS.get_environment("VIVARIUM_SETTLE")
+		if settle_env != "":
+			settle = float(settle_env)
+		get_tree().create_timer(settle).timeout.connect(_capture_and_quit)
 	else:
 		print("[vivarium] interactive (detail %d): WASD move, mouse look, " % detail,
 			"Space/Shift up/down, Ctrl=fast, LMB dig, RMB place, Esc frees mouse")
@@ -203,13 +241,19 @@ func _carve_test() -> void:
 
 func _capture_and_quit() -> void:
 	_trace("capture: start")
-	# Overhead vista matching the Bevy spike's framing, close enough that block
-	# self-shadowing (SSAO) reads. All in voxel/world units (1:1).
+	# Geology vista: a high oblique aerial framing the *whole* landmass so the
+	# km-scale relief — ridge-and-valley drainage, peaks, coast — reads in one
+	# frame. Pulled far back/up over one corner, looking across the region centre.
+	# (The interactive camera stays at eye level; this is just the verification
+	# framing.) Env-tunable so the vista can be swept. All in voxel units (1:1).
 	var sh: int = world.surface_height(0, 0)
-	cam.position = Vector3(40, sh + 30, 40)
-	cam.look_at(Vector3(0, sh, 0), Vector3.UP)
-	_carve_test()
-	_trace("carve done; fps=%.1f, view_distance=%d voxels (%d physical), detail=%d"
+	var cam_back := 14000.0
+	var back_env := OS.get_environment("VIVARIUM_CAM_BACK")
+	if back_env != "":
+		cam_back = float(back_env)
+	cam.position = Vector3(-cam_back, sh + cam_back * 0.45, -cam_back)
+	cam.look_at(Vector3(0, float(sh), 0), Vector3.UP)
+	_trace("vista framed; fps=%.1f, view_distance=%d voxels (%d physical), detail=%d"
 		% [Engine.get_frames_per_second(), _view_distance, _view_distance / detail, detail])
 	# Let the remesh settle (and FPS recover) before grabbing the frame.
 	await get_tree().create_timer(2.0).timeout

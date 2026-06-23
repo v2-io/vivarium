@@ -65,15 +65,30 @@ struct VivariumWorld {
 #[godot_api]
 impl INode for VivariumWorld {
     fn init(base: Base<Node>) -> Self {
-        // Same seed/agent-count as the Bevy debug view, so the two spikes look
-        // at literally the same world and the comparison is apples-to-apples.
-        // Voxel resolution is env-tunable (VIVARIUM_DETAIL, default 8) so the
-        // perf sweep needs no recompile.
-        let detail = std::env::var("VIVARIUM_DETAIL")
-            .ok()
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(4);
-        Self { world: RwLock::new(World::with_detail(0x00C0_FFEE, 24, detail)), base }
+        // Same seed as the Bevy geology view, so the two render literally the same
+        // eroded world and the comparison stays apples-to-apples.
+        //
+        // The world is now the *geology tier*: detail 2 (the 0.5 m voxel anchor),
+        // a ~12 km landmass carved by stream-power erosion. All three knobs are
+        // env-tunable so the scale can be swept without a recompile:
+        //   VIVARIUM_DETAIL       voxels/unit              (default 2)
+        //   VIVARIUM_REGION_HALF  half-extent in metres    (default 6000 → ~12 km)
+        //   VIVARIUM_EPOCHS       erosion epochs at launch (default 70)
+        // Defaults mirror spikes/bevy-voxel/src/main.rs exactly.
+        let env_i32 = |k: &str, d: i32| {
+            std::env::var(k).ok().and_then(|s| s.parse().ok()).unwrap_or(d)
+        };
+        let detail = env_i32("VIVARIUM_DETAIL", 2);
+        let region_half = env_i32("VIVARIUM_REGION_HALF", 6_000);
+        let epochs = env_i32("VIVARIUM_EPOCHS", 70).max(0) as u32;
+        godot_print!(
+            "[vivarium] generating eroded world (seed {:#x}, detail {detail}, \
+             ±{region_half} m, {epochs} epochs)… this is the slow tier, ~seconds.",
+            0x00C0_FFEE_u64,
+        );
+        let world = World::eroded(0x00C0_FFEE, 24, detail, region_half, epochs);
+        godot_print!("[vivarium] world ready.");
+        Self { world: RwLock::new(world), base }
     }
 
     /// A loud self-check that the FFI seam is alive: read real facts out of core

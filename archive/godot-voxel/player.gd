@@ -14,8 +14,10 @@ extends Camera3D
 var world: Object = null     # VivariumWorld bridge
 var terrain: Object = null   # VoxelTerrain
 
-const MOVE_SPEED := 24.0
-const FAST_MULT := 3.0
+# Geology-scale traversal: the landmass is ~12 km across, so toy-world speeds felt
+# glacial. ~200 voxels/s normal, ~800 fast (× detail), matching the Bevy spike.
+const MOVE_SPEED := 100.0
+const FAST_MULT := 4.0
 const MOUSE_SENS := 0.0025
 const REACH := 120.0
 const PLACE_MATERIAL := 1     # STONE, for now

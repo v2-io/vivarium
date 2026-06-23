@@ -25,4 +25,4 @@ crate-type = ["cdylib"]
 # flight, or gdext's cell will (correctly) flag the aliasing. Coordinating that
 # is a real item for the spike findings.
 godot = { version = "0.5.3", features = ["experimental-threads"] }
-vivarium-core = { path = "../vivarium-core" }
+vivarium-core = { path = "../../crates/vivarium-core" }

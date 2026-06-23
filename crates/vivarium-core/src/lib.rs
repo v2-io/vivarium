@@ -117,8 +117,31 @@ impl World {
     /// agents' wander area scales with `detail` so they roam a comparable
     /// *physical* region regardless of resolution.
     pub fn with_detail(seed: u64, n_agents: usize, detail: voxel::Detail) -> Self {
+        Self::from_volume(seed, n_agents, Volume::with_detail(seed, detail))
+    }
+
+    /// Build the world on top of a geologically-eroded volume (see
+    /// [`Volume::eroded`]) — km-scale mountains carved by a real drainage network,
+    /// rather than the raw-FBM relief of [`Self::with_detail`]. This is the
+    /// constructor a *view* uses when it wants the geology tier; the agents and
+    /// step dynamics are identical, only the ground beneath them differs. The
+    /// erosion cost is paid once here, before the first frame. Deterministic from
+    /// `seed`.
+    pub fn eroded(
+        seed: u64,
+        n_agents: usize,
+        detail: voxel::Detail,
+        region_half_m: i32,
+        epochs: u32,
+    ) -> Self {
+        Self::from_volume(seed, n_agents, Volume::eroded(seed, detail, region_half_m, epochs))
+    }
+
+    /// Shared construction: place `n_agents` deterministically on whatever volume
+    /// was handed in. Factored out so the raw-FBM and eroded constructors differ
+    /// only in the volume they build, never in agent placement or wandering bounds.
+    fn from_volume(seed: u64, n_agents: usize, volume: Volume) -> Self {
         let mut rng = Rng::new(seed);
-        let volume = Volume::with_detail(seed, detail);
         let bound = 64.0 * volume.detail() as f32;
         let agents = (0..n_agents)
             .map(|_| {
