@@ -54,13 +54,28 @@ const PALETTE := {
 # view_distance is the only lever for that from the public API. A real limitation
 # to weigh in the Bevy-vs-Godot decision.
 #
+# MEASURED (2026-06-23, bench/ campaign): view_distance is the DOMINANT cost knob,
+# by far — because the octree fills its whole sphere with no occlusion culling, the
+# cost grows with the sphere volume. The benchmark cost curve (3 runs each, this
+# machine):
+#     view 32768 (16 km): ~13 fps, 442k data blocks   ← the old default; painful
+#     view 16384 ( 8 km): ~106 fps, 140k data blocks   ← 8× faster
+#     view  8192 ( 4 km): ~145 fps,  89k data blocks   ← reach too short, lands clip
+# 32768 was reaching ~20 km — far past the ±12 000-voxel continent edge, into empty
+# ocean — so it paid 8× the framerate to render *nothing*. 16384 still spans the
+# whole landmass from a central vantage (16384 > the 12000-voxel half-extent) AND
+# reads richly in the screenshots, so it is the default: full view of the land at a
+# fraction of the cost. Push VIVARIUM_VIEWCAP=32768 for the extreme edge-to-edge
+# vista if you accept ~13 fps. (Deltas clear the ±8% fps / ±7% data-block noise
+# floor by ~700%, so this is real, not jitter — see bench/README.md.)
+#
 # All env-overridable so the reach can be swept without editing the file:
-#   VIVARIUM_VIEWCAP    view distance in voxels   (default 32768 → spans the land)
+#   VIVARIUM_VIEWCAP    view distance in voxels   (default 16384 → spans the land, fast)
 #   VIVARIUM_LOD_DIST   LOD0 full-detail radius   (default 1024)
 #   VIVARIUM_LOD_COUNT  octree levels             (default 7)
 const LOD_COUNT_DEFAULT := 7
 const LOD_DISTANCE_DEFAULT := 1024.0
-const VIEW_DISTANCE_DEFAULT := 32768
+const VIEW_DISTANCE_DEFAULT := 16384
 
 var world: Object     # VivariumWorld (Rust bridge)
 var terrain: Object   # VoxelTerrain (kept for the automated dig self-test)
@@ -169,6 +184,12 @@ func _ready() -> void:
 	terrain.lod_count = lod_count
 	terrain.lod_distance = lod_distance       # how far LOD0 (full detail) reaches
 	terrain.view_distance = _view_distance
+	# Mesh block size (16 or 32). Bigger = fewer, larger mesh tasks (less per-block
+	# overhead) at coarser streaming granularity — a candidate "free" win (same
+	# view). VIVARIUM_MESH_BLOCK to A/B it; default is the engine's 16.
+	var mb_env := OS.get_environment("VIVARIUM_MESH_BLOCK")
+	if mb_env != "":
+		terrain.mesh_block_size = int(mb_env)
 
 	# --- LOD responsiveness under fast motion (Joseph 2026-06-23) -------------
 	# Slow-and-steady prioritizes well; "whipping around" leaves the thing in
