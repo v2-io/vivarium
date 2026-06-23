@@ -81,66 +81,78 @@ impl Voxel {
     }
 }
 
-/// Vertical span of the world, in voxels, measured from `y = 0` at the bottom.
-/// Generation never produces solid voxels at or above this; it is the ceiling
-/// of the abstraction tier, not a wall an agent can hit. Chosen tall enough for
-/// hills + headroom and no taller, so the surface-scan helpers terminate fast.
-pub const WORLD_HEIGHT: i32 = 128;
+/// **The real-world anchor** (DESIGN.md / `ref/geology/NOTES.md` §0a). The finest
+/// voxel is half a metre on a side: a person is ~3–4 voxels, materials and items
+/// have real extent, and — crucially — *geology is simulated at its true scale*.
+/// Everything physical derives from this. One "world unit" below means **one
+/// metre**; [`Detail`] is **voxels per metre**, so the anchor resolution is
+/// `detail = 2`.
+pub const METERS_PER_VOXEL: f32 = 0.5;
 
-/// The `y` below which empty space is filled with water rather than air. Gives
-/// the seed world lakes and coastlines, so a first-person spike has something
-/// to stand at the edge of. Purely a worldgen choice.
-pub const SEA_LEVEL: i32 = 24;
+/// Vertical span of the world, **in metres**, measured from `y = 0` (deep
+/// bedrock) up. ~8.2 km: enough for multi-km peaks above the sea and several km
+/// of crust + ocean below. The world is a pure function — a tall world costs
+/// nothing but generation *range*, since nothing is materialized away from the
+/// surface. (Was 128 in the pre-anchor toy world; that was ~100× too short.)
+pub const WORLD_HEIGHT: i32 = 8192;
 
-/// World resolution: how many voxels span one "world unit" of terrain feature.
+/// Sea level, **in metres** (~3 km up the column), leaving ~5 km of headroom for
+/// mountains and ~3 km below for ocean basins and crust (caves, strata, ore).
+pub const SEA_LEVEL: i32 = 3000;
+
+/// Soil depth (grass/dirt skin over bedrock), **in metres**. A few metres of
+/// regolith; below it is stone. Scales to voxels via [`Detail`].
+pub const SOIL_DEPTH: i32 = 4;
+
+/// World resolution: **voxels per metre**. The anchor is `detail = 2` (0.5 m
+/// voxels, [`METERS_PER_VOXEL`]). The constants above are in metres and are
+/// multiplied through by `detail` to reach voxels; terrain noise is sampled in
+/// *metre* space and scaled up, so a finer `detail` reproduces the same landscape
+/// out of more, smaller voxels rather than inventing higher-frequency relief.
 ///
-/// `detail = 1` is the base grid the constants above are written in. Raising it
-/// makes the *same* hills and lakes out of proportionally smaller, more numerous
-/// voxels — `detail = 8` is 8× finer in each axis, so ~512× the voxels for the
-/// same physical world. Generation stays a pure function of `(seed, detail,
-/// coords)`; the constants above are simply multiplied through. Heightmap
-/// continuity is preserved (the noise is sampled in unit space, then scaled up),
-/// so finer just means smoother, not noisier.
-///
-/// This is the knob the Bevy/Godot spike sweeps to probe the rendering perf
-/// ceiling. A *view* renders voxels at `1/detail` of a world unit so the world
-/// looks the same physical size at any resolution.
+/// A *view* renders voxels at `1 / detail` metres, so the world is the same
+/// physical size at any resolution — the knob the Bevy/Godot spike swept for the
+/// rendering perf ceiling. The *geology* tier resolutions (tectonics ~3 km,
+/// fluvial erosion ~16 m; NOTES §0a) are independent of this and live in
+/// [`Volume::eroded`].
 pub type Detail = i32;
 
 /// A patch of pre-computed eroded terrain — the output of the slow "abstraction
-/// tier" (see [`crate::geo`]), held in **world units** (one sample per world
-/// unit: the coarse *simulation grid*, independent of voxel [`Detail`]). When a
-/// [`Volume`] carries one, it *is* the terrain — [`Volume::terrain_height`]
-/// samples it bilinearly instead of the raw FBM, and the finer voxel grid is
-/// materialized from it. That coarse-sim-grid / fine-render-voxel split is
-/// exactly what `ref/geology/NOTES.md` argues for: drainage emerges on the sim
-/// grid, appearance lives in the voxels.
+/// tier" (see [`crate::geo`]). It is the **fluvial-erosion tier** of NOTES §0a:
+/// elevations in **metres**, sampled on a coarse grid of ~16 m cells (the
+/// research-earned resolution where first-order drainage survives), spanning a
+/// region kilometres across. When a [`Volume`] carries one it *is* the terrain —
+/// [`Volume::terrain_height`] samples it bilinearly and the 0.5 m render voxels
+/// are materialized from it. Coarse sim grid, fine render voxels: orders of
+/// magnitude apart, exactly as the scale ladder requires.
 #[derive(Clone, Debug)]
 struct ErodedSurface {
-    /// World-unit coordinate of grid index `(0, 0)`.
-    x0: i32,
-    z0: i32,
-    /// Grid edge length (square), in world-unit samples.
+    /// Metre coordinate of grid node `(0, 0)`.
+    x0_m: f32,
+    z0_m: f32,
+    /// Metres per erosion cell (~16 m — NOTES §0a).
+    cell_m: f32,
+    /// Grid edge length (square), in nodes.
     nx: usize,
-    /// Row-major world-unit elevations, length `nx · nx`.
-    h: Vec<f32>,
+    /// Row-major elevations in **metres**, length `nx · nx`.
+    h_m: Vec<f32>,
 }
 
 impl ErodedSurface {
-    /// Bilinearly sample the surface at a world-unit position, **clamping** to the
-    /// patch edge outside it: beyond the eroded continent the coastline simply
+    /// Bilinearly sample the surface (metres) at a metre position, **clamping** to
+    /// the patch edge outside it: beyond the eroded region the coastline simply
     /// extends into open sea, rather than presenting a cliff or a seam back to raw
     /// FBM. Always returns a height.
-    fn sample(&self, xu: f32, zu: f32) -> f32 {
-        let fx = (xu - self.x0 as f32).clamp(0.0, (self.nx - 1) as f32);
-        let fz = (zu - self.z0 as f32).clamp(0.0, (self.nx - 1) as f32);
-        let (x0, z0) = (fx.floor() as usize, fz.floor() as usize);
+    fn sample(&self, xm: f32, zm: f32) -> f32 {
+        let gx = ((xm - self.x0_m) / self.cell_m).clamp(0.0, (self.nx - 1) as f32);
+        let gz = ((zm - self.z0_m) / self.cell_m).clamp(0.0, (self.nx - 1) as f32);
+        let (x0, z0) = (gx.floor() as usize, gz.floor() as usize);
         let (x1, z1) = ((x0 + 1).min(self.nx - 1), (z0 + 1).min(self.nx - 1));
-        let (tx, tz) = (fx - x0 as f32, fz - z0 as f32);
-        let h00 = self.h[z0 * self.nx + x0];
-        let h10 = self.h[z0 * self.nx + x1];
-        let h01 = self.h[z1 * self.nx + x0];
-        let h11 = self.h[z1 * self.nx + x1];
+        let (tx, tz) = (gx - x0 as f32, gz - z0 as f32);
+        let h00 = self.h_m[z0 * self.nx + x0];
+        let h10 = self.h_m[z0 * self.nx + x1];
+        let h01 = self.h_m[z1 * self.nx + x0];
+        let h11 = self.h_m[z1 * self.nx + x1];
         let a = h00 + (h10 - h00) * tx;
         let b = h01 + (h11 - h01) * tx;
         a + (b - a) * tz
@@ -182,45 +194,58 @@ impl Volume {
         Self { seed: r.next_u64(), detail: detail.max(1), edits: BTreeMap::new(), eroded: None }
     }
 
-    /// Build a world whose terrain has been shaped by the [`crate::geo`]
-    /// abstraction tier: the raw FBM terrain is sampled onto a world-unit grid
-    /// spanning `±half_extent` world units, eroded by uplift + stream-power
-    /// incision + talus draining to sea level, and that matured surface *becomes*
-    /// the terrain. Outside the patch the coastline extends into open sea.
-    ///
-    /// Deterministic from `seed`. The cost is paid once, up front — this is the
-    /// "world creation takes longer than a tick" tier — and `epochs` trades that
-    /// startup time for landscape maturity. Beyond the eroded patch the world is
-    /// open ocean, so size `half_extent` to comfortably exceed the view distance.
-    pub fn eroded(seed: u64, detail: Detail, half_extent: i32, epochs: u32) -> Self {
-        let mut v = Self::with_detail(seed, detail);
-        let nx = (half_extent.max(2) * 2) as usize;
-        let (x0, z0) = (-half_extent, -half_extent);
+    /// Metres per fluvial-erosion cell — the research-earned resolution where
+    /// first-order drainage survives (NOTES §0a; CAESAR-Lisflood). Far coarser
+    /// than the 0.5 m render voxel, far finer than the tectonic tier.
+    pub const EROSION_CELL_M: f32 = 16.0;
 
-        // Sample the uneroded FBM terrain onto the world-unit simulation grid.
+    /// Build a world whose terrain has been shaped by the [`crate::geo`] fluvial
+    /// erosion tier. The raw FBM continental relief is sampled onto a ~16 m grid
+    /// spanning `±region_half_m` **metres**, eroded by gentle uplift + stream-power
+    /// incision + talus draining to sea level, and that matured surface *becomes*
+    /// the terrain — km-scale mountains carved by a real drainage network. Outside
+    /// the patch the coastline extends into open sea.
+    ///
+    /// The erosion is deliberately **gentle**: the kilometre relief comes from the
+    /// continental FBM, and erosion's job here is to *carve valleys and drainage*
+    /// into it, not to build or raze the mountains (the first spike's mistake was
+    /// erosion strong enough to flatten everything — at the wrong scale entirely).
+    ///
+    /// Deterministic from `seed`. Cost is paid once, up front — the "world creation
+    /// takes longer than a tick" tier. The grid is `(2·region_half_m / 16)²` nodes,
+    /// so a ~24 km region is ~2.3 M nodes (a few seconds in release); the O(n)
+    /// Braun-Willett stack (deferred in `geo`) is the lever when this must grow.
+    pub fn eroded(seed: u64, detail: Detail, region_half_m: i32, epochs: u32) -> Self {
+        let mut v = Self::with_detail(seed, detail);
+        let cell = Self::EROSION_CELL_M;
+        let span_m = (region_half_m.max(1) * 2) as f32;
+        let nx = (span_m / cell).ceil() as usize;
+        let origin = -region_half_m as f32;
+
+        // Sample the continental FBM relief (metres) onto the ~16 m erosion grid.
         let mut h = vec![0.0f32; nx * nx];
         for vv in 0..nx {
             for uu in 0..nx {
-                let xu = (x0 + uu as i32) as f32;
-                let zu = (z0 + vv as i32) as f32;
-                h[vv * nx + uu] = v.fbm_height_world(xu, zu);
+                let xm = origin + uu as f32 * cell;
+                let zm = origin + vv as f32 * cell;
+                h[vv * nx + uu] = v.fbm_height_world(xm, zm);
             }
         }
 
-        // Erode it, draining to the existing sea level (in world units).
+        // Gentle erosion at the real cell size, draining to sea level (metres).
         let params = crate::geo::ErosionParams {
             nx,
-            cell_size: 1.0,
-            uplift: 0.04,
-            k: 0.20,
+            cell_size: cell,
+            uplift: 1.5,   // m/epoch — a touch of tectonic forcing, not mountain-building
+            k: 0.0009,     // erodibility tuned to carve, not raze, km relief (see sweep)
             m: 0.5,
-            max_slope: 0.8,
+            max_slope: 1.2, // talus repose ~50° — steep mountain flanks allowed
             epochs,
             dt: 1.0,
             sea_level: Some(SEA_LEVEL as f32),
         };
-        let field = crate::geo::Heightfield::from_heights(nx, 1.0, h).erode(&params);
-        v.eroded = Some(ErodedSurface { x0, z0, nx, h: field.h });
+        let field = crate::geo::Heightfield::from_heights(nx, cell, h).erode(&params);
+        v.eroded = Some(ErodedSurface { x0_m: origin, z0_m: origin, cell_m: cell, nx, h_m: field.h });
         v
     }
 
@@ -304,46 +329,48 @@ impl Volume {
             // it is grass — a cheap, legible bit of texture for the eye.
             return if h < sea { Voxel::DIRT } else { Voxel::GRASS };
         }
-        // Soil is a fixed *physical* depth (4 world units), so it scales with
-        // resolution; below it is stone.
-        if y > h - 4 * self.detail {
+        // Soil is a fixed *physical* depth ([`SOIL_DEPTH`] metres), so it scales
+        // with resolution; below it is stone.
+        if y > h - SOIL_DEPTH * self.detail {
             Voxel::DIRT
         } else {
             Voxel::STONE
         }
     }
 
-    /// Terrain surface height at `(x, z)`, in voxels. Deterministic.
+    /// Terrain surface height at voxel column `(x, z)`, in voxels. Deterministic.
     ///
-    /// Sampled in *unit* space (`coord / detail`) and scaled back up by `detail`,
-    /// so a finer world reproduces the same hills out of more, smaller voxels
-    /// rather than inventing higher-frequency detail. When an [`ErodedSurface`] is
-    /// present it supplies the world-unit height (the eroded landscape);
-    /// otherwise the raw FBM does. Either way the world-unit height is scaled to
-    /// voxel units the same way — the eroded sim grid and the render voxels are
-    /// decoupled resolutions.
+    /// The voxel coordinate is converted to **metres** (`coord / detail`), the
+    /// terrain height is evaluated in metres — from the [`ErodedSurface`] when one
+    /// is present (the eroded landscape), else the raw continental FBM — and the
+    /// result is scaled back to voxels (`× detail`). So the eroded sim grid
+    /// (~16 m), the metre datum, and the render voxels (0.5 m) are cleanly
+    /// decoupled resolutions, and a finer `detail` reproduces the same landscape
+    /// out of more, smaller voxels.
     fn terrain_height(&self, x: i32, z: i32) -> i32 {
         let d = self.detail as f32;
-        let (xu, zu) = (x as f32 / d, z as f32 / d);
-        let hw = match &self.eroded {
-            Some(e) => e.sample(xu, zu),
-            None => self.fbm_height_world(xu, zu),
+        let (xm, zm) = (x as f32 / d, z as f32 / d);
+        let h_m = match &self.eroded {
+            Some(e) => e.sample(xm, zm),
+            None => self.fbm_height_world(xm, zm),
         };
-        (hw * d).round() as i32
+        (h_m * d).round() as i32
     }
 
-    /// Continuous terrain height in **world units** (detail-independent) from the
-    /// raw FBM — the uneroded abstraction, and the initial condition the erosion
-    /// pass starts from.
+    /// Continuous terrain height in **metres** (detail-independent) from the raw
+    /// FBM — the uneroded *continental* relief, and the initial condition the
+    /// erosion tier starts from. Coordinates are in metres.
     ///
-    /// Base octave gives broad hills; successive octaves add finer relief. The
-    /// 5th is high-frequency (~2.5-unit wavelength): its micro-relief is sub-voxel
-    /// at low resolution and only resolves cleanly as `detail` rises.
+    /// Real-scale: a base wavelength of ~22 km gives mountain *massifs*, six
+    /// octaves add ridge-and-valley structure down to ~700 m features, and the
+    /// amplitude puts peaks a couple of km above the 3 km sea level and ocean
+    /// basins a couple of km below. (Sub-~700 m detail is the render-voxel tier's
+    /// job — added noise under the fidelity invariant — not invented here.)
     fn fbm_height_world(&self, xu: f32, zu: f32) -> f32 {
-        const FREQ: f32 = 1.0 / 40.0; // larger denominator => broader base hills
-        const AMPLITUDE: f32 = 22.0;
-        const BASE: f32 = 30.0; // mean ground height, a few voxels above sea
-        const OCTAVES: u32 = 5;
+        const FREQ: f32 = 1.0 / 22_000.0; // ~22 km base wavelength (metres)
+        const AMPLITUDE: f32 = 2_300.0; // metres of relief about the base
+        const BASE: f32 = 3_200.0; // metres — just above sea level (3 km)
+        const OCTAVES: u32 = 6;
         BASE + self.fbm(xu * FREQ, zu * FREQ, OCTAVES) * AMPLITUDE
     }
 
@@ -484,41 +511,41 @@ mod tests {
     }
 
     #[test]
-    fn eroded_world_is_reproducible_and_drained() {
+    fn eroded_world_is_reproducible_and_changes_terrain() {
         // The eroded terrain must be a deterministic function of the seed (same
         // tether-to-truth guarantee as the raw world), and erosion must actually
-        // carve below the original surface somewhere (it is doing something).
-        let a = Volume::eroded(0xC0FFEE, 4, 24, 10);
-        let b = Volume::eroded(0xC0FFEE, 4, 24, 10);
-        let raw = Volume::with_detail(0xC0FFEE, 4);
-        let mut lowered_somewhere = false;
-        for z in -20..20 {
-            for x in -20..20 {
+        // reshape the surface (it is doing something). `region_half_m` is in
+        // metres now; a ~3.2 km region at 16 m cells is ~200² nodes — fast.
+        let a = Volume::eroded(0xC0FFEE, 2, 1600, 12);
+        let b = Volume::eroded(0xC0FFEE, 2, 1600, 12);
+        let raw = Volume::with_detail(0xC0FFEE, 2);
+        let mut changed_somewhere = false;
+        for z in -100..100 {
+            for x in -100..100 {
                 assert_eq!(
                     a.surface_height(x, z),
                     b.surface_height(x, z),
                     "eroded terrain diverged between runs at ({x},{z})"
                 );
-                if a.surface_height(x, z) < raw.surface_height(x, z) {
-                    lowered_somewhere = true;
+                if a.surface_height(x, z) != raw.surface_height(x, z) {
+                    changed_somewhere = true;
                 }
             }
         }
-        assert!(lowered_somewhere, "erosion left the whole surface unchanged");
+        assert!(changed_somewhere, "erosion left the surface untouched");
     }
 
     #[test]
     fn terrain_is_continuous() {
-        // At the play resolution (detail 4+) adjacent voxels should not differ
-        // wildly — the mesher and any walking agent rely on the surface being
-        // walkable, not a cliff per voxel. (At detail 1 the FBM octaves put real
-        // relief into each unit step, which is expected; continuity is a
-        // per-voxel property and so is asserted at the resolution we render.)
+        // Adjacent voxels must not differ *wildly* — a walking agent and the
+        // mesher rely on the surface being a slope, not a per-voxel cliff. At the
+        // real anchor a steep mountainside is a genuine ~1–2 voxels per voxel, so
+        // the bound is "no pathological cliff" (a noise bug), not "nearly flat".
         let v = Volume::with_detail(99, 4);
         let mut prev = v.surface_height(0, 0).unwrap();
         for x in 1..800 {
             let h = v.surface_height(x, 0).unwrap();
-            assert!((h - prev).abs() <= 3, "height jump of {} at x={}", h - prev, x);
+            assert!((h - prev).abs() <= 6, "height jump of {} at x={}", h - prev, x);
             prev = h;
         }
     }

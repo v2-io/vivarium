@@ -26,9 +26,10 @@ use bevy_voxel_world::prelude::*;
 
 use vivarium_core::voxel::Volume;
 
-/// Voxels per world unit — matches the Godot spike's default so both views look
-/// at the same physical world.
-const DETAIL: i32 = 4;
+/// Voxels per metre — the real-world anchor is 0.5 m voxels, so `detail = 2`
+/// (vivarium-core `METERS_PER_VOXEL`). The world is now at *true geological
+/// scale*: km-tall mountains, a multi-km-wide landmass draining to a real sea.
+const DETAIL: i32 = 2;
 const SEED: u64 = 0x00C0_FFEE;
 
 /// Overcast sky / fog colour, matching the Godot spike.
@@ -41,13 +42,14 @@ struct VivWorld {
     volume: Arc<Volume>,
 }
 
-/// World-unit half-extent of the eroded landmass. Comfortably exceeds the view
-/// distance (fog ends at ~110 world units) so the open-sea edge is never in
-/// frame; beyond it the world is ocean.
-const EROSION_HALF_EXTENT: i32 = 176;
-/// Erosion epochs run once at startup. Trades a second or two of world-creation
-/// time for landscape maturity (this is the slow abstraction tier).
-const EROSION_EPOCHS: u32 = 45;
+/// Half-extent of the eroded landmass, **in metres** (≈12 km region). Far larger
+/// than the view distance, so you fly within a continent, not toward its edge.
+/// (Kept modest so startup stays ~2–3 s; a bigger world wants the O(n) erosion
+/// stack — see `geo`.)
+const EROSION_REGION_HALF_M: i32 = 6_000;
+/// Erosion epochs run once at startup. Trades a couple of seconds of
+/// world-creation time for landscape maturity (the slow abstraction tier).
+const EROSION_EPOCHS: u32 = 30;
 
 impl Default for VivWorld {
     fn default() -> Self {
@@ -57,7 +59,7 @@ impl Default for VivWorld {
         eprintln!(
             "vivarium: generating eroded world (seed {SEED:#x}, {EROSION_EPOCHS} epochs)…"
         );
-        let volume = Volume::eroded(SEED, DETAIL, EROSION_HALF_EXTENT, EROSION_EPOCHS);
+        let volume = Volume::eroded(SEED, DETAIL, EROSION_REGION_HALF_M, EROSION_EPOCHS);
         eprintln!("vivarium: world ready.");
         Self { volume: Arc::new(volume) }
     }
@@ -161,21 +163,43 @@ fn setup(mut commands: Commands, world: Res<VivWorld>) {
     // Fresh diagnostics log per run.
     let _ = std::fs::write("/tmp/bevy_diag.log", "");
 
-    // Spawn the camera on the surface column above the origin — read from the
-    // already-built eroded world, not a fresh one (erosion is paid for once).
-    let surface = world.volume.surface_height(0, 0).unwrap_or(120);
-    let eye = Vec3::new(40.0, surface as f32 + 30.0, 40.0);
-    let look = Vec3::new(0.0, surface as f32, 0.0);
+    // Spawn the camera on the tallest peak, looking down-slope — so the real
+    // scale reads instantly (you're standing a kilometre up, ground falling away)
+    // rather than dropping you onto ambiguous lowland. Scan the eroded surface
+    // coarsely for its highest column; the scan is O(1)-per-sample and cheap.
+    let half = EROSION_REGION_HALF_M * DETAIL; // region half-extent in voxels
+    let step = 150; // voxels between scan samples (~75 m)
+    let (mut best, mut peak) = (i32::MIN, IVec3::ZERO);
+    let mut z = -half;
+    while z <= half {
+        let mut x = -half;
+        while x <= half {
+            if let Some(h) = world.volume.surface_height(x, z) {
+                if h > best {
+                    best = h;
+                    peak = IVec3::new(x, h, z);
+                }
+            }
+            x += step;
+        }
+        z += step;
+    }
+
+    let eye = Vec3::new(peak.x as f32, peak.y as f32 + 50.0, peak.z as f32);
+    // Look back toward the world centre and downward — the descending flank.
+    let look = Vec3::new(peak.x as f32 * 0.3, peak.y as f32 - 500.0, peak.z as f32 * 0.3);
 
     commands.spawn((
         Camera3d::default(),
         Transform::from_translation(eye).looking_at(look, Vec3::Y),
         VoxelWorldCamera::<VivWorld>::default(),
-        // Distance fog into the overcast sky — the Bevy analogue of the Godot
-        // Environment depth fog. start/end in world units (= voxels).
+        // Distance fog into the overcast sky. start/end in voxels; at 0.5 m voxels
+        // ~150–520 voxels is ~75–260 m of visible descent before the fog — enough
+        // to read the height without pushing the chunk working set (and stutter)
+        // past what the spawn radius can feed.
         DistanceFog {
             color: SKY,
-            falloff: FogFalloff::Linear { start: 60.0 * DETAIL as f32, end: 110.0 * DETAIL as f32 },
+            falloff: FogFalloff::Linear { start: 150.0, end: 520.0 },
             ..default()
         },
     ));
@@ -287,8 +311,9 @@ fn fly_camera(
         dir -= Vec3::Y;
     }
     if dir != Vec3::ZERO {
-        // Matched to the Godot spike (MOVE_SPEED 24 × detail 4 = 96, ×3 fast).
-        let speed = if keys.pressed(KeyCode::ControlLeft) { 288.0 } else { 96.0 };
+        // Real-scale traversal: ~100 m/s normal, ~400 m/s fast (the landmass is
+        // ~12 km across, so the toy-scale speeds would feel glacial). Voxels/s.
+        let speed = if keys.pressed(KeyCode::ControlLeft) { 800.0 } else { 200.0 };
         transform.translation += dir.normalize() * speed * time.delta_secs();
     }
 }
