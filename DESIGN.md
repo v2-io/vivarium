@@ -181,8 +181,17 @@ the calibration-lab use is pursued.)
 
 ## Engine — decided: Bevy
 
-Resolved 2026-06-20. Bevy (Rust), for reasons specific to *this* project's axes,
-not graphics:
+Resolved 2026-06-20; **empirically confirmed 2026-06-22** by building the same
+core world through both `bevy_voxel_world` and `godot_voxel` to feature parity
+(terrain, LOD, fog, fly + dig). Full comparison and the confounds in
+[`spikes/FINDINGS.md`](spikes/FINDINGS.md). Short version: Bevy held up on the
+axis that could have overturned this (visual quality + UX) and, decisively for a
+Rust core, erases the FFI seam a non-Rust engine necessarily imposes — Godot
+needed a GDScript view + a gdext bridge + a codesign/build dance to reach the
+same place. Godot's genuine edges (instant iteration, smoother LOD-fill) are real
+but narrow. The Godot spike is preserved under `archive/`.
+
+Bevy (Rust), for reasons specific to *this* project's axes, not graphics:
 
 - ECS is the natural substrate for both world-sim (thousands of tiles/items as
   components) and cognitive LOD: an agent's "mind" is just a component swapped

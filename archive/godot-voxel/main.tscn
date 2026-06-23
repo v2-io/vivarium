@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://bv1vivariumspike0"]
+
+[ext_resource type="Script" path="res://main.gd" id="1_main"]
+
+; The scene is assembled in main.gd at runtime (see that file). The root is a
+; plain Node3D; the Rust VivariumWorld bridge is created as a child in code.
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
