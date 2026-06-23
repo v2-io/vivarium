@@ -184,12 +184,17 @@ func _ready() -> void:
 	terrain.lod_count = lod_count
 	terrain.lod_distance = lod_distance       # how far LOD0 (full detail) reaches
 	terrain.view_distance = _view_distance
-	# Mesh block size (16 or 32). Bigger = fewer, larger mesh tasks (less per-block
-	# overhead) at coarser streaming granularity — a candidate "free" win (same
-	# view). VIVARIUM_MESH_BLOCK to A/B it; default is the engine's 16.
+	# Mesh block size (16 or 32). MEASURED (bench/, 2026-06-23): 32 vs the engine's
+	# 16 gives +37% fps (145 vs 106 at the 16384 view) and -72% draw calls, no
+	# visible quality loss — fewer, larger mesh tasks. Defaulted to 32 at Joseph's
+	# call, accepting that it also enlarges the remesh-per-edit area (the fly-only
+	# benchmark doesn't exercise digging; revisit if dig-feel suffers).
+	# VIVARIUM_MESH_BLOCK=16 to revert.
+	var mesh_block := 32
 	var mb_env := OS.get_environment("VIVARIUM_MESH_BLOCK")
 	if mb_env != "":
-		terrain.mesh_block_size = int(mb_env)
+		mesh_block = int(mb_env)
+	terrain.mesh_block_size = mesh_block
 
 	# --- LOD responsiveness under fast motion (Joseph 2026-06-23) -------------
 	# Slow-and-steady prioritizes well; "whipping around" leaves the thing in

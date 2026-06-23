@@ -82,12 +82,12 @@ So view 16384 + mesh_block 32 ≈ **145 fps — 11× the original baseline** —
 visible terrain-quality regression (`mb32_vd16k/run_1_t24.png`). Fewer, larger
 mesh tasks → far fewer draw calls.
 
-**Not defaulted, on purpose.** Mesh block size also sets how large an area
-remeshes per *edit* (dig/place) — core to a voxel game, and the benchmark flies
-but never digs. Changing a default on an axis the instrument doesn't measure is
-exactly the mistake this campaign exists to avoid. Recommendation: try
-`VIVARIUM_MESH_BLOCK=32`, confirm digging still feels responsive, then promote it
-to default if good.
+**Now the default (Joseph's call, 2026-06-23).** Caveat carried forward: mesh
+block size also sets how large an area remeshes per *edit* (dig/place) — core to a
+voxel game, and the benchmark flies but never digs. So the fps win is measured but
+the dig-feel cost is *not*; `VIVARIUM_MESH_BLOCK=16` reverts if digging feels
+heavy. Combined default is now view 16384 + mesh_block 32 ≈ 145 fps (11× the
+original 32768/16 baseline).
 
 ## What this means for the engine decision (Bevy vs Godot)
 
