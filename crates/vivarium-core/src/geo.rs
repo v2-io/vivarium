@@ -542,6 +542,34 @@ mod tests {
         );
     }
 
+    /// Eroding a *supplied* field with sea-level outlets must also be bit-identical
+    /// across runs — the path the real-terrain preview takes. (Covers
+    /// `from_heights` + `erode` + the `sea_level` outlet branch, which the
+    /// blank-slate `simulate` tests do not exercise.)
+    #[test]
+    fn erode_over_field_with_sea_level_is_bit_identical() {
+        let p = ErosionParams {
+            nx: 48,
+            epochs: 15,
+            sea_level: Some(24.0),
+            ..Default::default()
+        };
+        // A reproducible non-trivial starting field (a tilted, bumpy block).
+        let make = || {
+            let mut h = vec![0.0f32; p.nx * p.nx];
+            let mut r = Rng::new(0xABCD);
+            for (i, v) in h.iter_mut().enumerate() {
+                *v = 20.0 + (i % p.nx) as f32 * 0.3 + r.next_f32() * 4.0;
+            }
+            Heightfield::from_heights(p.nx, p.cell_size, h).erode(&p)
+        };
+        let a = make();
+        let b = make();
+        for (x, y) in a.h.iter().zip(b.h.iter()) {
+            assert_eq!(x.to_bits(), y.to_bits(), "erode-over-field diverged");
+        }
+    }
+
     /// The talus pass must hold: a deliberately over-steep spike should be cut
     /// back toward the repose slope rather than left standing or amplified.
     #[test]
