@@ -92,6 +92,12 @@ var _csv: FileAccess
 var _label: Label
 var _bench_eye0: Vector3            # path is defined relative to the start pose
 var _bench_yaw0: float
+var _sea_level: int = 0             # clamp the flight above this (never underwater)
+var _tag := ""                      # VIVARIUM_TAG: prefixes CSV + shots so sweep
+                                    # runs don't clobber each other's output
+var _shot_interval := 5.0           # seconds between bench screenshots
+var _next_shot_t := 1e9             # path-time of the next screenshot
+var _clearance := 250.0             # bench eye height above ground/sea (VIVARIUM_CLEAR)
 
 # Flushed-per-line trace to user://trace.log, so progress is visible even when
 # the process is killed (stdout is block-buffered off a tty and lost on SIGKILL).
@@ -122,7 +128,8 @@ func _ready() -> void:
 	world.name = "VivariumWorld"
 	add_child(world)
 	detail = world.voxels_per_unit()
-	_trace("world added, detail=%d" % detail)
+	_sea_level = world.sea_level()
+	_trace("world added, detail=%d, sea_level=%d" % [detail, _sea_level])
 
 	var palette := VoxelColorPalette.new()
 	for idx in PALETTE:
@@ -293,10 +300,23 @@ func _ready() -> void:
 	# Telemetry / benchmark wiring (see the block by the member vars).
 	_bench = OS.get_environment("VIVARIUM_BENCH") == "1"
 	_telemetry_on = _bench or OS.get_environment("VIVARIUM_TELEMETRY") == "1"
+	_tag = OS.get_environment("VIVARIUM_TAG")   # "" unless set
 	if _bench:
 		var secs_env := OS.get_environment("VIVARIUM_BENCH_SECS")
 		if secs_env != "":
 			_bench_secs = float(secs_env)
+		var shot_env := OS.get_environment("VIVARIUM_SHOT_SECS")
+		if shot_env != "":
+			_shot_interval = float(shot_env)
+		var clear_env := OS.get_environment("VIVARIUM_CLEAR")
+		if clear_env != "":
+			_clearance = float(clear_env)
+		_next_shot_t = _shot_interval
+		# Start over LAND, not the seaward spawn — otherwise the first half of the
+		# out-and-back path is over open ocean and those samples don't measure
+		# terrain work. Begin at the highest sampled point (deep in the continent),
+		# so the whole path stays over real relief and every sample is comparable.
+		cam.position = _pick_bench_start()
 		# The scripted path is defined relative to the camera's start pose, so it
 		# flies the same shape regardless of where we spawn.
 		_bench_eye0 = cam.position
@@ -383,6 +403,12 @@ func _process(delta: float) -> void:
 	if _bench:
 		_bench_t += delta
 		_drive_bench_camera(_bench_t, delta)
+		# Periodic screenshots along the path: numbers tell us the cost, but only
+		# the image tells us whether the terrain actually developed. Captured at
+		# fixed path-times so two configs' shots are directly comparable.
+		if _bench_t >= _next_shot_t:
+			_capture_bench_shot(_bench_t)
+			_next_shot_t += _shot_interval
 
 	_sample_accum += delta
 	if _sample_accum >= 1.0 / TELEMETRY_HZ:
@@ -391,7 +417,25 @@ func _process(delta: float) -> void:
 		_worst_ms = 0.0
 
 	if _bench and _bench_t >= _bench_secs:
+		_capture_bench_shot(_bench_t)   # always grab a final frame
 		_finish_bench()
+
+# Pick the highest land point on a coarse grid over the continent — a deep-interior
+# start, so the out-and-back flight stays over relief the whole way. One-time scan
+# (~81 cheap FFI height lookups). Y is left at 0; terrain-follow sets it next frame.
+func _pick_bench_start() -> Vector3:
+	var best := Vector3.ZERO
+	var best_h := -1
+	for gz in range(-4, 5):
+		for gx in range(-4, 5):
+			var x := gx * 1000
+			var z := gz * 1000
+			var h: int = world.surface_height(x, z)
+			if h > best_h:
+				best_h = h
+				best = Vector3(float(x), 0.0, float(z))
+	_trace("bench start (highest of grid) = %v, h=%d" % [best, best_h])
+	return best
 
 # Deterministic stress path: cruise straight, hard 180° whip-around (the regime
 # that exposed the LOD churn), then cruise the new heading. Yaw is a pure function
@@ -405,13 +449,18 @@ func _drive_bench_camera(t: float, delta: float) -> void:
 	if t > WHIP_START:
 		var w: float = clampf((t - WHIP_START) / WHIP_DUR, 0.0, 1.0)
 		yaw = _bench_yaw0 + PI * w        # smooth 180° turn over WHIP_DUR seconds
-	cam.rotation = Vector3(-0.15, yaw, 0.0)   # slight downward pitch, level roll
+	cam.rotation = Vector3(-0.30, yaw, 0.0)   # look down ~17° so terrain fills frame
 	var fwd := Vector3(-sin(yaw), 0.0, -cos(yaw))   # Godot forward is -Z at yaw 0
 	cam.position += fwd * V * delta
-	# Terrain-follow: hold a fixed eye height above the moving ground.
+	# Terrain-follow, but stay ABOVE the water surface: surface_height under the
+	# ocean is the seabed, so following it alone flies the camera underwater and we
+	# render the world from below (useless intel). Clamp to max(ground, sea) + a
+	# real clearance so the flight is always a useful over-the-terrain oblique.
+	# Clearance is the framing knob (VIVARIUM_CLEAR): lower = closer/more detail,
+	# higher = wider vista.
 	var gh: int = world.surface_height(int(cam.position.x), int(cam.position.z))
-	if gh > 0:
-		cam.position.y = gh + 40.0
+	var floor_y: int = maxi(gh, _sea_level)
+	cam.position.y = floor_y + _clearance
 
 func _emit_sample(t: float) -> void:
 	var fps := Engine.get_frames_per_second()
@@ -449,10 +498,18 @@ func _emit_sample(t: float) -> void:
 			q_tot, q_mesh, q_gen, dropped, blocked, draw, vmem_mb]
 
 func _setup_csv() -> void:
-	_csv = FileAccess.open("user://telemetry.csv", FileAccess.WRITE)
+	_csv = FileAccess.open("user://telemetry%s.csv" % _tag, FileAccess.WRITE)
 	if _csv != null:
 		_csv.store_line("t,fps,worst_ms,draw_calls,mesh_blocks,data_blocks,q_total,q_mesh,q_gen,dropped_mesh,blocked_lod,vmem_mb")
 		_csv.flush()
+
+# Grab the current frame to user://bench<tag>_t<NN>.png. Path-time in the name so
+# a sweep's shots sort and pair up across configs (t05, t10, …).
+func _capture_bench_shot(t: float) -> void:
+	var img := get_viewport().get_texture().get_image()
+	var path := "user://bench%s_t%02d.png" % [_tag, int(round(t))]
+	img.save_png(path)
+	_trace("shot %s (fps=%.1f)" % [path, Engine.get_frames_per_second()])
 
 func _setup_label() -> void:
 	_label = Label.new()
@@ -471,7 +528,7 @@ func _finish_bench() -> void:
 	if _csv != null:
 		_csv.flush()
 		_csv.close()
-	var p := ProjectSettings.globalize_path("user://telemetry.csv")
+	var p := ProjectSettings.globalize_path("user://telemetry%s.csv" % _tag)
 	print("[vivarium] BENCH done (%.0fs). CSV=%s" % [_bench_secs, p])
 	_trace("bench done -> " + p)
 	get_tree().quit()

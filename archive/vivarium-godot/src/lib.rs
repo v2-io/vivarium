@@ -162,9 +162,21 @@ impl VivariumWorld {
 
     /// Topmost solid `y` in the generated column at `(x, z)`, or `-1` if empty.
     /// Lets the camera/controller spawn the player on the ground.
+    ///
+    /// NB: under the ocean this is the *seabed* (the topmost solid is below the
+    /// waterline), so a camera that follows this alone flies underwater. Clamp the
+    /// eye height to at least [`Self::sea_level`] — see the benchmark flight.
     #[func]
     fn surface_height(&self, x: i32, z: i32) -> i32 {
         self.world.read().unwrap().volume.surface_height(x, z).unwrap_or(-1)
+    }
+
+    /// Sea level, in voxels. The waterline the ocean fills to; a flying camera
+    /// should stay above `max(surface_height, sea_level)` so it never renders the
+    /// world from underneath the water surface.
+    #[func]
+    fn sea_level(&self) -> i32 {
+        self.world.read().unwrap().volume.sea_level()
     }
 
     /// Voxels per world unit (see `vivarium_core::voxel::Detail`). The view
