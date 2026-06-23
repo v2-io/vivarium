@@ -29,6 +29,7 @@
 //! The world is 3D — see [`voxel`] for the volumetric substrate and the
 //! reasoning behind storing the world as `seed + sparse edits`.
 
+pub mod geo;
 pub mod voxel;
 
 use voxel::Volume;

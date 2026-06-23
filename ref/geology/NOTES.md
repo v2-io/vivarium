@@ -317,6 +317,33 @@ not vendored into vivarium history.
   solver we still need in hand.** The two are complementary, not redundant.
 - **`ref/geology/pdfs/`** — intended home for PDFs. Empty: see §9 fetch status.
 
+## 8b. First spike result (2026-06-22) — uplift→erode landed
+
+Built `crates/vivarium-core/src/geo.rs` (the abstraction-tier heightfield erosion)
++ `examples/erosion_preview.rs` (dependency-free ASCII drainage view). The
+determinism-clean pipeline from §3–§4: priority-flood fill (Barnes, ε-gradient
+flats) → D8 receivers → drainage area → implicit n=1 stream-power incision
+(Whipple/Braun-Willett) → talus (Musgrave). Elevation-sorted order stands in for
+B&W's O(n) stack (noted for the O(n) swap when grid size demands it).
+
+**What held (3 of 4):** bit-identical replay (asserted, compared on raw f32 bits);
+flow concentrates into a *hierarchical* network (rills→tributaries→trunks, real
+confluences — drainage topology is a tree); talus caps over-steep slopes. Tests:
+`erosion_is_bit_identical`, `different_seeds_differ`, `drainage_concentrates`,
+`talus_caps_slope` — all pass.
+
+**The honest catch:** network *geometry* is grid-locked — trunks run as
+near-straight vertical/diagonal lines, not sinuous dendrites. This is **the D8
+single-flow-direction anisotropy** predicted in §2 (PNAS arXiv:1911.03519), not a
+bug. (An earlier dome initial-condition made it worse via false radial drainage;
+corrected to the textbook uniform-uplift + noise symmetry-breaking setup.)
+
+**Validated next increment:** multiple-flow-direction / D∞ drainage routing
+(Tarboton) for area accumulation, keeping the single-receiver tree for the
+implicit erosion solve. *Then* voxel-sampling (NOTES §8 step 4). The spike's real
+job — prove the deterministic pipeline works and surface the exact named
+limitation — is done.
+
 ## 9. Source ledger → relata
 
 Spine seeded into `relata` this session (verified critical-path): galin-2019,
