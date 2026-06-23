@@ -15,7 +15,6 @@ use std::sync::Arc;
 use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
 use bevy::ecs::message::MessageWriter;
 use bevy::input::mouse::AccumulatedMouseMotion;
-use bevy::pbr::{DistanceFog, FogFalloff};
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
@@ -69,12 +68,14 @@ impl VoxelWorldConfig for VivWorld {
     type MaterialIndex = u8;
     type ChunkUserBundle = ();
 
-    // Conservative spawn radius. FINDING: 32 loaded ~40k chunk-entities while
-    // flying and caused worsening stutter (see /tmp/bevy_diag.log analysis); 16
-    // (~Godot's effective view) keeps the working set an order of magnitude
-    // smaller, and distance fog hides the edge.
+    // TEMPORARY: deliberately oversized so the kilometre-scale terrain is at
+    // least *visible* while we decide the real distant-LOD solution. 64 chunks ×
+    // 32 voxels × 0.5 m ≈ 1 km of reach — far past what this renderer can do
+    // smoothly (the 32-chunk stutter finding stands), so expect a slow start and
+    // low fps. This is the wall, made visible on purpose; it is not a fix. Lower
+    // it back toward 16 if a machine chokes.
     fn spawning_distance(&self) -> u32 {
-        16
+        64
     }
 
     fn min_despawn_distance(&self) -> u32 {
@@ -163,45 +164,19 @@ fn setup(mut commands: Commands, world: Res<VivWorld>) {
     // Fresh diagnostics log per run.
     let _ = std::fs::write("/tmp/bevy_diag.log", "");
 
-    // Spawn the camera on the tallest peak, looking down-slope — so the real
-    // scale reads instantly (you're standing a kilometre up, ground falling away)
-    // rather than dropping you onto ambiguous lowland. Scan the eroded surface
-    // coarsely for its highest column; the scan is O(1)-per-sample and cheap.
-    let half = EROSION_REGION_HALF_M * DETAIL; // region half-extent in voxels
-    let step = 150; // voxels between scan samples (~75 m)
-    let (mut best, mut peak) = (i32::MIN, IVec3::ZERO);
-    let mut z = -half;
-    while z <= half {
-        let mut x = -half;
-        while x <= half {
-            if let Some(h) = world.volume.surface_height(x, z) {
-                if h > best {
-                    best = h;
-                    peak = IVec3::new(x, h, z);
-                }
-            }
-            x += step;
-        }
-        z += step;
-    }
-
-    let eye = Vec3::new(peak.x as f32, peak.y as f32 + 50.0, peak.z as f32);
-    // Look back toward the world centre and downward — the descending flank.
-    let look = Vec3::new(peak.x as f32 * 0.3, peak.y as f32 - 500.0, peak.z as f32 * 0.3);
+    // Spawn near the *middle* of the region at standing height, gazing out across
+    // the terrain (not down at it). No fog — we want to see as far as the renderer
+    // physically reaches, hard edge and LOD seams included; that boundary is the
+    // very thing we are about to fix.
+    let ground = world.volume.surface_height(0, 0).unwrap_or(6_000);
+    let eye = Vec3::new(0.0, ground as f32 + 12.0, 0.0); // ~6 m eye height
+    // Look outward and very slightly down — across the landscape toward the horizon.
+    let look = Vec3::new(800.0, ground as f32 - 60.0, 300.0);
 
     commands.spawn((
         Camera3d::default(),
         Transform::from_translation(eye).looking_at(look, Vec3::Y),
         VoxelWorldCamera::<VivWorld>::default(),
-        // Distance fog into the overcast sky. start/end in voxels; at 0.5 m voxels
-        // ~150–520 voxels is ~75–260 m of visible descent before the fog — enough
-        // to read the height without pushing the chunk working set (and stutter)
-        // past what the spawn radius can feed.
-        DistanceFog {
-            color: SKY,
-            falloff: FogFalloff::Linear { start: 150.0, end: 520.0 },
-            ..default()
-        },
     ));
 
     // Overcast lighting: dim, shadowless key + strong flat ambient.
