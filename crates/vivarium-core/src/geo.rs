@@ -128,6 +128,16 @@ pub struct ErosionParams {
     /// than only draining off the grid edge. `None` keeps the from-scratch
     /// behaviour: the outer ring is the only base level.
     pub sea_level: Option<f32>,
+    /// **Sediment transport capacity** coefficient `Kt` (`0` = pure detachment,
+    /// the old behaviour). When `> 0`, the model is no longer purely incisional:
+    /// each reach can carry only `Kt·Aᵐ·S` of sediment, and where that capacity
+    /// drops below the load it has picked up — slack, low-gradient reaches near
+    /// base level — the excess **deposits**. This is what grades lower valleys to
+    /// a smooth, monotonic profile and builds floodplains / alluvial fills, rather
+    /// than leaving the bumpy floors that pool water exactly where rivers should
+    /// run cleanest. (Transport-limited geomorphology; the behaviour CAESAR-Lisflood
+    /// models and the reason real outlets are graded, not chains of pools.)
+    pub transport_k: f32,
 }
 
 impl Default for ErosionParams {
@@ -142,6 +152,7 @@ impl Default for ErosionParams {
             epochs: 60,
             dt: 1.0,
             sea_level: None,
+            transport_k: 0.0, // pure detachment unless a caller opts into deposition
         }
     }
 }
@@ -224,7 +235,17 @@ impl Heightfield {
             let receivers = self.receivers(&outlets);
             let order = self.elevation_order();
             self.accumulate_drainage(&order);
+            // Snapshot before incision so the deposition pass knows how much
+            // sediment each cell produced this epoch.
+            let pre_incision = if params.transport_k > 0.0 {
+                Some(self.h.clone())
+            } else {
+                None
+            };
             self.incise(params, &receivers, &order);
+            if let Some(before) = pre_incision {
+                self.deposit(params, &receivers, &order, &before);
+            }
             self.talus(params);
         }
         self
@@ -469,6 +490,52 @@ impl Heightfield {
             };
             let factor = params.k * params.dt * self.drainage[i].powf(params.m) / dist;
             self.h[i] = (self.h[i] + factor * self.h[r]) / (1.0 + factor);
+        }
+    }
+
+    /// Step 5b — **transport-limited deposition.** Routes the sediment this
+    /// epoch's incision produced downstream along the single-flow tree; each reach
+    /// carries at most `Kt·Aᵐ·S`, and where the load exceeds capacity — slack,
+    /// low-gradient reaches near base level — the excess is laid down, grading the
+    /// valley floor to a smooth monotonic descent and building floodplains /
+    /// alluvial fills. This is the fix for "pools where rivers should run
+    /// cleanest": deposition is strongest exactly where gradient is lowest.
+    /// Deterministic (fixed downstream order + neighbour geometry); deposition is
+    /// applied at a fraction per epoch so the floor grades gradually rather than
+    /// overshooting — the stable way to run an explicit deposition pass.
+    fn deposit(&mut self, params: &ErosionParams, recv: &[usize], order: &[usize], before: &[f32]) {
+        const DEPOSIT_RATE: f32 = 0.5;
+        let nx = self.nx;
+        let area = self.cell_size * self.cell_size;
+        // Sediment each cell produced by incision this epoch (positive only).
+        let mut qs = vec![0.0f32; nx * nx];
+        for i in 0..nx * nx {
+            let eroded = before[i] - self.h[i];
+            if eroded > 0.0 {
+                qs[i] = eroded * area;
+            }
+        }
+        // High → low: gather load, deposit the over-capacity excess, carry the rest.
+        for &i in order.iter().rev() {
+            let r = recv[i];
+            if r == i {
+                continue; // outlet — remaining sediment leaves to the sea
+            }
+            let (x, y) = (i % nx, i / nx);
+            let (rx, ry) = (r % nx, r / nx);
+            let dist = if x != rx && y != ry {
+                self.cell_size * std::f32::consts::SQRT_2
+            } else {
+                self.cell_size
+            };
+            let slope = ((self.h[i] - self.h[r]) / dist).max(0.0);
+            let capacity = params.transport_k * self.drainage[i].powf(params.m) * slope;
+            if qs[i] > capacity {
+                let deposited = (qs[i] - capacity) * DEPOSIT_RATE;
+                self.h[i] += deposited / area;
+                qs[i] -= deposited;
+            }
+            qs[r] += qs[i];
         }
     }
 

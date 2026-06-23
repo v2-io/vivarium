@@ -136,6 +136,12 @@ struct ErodedSurface {
     nx: usize,
     /// Row-major elevations in **metres**, length `nx · nx`.
     h_m: Vec<f32>,
+    /// Per-node **roughness** in `[0, 1]` derived from local slope: ~0 on flat
+    /// valley floors and graded reaches, ~1 on steep flanks. Scales the sub-grid
+    /// detail noise so it does not add bumps where a river would have smoothed the
+    /// ground — the fidelity invariant applied to materialization (DESIGN.md), and
+    /// the reason slack valley floors stop reading as a chain of pools.
+    rough: Vec<f32>,
 }
 
 impl ErodedSurface {
@@ -144,17 +150,27 @@ impl ErodedSurface {
     /// extends into open sea, rather than presenting a cliff or a seam back to raw
     /// FBM. Always returns a height.
     fn sample(&self, xm: f32, zm: f32) -> f32 {
+        self.bilinear(&self.h_m, xm, zm)
+    }
+
+    /// Bilinearly sampled roughness `[0, 1]` at a metre position (see [`Self::rough`]).
+    fn roughness(&self, xm: f32, zm: f32) -> f32 {
+        self.bilinear(&self.rough, xm, zm)
+    }
+
+    /// Shared bilinear sampler over a row-major `nx·nx` grid, clamped to the edge.
+    fn bilinear(&self, grid: &[f32], xm: f32, zm: f32) -> f32 {
         let gx = ((xm - self.x0_m) / self.cell_m).clamp(0.0, (self.nx - 1) as f32);
         let gz = ((zm - self.z0_m) / self.cell_m).clamp(0.0, (self.nx - 1) as f32);
         let (x0, z0) = (gx.floor() as usize, gz.floor() as usize);
         let (x1, z1) = ((x0 + 1).min(self.nx - 1), (z0 + 1).min(self.nx - 1));
         let (tx, tz) = (gx - x0 as f32, gz - z0 as f32);
-        let h00 = self.h_m[z0 * self.nx + x0];
-        let h10 = self.h_m[z0 * self.nx + x1];
-        let h01 = self.h_m[z1 * self.nx + x0];
-        let h11 = self.h_m[z1 * self.nx + x1];
-        let a = h00 + (h10 - h00) * tx;
-        let b = h01 + (h11 - h01) * tx;
+        let v00 = grid[z0 * self.nx + x0];
+        let v10 = grid[z0 * self.nx + x1];
+        let v01 = grid[z1 * self.nx + x0];
+        let v11 = grid[z1 * self.nx + x1];
+        let a = v00 + (v10 - v00) * tx;
+        let b = v01 + (v11 - v01) * tx;
         a + (b - a) * tz
     }
 }
@@ -242,13 +258,38 @@ impl Volume {
             uplift: 2.0, // m/epoch
             k: 0.02,     // erodibility — dissects with MFD without razing the relief
             m: 0.5,
-            max_slope: 1.2, // talus repose ~50° — steep mountain flanks allowed
+            max_slope: 1.2,    // talus repose ~50° — steep mountain flanks allowed
+            transport_k: 0.05, // deposition: grade slack lower reaches, no pooled floors
             epochs,
             dt: 1.0,
             sea_level: Some(SEA_LEVEL as f32),
         };
         let field = crate::geo::Heightfield::from_heights(nx, cell, h).erode(&params);
-        v.eroded = Some(ErodedSurface { x0_m: origin, z0_m: origin, cell_m: cell, nx, h_m: field.h });
+
+        // Roughness from local slope: smooth (0) on flat/graded floors, rough (1)
+        // on steep flanks — so the sub-grid detail noise textures slopes but leaves
+        // valley floors graded (no spurious pools).
+        let hm = &field.h;
+        let mut rough = vec![0.0f32; nx * nx];
+        for j in 0..nx {
+            for i in 0..nx {
+                let l = hm[j * nx + i.saturating_sub(1)];
+                let r = hm[j * nx + (i + 1).min(nx - 1)];
+                let d = hm[j.saturating_sub(1) * nx + i];
+                let u = hm[(j + 1).min(nx - 1) * nx + i];
+                let slope = ((r - l).powi(2) + (u - d).powi(2)).sqrt() / (2.0 * cell);
+                rough[j * nx + i] = smoothstep(0.05, 0.40, slope); // flat→0, steep→1
+            }
+        }
+
+        v.eroded = Some(ErodedSurface {
+            x0_m: origin,
+            z0_m: origin,
+            cell_m: cell,
+            nx,
+            h_m: field.h,
+            rough,
+        });
         v
     }
 
@@ -354,10 +395,11 @@ impl Volume {
         let d = self.detail as f32;
         let (xm, zm) = (x as f32 / d, z as f32 / d);
         let h_m = match &self.eroded {
-            // Macro form from the erosion tier, plus sub-grid detail relief so the
-            // 0.5 m voxels read as real ground, not a staircase quantization of a
-            // smooth ramp (see [`Self::detail_relief`]).
-            Some(e) => e.sample(xm, zm) + self.detail_relief(xm, zm),
+            // Macro form from the erosion tier, plus sub-grid detail relief —
+            // scaled by local roughness so it textures steep flanks but leaves
+            // graded valley floors smooth (no pooled bumps; see [`Self::detail_relief`]
+            // and [`ErodedSurface::rough`]).
+            Some(e) => e.sample(xm, zm) + e.roughness(xm, zm) * self.detail_relief(xm, zm),
             None => self.fbm_height_world(xm, zm),
         };
         (h_m * d).round() as i32
@@ -395,10 +437,22 @@ impl Volume {
     /// basins a couple of km below. (Sub-~700 m detail is the render-voxel tier's
     /// job — added noise under the fidelity invariant — not invented here.)
     fn fbm_height_world(&self, xu: f32, zu: f32) -> f32 {
-        const FREQ: f32 = 1.0 / 22_000.0; // ~22 km base wavelength (metres)
-        const AMPLITUDE: f32 = 2_300.0; // metres of relief about the base
-        const BASE: f32 = 3_200.0; // metres — just above sea level (3 km)
-        const OCTAVES: u32 = 6;
+        // **The scale-free prior.** FBM is the honest maximum-entropy field when we
+        // know there is structure at every scale but have no information yet
+        // privileging any one — the unbiased prior before the *actual* fractal
+        // hierarchy is known. So it is not pretending to be geology: it is the
+        // proto-relief that the (physical) erosion then *shapes*, and a deliberate
+        // placeholder for the tectonic-uplift tier (deferred — NOTES §0a) that will
+        // one day replace it with information about where ranges truly sit.
+        //
+        // Base wavelength is kept *smaller* than a typical view so relief exists at
+        // many scales and several massifs fall in frame; erosion dissects it into
+        // emergent ridges. (Earlier a 22 km base — larger than the 12 km region —
+        // collapsed this to one dome; that was the bug, not the voxel scaling.)
+        const FREQ: f32 = 1.0 / 6_000.0; // ~6 km base wavelength (< region)
+        const AMPLITUDE: f32 = 2_200.0; // metres of relief about the base
+        const BASE: f32 = 3_300.0; // metres — a little above the 3 km sea
+        const OCTAVES: u32 = 7; // down to ~90 m features for erosion to act on
         BASE + self.fbm(xu * FREQ, zu * FREQ, OCTAVES) * AMPLITUDE
     }
 
@@ -483,6 +537,14 @@ impl Volume {
 #[inline]
 fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + (b - a) * t
+}
+
+/// Hermite smoothstep: 0 below `lo`, 1 above `hi`, an ease-curve between. Used to
+/// turn a local slope into a `[0, 1]` roughness weight.
+#[inline]
+fn smoothstep(lo: f32, hi: f32, x: f32) -> f32 {
+    let t = ((x - lo) / (hi - lo)).clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
 }
 
 /// Perlin's quintic fade `6t⁵ − 15t⁴ + 10t³`: an ease curve with zero first *and*

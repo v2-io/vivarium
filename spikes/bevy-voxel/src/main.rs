@@ -302,7 +302,7 @@ fn far_color(h: i32, wet: bool, sea: i32) -> [f32; 4] {
         return [0.16, 0.34, 0.55, 1.0];
     }
     let above_m = (h - sea).max(0) as f32 / DETAIL as f32;
-    let t = (above_m / 1500.0).clamp(0.0, 1.0); // peaks reach ~1.5 km above sea
+    let t = (above_m / 2500.0).clamp(0.0, 1.0); // peaks reach ~2.7 km above sea
     let stops = [[0.28, 0.50, 0.24], [0.42, 0.40, 0.30], [0.95, 0.96, 0.98]];
     let seg = (t * 2.0).min(1.999);
     let k = seg.floor() as usize;
