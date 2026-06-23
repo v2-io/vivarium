@@ -16,6 +16,8 @@ use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
 use bevy::ecs::message::MessageWriter;
 use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::prelude::*;
+use bevy::asset::RenderAssetUsages;
+use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 use bevy_voxel_world::custom_meshing::{CHUNK_SIZE_F, CHUNK_SIZE_U};
@@ -68,14 +70,12 @@ impl VoxelWorldConfig for VivWorld {
     type MaterialIndex = u8;
     type ChunkUserBundle = ();
 
-    // TEMPORARY: deliberately oversized so the kilometre-scale terrain is at
-    // least *visible* while we decide the real distant-LOD solution. 64 chunks ×
-    // 32 voxels × 0.5 m ≈ 1 km of reach — far past what this renderer can do
-    // smoothly (the 32-chunk stutter finding stands), so expect a slow start and
-    // low fps. This is the wall, made visible on purpose; it is not a fix. Lower
-    // it back toward 16 if a machine chokes.
+    // Near, diggable band only — the distant terrain is drawn by the far-terrain
+    // backdrop mesh (see `spawn_far_terrain`), so this can stay small and fast.
+    // 16 chunks × 32 voxels × 0.5 m ≈ 256 m of full-detail voxels around the
+    // camera; everything beyond is the backdrop.
     fn spawning_distance(&self) -> u32 {
-        64
+        16
     }
 
     fn min_despawn_distance(&self) -> u32 {
@@ -160,9 +160,18 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, world: Res<VivWorld>) {
+fn setup(
+    mut commands: Commands,
+    world: Res<VivWorld>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
     // Fresh diagnostics log per run.
     let _ = std::fs::write("/tmp/bevy_diag.log", "");
+
+    // The distant terrain (v1 of the horizon-LOD plan): a single coarse mesh of
+    // the whole region, behind the near voxels.
+    spawn_far_terrain(&mut commands, &mut meshes, &mut materials, &world.volume);
 
     // Spawn near the *middle* of the region at standing height, gazing out across
     // the terrain (not down at it). No fog — we want to see as far as the renderer
@@ -189,6 +198,120 @@ fn setup(mut commands: Commands, world: Res<VivWorld>) {
         brightness: 600.0,
         affects_lightmapped_meshes: true,
     });
+}
+
+/// v1 of the horizon-LOD plan (ref/rendering/NOTES.md): one coarse heightfield
+/// mesh of the whole eroded region, sampled from `surface_height`, spawned as the
+/// distant backdrop *behind* the near diggable voxels. This is an **in-world 3D
+/// surface** — look toward a far massif and this draws it — not a top-down map.
+///
+/// It is a pure view over the core: every vertex is `surface_height(x, z)`, so it
+/// is deterministic and stores no state. Sampled every `FAR_STRIDE` voxels (~the
+/// erosion-cell scale) and sunk `FAR_DROP` voxels so the full-detail near voxels
+/// reliably win the depth test wherever they exist; the distance, where no voxels
+/// spawn, is carried entirely by this mesh. Water cells are clamped to sea level
+/// and coloured as water so coastlines and lakes read at range.
+fn spawn_far_terrain(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    volume: &Volume,
+) {
+    const FAR_STRIDE: i32 = 32; // voxels between samples (~16 m at detail 2)
+    const FAR_DROP: f32 = 16.0; // voxels to sink below the near surface (z-fight guard)
+    let half = EROSION_REGION_HALF_M * DETAIL; // region half-extent in voxels
+    let sea = volume.sea_level();
+    let n = ((2 * half) / FAR_STRIDE) as usize + 1;
+
+    // Heights first — normals need neighbours. Below sea clamps to the waterline.
+    let mut hs = vec![0i32; n * n];
+    let mut wet = vec![false; n * n];
+    for j in 0..n {
+        for i in 0..n {
+            let x = -half + i as i32 * FAR_STRIDE;
+            let z = -half + j as i32 * FAR_STRIDE;
+            let g = volume.surface_height(x, z).unwrap_or(sea);
+            if g <= sea {
+                hs[j * n + i] = sea;
+                wet[j * n + i] = true;
+            } else {
+                hs[j * n + i] = g;
+            }
+        }
+    }
+
+    let mut positions = Vec::with_capacity(n * n);
+    let mut colors = Vec::with_capacity(n * n);
+    let mut normals = Vec::with_capacity(n * n);
+    for j in 0..n {
+        for i in 0..n {
+            let x = (-half + i as i32 * FAR_STRIDE) as f32;
+            let z = (-half + j as i32 * FAR_STRIDE) as f32;
+            positions.push([x, hs[j * n + i] as f32 - FAR_DROP, z]);
+            colors.push(far_color(hs[j * n + i], wet[j * n + i], sea));
+            // Central-difference normal from the height grid (smooth hillshade).
+            let l = hs[j * n + i.saturating_sub(1)];
+            let r = hs[j * n + (i + 1).min(n - 1)];
+            let d = hs[j.saturating_sub(1) * n + i];
+            let u = hs[(j + 1).min(n - 1) * n + i];
+            let dx = (r - l) as f32 / (2.0 * FAR_STRIDE as f32);
+            let dz = (u - d) as f32 / (2.0 * FAR_STRIDE as f32);
+            let nrm = Vec3::new(-dx, 1.0, -dz).normalize();
+            normals.push([nrm.x, nrm.y, nrm.z]);
+        }
+    }
+
+    let mut indices = Vec::with_capacity((n - 1) * (n - 1) * 6);
+    for j in 0..n - 1 {
+        for i in 0..n - 1 {
+            let a = (j * n + i) as u32;
+            let b = a + 1;
+            let c = ((j + 1) * n + i) as u32;
+            let d = c + 1;
+            indices.extend_from_slice(&[a, c, b, b, c, d]);
+        }
+    }
+
+    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::RENDER_WORLD);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+    mesh.insert_indices(Indices::U32(indices));
+
+    let material = materials.add(StandardMaterial {
+        base_color: Color::WHITE, // multiplied by the per-vertex colours
+        perceptual_roughness: 1.0,
+        metallic: 0.0,
+        double_sided: true,
+        cull_mode: None, // winding-agnostic for v1; tighten later
+        ..default()
+    });
+
+    commands.spawn((Mesh3d(meshes.add(mesh)), MeshMaterial3d(material)));
+    eprintln!(
+        "vivarium: far-terrain backdrop {n}×{n} grid ({} k tris)",
+        (n - 1) * (n - 1) * 2 / 1000
+    );
+}
+
+/// Elevation/material colour for a far-terrain vertex: water blue below sea, then
+/// a green-lowland → brown-rock → white-peak ramp by height above sea (metres).
+fn far_color(h: i32, wet: bool, sea: i32) -> [f32; 4] {
+    if wet {
+        return [0.16, 0.34, 0.55, 1.0];
+    }
+    let above_m = (h - sea).max(0) as f32 / DETAIL as f32;
+    let t = (above_m / 1500.0).clamp(0.0, 1.0); // peaks reach ~1.5 km above sea
+    let stops = [[0.28, 0.50, 0.24], [0.42, 0.40, 0.30], [0.95, 0.96, 0.98]];
+    let seg = (t * 2.0).min(1.999);
+    let k = seg.floor() as usize;
+    let f = seg - k as f32;
+    [
+        stops[k][0] + (stops[k + 1][0] - stops[k][0]) * f,
+        stops[k][1] + (stops[k + 1][1] - stops[k][1]) * f,
+        stops[k][2] + (stops[k + 1][2] - stops[k][2]) * f,
+        1.0,
+    ]
 }
 
 /// Once a second, log frame health + total entity count to /tmp/bevy_diag.log
