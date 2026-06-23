@@ -42,6 +42,7 @@ fn main() {
         k: 0.20,
         m: 0.5,
         max_slope: 0.8,
+        deposition: 0.5, // Davy-Lague transport (added 2026-06-23); see geo::deposit
         epochs,
         dt: 1.0,
         sea_level: Some(SEA_LEVEL as f32),

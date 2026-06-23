@@ -104,6 +104,20 @@ pub const SEA_LEVEL: i32 = 3000;
 /// regolith; below it is stone. Scales to voxels via [`Detail`].
 pub const SOIL_DEPTH: i32 = 4;
 
+/// Continental-shelf floor, **in metres** — the elevation the land grades *down*
+/// to beyond the eroded patch. 300 m below sea, so the engineered region reads as
+/// a continent sitting in open ocean (DESIGN: bounded continent, 2026-06-23).
+/// Without this the bilinear sampler's edge-clamp extruded the patch boundary's
+/// height to the horizon — straight ridges running off forever (the artifact this
+/// removes).
+const OCEAN_FLOOR_M: f32 = SEA_LEVEL as f32 - 300.0;
+
+/// Distance, **in metres**, over which the macro surface grades from the patch
+/// edge down to [`OCEAN_FLOOR_M`]. The continental shelf / drop-off width; also
+/// the band over which sub-grid detail noise fades out, so the open ocean is a
+/// clean flat sea rather than a noise-speckled fringe.
+const SHELF_FALLOFF_M: f32 = 1500.0;
+
 /// World resolution: **voxels per metre**. The anchor is `detail = 2` (0.5 m
 /// voxels, [`METERS_PER_VOXEL`]). The constants above are in metres and are
 /// multiplied through by `detail` to reach voxels; terrain noise is sampled in
@@ -145,12 +159,30 @@ struct ErodedSurface {
 }
 
 impl ErodedSurface {
-    /// Bilinearly sample the surface (metres) at a metre position, **clamping** to
-    /// the patch edge outside it: beyond the eroded region the coastline simply
-    /// extends into open sea, rather than presenting a cliff or a seam back to raw
-    /// FBM. Always returns a height.
+    /// Bilinearly sample the surface (metres) at a metre position. Outside the
+    /// patch the sample coordinate is **clamped to the edge** (see [`Self::bilinear`]),
+    /// so this alone would extrude the boundary height outward forever. The
+    /// open-ocean falloff that turns that into a real coastline is applied by the
+    /// caller ([`Volume::terrain_height`]) via [`Self::exterior_t`] — kept separate
+    /// so this stays a pure sampler. Always returns a height.
     fn sample(&self, xm: f32, zm: f32) -> f32 {
         self.bilinear(&self.h_m, xm, zm)
+    }
+
+    /// Smooth exterior weight: `0` anywhere inside the eroded patch, ramping to `1`
+    /// over [`SHELF_FALLOFF_M`] beyond its edge. This is the lever that makes the
+    /// patch a continent in open sea: the caller grades the macro height from the
+    /// (edge-clamped) sample down to [`OCEAN_FLOOR_M`] by this weight, and fades the
+    /// sub-grid detail noise out by `1 - t`, so beyond the shelf the world is a
+    /// clean flat ocean instead of the edge cell smeared to the horizon.
+    fn exterior_t(&self, xm: f32, zm: f32) -> f32 {
+        let x1 = self.x0_m + (self.nx - 1) as f32 * self.cell_m;
+        let z1 = self.z0_m + (self.nx - 1) as f32 * self.cell_m;
+        // Distance from the point to the patch rectangle (0 when inside).
+        let dx = (self.x0_m - xm).max(xm - x1).max(0.0);
+        let dz = (self.z0_m - zm).max(zm - z1).max(0.0);
+        let d = (dx * dx + dz * dz).sqrt();
+        smoothstep(0.0, SHELF_FALLOFF_M, d)
     }
 
     /// Bilinearly sampled roughness `[0, 1]` at a metre position (see [`Self::rough`]).
@@ -402,7 +434,17 @@ impl Volume {
             // scaled by local roughness so it textures steep flanks but leaves
             // graded valley floors smooth (no pooled bumps; see [`Self::detail_relief`]
             // and [`ErodedSurface::rough`]).
-            Some(e) => e.sample(xm, zm) + e.roughness(xm, zm) * self.detail_relief(xm, zm),
+            //
+            // Beyond the patch, grade the (edge-clamped) macro height down to the
+            // ocean floor and fade the detail noise out, so the engineered region
+            // reads as a continent in open sea rather than its boundary extruded to
+            // the horizon. `t` is 0 inside the patch, so this is a no-op there.
+            Some(e) => {
+                let t = e.exterior_t(xm, zm);
+                let macro_m = e.sample(xm, zm);
+                let shelf_m = macro_m + (OCEAN_FLOOR_M - macro_m) * t;
+                shelf_m + e.roughness(xm, zm) * self.detail_relief(xm, zm) * (1.0 - t)
+            }
             None => self.fbm_height_world(xm, zm),
         };
         (h_m * d).round() as i32
@@ -417,11 +459,20 @@ impl Volume {
     /// the surface walkable texture (knolls, gullies, broken ground) and break the
     /// 16 m grid periodicity.
     ///
-    /// It is **zero-mean**, so it does not shift the macro elevation — the
-    /// materialized detail stays statistically consistent with the abstraction it
-    /// refines (DESIGN.md's fidelity invariant; a first, simple-noise take on the
-    /// conservative-refinement gap, NOTES §7). Coordinates are offset so this
-    /// stream is decorrelated from the continental FBM.
+    /// It is **zero-mean over the plane**, which is *necessary but not sufficient*
+    /// for the fidelity invariant — and the earlier comment here overstated it.
+    /// DESIGN.md's invariant (sharpened in NOTES §7) is a *per-coarse-cell
+    /// conservation* property: the fine voxels inside a given ~16 m cell must sum
+    /// back to that cell's aggregate elevation. Plane-zero-mean noise does **not**
+    /// guarantee that — within any single cell the noise has a nonzero local
+    /// integral, so it shifts that cell's materialized mean off the abstraction.
+    /// So this is honestly a **first, non-conservative approximation** — the
+    /// "simple-noise start" NOTES §0a explicitly licenses for now — and the
+    /// conservative-refinement gap (NOTES §7) remains **open**, not satisfied. The
+    /// principled version constrains the noise to conserve each coarse cell's mean
+    /// (a multigrid/wavelet detail that integrates to zero *per cell*); that is the
+    /// same shape as the AAT fidelity-invariant concern, so it is not throwaway.
+    /// Coordinates are offset so this stream is decorrelated from the continental FBM.
     fn detail_relief(&self, xm: f32, zm: f32) -> f32 {
         const FREQ: f32 = 1.0 / 220.0; // ~220 m base wavelength
         const AMPLITUDE: f32 = 28.0; // metres of roughness about the macro slope
