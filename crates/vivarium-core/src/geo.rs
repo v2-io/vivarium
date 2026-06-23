@@ -121,6 +121,13 @@ pub struct ErosionParams {
     /// any `dt`, so few large steps reach a mature landscape cheaply.
     pub epochs: u32,
     pub dt: f32,
+    /// Optional waterline. When `Some(s)`, any cell at or below `s` is a drainage
+    /// **outlet** — the ocean the rivers run to — and is never uplifted. This is
+    /// what lets erosion run over a real, pre-existing landscape (e.g. the voxel
+    /// world's Perlin terrain) and carve valleys down to its coastlines, rather
+    /// than only draining off the grid edge. `None` keeps the from-scratch
+    /// behaviour: the outer ring is the only base level.
+    pub sea_level: Option<f32>,
 }
 
 impl Default for ErosionParams {
@@ -134,6 +141,7 @@ impl Default for ErosionParams {
             max_slope: 1.0, // ~45° repose for the talus pass
             epochs: 60,
             dt: 1.0,
+            sea_level: None,
         }
     }
 }
@@ -192,27 +200,59 @@ impl Heightfield {
         Self { nx, cell_size: params.cell_size, h, drainage: vec![0.0; nx * nx] }
     }
 
-    /// Run the full uplift→erode simulation and return the matured field.
-    pub fn simulate(params: &ErosionParams, seed: u64) -> Self {
-        let mut field = Self::seeded(params, seed);
-        for _ in 0..params.epochs {
-            field.uplift(params);
-            field.fill_depressions();
-            let receivers = field.receivers();
-            let order = field.elevation_order();
-            field.accumulate_drainage(&receivers, &order);
-            field.incise(params, &receivers, &order);
-            field.talus(params);
-        }
-        field
+    /// Wrap an existing heightfield (e.g. sampled from the voxel world's terrain)
+    /// so erosion can be run *over* it. The drainage field starts empty and is
+    /// filled by the first epoch.
+    pub fn from_heights(nx: usize, cell_size: f32, h: Vec<f32>) -> Self {
+        assert_eq!(h.len(), nx * nx, "heights must be nx*nx");
+        Self { nx, cell_size, drainage: vec![0.0; nx * nx], h }
     }
 
-    /// Step 1 — raise interior cells; the boundary ring is the fixed base level.
-    fn uplift(&mut self, params: &ErosionParams) {
-        let rise = params.uplift * params.dt;
-        for y in 1..self.nx - 1 {
-            for x in 1..self.nx - 1 {
+    /// Run the full uplift→erode simulation from a seeded blank slate.
+    pub fn simulate(params: &ErosionParams, seed: u64) -> Self {
+        Self::seeded(params, seed).erode(params)
+    }
+
+    /// Run the uplift→erode loop in place on whatever field this already is, and
+    /// return it. Used both by [`Self::simulate`] (from `seeded`) and to erode a
+    /// real pre-existing landscape built with [`Self::from_heights`].
+    pub fn erode(mut self, params: &ErosionParams) -> Self {
+        for _ in 0..params.epochs {
+            let outlets = self.outlets(params);
+            self.uplift(params, &outlets);
+            self.fill_depressions(&outlets);
+            let receivers = self.receivers(&outlets);
+            let order = self.elevation_order();
+            self.accumulate_drainage(&receivers, &order);
+            self.incise(params, &receivers, &order);
+            self.talus(params);
+        }
+        self
+    }
+
+    /// Which cells are fixed drainage outlets this epoch: always the outer ring;
+    /// additionally every cell at or below `sea_level` when one is set (the
+    /// coastline rivers run to). Recomputed each epoch because erosion moves cells
+    /// across the waterline. Deterministic — a pure function of the current field.
+    fn outlets(&self, params: &ErosionParams) -> Vec<bool> {
+        let nx = self.nx;
+        let mut out = vec![false; nx * nx];
+        for y in 0..nx {
+            for x in 0..nx {
                 let i = self.idx(x, y);
+                out[i] = Self::is_boundary(nx, x, y)
+                    || params.sea_level.is_some_and(|s| self.h[i] <= s);
+            }
+        }
+        out
+    }
+
+    /// Step 1 — raise non-outlet cells; outlets (boundary ring + any ocean) are
+    /// the fixed base level the landscape drains toward.
+    fn uplift(&mut self, params: &ErosionParams, outlets: &[bool]) {
+        let rise = params.uplift * params.dt;
+        for (i, &is_outlet) in outlets.iter().enumerate() {
+            if !is_outlet {
                 self.h[i] += rise;
             }
         }
@@ -227,7 +267,7 @@ impl Heightfield {
     /// Determinism: the frontier is a min-heap keyed by `(elevation, insertion
     /// index)`. Float ties never decide order — the integer index does — so two
     /// runs pop cells in exactly the same sequence.
-    fn fill_depressions(&mut self) {
+    fn fill_depressions(&mut self, outlets: &[bool]) {
         use std::cmp::Ordering;
         use std::collections::BinaryHeap;
 
@@ -265,15 +305,14 @@ impl Heightfield {
         let mut heap = BinaryHeap::new();
         let mut seq = 0u64;
 
-        // Seed the frontier with the whole boundary ring at its own elevation.
-        for y in 0..nx {
-            for x in 0..nx {
-                if Self::is_boundary(nx, x, y) {
-                    let i = y * nx + x;
-                    closed[i] = true;
-                    heap.push(Cell { elev: self.h[i], seq, i });
-                    seq += 1;
-                }
+        // Seed the frontier with every outlet (boundary ring + any ocean) at its
+        // own elevation. Ocean cells are drains, not pits, so they must not be
+        // filled — seeding them is what keeps an inland sea from being flooded shut.
+        for (i, &is_outlet) in outlets.iter().enumerate() {
+            if is_outlet {
+                closed[i] = true;
+                heap.push(Cell { elev: self.h[i], seq, i });
+                seq += 1;
             }
         }
 
@@ -301,14 +340,14 @@ impl Heightfield {
     /// defensively, any cell with no lower neighbour) are their own receiver: a
     /// drainage outlet. After [`Self::fill_depressions`] every interior cell has a
     /// strictly-lower neighbour, so the relation is a forest rooted at the ring.
-    fn receivers(&self) -> Vec<usize> {
+    fn receivers(&self, outlets: &[bool]) -> Vec<usize> {
         let nx = self.nx;
         let mut recv = vec![0usize; nx * nx];
         for y in 0..nx {
             for x in 0..nx {
                 let i = self.idx(x, y);
-                if Self::is_boundary(nx, x, y) {
-                    recv[i] = i;
+                if outlets[i] {
+                    recv[i] = i; // an outlet drains to itself (sea / grid edge)
                     continue;
                 }
                 let hi = self.h[i];
