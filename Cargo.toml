@@ -9,7 +9,11 @@
 # wrong.
 [workspace]
 resolver = "2"
-members = ["crates/vivarium-core", "crates/vivarium-app", "crates/vivarium-godot", "spikes/bevy-voxel"]
+members = ["crates/vivarium-core", "crates/vivarium-app", "spikes/bevy-voxel"]
+# The Godot voxel-view spike (+ its gdext bridge) is archived after the engine
+# comparison chose Bevy — see spikes/FINDINGS.md. Kept for reference, excluded
+# from the build. Re-add the bridge as a member to revive it.
+exclude = ["archive"]
 
 [workspace.package]
 edition = "2021"
