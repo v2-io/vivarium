@@ -1,8 +1,13 @@
-# First-person fly camera + voxel editing for the Godot spike.
+# First-person controller + voxel editing for the Godot spike.
 #
-# Noclip on purpose: the point of this build is to feel mouse-look responsiveness
-# and voxel editing, not locomotion/physics (collision against voxel terrain can
-# come later if the feel test warrants it). Left click digs, right click places.
+# Two modes, toggled with F:
+#   WALK (default) — feet on the ground: move horizontally and stay a couple metres
+#     above the surface (terrain-follow via core's surface_height). Shift = run.
+#   FLY (noclip)   — free 6-DoF traversal for crossing the ~12 km landmass fast;
+#     Space/Shift = up/down, Ctrl = fast. The old behaviour, kept because walking
+#     across a continent is glacial.
+# Look is mouse in both; vertical look never tilts walking direction (forward is
+# always horizontal on foot). Left click digs, right click places.
 #
 # Editing writes to BOTH sides and that is deliberate: world.dig/place persists
 # the change in vivarium-core (the source of truth), and VoxelTool.set_voxel
@@ -14,17 +19,23 @@ extends Camera3D
 var world: Object = null     # VivariumWorld bridge
 var terrain: Object = null   # VoxelTerrain
 
-# Geology-scale traversal: the landmass is ~12 km across, so toy-world speeds felt
-# glacial. ~200 voxels/s normal, ~800 fast (× detail), matching the Bevy spike.
+# Fly speeds (the "m/s" convention: ×_unit → voxels/s). ~100 m/s normal, ~400 fast.
 const MOVE_SPEED := 100.0
 const FAST_MULT := 4.0
+# Walk speeds, same convention. Brisker than a real 1.5 m/s walk so exploring the
+# km-scale world on foot isn't painful, but unmistakably grounded vs flying.
+const WALK_SPEED := 6.0
+const RUN_SPEED := 16.0
+# Eye height above the surface while walking, in metres ("a couple metres").
+const EYE_HEIGHT := 2.0
 const MOUSE_SENS := 0.0025
 const REACH := 120.0
 const PLACE_MATERIAL := 1     # STONE, for now
 
 var _yaw := 0.0
 var _pitch := 0.0
-var _unit := 1     # voxels per world unit; movement/reach scale with it
+var _unit := 1      # voxels per world unit; movement/reach/eye-height scale with it
+var _walk := true   # start on foot; F toggles to fly
 
 func _ready() -> void:
 	if OS.get_environment("VIVARIUM_AUTOSHOT") != "":
@@ -59,8 +70,40 @@ func _input(event: InputEvent) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE \
 			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED \
 			else Input.MOUSE_MODE_CAPTURED
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_F:
+		# Toggle walk/fly. Next _process frame re-grounds the camera if now walking.
+		_walk = not _walk
+		print("[vivarium] mode: ", "WALK" if _walk else "FLY")
 
 func _process(delta: float) -> void:
+	if _walk:
+		_walk_step(delta)
+	else:
+		_fly_step(delta)
+
+# On foot: move in the horizontal plane only (look pitch never tilts the walk
+# direction), then ride the surface a couple of metres up. surface_height is core's
+# topmost solid voxel, so you walk the real eroded ground; below sea that's the
+# seabed (wading underwater — collision/water handling is a later concern).
+func _walk_step(delta: float) -> void:
+	var b := global_transform.basis
+	var fwd := Vector3(-b.z.x, 0.0, -b.z.z).normalized()   # heading, flattened
+	var rgt := Vector3(b.x.x, 0.0, b.x.z).normalized()
+	var dir := Vector3.ZERO
+	if Input.is_key_pressed(KEY_W): dir += fwd
+	if Input.is_key_pressed(KEY_S): dir -= fwd
+	if Input.is_key_pressed(KEY_D): dir += rgt
+	if Input.is_key_pressed(KEY_A): dir -= rgt
+	if dir != Vector3.ZERO:
+		var speed := (RUN_SPEED if Input.is_key_pressed(KEY_SHIFT) else WALK_SPEED) * _unit
+		position += dir.normalized() * speed * delta
+	# Re-ground every frame (also catches a fresh walk-mode toggle and moving terrain).
+	if world != null:
+		var gh: int = world.surface_height(int(round(position.x)), int(round(position.z)))
+		if gh > 0:
+			position.y = gh + EYE_HEIGHT * _unit
+
+func _fly_step(delta: float) -> void:
 	var dir := Vector3.ZERO
 	var b := global_transform.basis
 	if Input.is_key_pressed(KEY_W): dir -= b.z

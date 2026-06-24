@@ -367,8 +367,9 @@ func _ready() -> void:
 	elif _bench:
 		print("[vivarium] BENCH: flying a fixed %ds path; telemetry -> user://telemetry.csv" % int(_bench_secs))
 	else:
-		print("[vivarium] interactive (detail %d): WASD move, mouse look, " % detail,
-			"Space/Shift up/down, Ctrl=fast, LMB dig, RMB place, Esc frees mouse")
+		print("[vivarium] interactive (detail %d): WALK (default) — WASD move, " % detail,
+			"mouse look, Shift=run · F=toggle FLY (Space/Shift up-down, Ctrl=fast) · ",
+			"LMB dig, RMB place, Esc frees mouse")
 
 # Carve a crater at the origin through the same path the player uses (core edit
 # + VoxelTool remesh), so the automated screenshot proves the dig path end to
