@@ -133,8 +133,12 @@ impl World {
         detail: voxel::Detail,
         region_half_m: i32,
         epochs: u32,
+        fine_cell_m: f32,
+        fine_epochs: u32,
     ) -> Self {
-        Self::from_volume(seed, n_agents, Volume::eroded(seed, detail, region_half_m, epochs))
+        let volume =
+            Volume::eroded_refined(seed, detail, region_half_m, epochs, fine_cell_m, fine_epochs);
+        Self::from_volume(seed, n_agents, volume)
     }
 
     /// Shared construction: place `n_agents` deterministically on whatever volume

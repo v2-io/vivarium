@@ -264,6 +264,32 @@ impl Volume {
     /// so a ~24 km region is ~2.3 M nodes (a few seconds in release); the O(n)
     /// Braun-Willett stack (deferred in `geo`) is the lever when this must grow.
     pub fn eroded(seed: u64, detail: Detail, region_half_m: i32, epochs: u32) -> Self {
+        // No fine-refinement pass: `fine_epochs = 0` reproduces the original
+        // single-tier behaviour exactly (the Bevy spike depends on this).
+        Self::eroded_refined(seed, detail, region_half_m, epochs, Self::EROSION_CELL_M, 0)
+    }
+
+    /// As [`Self::eroded`], but with an optional **finer-scale erosion refinement**.
+    /// After the coarse ~16 m erosion matures the macro drainage network, the field
+    /// is upsampled onto a `fine_cell_m` grid and run for `fine_epochs` more epochs
+    /// of the *same stream-power physics* (with uplift switched **off** — we are
+    /// refining existing relief, not building new mountains). The result is sub-16 m
+    /// drainage detail that is *carved by erosion* rather than invented by the
+    /// fractal `detail_relief` noise — a step toward the conservative-refinement
+    /// goal (NOTES §7): physically-plausible fine structure instead of arbitrary
+    /// noise. `fine_epochs = 0` (or `fine_cell_m >= 16 m`) skips it entirely.
+    ///
+    /// Cost scales with `(span / fine_cell_m)²`: at 8 m over a 24 km span that is
+    /// ~2.3 M extra nodes per fine epoch; at 4 m, ~9 M. This is the experimental
+    /// knob — start coarse and a few epochs, watch what it buys.
+    pub fn eroded_refined(
+        seed: u64,
+        detail: Detail,
+        region_half_m: i32,
+        epochs: u32,
+        fine_cell_m: f32,
+        fine_epochs: u32,
+    ) -> Self {
         let mut v = Self::with_detail(seed, detail);
         let cell = Self::EROSION_CELL_M;
         let span_m = (region_half_m.max(1) * 2) as f32;
@@ -299,30 +325,56 @@ impl Volume {
             dt: 1.0,
             sea_level: Some(SEA_LEVEL as f32),
         };
-        let field = crate::geo::Heightfield::from_heights(nx, cell, h).erode(&params);
+        let coarse = crate::geo::Heightfield::from_heights(nx, cell, h).erode(&params);
 
-        // Roughness from local slope: smooth (0) on flat/graded floors, rough (1)
-        // on steep flanks — so the sub-grid detail noise textures slopes but leaves
-        // valley floors graded (no spurious pools).
-        let hm = &field.h;
-        let mut rough = vec![0.0f32; nx * nx];
-        for j in 0..nx {
-            for i in 0..nx {
-                let l = hm[j * nx + i.saturating_sub(1)];
-                let r = hm[j * nx + (i + 1).min(nx - 1)];
-                let d = hm[j.saturating_sub(1) * nx + i];
-                let u = hm[(j + 1).min(nx - 1) * nx + i];
-                let slope = ((r - l).powi(2) + (u - d).powi(2)).sqrt() / (2.0 * cell);
-                rough[j * nx + i] = smoothstep(0.05, 0.40, slope); // flat→0, steep→1
+        // Optional finer-scale refinement: upsample the eroded macro field and carve
+        // it with a few more epochs of the same physics, uplift off. The surface that
+        // *becomes the terrain* is then the finer field (more resolution, real
+        // sub-grid drainage). `surf_*` is whichever field we keep.
+        let (surf_h, surf_cell, surf_nx) = if fine_epochs > 0 && fine_cell_m < cell {
+            let nx_f = (span_m / fine_cell_m).ceil() as usize;
+            let mut hf = vec![0.0f32; nx_f * nx_f];
+            for vv in 0..nx_f {
+                for uu in 0..nx_f {
+                    let xm = origin + uu as f32 * fine_cell_m;
+                    let zm = origin + vv as f32 * fine_cell_m;
+                    hf[vv * nx_f + uu] = sample_grid_bilinear(&coarse.h, nx, origin, cell, xm, zm);
+                }
+            }
+            let fine_params = crate::geo::ErosionParams {
+                nx: nx_f,
+                cell_size: fine_cell_m,
+                uplift: 0.0, // refine, don't build — the mountains already exist
+                epochs: fine_epochs,
+                ..params.clone()
+            };
+            let fine = crate::geo::Heightfield::from_heights(nx_f, fine_cell_m, hf).erode(&fine_params);
+            (fine.h, fine_cell_m, nx_f)
+        } else {
+            (coarse.h, cell, nx)
+        };
+
+        // Roughness from local slope on the *kept* field: smooth (0) on flat/graded
+        // floors, rough (1) on steep flanks — so the sub-grid detail noise textures
+        // slopes but leaves valley floors graded (no spurious pools).
+        let mut rough = vec![0.0f32; surf_nx * surf_nx];
+        for j in 0..surf_nx {
+            for i in 0..surf_nx {
+                let l = surf_h[j * surf_nx + i.saturating_sub(1)];
+                let r = surf_h[j * surf_nx + (i + 1).min(surf_nx - 1)];
+                let d = surf_h[j.saturating_sub(1) * surf_nx + i];
+                let u = surf_h[(j + 1).min(surf_nx - 1) * surf_nx + i];
+                let slope = ((r - l).powi(2) + (u - d).powi(2)).sqrt() / (2.0 * surf_cell);
+                rough[j * surf_nx + i] = smoothstep(0.05, 0.40, slope); // flat→0, steep→1
             }
         }
 
         v.eroded = Some(ErodedSurface {
             x0_m: origin,
             z0_m: origin,
-            cell_m: cell,
-            nx,
-            h_m: field.h,
+            cell_m: surf_cell,
+            nx: surf_nx,
+            h_m: surf_h,
             rough,
         });
         v
@@ -596,6 +648,24 @@ fn lerp(a: f32, b: f32, t: f32) -> f32 {
 /// Hermite smoothstep: 0 below `lo`, 1 above `hi`, an ease-curve between. Used to
 /// turn a local slope into a `[0, 1]` roughness weight.
 #[inline]
+/// Bilinearly sample a square row-major `nx·nx` grid whose cell `[0,0]` sits at
+/// world `(origin, origin)` with spacing `cell`, clamped to the edge outside it.
+/// Used to upsample the coarse eroded field onto the finer refinement grid.
+fn sample_grid_bilinear(grid: &[f32], nx: usize, origin: f32, cell: f32, xm: f32, zm: f32) -> f32 {
+    let gx = ((xm - origin) / cell).clamp(0.0, (nx - 1) as f32);
+    let gz = ((zm - origin) / cell).clamp(0.0, (nx - 1) as f32);
+    let (x0, z0) = (gx.floor() as usize, gz.floor() as usize);
+    let (x1, z1) = ((x0 + 1).min(nx - 1), (z0 + 1).min(nx - 1));
+    let (tx, tz) = (gx - x0 as f32, gz - z0 as f32);
+    let v00 = grid[z0 * nx + x0];
+    let v10 = grid[z0 * nx + x1];
+    let v01 = grid[z1 * nx + x0];
+    let v11 = grid[z1 * nx + x1];
+    let a = v00 + (v10 - v00) * tx;
+    let b = v01 + (v11 - v01) * tx;
+    a + (b - a) * tz
+}
+
 fn smoothstep(lo: f32, hi: f32, x: f32) -> f32 {
     let t = ((x - lo) / (hi - lo)).clamp(0.0, 1.0);
     t * t * (3.0 - 2.0 * t)
@@ -685,6 +755,30 @@ mod tests {
             }
         }
         assert!(changed_somewhere, "erosion left the surface untouched");
+    }
+
+    #[test]
+    fn eroded_refined_is_reproducible_and_differs_from_coarse() {
+        // The fine-refinement pass must stay deterministic, and a few fine epochs
+        // at a sub-16 m cell must actually change the surface vs the coarse-only run
+        // (it is carving something). 4 m cells over a 1.6 km region ≈ 800² nodes.
+        let coarse = Volume::eroded(0xC0FFEE, 2, 800, 12);
+        let a = Volume::eroded_refined(0xC0FFEE, 2, 800, 12, 4.0, 4);
+        let b = Volume::eroded_refined(0xC0FFEE, 2, 800, 12, 4.0, 4);
+        let mut differs = false;
+        for z in -80..80 {
+            for x in -80..80 {
+                assert_eq!(
+                    a.surface_height(x, z),
+                    b.surface_height(x, z),
+                    "refined terrain diverged between runs at ({x},{z})"
+                );
+                if a.surface_height(x, z) != coarse.surface_height(x, z) {
+                    differs = true;
+                }
+            }
+        }
+        assert!(differs, "fine refinement left the surface identical to coarse");
     }
 
     #[test]
