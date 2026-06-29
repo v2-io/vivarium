@@ -159,6 +159,54 @@ impl Default for ErosionParams {
     }
 }
 
+/// Parameters for the **static hydrology** pass — see [`Heightfield::water_depth`].
+///
+/// This shapes a *baked, steady-state* water surface, not a time-stepped fluid
+/// sim: the bet (DESIGN.md, and Joseph's "even if we pretend it is static by the
+/// time I walk in it") is that a walkable stream-and-pool field can be a pure
+/// function of the matured terrain — so it inherits the erosion tier's
+/// determinism for free. The *exponents* below are physics (Manning normal-flow
+/// depth × downstream hydraulic geometry); the *coefficients* are dials, swept by
+/// eye like [`ErosionParams`] until the trunk reads as a real river and the
+/// headwaters as a thread.
+#[derive(Clone, Copy)]
+pub struct HydrologyParams {
+    /// Lumped depth coefficient `C` in `d = C · Q^0.3 · S^(−0.3)` (gives metres
+    /// when `Q` is drainage area in m² and `S` is dimensionless slope). Sets how
+    /// deep the trunk runs; the single most useful knob when tuning on foot.
+    pub depth_c: f32,
+    /// Channelization threshold on drainage area (m²): a cell draining less than
+    /// this is hillslope, not channel, and carries no mapped water (depth 0).
+    /// Without it every pixel would be a trickle; this is what makes water a
+    /// *network* rather than a sheet.
+    pub channel_area_m2: f32,
+    /// Slope floor for the Manning term. A true flat drives normal-depth → ∞,
+    /// which is physically the regime where water *ponds* to a downstream control
+    /// — the priority-flood/backwater lake successor that is **not yet wired**.
+    /// Clamping `S` here turns that singularity into a deep-but-finite pond in the
+    /// slack lower reaches: the v1 stand-in that gives pools on today's
+    /// (depression-free) terrain.
+    pub slope_floor: f32,
+    /// Hard cap on mapped depth (m) — a guard so a pathological cell can't flood
+    /// the whole voxel column.
+    pub max_depth: f32,
+}
+
+impl Default for HydrologyParams {
+    fn default() -> Self {
+        // First-pass dials for the ~16 m / 12 km tier (NOTES §0a). Not yet
+        // walk-tuned — chosen so the trunk is a few metres deep and only genuine
+        // channels carry water; expect to sweep `depth_c` and `channel_area_m2`
+        // once it has been seen on foot.
+        Self {
+            depth_c: 0.004,
+            channel_area_m2: 1.0e5, // ~0.1 km²: a small but real first-order channel
+            slope_floor: 1.0e-3,
+            max_depth: 12.0,
+        }
+    }
+}
+
 /// A square elevation field and the drainage state derived from it. Plain data,
 /// cheap to clone and to diff — the same discipline as [`crate::voxel::Volume`].
 #[derive(Clone, Debug)]
@@ -592,6 +640,61 @@ impl Heightfield {
             (lo.min(v), hi.max(v))
         })
     }
+
+    /// **Static hydrology**: a baked water-*depth* field (metres, ≥ 0) over the
+    /// matured terrain — the stream-and-pool layer DESIGN.md asks for, computed
+    /// once as a pure function of the eroded surface (so it inherits the erosion
+    /// tier's bit-for-bit determinism) rather than time-stepped.
+    ///
+    /// Depth follows **Manning normal-flow** for a wide channel combined with
+    /// **downstream hydraulic geometry** (`w ∝ Q^0.5`), which collapse to
+    ///
+    /// ```text
+    ///   d = C · Q^0.3 · S^(−0.3)
+    /// ```
+    ///
+    /// with `Q` the drainage area (a discharge proxy under spatially-uniform rain
+    /// — the Perlin-rain field is a later refinement) and `S` the local energy
+    /// slope `|∇h|`. The slope term is the load-bearing part: it *deepens* the
+    /// slack, low-gradient lower reaches that the deposition pass grades flat — so
+    /// they read as widening pools — while steep headwaters stay a thin ribbon.
+    /// Cells draining less than `channel_area_m2` carry no water.
+    ///
+    /// What this is **not** yet: true closed-basin lakes (priority-flood —
+    /// [`Self::fill_depressions`] already computes spill levels, so the seam is
+    /// one call away) and lithologic sills. Those are the next increment; on
+    /// today's depression-free terrain this pass is rivers + slack-reach backwater
+    /// ponding, which is what is actually visible underfoot.
+    ///
+    /// Returns a row-major `nx·nx` field aligned with `self.h`; safe to bilinearly
+    /// sample (it is 0 in dry regions, so interpolation never smears a sentinel).
+    pub fn water_depth(&self, hp: &HydrologyParams) -> Vec<f32> {
+        let nx = self.nx;
+        let mut depth = vec![0.0f32; nx * nx];
+        for y in 0..nx {
+            for x in 0..nx {
+                let i = y * nx + x;
+                let q = self.drainage[i];
+                if q < hp.channel_area_m2 {
+                    continue; // hillslope, not channel
+                }
+                // Local energy slope from central differences — the same gradient
+                // form the voxel tier uses for roughness, kept consistent so the
+                // water sits where the ground reads as graded. Clamped at the floor
+                // (see `slope_floor`) so a flat reach ponds instead of diverging.
+                let xl = self.h[y * nx + x.saturating_sub(1)];
+                let xr = self.h[y * nx + (x + 1).min(nx - 1)];
+                let yd = self.h[y.saturating_sub(1) * nx + x];
+                let yu = self.h[(y + 1).min(nx - 1) * nx + x];
+                let s = (((xr - xl).powi(2) + (yu - yd).powi(2)).sqrt()
+                    / (2.0 * self.cell_size))
+                    .max(hp.slope_floor);
+                let d = hp.depth_c * q.powf(0.3) * s.powf(-0.3);
+                depth[i] = d.min(hp.max_depth);
+            }
+        }
+        depth
+    }
 }
 
 #[cfg(test)]
@@ -647,6 +750,40 @@ mod tests {
             max_area > 0.10 * total,
             "largest drainage {max_area} is under 10% of total {total}; flow did not concentrate"
         );
+    }
+
+    /// The static hydrology must map a *channel network* — water on some cells but
+    /// far from all (a sheet would mean the threshold is doing nothing) — with
+    /// bounded depth, and be bit-identical across runs (it inherits the erosion
+    /// tier's determinism). `channel_area_m2` is scaled to this unit-cell test
+    /// field; the production default is tuned for the 16 m / 12 km world.
+    #[test]
+    fn water_depth_maps_a_channel_network() {
+        let p = ErosionParams { nx: 96, epochs: 50, ..Default::default() };
+        let f = Heightfield::simulate(&p, 0xBEEF);
+        let hp = HydrologyParams {
+            channel_area_m2: 200.0, // ~200 unit cells of upstream area
+            depth_c: 0.05,
+            ..Default::default()
+        };
+        let depth = f.water_depth(&hp);
+        let wet = depth.iter().filter(|&&d| d > 0.0).count();
+        let frac = wet as f32 / depth.len() as f32;
+        assert!(
+            frac > 0.0 && frac < 0.5,
+            "wetted fraction {frac} is not a channel network (0 = nothing, ≥0.5 = sheet)"
+        );
+        let maxd = depth.iter().cloned().fold(0.0f32, f32::max);
+        assert!(
+            maxd > 0.0 && maxd <= hp.max_depth,
+            "max depth {maxd} out of (0, {}] range",
+            hp.max_depth
+        );
+        // Determinism: same matured field → bit-identical water.
+        let depth2 = Heightfield::simulate(&p, 0xBEEF).water_depth(&hp);
+        for (a, b) in depth.iter().zip(depth2.iter()) {
+            assert_eq!(a.to_bits(), b.to_bits(), "water depth diverged between runs");
+        }
     }
 
     /// Eroding a *supplied* field with sea-level outlets must also be bit-identical

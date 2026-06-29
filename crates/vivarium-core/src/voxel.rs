@@ -156,6 +156,11 @@ struct ErodedSurface {
     /// ground — the fidelity invariant applied to materialization (DESIGN.md), and
     /// the reason slack valley floors stop reading as a chain of pools.
     rough: Vec<f32>,
+    /// Per-node **static water depth** in metres (≥ 0), from the baked hydrology
+    /// pass ([`crate::geo::Heightfield::water_depth`]). The water *surface* is
+    /// `h_m + depth_m`; 0 means dry. Sampled bilinearly like the others — safe
+    /// because dry is a true 0, so interpolation never smears a sentinel.
+    depth_m: Vec<f32>,
 }
 
 impl ErodedSurface {
@@ -188,6 +193,13 @@ impl ErodedSurface {
     /// Bilinearly sampled roughness `[0, 1]` at a metre position (see [`Self::rough`]).
     fn roughness(&self, xm: f32, zm: f32) -> f32 {
         self.bilinear(&self.rough, xm, zm)
+    }
+
+    /// Bilinearly sampled static water depth (metres, ≥ 0) at a metre position
+    /// (see [`Self::depth_m`]). Faded out by the exterior weight so the open ocean
+    /// beyond the patch stays the clean flat sea, not a smear of edge channels.
+    fn water_depth(&self, xm: f32, zm: f32) -> f32 {
+        self.bilinear(&self.depth_m, xm, zm) * (1.0 - self.exterior_t(xm, zm))
     }
 
     /// Shared bilinear sampler over a row-major `nx·nx` grid, clamped to the edge.
@@ -331,7 +343,7 @@ impl Volume {
         // it with a few more epochs of the same physics, uplift off. The surface that
         // *becomes the terrain* is then the finer field (more resolution, real
         // sub-grid drainage). `surf_*` is whichever field we keep.
-        let (surf_h, surf_cell, surf_nx) = if fine_epochs > 0 && fine_cell_m < cell {
+        let (surf_field, surf_cell, surf_nx) = if fine_epochs > 0 && fine_cell_m < cell {
             let nx_f = (span_m / fine_cell_m).ceil() as usize;
             let mut hf = vec![0.0f32; nx_f * nx_f];
             for vv in 0..nx_f {
@@ -349,10 +361,18 @@ impl Volume {
                 ..params.clone()
             };
             let fine = crate::geo::Heightfield::from_heights(nx_f, fine_cell_m, hf).erode(&fine_params);
-            (fine.h, fine_cell_m, nx_f)
+            (fine, fine_cell_m, nx_f)
         } else {
-            (coarse.h, cell, nx)
+            (coarse, cell, nx)
         };
+
+        // Static hydrology on the *kept* field — computed here, in continuous
+        // metre-space, **before** voxel quantization, so terrace steps can't fake
+        // pools: the water surface follows the smooth graded bed, not the snapped
+        // one. `depth_m` (metres, ≥ 0) is the baked stream-and-pool layer; the
+        // voxel tier renders inland water up to `bed + depth` (see `generated`).
+        let depth_m = surf_field.water_depth(&crate::geo::HydrologyParams::default());
+        let surf_h = surf_field.h; // move the kept heights out for the surface below
 
         // Roughness from local slope on the *kept* field: smooth (0) on flat/graded
         // floors, rough (1) on steep flanks — so the sub-grid detail noise textures
@@ -376,6 +396,7 @@ impl Volume {
             nx: surf_nx,
             h_m: surf_h,
             rough,
+            depth_m,
         });
         v
     }
@@ -449,16 +470,18 @@ impl Volume {
         if y < 0 || y >= self.world_height() {
             return Voxel::AIR;
         }
-        let sea = self.sea_level();
         let h = self.terrain_height(x, z);
         if y > h {
-            // Above ground: water up to sea level, else air.
-            return if y <= sea { Voxel::WATER } else { Voxel::AIR };
+            // Above ground: water up to the static waterline (sea, or a higher
+            // inland stream/pool surface from the baked hydrology), else air.
+            let wl = self.waterline(x, z);
+            return if y <= wl { Voxel::WATER } else { Voxel::AIR };
         }
         if y == h {
-            // The surface skin. Below the waterline it is dirt (lakebed), above
-            // it is grass — a cheap, legible bit of texture for the eye.
-            return if h < sea { Voxel::DIRT } else { Voxel::GRASS };
+            // The surface skin. Below the waterline it is dirt (lake/streambed),
+            // above it is grass — a cheap, legible bit of texture for the eye.
+            let wl = self.waterline(x, z);
+            return if h < wl { Voxel::DIRT } else { Voxel::GRASS };
         }
         // Soil is a fixed *physical* depth ([`SOIL_DEPTH`] metres), so it scales
         // with resolution; below it is stone.
@@ -467,6 +490,28 @@ impl Volume {
         } else {
             Voxel::STONE
         }
+    }
+
+    /// The static waterline at column `(x, z)`, in voxels: the higher of sea level
+    /// and the baked **inland** water surface (eroded bed + hydrology depth). This
+    /// is the `y` up to which an above-ground column fills with [`Voxel::WATER`].
+    /// Pure function of worldgen — deterministic, edit-blind, and `None`-eroded
+    /// worlds simply see the sea. See [`crate::geo::Heightfield::water_depth`].
+    fn waterline(&self, x: i32, z: i32) -> i32 {
+        let sea = self.sea_level();
+        let Some(e) = &self.eroded else { return sea };
+        let d = self.detail as f32;
+        let (xm, zm) = (x as f32 / d, z as f32 / d);
+        let depth = e.water_depth(xm, zm);
+        if depth <= 0.0 {
+            return sea;
+        }
+        // Surface = the *smooth* eroded bed + depth, not the noisy terrain_height:
+        // roughness is damped to ~0 on channels and floors, so the two agree where
+        // water lives, and sampling the smooth bed keeps the surface flat where the
+        // sub-grid noise would otherwise ripple it into a false chop.
+        let surf_m = e.sample(xm, zm) + depth;
+        sea.max((surf_m * d).round() as i32)
     }
 
     /// Terrain surface height at voxel column `(x, z)`, in voxels. Deterministic.
@@ -755,6 +800,33 @@ mod tests {
             }
         }
         assert!(changed_somewhere, "erosion left the surface untouched");
+    }
+
+    /// The baked hydrology must put water *inland and above sea level* — a stream
+    /// surface standing higher than the ocean — under the production default
+    /// params, not just fill the sea. This is the headless proxy for "you can walk
+    /// to a valley and find a stream": if it is zero, the depth dials produced
+    /// nothing visible and need a sweep. Also checks the waterline is deterministic.
+    #[test]
+    fn eroded_world_has_inland_water_above_sea() {
+        let v = Volume::eroded(0x1234_5678, 1, 2000, 60);
+        let w = Volume::eroded(0x1234_5678, 1, 2000, 60);
+        let sea = v.sea_level();
+        let mut inland_cols = 0u32;
+        let r = 1900;
+        for z in (-r..=r).step_by(8) {
+            for x in (-r..=r).step_by(8) {
+                let wl = v.waterline(x, z);
+                assert_eq!(wl, w.waterline(x, z), "waterline diverged at ({x},{z})");
+                if wl > sea {
+                    inland_cols += 1;
+                }
+            }
+        }
+        assert!(
+            inland_cols > 0,
+            "no inland water above sea level — hydrology produced nothing visible"
+        );
     }
 
     #[test]
