@@ -30,6 +30,7 @@
 //! reasoning behind storing the world as `seed + sparse edits`.
 
 pub mod geo;
+pub mod hydro;
 pub mod voxel;
 
 use voxel::Volume;
