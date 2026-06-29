@@ -371,7 +371,8 @@ impl Volume {
         // pools: the water surface follows the smooth graded bed, not the snapped
         // one. `depth_m` (metres, ≥ 0) is the baked stream-and-pool layer; the
         // voxel tier renders inland water up to `bed + depth` (see `generated`).
-        let depth_m = surf_field.water_depth(&crate::geo::HydrologyParams::default());
+        let depth_m = surf_field
+            .water_depth(&crate::geo::HydrologyParams::default(), Some(SEA_LEVEL as f32));
         let surf_h = surf_field.h; // move the kept heights out for the surface below
 
         // Roughness from local slope on the *kept* field: smooth (0) on flat/graded
@@ -802,30 +803,43 @@ mod tests {
         assert!(changed_somewhere, "erosion left the surface untouched");
     }
 
-    /// The baked hydrology must put water *inland and above sea level* — a stream
-    /// surface standing higher than the ocean — under the production default
-    /// params, not just fill the sea. This is the headless proxy for "you can walk
-    /// to a valley and find a stream": if it is zero, the depth dials produced
-    /// nothing visible and need a sweep. Also checks the waterline is deterministic.
+    /// On a real-relief world the baked hydrology must (a) put water *inland and
+    /// above sea level* — a stream surface standing higher than the ocean, the
+    /// headless proxy for "walk to a valley and find a stream" — and (b) read as a
+    /// *network*, not a sheet: only a minority of land columns are wet. (a) failing
+    /// means the depth dials produce nothing visible; (b) failing means the free
+    /// surface is over-flooding the valleys. Also checks determinism.
     #[test]
     fn eroded_world_has_inland_water_above_sea() {
         let v = Volume::eroded(0x1234_5678, 1, 2000, 60);
         let w = Volume::eroded(0x1234_5678, 1, 2000, 60);
         let sea = v.sea_level();
-        let mut inland_cols = 0u32;
+        let (mut inland, mut land, mut wet_land) = (0u32, 0u32, 0u32);
         let r = 1900;
         for z in (-r..=r).step_by(8) {
             for x in (-r..=r).step_by(8) {
                 let wl = v.waterline(x, z);
                 assert_eq!(wl, w.waterline(x, z), "waterline diverged at ({x},{z})");
                 if wl > sea {
-                    inland_cols += 1;
+                    inland += 1;
+                }
+                let h = v.terrain_height(x, z);
+                if h > sea {
+                    land += 1;
+                    if wl > h {
+                        wet_land += 1; // standing water above the ground here
+                    }
                 }
             }
         }
         assert!(
-            inland_cols > 0,
+            inland > 0,
             "no inland water above sea level — hydrology produced nothing visible"
+        );
+        let wet_frac = wet_land as f32 / land.max(1) as f32;
+        assert!(
+            wet_frac < 0.4,
+            "{wet_frac} of land is under water — a sheet, not a stream network"
         );
     }
 

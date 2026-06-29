@@ -200,7 +200,7 @@ impl Default for HydrologyParams {
         // once it has been seen on foot.
         Self {
             depth_c: 0.004,
-            channel_area_m2: 1.0e5, // ~0.1 km²: a small but real first-order channel
+            channel_area_m2: 5.0e5, // ~0.5 km²: trunk + major tributaries, not every rivulet
             slope_floor: 1.0e-3,
             max_depth: 12.0,
         }
@@ -646,42 +646,68 @@ impl Heightfield {
     /// once as a pure function of the eroded surface (so it inherits the erosion
     /// tier's bit-for-bit determinism) rather than time-stepped.
     ///
-    /// Depth follows **Manning normal-flow** for a wide channel combined with
-    /// **downstream hydraulic geometry** (`w ∝ Q^0.5`), which collapse to
+    /// The returned field is `depth = max(0, W − bed)`, where `W` is a **free
+    /// water surface**: flat across a valley cross-section, not draped on the bed.
+    /// (The first cut added a per-cell `bed + depth`, which parallels the ground
+    /// and staircases down the slope — it does not read as water. The free surface
+    /// is the fix.) `W` is built in one upstream sweep:
     ///
-    /// ```text
-    ///   d = C · Q^0.3 · S^(−0.3)
-    /// ```
+    /// 1. **Channel stage.** A cell draining ≥ `channel_area_m2` is a channel; its
+    ///    surface is `bed + d` with normal-flow depth
+    ///    `d = C · Q^0.3 · S^(−0.3)` — Manning normal depth × downstream hydraulic
+    ///    geometry (`w ∝ Q^0.5`), `Q` the drainage area (a discharge proxy under
+    ///    uniform rain), `S` the local energy slope. The slope term deepens slack
+    ///    reaches and keeps steep headwaters thin.
+    /// 2. **Free surface.** Every other cell **inherits its downstream receiver's
+    ///    water level**. Walked low→high (so a receiver is always resolved first),
+    ///    this carries each channel's flat stage up its banks: a cell is wet
+    ///    exactly where its bed lies below the level of the channel it drains into,
+    ///    which fills the cross-section flat and backs water up behind a rise.
+    ///    Hillsides, sitting above their channel's level, stay dry.
     ///
-    /// with `Q` the drainage area (a discharge proxy under spatially-uniform rain
-    /// — the Perlin-rain field is a later refinement) and `S` the local energy
-    /// slope `|∇h|`. The slope term is the load-bearing part: it *deepens* the
-    /// slack, low-gradient lower reaches that the deposition pass grades flat — so
-    /// they read as widening pools — while steep headwaters stay a thin ribbon.
-    /// Cells draining less than `channel_area_m2` carry no water.
+    /// `sea_level` (if any) and the boundary ring are outlets, exactly as in
+    /// erosion; sea cells hold the surface at `sea_level`, so coastal fill matches
+    /// the existing ocean.
     ///
-    /// What this is **not** yet: true closed-basin lakes (priority-flood —
-    /// [`Self::fill_depressions`] already computes spill levels, so the seam is
-    /// one call away) and lithologic sills. Those are the next increment; on
-    /// today's depression-free terrain this pass is rivers + slack-reach backwater
-    /// ponding, which is what is actually visible underfoot.
+    /// What this is **not** yet: true closed-basin lakes and lithologic sills. On
+    /// today's depression-free terrain there are no basins to pond in, so this is
+    /// flat-surfaced rivers + cross-section fill + modest backwater. Lithology
+    /// (spatially-varying `K` → hard sills → real basins) is the next increment;
+    /// those basins will flood through this same free surface as proper lakes.
     ///
     /// Returns a row-major `nx·nx` field aligned with `self.h`; safe to bilinearly
-    /// sample (it is 0 in dry regions, so interpolation never smears a sentinel).
-    pub fn water_depth(&self, hp: &HydrologyParams) -> Vec<f32> {
+    /// sample (0 in dry regions, so interpolation never smears a sentinel).
+    pub fn water_depth(&self, hp: &HydrologyParams, sea_level: Option<f32>) -> Vec<f32> {
         let nx = self.nx;
-        let mut depth = vec![0.0f32; nx * nx];
+        let n = nx * nx;
+
+        // Outlets — boundary ring + any sea cell — and the steepest-descent
+        // receiver tree over them, reusing the erosion machinery so the water
+        // drains exactly the network the terrain was carved by.
+        let mut outlet = vec![false; n];
         for y in 0..nx {
             for x in 0..nx {
-                let i = y * nx + x;
-                let q = self.drainage[i];
-                if q < hp.channel_area_m2 {
-                    continue; // hillslope, not channel
-                }
-                // Local energy slope from central differences — the same gradient
-                // form the voxel tier uses for roughness, kept consistent so the
-                // water sits where the ground reads as graded. Clamped at the floor
-                // (see `slope_floor`) so a flat reach ponds instead of diverging.
+                let i = self.idx(x, y);
+                outlet[i] = Self::is_boundary(nx, x, y)
+                    || sea_level.is_some_and(|s| self.h[i] <= s);
+            }
+        }
+        let recv = self.receivers(&outlet);
+        let order = self.elevation_order(); // ascending — receiver before donor
+        let sea = sea_level.unwrap_or(f32::MIN);
+
+        // Water-surface elevation `W`, resolved low→high.
+        let mut w = vec![0.0f32; n];
+        for &i in &order {
+            let bed = self.h[i];
+            if outlet[i] {
+                // Sea holds at the waterline; a dry edge outlet holds at its bed.
+                w[i] = if bed <= sea { sea } else { bed };
+                continue;
+            }
+            if self.drainage[i] >= hp.channel_area_m2 {
+                // Channel: bed + normal-flow depth (the stage this reach carries).
+                let (x, y) = (i % nx, i / nx);
                 let xl = self.h[y * nx + x.saturating_sub(1)];
                 let xr = self.h[y * nx + (x + 1).min(nx - 1)];
                 let yd = self.h[y.saturating_sub(1) * nx + x];
@@ -689,9 +715,20 @@ impl Heightfield {
                 let s = (((xr - xl).powi(2) + (yu - yd).powi(2)).sqrt()
                     / (2.0 * self.cell_size))
                     .max(hp.slope_floor);
-                let d = hp.depth_c * q.powf(0.3) * s.powf(-0.3);
-                depth[i] = d.min(hp.max_depth);
+                let d = (hp.depth_c * self.drainage[i].powf(0.3) * s.powf(-0.3))
+                    .min(hp.max_depth);
+                w[i] = bed + d;
+            } else {
+                // Hillslope: inherit the flat level of the channel downstream.
+                w[i] = w[recv[i]];
             }
+        }
+
+        // Depth above bed — flat within a cross-section, 0 where the ground stands
+        // above its controlling water level.
+        let mut depth = vec![0.0f32; n];
+        for i in 0..n {
+            depth[i] = (w[i] - self.h[i]).max(0.0);
         }
         depth
     }
@@ -752,13 +789,15 @@ mod tests {
         );
     }
 
-    /// The static hydrology must map a *channel network* — water on some cells but
-    /// far from all (a sheet would mean the threshold is doing nothing) — with
-    /// bounded depth, and be bit-identical across runs (it inherits the erosion
-    /// tier's determinism). `channel_area_m2` is scaled to this unit-cell test
-    /// field; the production default is tuned for the 16 m / 12 km world.
+    /// The static hydrology must produce *some* water with bounded depth and be
+    /// bit-identical across runs (it inherits the erosion tier's determinism).
+    /// Network-vs-sheet is **not** asserted here: this from-scratch field is
+    /// deliberately low-relief, where a flat free surface legitimately spreads wide
+    /// (a near-flat plain floods). That property is guarded on a real-relief world
+    /// in `voxel::tests::eroded_world_has_inland_water_above_sea`. `channel_area_m2`
+    /// is scaled to this unit-cell field; the production default targets 16 m / 12 km.
     #[test]
-    fn water_depth_maps_a_channel_network() {
+    fn water_depth_is_bounded_and_deterministic() {
         let p = ErosionParams { nx: 96, epochs: 50, ..Default::default() };
         let f = Heightfield::simulate(&p, 0xBEEF);
         let hp = HydrologyParams {
@@ -766,13 +805,9 @@ mod tests {
             depth_c: 0.05,
             ..Default::default()
         };
-        let depth = f.water_depth(&hp);
+        let depth = f.water_depth(&hp, None);
         let wet = depth.iter().filter(|&&d| d > 0.0).count();
-        let frac = wet as f32 / depth.len() as f32;
-        assert!(
-            frac > 0.0 && frac < 0.5,
-            "wetted fraction {frac} is not a channel network (0 = nothing, ≥0.5 = sheet)"
-        );
+        assert!(wet > 0, "hydrology produced no water at all");
         let maxd = depth.iter().cloned().fold(0.0f32, f32::max);
         assert!(
             maxd > 0.0 && maxd <= hp.max_depth,
@@ -780,7 +815,7 @@ mod tests {
             hp.max_depth
         );
         // Determinism: same matured field → bit-identical water.
-        let depth2 = Heightfield::simulate(&p, 0xBEEF).water_depth(&hp);
+        let depth2 = Heightfield::simulate(&p, 0xBEEF).water_depth(&hp, None);
         for (a, b) in depth.iter().zip(depth2.iter()) {
             assert_eq!(a.to_bits(), b.to_bits(), "water depth diverged between runs");
         }
