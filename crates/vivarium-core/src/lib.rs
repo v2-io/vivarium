@@ -145,7 +145,15 @@ impl World {
     /// Shared construction: place `n_agents` deterministically on whatever volume
     /// was handed in. Factored out so the raw-FBM and eroded constructors differ
     /// only in the volume they build, never in agent placement or wandering bounds.
-    fn from_volume(seed: u64, n_agents: usize, volume: Volume) -> Self {
+    ///
+    /// Public because it is also the worldgen-cache load path: an adapter that
+    /// reloads a frozen [`Volume`] (via [`Volume::from_bytes`]) rebuilds the world
+    /// through here, getting agent placement *identical* to a freshly-[`eroded`]
+    /// world for the same seed — the cache changes only how the volume was obtained,
+    /// never the world it yields.
+    ///
+    /// [`eroded`]: Self::eroded
+    pub fn from_volume(seed: u64, n_agents: usize, volume: Volume) -> Self {
         let mut rng = Rng::new(seed);
         let bound = 64.0 * volume.detail() as f32;
         let agents = (0..n_agents)

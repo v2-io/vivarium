@@ -104,6 +104,21 @@ pub const SEA_LEVEL: i32 = 3000;
 /// regolith; below it is stone. Scales to voxels via [`Detail`].
 pub const SOIL_DEPTH: i32 = 4;
 
+/// Version tag for a *worldgen result* — bumped whenever a change to the
+/// erosion or hydrology algorithm (or its constants: precip, step budget, dt,
+/// epochs, …) would make the produced terrain/water DIFFERENT for the same
+/// inputs. It is embedded in [`Volume::to_bytes`] and checked by
+/// [`Volume::from_bytes`], so a cache written by an older version is silently
+/// rejected (the caller regenerates) rather than loaded as stale, wrong data.
+///
+/// This exists because the expensive worldgen is cached to disk by the view
+/// adapters (it takes minutes — see the godot bridge). The cache filename keys
+/// on the *call* parameters (seed/region/epochs/…), but the hydrology constants
+/// live inside [`Volume::eroded_refined`] and are NOT in that key — so without
+/// a content version, editing `precip_rate` or the step budget would serve a
+/// stale cache. **If you touch worldgen output, bump this.**
+pub const WORLDGEN_VERSION: u32 = 1;
+
 /// Minimum water depth (metres) that renders as water. Below this is a thin
 /// transient runoff film, not standing water; thresholding it keeps hillslopes
 /// dry rather than sheened.
@@ -486,6 +501,9 @@ impl Volume {
         // we can afford a generous budget. (Wide shallow lakes still level
         // asymptotically slowly — gravity waves — which is why the proper fix for
         // their final flatness is a volume-conserving fill, not just more steps.)
+        // NB: this step budget and the `precip_rate`/`dt` above determine the
+        // frozen water result. If you change any of them, bump [`WORLDGEN_VERSION`]
+        // so on-disk worldgen caches invalidate instead of serving stale water.
         let steps = (surf_nx as u32 * 20).clamp(1600, 12000);
         // Charge the atmosphere with ~the run's precipitation budget (it recycles
         // via evaporation, so this only has to prime the cycle).
@@ -844,6 +862,172 @@ fn fade(t: f32) -> f32 {
     t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
 }
 
+// === Worldgen cache (de)serialization =============================================
+//
+// The eroded/hydrology worldgen is the slow tier — minutes for a full region (a
+// km-scale grid run to hydrological steady state). For active iteration on a
+// *view* (where the world is fixed and only the camera/render changes) recomputing
+// it every launch is pure waste. So a view adapter can freeze a generated `Volume`
+// to disk once and reload it instantly thereafter.
+//
+// This lives in core (not the adapter) because core owns these types' private
+// fields and their invariants — serialization belongs with the data it mirrors.
+// But core stays true to its dependency-free, closed-system charter: it does NO
+// file I/O and pulls in NO serde/bincode. It only converts `Volume ⇄ bytes`; the
+// adapter decides *where* those bytes live and *when* to trust them. A hand-rolled
+// little-endian format keyed by [`WORLDGEN_VERSION`] is plenty for a handful of
+// `f32` arrays and a sparse edit map, and it keeps the "no third-party crate
+// touches the formal state" guarantee intact.
+//
+// Determinism is preserved by construction: the bytes are a faithful image of a
+// deterministically-generated `Volume`, and any version/format/length mismatch is
+// rejected (→ `None`), so a corrupt or stale file can only ever cause a *regenerate*,
+// never a silently-wrong world.
+
+/// 8-byte file magic. The trailing digits are the *serialization layout* version
+/// (distinct from [`WORLDGEN_VERSION`], which versions the world *content*): bump
+/// the magic when the byte layout below changes, bump `WORLDGEN_VERSION` when the
+/// terrain/water a given input produces changes.
+const CACHE_MAGIC: [u8; 8] = *b"VIVWLD01";
+
+impl Volume {
+    /// Serialize this volume to a compact little-endian byte image for the worldgen
+    /// cache (see the module-level note). Round-trips exactly through
+    /// [`Volume::from_bytes`]. The image embeds [`WORLDGEN_VERSION`] so a reader can
+    /// reject content produced by a different worldgen.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut b = Vec::new();
+        b.extend_from_slice(&CACHE_MAGIC);
+        b.extend_from_slice(&WORLDGEN_VERSION.to_le_bytes());
+        b.extend_from_slice(&self.seed.to_le_bytes());
+        b.extend_from_slice(&self.detail.to_le_bytes());
+
+        // Edit overlay: count, then (x, y, z, voxel) each. BTreeMap iterates in
+        // sorted key order, so the byte image is itself deterministic.
+        b.extend_from_slice(&(self.edits.len() as u64).to_le_bytes());
+        for (pos, vox) in &self.edits {
+            b.extend_from_slice(&pos[0].to_le_bytes());
+            b.extend_from_slice(&pos[1].to_le_bytes());
+            b.extend_from_slice(&pos[2].to_le_bytes());
+            b.extend_from_slice(&vox.0.to_le_bytes());
+        }
+
+        match &self.eroded {
+            None => b.push(0),
+            Some(e) => {
+                b.push(1);
+                b.extend_from_slice(&e.x0_m.to_le_bytes());
+                b.extend_from_slice(&e.z0_m.to_le_bytes());
+                b.extend_from_slice(&e.cell_m.to_le_bytes());
+                b.extend_from_slice(&(e.nx as u64).to_le_bytes());
+                // Five arrays, each exactly nx·nx long; length is implied by nx so
+                // we don't repeat it. Order must match the read side below.
+                for arr in [&e.h_m, &e.depth_m, &e.water_surf_m, &e.vx_m, &e.vy_m] {
+                    for &f in arr {
+                        b.extend_from_slice(&f.to_le_bytes());
+                    }
+                }
+            }
+        }
+        b
+    }
+
+    /// Reconstruct a volume from a [`Volume::to_bytes`] image. Returns `None` on any
+    /// mismatch — wrong magic, a different [`WORLDGEN_VERSION`], a truncated or
+    /// internally-inconsistent buffer — so the caller treats a bad/stale cache as
+    /// "regenerate", never as a usable world.
+    pub fn from_bytes(bytes: &[u8]) -> Option<Volume> {
+        let mut r = ByteReader::new(bytes);
+        if r.take(8)? != CACHE_MAGIC {
+            return None;
+        }
+        if r.u32()? != WORLDGEN_VERSION {
+            return None; // produced by a different worldgen — invalidate.
+        }
+        let seed = r.u64()?;
+        let detail = r.i32()?;
+
+        let n_edits = r.u64()? as usize;
+        let mut edits = BTreeMap::new();
+        for _ in 0..n_edits {
+            let pos = [r.i32()?, r.i32()?, r.i32()?];
+            edits.insert(pos, Voxel(r.u16()?));
+        }
+
+        let eroded = match r.u8()? {
+            0 => None,
+            1 => {
+                let x0_m = r.f32()?;
+                let z0_m = r.f32()?;
+                let cell_m = r.f32()?;
+                let nx = r.u64()? as usize;
+                let len = nx.checked_mul(nx)?; // guard a corrupt nx from over-allocating
+                let mut read_arr = || -> Option<Vec<f32>> {
+                    let mut v = Vec::with_capacity(len);
+                    for _ in 0..len {
+                        v.push(r.f32()?);
+                    }
+                    Some(v)
+                };
+                let h_m = read_arr()?;
+                let depth_m = read_arr()?;
+                let water_surf_m = read_arr()?;
+                let vx_m = read_arr()?;
+                let vy_m = read_arr()?;
+                Some(ErodedSurface { x0_m, z0_m, cell_m, nx, h_m, depth_m, water_surf_m, vx_m, vy_m })
+            }
+            _ => return None, // not a valid option tag
+        };
+
+        // Reject trailing garbage: a well-formed image is consumed exactly.
+        if !r.at_end() {
+            return None;
+        }
+        Some(Volume { seed, detail, edits, eroded })
+    }
+}
+
+/// Minimal bounds-checked little-endian cursor for [`Volume::from_bytes`]. Every
+/// accessor returns `None` on underflow, so a truncated cache can never panic or
+/// read past the buffer — it just fails the load and the caller regenerates.
+struct ByteReader<'a> {
+    buf: &'a [u8],
+    pos: usize,
+}
+
+impl<'a> ByteReader<'a> {
+    fn new(buf: &'a [u8]) -> Self {
+        Self { buf, pos: 0 }
+    }
+    fn take(&mut self, n: usize) -> Option<&'a [u8]> {
+        let end = self.pos.checked_add(n)?;
+        let slice = self.buf.get(self.pos..end)?;
+        self.pos = end;
+        Some(slice)
+    }
+    fn u8(&mut self) -> Option<u8> {
+        Some(self.take(1)?[0])
+    }
+    fn u16(&mut self) -> Option<u16> {
+        Some(u16::from_le_bytes(self.take(2)?.try_into().ok()?))
+    }
+    fn u32(&mut self) -> Option<u32> {
+        Some(u32::from_le_bytes(self.take(4)?.try_into().ok()?))
+    }
+    fn i32(&mut self) -> Option<i32> {
+        Some(i32::from_le_bytes(self.take(4)?.try_into().ok()?))
+    }
+    fn u64(&mut self) -> Option<u64> {
+        Some(u64::from_le_bytes(self.take(8)?.try_into().ok()?))
+    }
+    fn f32(&mut self) -> Option<f32> {
+        Some(f32::from_le_bytes(self.take(4)?.try_into().ok()?))
+    }
+    fn at_end(&self) -> bool {
+        self.pos == self.buf.len()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1028,5 +1212,56 @@ mod tests {
         }
         // And it really is micro-relief, not a flat plane: some steps exist.
         assert!(max_jump >= 1, "expected some micro-relief");
+    }
+
+    // --- Worldgen cache round-trips ----------------------------------------------
+
+    /// A plain (raw-FBM, no eroded patch) volume with edits survives a byte
+    /// round-trip unchanged — both the metadata and the edit overlay.
+    #[test]
+    fn cache_round_trips_plain_volume_with_edits() {
+        let mut v = Volume::with_detail(0xABCD, 2);
+        let h = v.surface_height(10, -7).unwrap();
+        v.set_voxel(10, h, -7, Voxel::AIR);
+        v.set_voxel(10, h - 1, -7, Voxel::STONE);
+
+        let back = Volume::from_bytes(&v.to_bytes()).expect("round-trip");
+        assert_eq!(back.detail(), v.detail());
+        assert_eq!(back.edit_count(), v.edit_count());
+        // The reconstructed world answers voxel queries identically.
+        for &(x, y, z) in &[(10, h, -7), (10, h - 1, -7), (0, h, 0)] {
+            assert_eq!(back.voxel(x, y, z), v.voxel(x, y, z), "voxel mismatch at {x},{y},{z}");
+        }
+    }
+
+    /// A volume carrying a (small) eroded+hydrology patch round-trips: the frozen
+    /// surface, water, and velocity fields all come back bit-identical, so a
+    /// reloaded world samples terrain and water exactly like the generated one.
+    #[test]
+    fn cache_round_trips_eroded_volume() {
+        // Tiny region so the test stays fast — the codec doesn't care about size.
+        let v = Volume::eroded_refined(99, 2, 256, 8, Volume::SIM_CELL_M, 4);
+        let back = Volume::from_bytes(&v.to_bytes()).expect("round-trip");
+        // Sample the surface + water + flow at a spread of columns; the reloaded
+        // volume must answer every public query identically.
+        for (x, z) in [(0, 0), (100, -60), (-240, 160), (400, 400)] {
+            assert_eq!(back.surface_height(x, z), v.surface_height(x, z), "surface @ {x},{z}");
+            assert_eq!(back.water_depth_voxels(x, z), v.water_depth_voxels(x, z), "depth @ {x},{z}");
+            assert_eq!(back.water_speed(x, z), v.water_speed(x, z), "speed @ {x},{z}");
+        }
+    }
+
+    /// A different [`WORLDGEN_VERSION`] in the header must be rejected (→ `None`),
+    /// so a stale cache forces a regenerate rather than loading wrong terrain.
+    #[test]
+    fn cache_rejects_wrong_version_and_garbage() {
+        let v = Volume::with_detail(1, 1);
+        let mut bytes = v.to_bytes();
+        // Corrupt the embedded version word (bytes 8..12, right after the magic).
+        bytes[8] = bytes[8].wrapping_add(1);
+        assert!(Volume::from_bytes(&bytes).is_none(), "wrong version must be rejected");
+        // Truncated / nonsense buffers are rejected too, never panic.
+        assert!(Volume::from_bytes(&[]).is_none());
+        assert!(Volume::from_bytes(b"not a cache file").is_none());
     }
 }

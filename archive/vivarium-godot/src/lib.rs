@@ -18,10 +18,11 @@
 //! the voxel terrain rendering and first-person controller land on top of this
 //! once the seam itself is proven to work.
 
+use std::path::PathBuf;
 use std::sync::RwLock;
 
 use godot::prelude::*;
-use vivarium_core::voxel::Voxel;
+use vivarium_core::voxel::{Voxel, Volume, WORLDGEN_VERSION};
 use vivarium_core::World;
 
 struct VivariumExtension;
@@ -33,6 +34,111 @@ unsafe impl ExtensionLibrary for VivariumExtension {}
 /// tether-to-truth (determinism) property holds regardless of render framerate —
 /// the same reasoning as the Bevy view's `FIXED_HZ`.
 const FIXED_HZ: f32 = 30.0;
+
+/// Build the eroded world, but reuse a frozen one from disk when we already paid
+/// the cost. The erosion+hydrology worldgen is the *slow tier* — minutes for a
+/// full region — and while iterating on the **view** the world never changes, so
+/// recomputing it every launch is pure waste. Core gives us a faithful byte image
+/// of a generated [`Volume`] ([`Volume::to_bytes`] / [`from_bytes`]); the caching
+/// — *where* the bytes live, *when* to trust them — is a view concern and lives
+/// here, exactly like the `RwLock`.
+///
+/// Correctness rests on core, not on us: the cache key includes every worldgen
+/// input *and* [`WORLDGEN_VERSION`], and `from_bytes` independently re-checks that
+/// version and the buffer's integrity. So a stale or corrupt file can only ever
+/// trigger a regenerate, never load a wrong world. Rebuilding the [`World`] from
+/// the cached volume via [`World::from_volume`] reproduces agent placement
+/// identically (same seed), so a reloaded world is indistinguishable from a freshly
+/// generated one.
+///
+/// Knobs: `VIVARIUM_NO_CACHE=1` always regenerates (and does not write);
+/// `VIVARIUM_CACHE_DIR` overrides the location (default: a `vivarium-worldcache/`
+/// under the OS temp dir — persists across launches, easy to wipe).
+fn load_or_generate_world(
+    seed: u64,
+    n_agents: usize,
+    detail: i32,
+    region_half: i32,
+    epochs: u32,
+    fine_cell: f32,
+    fine_epochs: u32,
+) -> World {
+    let generate = || {
+        godot_print!(
+            "[vivarium] generating eroded world (seed {seed:#x}, detail {detail}, \
+             ±{region_half} m, {epochs} coarse epochs, fine {fine_cell} m × {fine_epochs})… \
+             slow tier, minutes.",
+        );
+        World::eroded(seed, n_agents, detail, region_half, epochs, fine_cell, fine_epochs)
+    };
+
+    if std::env::var_os("VIVARIUM_NO_CACHE").is_some() {
+        return generate();
+    }
+
+    let path = world_cache_path(seed, detail, region_half, epochs, fine_cell, fine_epochs);
+
+    // Try to reload. A miss (no file), a stale version, or any corruption all fall
+    // through to regeneration — `from_bytes` is the integrity gate.
+    if let Ok(bytes) = std::fs::read(&path) {
+        match Volume::from_bytes(&bytes) {
+            Some(volume) => {
+                godot_print!(
+                    "[vivarium] worldgen cache HIT ({} KiB) — reloaded {}, skipping the slow tier.",
+                    bytes.len() / 1024,
+                    path.display(),
+                );
+                return World::from_volume(seed, n_agents, volume);
+            }
+            None => godot_warn!(
+                "[vivarium] worldgen cache at {} is stale or unreadable — regenerating.",
+                path.display(),
+            ),
+        }
+    }
+
+    let world = generate();
+    match write_world_cache(&path, &world.volume) {
+        Ok(()) => godot_print!(
+            "[vivarium] worldgen cached → {} (next launch reloads instantly).",
+            path.display(),
+        ),
+        Err(e) => godot_warn!("[vivarium] could not write worldgen cache {}: {e}", path.display()),
+    }
+    world
+}
+
+/// Cache file for a given worldgen. The name spells out every input plus
+/// [`WORLDGEN_VERSION`], so distinct worlds (and worlds from a changed worldgen)
+/// never collide — and the file is self-describing at a glance in the cache dir.
+fn world_cache_path(
+    seed: u64,
+    detail: i32,
+    region_half: i32,
+    epochs: u32,
+    fine_cell: f32,
+    fine_epochs: u32,
+) -> PathBuf {
+    let dir = std::env::var_os("VIVARIUM_CACHE_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| std::env::temp_dir().join("vivarium-worldcache"));
+    let name = format!(
+        "viv_s{seed:x}_d{detail}_r{region_half}_e{epochs}_fc{fine_cell:.1}_fe{fine_epochs}_v{WORLDGEN_VERSION}.bin",
+    );
+    dir.join(name)
+}
+
+/// Write the volume image atomically: serialize to a sibling `.tmp` then rename
+/// into place, so an interrupted write never leaves a half-file that a later run
+/// would have to detect and discard.
+fn write_world_cache(path: &PathBuf, volume: &Volume) -> std::io::Result<()> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let tmp = path.with_extension("bin.tmp");
+    std::fs::write(&tmp, volume.to_bytes())?;
+    std::fs::rename(&tmp, path)
+}
 
 /// The simulation, wrapped as a Godot node so a scene can hold it as the single
 /// source of truth. Every other node reads the world through this one.
@@ -90,13 +196,7 @@ impl INode for VivariumWorld {
         let epochs = env_i32("VIVARIUM_EPOCHS", 70).max(0) as u32;
         let fine_cell = env_f32("VIVARIUM_FINE_CELL", 8.0);
         let fine_epochs = env_i32("VIVARIUM_FINE_EPOCHS", 0).max(0) as u32;
-        godot_print!(
-            "[vivarium] generating eroded world (seed {:#x}, detail {detail}, \
-             ±{region_half} m, {epochs} coarse epochs, fine {fine_cell} m × {fine_epochs})… \
-             slow tier, ~seconds.",
-            0x00C0_FFEE_u64,
-        );
-        let world = World::eroded(
+        let world = load_or_generate_world(
             0x00C0_FFEE, 24, detail, region_half, epochs, fine_cell, fine_epochs,
         );
         godot_print!("[vivarium] world ready.");
