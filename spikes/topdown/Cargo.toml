@@ -1,0 +1,17 @@
+# vivarium-topdown — a character-driven pseudo-top-down explorer (see README.md).
+#
+# A different feel from the ortho-iso navigators: you control a character walking
+# the REAL voxel terrain, a PERSPECTIVE camera follows from a high (Zelda-ish)
+# angle, and a far-terrain backdrop lets the landscape run to a horizon — to test
+# whether perspective + character-for-scale brings back the "epic" the flat ortho
+# views lost. Real voxels via bevy_voxel_world; depends on the core only.
+[package]
+name = "vivarium-topdown"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+bevy = "0.18"
+bevy_voxel_world = "0.16"
+vivarium-core = { path = "../../crates/vivarium-core" }
