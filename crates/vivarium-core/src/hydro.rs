@@ -194,6 +194,11 @@ pub struct WaterSim {
     /// scalar `WaterParams::infiltration` where present, so flowing channels keep
     /// their water on the surface instead of leaking underground and re-gushing.
     pub infiltration_field: Option<Vec<f32>>,
+    // Cached lithology factor (1/hardness, see `gw_material`). The bed is fixed in
+    // the pure-water phase, so this is computed once and reused — without the cache
+    // it was a hardness sample per cell *per step*, the dominant water-phase cost.
+    // Invalidated (recomputed) whenever erosion (`capacity > 0`) moves the bed.
+    mat_cache: Option<Vec<f32>>,
     // Outgoing flux on each axial pipe (m³/s), held between steps so momentum
     // persists. Non-negative: a pipe only ever carries water *out* of its cell;
     // the neighbour's opposite pipe is the return path.
@@ -219,6 +224,7 @@ impl WaterSim {
             origin_m: 0.0,
             hardness: None,
             infiltration_field: None,
+            mat_cache: None,
             fl: z.clone(),
             fr: z.clone(),
             ft: z.clone(),
@@ -385,7 +391,13 @@ impl WaterSim {
         // Lithology factor (1/hardness, clamped) — groundwater permeability AND
         // porosity come from the rock, so storage and flow vary with the material
         // and water backs up at soft→hard contacts (→ springs). 1.0 with no Strata.
-        let mat = self.gw_material(l);
+        // Cached: the bed is fixed in the water phase, so compute once and reuse;
+        // recompute only when erosion (capacity > 0) is moving the bed.
+        let mat = self
+            .mat_cache
+            .take()
+            .filter(|_| p.capacity == 0.0)
+            .unwrap_or_else(|| self.gw_material(l));
         {
             // 5a. Infiltration: surface → groundwater, **only into unsaturated
             //     soil** (capped by the remaining capacity). This is the load-
@@ -439,6 +451,11 @@ impl WaterSim {
                 self.depth[i] = after;
             }
             self.atmosphere += evaporated;
+        }
+        // Keep the lithology factor for next step when the bed is fixed (water
+        // phase); when erosion moves the bed it must be recomputed, so drop it.
+        if p.capacity == 0.0 {
+            self.mat_cache = Some(mat);
         }
 
         // 6. The domain edge drains to the ocean store — counted, not deleted (the

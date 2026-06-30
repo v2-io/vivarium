@@ -311,8 +311,10 @@ impl Volume {
     /// erosion grid, since this is where the fine detail (streams, fine carving) is
     /// earned. The macro field is upsampled onto this grid before the sim runs.
     /// Cost scales as `(span / SIM_CELL_M)² · steps`, so this is the granularity ⇄
-    /// worldgen-time dial. (16 m macro → 8 m sim; 4 m is the next step.)
-    pub const SIM_CELL_M: f32 = 8.0;
+    /// worldgen-time dial. 4 m resolves thin headwater streams (so the sealed-bed
+    /// field catches them and they stop leaking underground); finer still is the
+    /// next dial when worldgen time allows.
+    pub const SIM_CELL_M: f32 = 4.0;
 
     /// Epochs of fine stream-power erosion at [`Self::SIM_CELL_M`] — the geological
     /// phase that carves the *fine* channels into the upsampled macro field (uplift
@@ -484,7 +486,7 @@ impl Volume {
         // we can afford a generous budget. (Wide shallow lakes still level
         // asymptotically slowly — gravity waves — which is why the proper fix for
         // their final flatness is a volume-conserving fill, not just more steps.)
-        let steps = (surf_nx as u32 * 20).clamp(1600, 10000);
+        let steps = (surf_nx as u32 * 20).clamp(1600, 12000);
         // Charge the atmosphere with ~the run's precipitation budget (it recycles
         // via evaporation, so this only has to prime the cycle).
         let atm = wp.precip_rate as f64 * wp.dt as f64 * steps as f64
