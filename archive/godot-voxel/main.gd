@@ -82,6 +82,7 @@ var terrain: Object   # VoxelTerrain (kept for the automated dig self-test)
 var cam: Camera3D     # the player camera (repositioned for the dig close-up)
 var detail: int = 1
 var _view_distance: int = 0
+var _iso: bool = false   # VIVARIUM_VIEW=iso → orthographic navigator (navigator.gd)
 
 var _trace_file: FileAccess
 
@@ -246,34 +247,48 @@ func _ready() -> void:
 		terrain.debug_draw_mesh_updates = true
 	_trace("terrain added")
 
-	# First-person fly camera (player.gd), in voxel/world coordinates (1:1).
-	# Geology-scale framing mirrors the Bevy spike (spikes/bevy-voxel setup): stand
-	# just above the ground at the region centre and gaze *outward and slightly
-	# down* across the landmass toward the far massifs — not down at one's feet.
+	# Camera: either the first-person walk/fly rig (default) or the isometric
+	# navigator (VIVARIUM_VIEW=iso). They are different contracts with the renderer
+	# — see navigator.gd's header — so they live in separate scripts and we pick
+	# one here rather than branching inside a single controller.
+	_iso = OS.get_environment("VIVARIUM_VIEW") == "iso"
 	var sh: int = world.surface_height(0, 0)
 	cam = Camera3D.new()
-	cam.set_script(load("res://player.gd"))
-	cam.world = world
-	cam.terrain = terrain
-	cam.far = float(_view_distance) + 8192.0   # don't clip the far terrain
-	cam.position = Vector3(0, sh + 12, 0)        # ~6 m eye height at detail 2
-	add_child(cam)                               # in-tree before look_at()
-	cam.look_at(Vector3(800, sh - 60, 300), Vector3.UP)   # outward across the terrain
-	cam.resync()                                 # carry that heading into yaw/pitch
+	if _iso:
+		# Orthographic overhead navigator. It owns its own VoxelViewer (parked on
+		# the ground focus, not the floating eye), so we do NOT add one here.
+		cam.set_script(load("res://navigator.gd"))
+		cam.world = world
+		cam.terrain = terrain
+		cam.view_distance = _view_distance
+		add_child(cam)
+	else:
+		# First-person fly camera (player.gd), in voxel/world coordinates (1:1).
+		# Geology-scale framing mirrors the Bevy spike (spikes/bevy-voxel setup):
+		# stand just above the ground at the region centre and gaze *outward and
+		# slightly down* across the landmass toward the far massifs — not at one's feet.
+		cam.set_script(load("res://player.gd"))
+		cam.world = world
+		cam.terrain = terrain
+		cam.far = float(_view_distance) + 8192.0   # don't clip the far terrain
+		cam.position = Vector3(0, sh + 12, 0)        # ~6 m eye height at detail 2
+		add_child(cam)                               # in-tree before look_at()
+		cam.look_at(Vector3(800, sh - 60, 300), Vector3.UP)   # outward across the terrain
+		cam.resync()                                 # carry that heading into yaw/pitch
 
-	# A VoxelViewer tells the terrain where to stream chunks (and at which LOD,
-	# by distance). view_distance matches the terrain's.
-	var viewer := VoxelViewer.new()
-	viewer.view_distance = _view_distance
-	# Flying over a surface, the full-height column (ratio 1.0 = mesh 32 k voxels
-	# up and down) is mostly wasted budget — squashing it *should* be a pure win,
-	# but bundled with the other changes (2026-06-23) the net was a regression and
-	# it wasn't isolated, so default is left at the engine's 1.0 until measured
-	# alone. Set VIVARIUM_VRATIO=0.3 to try it (lower = less vertical reach).
-	var vratio_env := OS.get_environment("VIVARIUM_VRATIO")
-	if vratio_env != "":
-		viewer.view_distance_vertical_ratio = float(vratio_env)
-	cam.add_child(viewer)
+		# A VoxelViewer tells the terrain where to stream chunks (and at which LOD,
+		# by distance). view_distance matches the terrain's.
+		var viewer := VoxelViewer.new()
+		viewer.view_distance = _view_distance
+		# Flying over a surface, the full-height column (ratio 1.0 = mesh 32 k voxels
+		# up and down) is mostly wasted budget — squashing it *should* be a pure win,
+		# but bundled with the other changes (2026-06-23) the net was a regression and
+		# it wasn't isolated, so default is left at the engine's 1.0 until measured
+		# alone. Set VIVARIUM_VRATIO=0.3 to try it (lower = less vertical reach).
+		var vratio_env := OS.get_environment("VIVARIUM_VRATIO")
+		if vratio_env != "":
+			viewer.view_distance_vertical_ratio = float(vratio_env)
+		cam.add_child(viewer)
 
 	# Soft overcast key light. Enough energy that block faces shade by their
 	# orientation (top vs side vs angled) — the face-to-face contrast that gives
@@ -306,7 +321,14 @@ func _ready() -> void:
 	# Fog drowns the whole-landmass vista in grey (it's tuned to dissolve the far
 	# edge, but at 16 km everything is "far"). Toggle off with VIVARIUM_FOG=0 when
 	# the goal is to read the real terrain shape rather than an atmospheric mood.
-	env.fog_enabled = OS.get_environment("VIVARIUM_FOG") != "0"
+	# Depth fog is a first-person atmospheric mood (dissolve the far horizon). The
+	# iso navigator floats ~12 km back orthographically, so EVERYTHING is past
+	# fog_depth_begin and the whole scene washes to flat grey — useless for an
+	# overhead map view. Off by default in iso; VIVARIUM_FOG=1 forces it on.
+	if _iso:
+		env.fog_enabled = OS.get_environment("VIVARIUM_FOG") == "1"
+	else:
+		env.fog_enabled = OS.get_environment("VIVARIUM_FOG") != "0"
 	env.fog_mode = Environment.FOG_MODE_DEPTH
 	env.fog_light_color = sky_color
 	# Fog the sky too, fully — so the whole sky becomes the same fog colour the
@@ -335,7 +357,7 @@ func _ready() -> void:
 	# Interactive by default. In an automated run (VIVARIUM_AUTOSHOT set) give the
 	# streaming threads a few seconds, then screenshot and quit — used to verify
 	# renders without a human watching.
-	_trace("scene built, viewer.view_distance=%d" % viewer.view_distance)
+	_trace("scene built, view_distance=%d, mode=%s" % [_view_distance, "iso" if _iso else "walk"])
 
 	# Telemetry / benchmark wiring (see the block by the member vars).
 	_bench = OS.get_environment("VIVARIUM_BENCH") == "1"
@@ -380,6 +402,9 @@ func _ready() -> void:
 		get_tree().create_timer(settle).timeout.connect(_capture_and_quit)
 	elif _bench:
 		print("[vivarium] BENCH: flying a fixed %ds path; telemetry -> user://telemetry.csv" % int(_bench_secs))
+	elif _iso:
+		# navigator.gd prints its own control hints in _ready().
+		print("[vivarium] interactive (detail %d): ISO NAVIGATOR (VIVARIUM_VIEW=iso)" % detail)
 	else:
 		print("[vivarium] interactive (detail %d): WALK (default) — WASD move, " % detail,
 			"mouse look, Shift=run · F=toggle FLY (Space/Shift up-down, Ctrl=fast) · ",
@@ -413,12 +438,16 @@ func _capture_and_quit() -> void:
 	# (The interactive camera stays at eye level; this is just the verification
 	# framing.) Env-tunable so the vista can be swept. All in voxel units (1:1).
 	var sh: int = world.surface_height(0, 0)
-	var cam_back := 14000.0
-	var back_env := OS.get_environment("VIVARIUM_CAM_BACK")
-	if back_env != "":
-		cam_back = float(back_env)
-	cam.position = Vector3(-cam_back, sh + cam_back * 0.45, -cam_back)
-	cam.look_at(Vector3(0, float(sh), 0), Vector3.UP)
+	# Iso mode: navigator.gd already framed an orthographic vista of the region in
+	# its _ready() AUTOSHOT branch — repositioning to a perspective pose here would
+	# undo that. Just let the frame settle and screenshot it in place.
+	if not _iso:
+		var cam_back := 14000.0
+		var back_env := OS.get_environment("VIVARIUM_CAM_BACK")
+		if back_env != "":
+			cam_back = float(back_env)
+		cam.position = Vector3(-cam_back, sh + cam_back * 0.45, -cam_back)
+		cam.look_at(Vector3(0, float(sh), 0), Vector3.UP)
 	_trace("vista framed; fps=%.1f, view_distance=%d voxels (%d physical), detail=%d"
 		% [Engine.get_frames_per_second(), _view_distance, _view_distance / detail, detail])
 	# Let the remesh settle (and FPS recover) before grabbing the frame.
