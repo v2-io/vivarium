@@ -144,6 +144,14 @@ pub struct WaterSim {
     /// runoff drains into it, ocean-evaporation lifts from it. Together with the
     /// three fields above, the grand total is invariant (see `total_water`).
     pub ocean: f64,
+    /// World metre coordinate of grid node `(0, 0)` — so hardness can be sampled in
+    /// world space. 0 for origin-centred test domains.
+    pub origin_m: f32,
+    /// Optional 3D **material hardness** ([`crate::geo::Strata`]). When present,
+    /// erosion is divided by the hardness *at the current bed elevation*, so soft
+    /// rock yields and hard bands resist — strata and waterfalls emerge. `None` =
+    /// uniform erodibility.
+    pub hardness: Option<crate::geo::Strata>,
     // Outgoing flux on each axial pipe (m³/s), held between steps so momentum
     // persists. Non-negative: a pipe only ever carries water *out* of its cell;
     // the neighbour's opposite pipe is the return path.
@@ -166,6 +174,8 @@ impl WaterSim {
             groundwater: z.clone(),
             atmosphere: 0.0,
             ocean: 0.0,
+            origin_m: 0.0,
+            hardness: None,
             fl: z.clone(),
             fr: z.clone(),
             ft: z.clone(),
@@ -177,6 +187,14 @@ impl WaterSim {
     /// cycle has water to precipitate. Returns `self` for building.
     pub fn with_atmosphere(mut self, amount: f64) -> Self {
         self.atmosphere = amount;
+        self
+    }
+
+    /// Give the sim a 3D material-hardness field and the world origin to sample it
+    /// at, so erosion respects strata and intrusions. Returns `self` for building.
+    pub fn with_hardness(mut self, strata: crate::geo::Strata, origin_m: f32) -> Self {
+        self.hardness = Some(strata);
+        self.origin_m = origin_m;
         self
     }
 
@@ -415,10 +433,19 @@ impl WaterSim {
                 let cap = p.capacity * sin_tilt * speed;
                 let s = self.sediment[i];
                 if cap > s {
-                    // Under capacity: lift bed into suspension. (3D material
-                    // hardness will divide `erode` here once Strata lands — softer
-                    // rock yields more, so strata and waterfalls emerge.)
-                    let amt = p.erode * (cap - s);
+                    // Under capacity: lift bed into suspension, resisted by the
+                    // material hardness at *this bed elevation* — soft rock yields,
+                    // hard bands hold, so strata, knickpoints and hard-sill lakes
+                    // emerge as the channel incises through the column.
+                    let hard = match &self.hardness {
+                        Some(st) => {
+                            let xm = self.origin_m + x as f32 * l;
+                            let ym = self.origin_m + y as f32 * l;
+                            st.hardness(xm, ym, self.bed[i])
+                        }
+                        None => 1.0,
+                    };
+                    let amt = p.erode / hard * (cap - s);
                     self.bed[i] -= amt;
                     self.sediment[i] = s + amt;
                 } else {
@@ -610,6 +637,54 @@ mod tests {
             "bed exploded — erosion unstable (max |bed| {})",
             sim.bed.iter().fold(0.0f32, |m, b| m.max(b.abs()))
         );
+    }
+
+    /// Material hardness must *modulate* erosion (soft yields, hard resists — the
+    /// basis of strata and waterfalls), while still conserving solid mass and
+    /// staying deterministic. Compared against a uniform-erodibility run to prove
+    /// the field actually changes the landscape.
+    #[test]
+    fn hardness_modulates_erosion_and_still_conserves() {
+        let nx = 64;
+        let bed0 = bowl(nx);
+        let p = WaterParams {
+            precip_rate: 0.05,
+            evaporation: 0.0,
+            infiltration: 0.0,
+            baseflow: 0.0,
+            capacity: 0.4,
+            erode: 0.5,
+            deposit: 0.5,
+            min_slope: 0.05,
+            ..Default::default()
+        };
+        let mut uniform = WaterSim::new(nx, bed0.clone()).with_atmosphere(1.0e6);
+        uniform.run(&p, 2000);
+
+        let strata = crate::geo::Strata::new(0x5712);
+        let mut hard = WaterSim::new(nx, bed0.clone())
+            .with_atmosphere(1.0e6)
+            .with_hardness(strata, 0.0);
+        let s0 = hard.total_solid();
+        hard.run(&p, 2000);
+
+        let drift = (hard.total_solid() - s0).abs() / s0.abs().max(1.0);
+        assert!(drift < 1e-3, "solid not conserved with hardness: {drift:.2e}");
+        let diff = uniform
+            .bed
+            .iter()
+            .zip(&hard.bed)
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0f32, f32::max);
+        assert!(diff > 0.1, "hardness had no effect on the landscape ({diff})");
+
+        let mut again = WaterSim::new(nx, bed0.clone())
+            .with_atmosphere(1.0e6)
+            .with_hardness(strata, 0.0);
+        again.run(&p, 2000);
+        for (a, b) in hard.bed.iter().zip(again.bed.iter()) {
+            assert_eq!(a.to_bits(), b.to_bits(), "hardness run not deterministic");
+        }
     }
 
     /// Determinism — the tether-to-truth property the whole core holds.

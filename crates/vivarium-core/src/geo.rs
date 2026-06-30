@@ -594,6 +594,77 @@ impl Heightfield {
     }
 }
 
+/// Spatially-varying rock **erodibility resistance** — material hardness as a
+/// deterministic 3D field. The erosion process samples it at the *incising bed
+/// elevation*, so as a channel cuts downward it meets successive layers: that is
+/// what makes **strata**, **knickpoints/waterfalls** (flow stalls on a hard
+/// band), **hard-sill lakes** (a resistant bar dams a valley) and **caprock**
+/// *emergent* rather than painted. `1.0` is baseline; higher resists erosion,
+/// lower yields. Pure function of `(seed, x, y, z)` — cheap, reproducible.
+#[derive(Clone, Copy, Debug)]
+pub struct Strata {
+    seed: u64,
+}
+
+impl Strata {
+    pub fn new(seed: u64) -> Self {
+        Self { seed }
+    }
+
+    /// Hardness at a world point (metres). Depth `z` drives horizontal **strata**
+    /// (alternating hard/soft bands); a low-frequency 3D component adds regional
+    /// **intrusions / blobs** of harder and softer rock (Joseph's original list).
+    /// Clamped to a sane resistance range so nothing is unerodable or vanishes.
+    pub fn hardness(&self, x: f32, y: f32, z: f32) -> f32 {
+        let p1 = hash_phase(self.seed ^ 0x9E37_79B9);
+        let p2 = hash_phase(self.seed ^ 0x2545_F491);
+        // Horizontal strata: alternating bands with depth, two scales.
+        let bands = 0.55 * (z * 0.03 + p1).sin() + 0.25 * (z * 0.11 + p2).sin();
+        // Regional blobs: low-frequency 3D value noise (intrusions, batholiths).
+        let f = 0.0009;
+        let blob = (value_noise3(x * f, y * f, z * f, self.seed) - 0.5) * 1.2;
+        (1.0 + bands + blob).clamp(0.25, 4.0)
+    }
+}
+
+fn hash_phase(s: u64) -> f32 {
+    (hash_u64(s) as f32 / u32::MAX as f32) * std::f32::consts::TAU
+}
+
+/// splitmix64 finalizer → 32 bits. Deterministic, well-mixed.
+fn hash_u64(x: u64) -> u32 {
+    let mut z = x.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    ((z ^ (z >> 31)) & 0xFFFF_FFFF) as u32
+}
+
+/// Trilinearly-interpolated 3D value noise in `[0, 1)`, deterministic from seed.
+fn value_noise3(x: f32, y: f32, z: f32, seed: u64) -> f32 {
+    let (xi, yi, zi) = (x.floor() as i64, y.floor() as i64, z.floor() as i64);
+    let (sx, sy, sz) = (smooth(x - xi as f32), smooth(y - yi as f32), smooth(z - zi as f32));
+    let mut acc = 0.0;
+    for (dx, wx) in [(0i64, 1.0 - sx), (1, sx)] {
+        for (dy, wy) in [(0i64, 1.0 - sy), (1, sy)] {
+            for (dz, wz) in [(0i64, 1.0 - sz), (1, sz)] {
+                let h = hash_u64(
+                    (xi + dx) as u64
+                        ^ ((yi + dy) as u64).wrapping_mul(0x1000_0193)
+                        ^ ((zi + dz) as u64).wrapping_mul(0x0100_0000_01B3)
+                        ^ seed,
+                );
+                acc += (h as f32 / u32::MAX as f32) * wx * wy * wz;
+            }
+        }
+    }
+    acc
+}
+
+#[inline]
+fn smooth(t: f32) -> f32 {
+    t * t * (3.0 - 2.0 * t)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
