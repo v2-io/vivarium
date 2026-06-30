@@ -5149,10 +5149,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "vivarium-iso-tiles"
+name = "vivarium-iso-voxels"
 version = "0.0.0"
 dependencies = [
  "bevy",
+ "bevy_voxel_world",
  "vivarium-core",
 ]
 

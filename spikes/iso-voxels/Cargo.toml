@@ -1,0 +1,17 @@
+# vivarium-iso-voxels — plain ortho-iso over REAL voxel cubes (see README.md).
+#
+# After the memoized-tile navigator was retired as an aesthetic non-starter, this
+# is the deliberately-simple successor: an orthographic isometric camera over the
+# actual voxel world rendered by bevy_voxel_world. No custom LOD, no memoization,
+# no hand-rolled rasteriser — the engine draws real cubes and the GPU depth buffer
+# handles occlusion correctly. Depends on the core; the core never depends on it.
+[package]
+name = "vivarium-iso-voxels"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+bevy = "0.18"
+bevy_voxel_world = "0.16"
+vivarium-core = { path = "../../crates/vivarium-core" }
