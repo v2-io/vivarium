@@ -6,13 +6,25 @@ agents and community dynamics* built on the Agentic Systems Framework (ASF /
 AAT). Read [`DESIGN.md`](DESIGN.md) before proposing anything — it carries the
 live thinking and the open questions.
 
-**Stage (2026-06-22).** Past the first vertical slice. `vivarium-core` is a
-deterministic 3D voxel world (seed + sparse edits, Perlin/FBM terrain, voxel
-LOD); the **engine question is resolved → Bevy** (`bevy_voxel_world`), confirmed
-by a head-to-head spike against Godot — see [`spikes/FINDINGS.md`](spikes/FINDINGS.md).
-The live view is `spikes/bevy-voxel/`; the Godot spike is in `archive/`. UDON
-(`~/src/libudon`) is *decided but not yet implemented* as the core-side
-notation for the logozoetic interface + scenario/replay formats.
+**Stage (2026-06-29).** Past the first vertical slice. `vivarium-core` is a
+deterministic 3D voxel world (seed + sparse edits, voxel LOD). The **engine
+question is resolved → Bevy** (`bevy_voxel_world`), confirmed by a head-to-head
+spike against Godot — see [`spikes/FINDINGS.md`](spikes/FINDINGS.md). Bevy is the
+intended live view, but the **Godot spike (`archive/godot-voxel/`) is currently
+the active first-person view** for terrain/water work (walk mode; build the bridge
+with `archive/godot-voxel/sync-lib.sh release`). UDON (`~/src/libudon`) is
+*decided but not yet implemented* as the core-side notation.
+
+**Worldgen geology + hydrology (the bulk of recent work).** A principled,
+mass-conserving water+erosion pipeline on branch `spike/hydrology` (not yet
+merged): macro erosion (16 m) → fine erosion (4 m, carves channels) → a conserved
+shallow-water + groundwater sim run to steady state → frozen snapshot (terrain,
+water depth/volume, velocity). Streams, flat lakes, springs, and a flat sea all
+*emerge* from the physics — no fractal noise, nothing imposed. The load-bearing
+principle (learned the hard way): **separate the timescales** — erosion is
+geological, water is hydrological; do not couple them on one timestep. Full
+writeup: [`ref/hydrology/NOTES.md`](ref/hydrology/NOTES.md). Known honest fudge:
+rain rate ~100-1000× real to fill basins in minutes not weeks.
 
 **The one discipline that matters most here.** Axes 1 (graphics) and 2 (world
 dynamics) are infinitely expandable and will quietly eat the budget that belongs
