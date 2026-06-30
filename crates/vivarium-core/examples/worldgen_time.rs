@@ -17,32 +17,45 @@ fn main() {
     let dt = t.elapsed();
     println!("worldgen (detail 2, ±{region} m, {epochs} epochs): {:.1} s", dt.as_secs_f32());
 
-    // Cross-section of the ACTUAL rendered voxels along z=0 — terrain (▓) and the
-    // water column on top (≈), read only through the public voxel API. A real lake
-    // must show a FLAT water top; a draped surface steps with the bed.
+    // Cross-section of the ACTUAL rendered voxels — terrain (▓) and the water
+    // column on top (≈), read through the public voxel API. The point is to see the
+    // water SURFACE: a real pool shows a FLAT ≈-top; a thin sheet draped on a slope
+    // staircases. We auto-pick the wettest row so the transect actually crosses
+    // water, and report the max depth (thin sheet vs real pool).
     let detail = v.detail() as i32;
-    let half = 11_000 * detail / 10; // a bit inside ±12 km (voxels)
+    let half = region * detail * 9 / 10; // voxels, just inside the patch
+    let sea = v.sea_level();
     let cols = 150usize;
-    let step = (2 * half / cols as i32).max(1);
-    let xs: Vec<i32> = (0..cols as i32).map(|i| -half + i * step).collect();
+    let xstep = (2 * half / cols as i32).max(1);
 
-    // Per column: terrain top, and water top (scan up from the ground while WATER).
+    let inland_at = |x: i32, z: i32| -> bool {
+        let g = v.surface_height(x, z).unwrap_or(0);
+        g > sea && v.voxel(x, g + 1, z) == Voxel::WATER
+    };
+    let probe = |z: i32| (0..cols).filter(|&c| inland_at(-half + c as i32 * xstep, z)).count();
+    let zp = (2 * half / 60).max(1);
+    let best_z = (0..60)
+        .map(|i| -half + i * zp)
+        .max_by_key(|&z| probe(z))
+        .unwrap_or(0);
+
     let mut ground = Vec::new();
     let mut wtop = Vec::new();
-    for &x in &xs {
-        let g = v.surface_height(x, 0).unwrap_or(0);
+    for c in 0..cols {
+        let x = -half + c as i32 * xstep;
+        let g = v.surface_height(x, best_z).unwrap_or(0);
         let mut y = g + 1;
-        while v.voxel(x, y, 0) == Voxel::WATER && y < g + 4000 {
+        while v.voxel(x, y, best_z) == Voxel::WATER && y < g + 4000 {
             y += 1;
         }
         ground.push(g);
-        wtop.push((y - 1).max(g)); // = g when dry
+        wtop.push((y - 1).max(g));
     }
     let lo = *ground.iter().min().unwrap();
-    let hi = *wtop.iter().max().unwrap().max(ground.iter().max().unwrap());
+    let hi = *wtop.iter().chain(ground.iter()).max().unwrap();
     let rows = 30i32;
     let span = (hi - lo).max(1);
-    println!("\ncross-section z=0  (terrain ▓, water ≈;  flat ≈-top = real water)");
+    println!("\ncross-section z={best_z} (wettest row)  (terrain ▓, water ≈; flat ≈-top = pool)");
     for r in 0..rows {
         let level = hi - (span * r) / rows;
         let line: String = (0..cols)
@@ -59,11 +72,13 @@ fn main() {
         println!("{line}");
     }
     let wet = wtop.iter().zip(&ground).filter(|(w, g)| *w > *g).count();
-    println!("wet columns: {wet}/{cols}");
+    let maxd = wtop.iter().zip(&ground).map(|(w, g)| w - g).max().unwrap_or(0);
+    println!(
+        "wet columns: {wet}/{cols};  max water depth this row: {:.1} m (small = thin sheet)",
+        maxd as f32 * 0.5
+    );
 
-    // Top-down water map: '~' = sea, '#' = inland water (a stream/lake standing
-    // above sea level), ' ' = dry land. Shows whether a river network formed.
-    let sea = v.sea_level();
+    // Top-down water map: '~' = sea, '#' = inland water, ' ' = dry land.
     let rows = 50usize;
     let zstep = (2 * half / rows as i32).max(1);
     let xstep = (2 * half / 110).max(1);

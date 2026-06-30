@@ -62,11 +62,19 @@ pub struct WaterParams {
     /// the ground absorbs it and stays dry; only concentrated flow runs.
     pub infiltration: f32,
     /// **Groundwater capacity** per cell (m of water): the soil's storage =
-    /// porosity × soil depth. Infiltration stops when the cell is saturated.
+    /// porosity × soil depth. Water above this **exfiltrates** to the surface — a
+    /// spring where the water table reaches the ground. This is what feeds streams.
     pub gw_capacity: f32,
-    /// **Baseflow** as a fraction of groundwater per second — groundwater seeping
-    /// back *to the surface* (springs / dry-season river flow). This is what keeps
-    /// channels running between rains; emergent, not placed.
+    /// **Lateral groundwater conductivity** (Darcy): groundwater flows down the
+    /// water-table gradient (`head = bed + gw`) at this rate, conserved. THIS is
+    /// the basic that makes the distribution *emerge* — water infiltrates on the
+    /// slopes, flows underground to the valleys, saturates them, and exfiltrates as
+    /// concentrated springs, leaving dry hillsides. Without it there is no
+    /// principled way to get dry slopes *and* wet channels.
+    pub gw_conductivity: f32,
+    /// **Baseflow** as a fraction of groundwater per second — a slow uniform seep
+    /// back to the surface, on top of saturation exfiltration. Keep small (it is a
+    /// secondary trickle; lateral flow + exfiltration do the real concentrating).
     pub baseflow: f32,
     /// **Ocean evaporation** (m/s global) — water moving from the ocean store to
     /// the atmosphere store, the engine that keeps precipitation supplied. Zero in
@@ -113,7 +121,8 @@ impl Default for WaterParams {
             evaporation: 0.004,
             infiltration: 0.010, // just under precip: slopes soak, channels run
             gw_capacity: 2.0,
-            baseflow: 0.001, // slow groundwater seepage → springs / baseflow
+            gw_conductivity: 0.1, // lateral groundwater flow → concentrated springs
+            baseflow: 0.0005, // small secondary seep
             ocean_evap: 0.0, // no ocean by default (closed world)
             sea_level: None,
             capacity: 0.0, // erosion off by default — pure water
@@ -332,20 +341,39 @@ impl WaterSim {
             self.transport_sediment(p);
         }
 
-        // 5. Reservoir transfers — all conserved (reservoir → reservoir):
-        //    infiltration (surface → groundwater, capped by remaining capacity),
-        //    baseflow (groundwater → surface), evaporation (surface → atmosphere).
+        // 5. Reservoir transfers — all conserved. Infiltration soaks surface water
+        //    into the soil; groundwater then flows laterally down the water-table
+        //    gradient (5b) and **exfiltrates** where it saturates — springs that
+        //    feed the streams. A small baseflow seeps; evaporation returns surface
+        //    water to the atmosphere. This is the principled distribution: slopes
+        //    infiltrate and drain underground (dry), valleys collect and exfiltrate
+        //    (wet), with no tuned threshold deciding it.
         {
+            // 5a. Infiltration: surface → groundwater (the soil takes what it can;
+            //     any over-saturation comes back out at 5c, not here).
             let inf = p.infiltration * dt;
+            for i in 0..n {
+                let into_gw = inf.min(self.depth[i]);
+                self.depth[i] -= into_gw;
+                self.groundwater[i] += into_gw;
+            }
+        }
+        // 5b. Lateral groundwater flow (Darcy) — the missing basic.
+        if p.gw_conductivity > 0.0 {
+            self.lateral_groundwater(p);
+        }
+        {
+            // 5c–e. Exfiltration (gw above capacity → surface = springs), a small
+            //       baseflow seep, then evaporation.
             let keep = 1.0 - p.evaporation * dt;
             let bf = p.baseflow * dt;
             let mut evaporated = 0.0f64;
             for i in 0..n {
-                let room = (p.gw_capacity - self.groundwater[i]).max(0.0);
-                let into_gw = inf.min(self.depth[i]).min(room);
-                self.depth[i] -= into_gw;
-                self.groundwater[i] += into_gw;
-
+                if self.groundwater[i] > p.gw_capacity {
+                    let ex = self.groundwater[i] - p.gw_capacity;
+                    self.groundwater[i] = p.gw_capacity;
+                    self.depth[i] += ex;
+                }
                 let out_gw = bf * self.groundwater[i];
                 self.groundwater[i] -= out_gw;
                 self.depth[i] += out_gw;
@@ -388,6 +416,62 @@ impl WaterSim {
         let bed: f64 = self.bed.iter().map(|&b| b as f64).sum();
         let sed: f64 = self.sediment.iter().map(|&s| s as f64).sum();
         bed + sed
+    }
+
+    /// One step of **lateral groundwater flow** (Darcy): groundwater moves down the
+    /// water-table gradient `head = bed + gw` toward its lower neighbours, split by
+    /// each neighbour's share of the head drop. Mass-conserving (a delta buffer),
+    /// stable (the export is capped at half the cell's store). Over many steps this
+    /// drains the slopes and concentrates groundwater in the valleys, where it
+    /// exfiltrates as springs — the mechanism that makes dry-hillside / wet-channel
+    /// distribution *emerge* instead of being thresholded.
+    fn lateral_groundwater(&mut self, p: &WaterParams) {
+        let nx = self.nx;
+        let n = nx * nx;
+        let k = p.gw_conductivity * p.dt;
+        let mut dgw = vec![0.0f32; n];
+        for y in 0..nx {
+            for x in 0..nx {
+                let i = y * nx + x;
+                let g = self.groundwater[i];
+                if g <= 0.0 {
+                    continue;
+                }
+                let head_i = self.bed[i] + g;
+                let nbr = [
+                    if x > 0 { Some(i - 1) } else { None },
+                    if x < nx - 1 { Some(i + 1) } else { None },
+                    if y > 0 { Some(i - nx) } else { None },
+                    if y < nx - 1 { Some(i + nx) } else { None },
+                ];
+                let mut drops = [0.0f32; 4];
+                let mut total = 0.0f32;
+                for (d, opt) in nbr.iter().enumerate() {
+                    if let Some(j) = opt {
+                        let drop = head_i - (self.bed[*j] + self.groundwater[*j]);
+                        if drop > 0.0 {
+                            drops[d] = drop;
+                            total += drop;
+                        }
+                    }
+                }
+                if total <= 0.0 {
+                    continue;
+                }
+                let out = (k * total).min(g * 0.5); // ≤ half the store, for stability
+                for (d, opt) in nbr.iter().enumerate() {
+                    if drops[d] > 0.0 {
+                        let j = opt.unwrap();
+                        let m = out * drops[d] / total;
+                        dgw[i] -= m;
+                        dgw[j] += m;
+                    }
+                }
+            }
+        }
+        for i in 0..n {
+            self.groundwater[i] += dgw[i];
+        }
     }
 
     /// One step of sediment transport (called from `step` when capacity > 0).
@@ -738,6 +822,42 @@ mod tests {
         for (a, b) in hard.bed.iter().zip(again.bed.iter()) {
             assert_eq!(a.to_bits(), b.to_bits(), "hardness run not deterministic");
         }
+    }
+
+    /// Lateral groundwater must **flow downhill and concentrate in the low ground**
+    /// — the basic that lets dry-slope / wet-valley distribution emerge — while
+    /// conserving the groundwater store. A tilted bed, uniform initial groundwater,
+    /// no surface water: after flowing, the bottom holds far more than the top.
+    #[test]
+    fn groundwater_flows_downhill_and_concentrates() {
+        let nx = 48;
+        let mut bed = vec![0.0f32; nx * nx];
+        for y in 0..nx {
+            for x in 0..nx {
+                bed[y * nx + x] = (nx - 1 - y) as f32 * 2.0; // high at top, low at bottom
+            }
+        }
+        let mut sim = WaterSim::new(nx, bed);
+        for g in sim.groundwater.iter_mut() {
+            *g = 1.0;
+        }
+        let g0: f64 = sim.groundwater.iter().map(|&g| g as f64).sum();
+        let p = WaterParams {
+            precip_rate: 0.0,
+            evaporation: 0.0,
+            infiltration: 0.0,
+            baseflow: 0.0,
+            gw_capacity: 1.0e9, // no exfiltration — isolate the lateral flow
+            gw_conductivity: 0.2,
+            ..Default::default()
+        };
+        sim.run(&p, 800);
+        let row: usize = nx; // sum a row's groundwater
+        let top: f32 = (0..nx).map(|x| sim.groundwater[2 * row + x]).sum();
+        let bot: f32 = (0..nx).map(|x| sim.groundwater[(nx - 3) * row + x]).sum();
+        assert!(bot > top * 1.5, "groundwater didn't concentrate downhill (top {top}, bot {bot})");
+        let g1: f64 = sim.groundwater.iter().map(|&g| g as f64).sum();
+        assert!((g1 - g0).abs() / g0 < 1e-3, "groundwater not conserved");
     }
 
     /// Determinism — the tether-to-truth property the whole core holds.

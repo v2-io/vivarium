@@ -387,14 +387,16 @@ impl Volume {
             dt: 0.01 * surf_cell, // ~CFL: scales with cell size
             pipe_area: surf_cell * surf_cell,
             precip_rate: 0.03,
-            evaporation: 0.006,
-            // Infiltration just under precip: unsaturated slopes absorb most of
-            // their rain (Hortonian), the small excess runs off and concentrates
-            // into channels. (This balance is the open tuning knob — too high and
-            // the land goes bone-dry, too low and a film sheets the slopes.)
-            infiltration: 0.028,
-            gw_capacity: 12.0,
-            baseflow: 0.0008, // slow seep → springs/baseflow feed the channels
+            evaporation: 0.005,
+            // The distribution now EMERGES from lateral groundwater, not a tuned
+            // threshold: infiltration is high so slopes soak their rain and stay
+            // dry on the surface; the groundwater flows downhill (gw_conductivity),
+            // saturates the valleys, and exfiltrates there as concentrated springs
+            // once it passes gw_capacity. Dry hillsides + wet channels, earned.
+            infiltration: 0.06,
+            gw_capacity: 4.0,
+            gw_conductivity: 0.15,
+            baseflow: 0.0004,
             sea_level: Some(SEA_LEVEL as f32),
             capacity: 0.25, // sediment transport ON — the bed carves as water runs
             erode: 0.4,
