@@ -72,8 +72,13 @@ fn main() {
         evaporation: 0.004,
         infiltration: 0.026, // ~87% soaks in; the excess concentrates into rivers
         sea_level: None,
+        capacity: 0.3, // sediment transport ON — the bed carves as the water runs
+        erode: 0.5,
+        deposit: 0.5,
+        min_slope: 0.05,
         ..Default::default()
     };
+    let bed_before = bed.clone();
 
     println!("vivarium water spike — seed {seed:#x}, {nx}×{nx}, {steps} steps\n");
 
@@ -90,7 +95,15 @@ fn main() {
     }
     println!();
 
-    plan_view(&sim, &bed);
+    // How much did the water carve? (erosion = bed dropped, deposition = rose)
+    let (mut cut, mut fill) = (0.0f32, 0.0f32);
+    for (a, b) in sim.bed.iter().zip(&bed_before) {
+        let dz = a - b;
+        if dz < 0.0 { cut = cut.min(dz) } else { fill = fill.max(dz) }
+    }
+    println!("erosion: deepest cut {cut:.1} m, highest fill {fill:.1} m\n");
+
+    plan_view(&sim, &sim.bed); // the carved bed
     println!();
     cross_section(&sim, basin_y);
 }

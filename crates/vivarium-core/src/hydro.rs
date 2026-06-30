@@ -299,10 +299,12 @@ impl WaterSim {
             }
         }
 
-        // 4b. [pending] Sediment transport — the fine erosion (erode/deposit +
-        //     advection). Being designed conservation-first (see the conserved-
-        //     reservoir model), so deliberately not yet wired: a leaky version
-        //     would violate the global-conservation invariant.
+        // 4b. Sediment transport — the fine erosion. Velocity-capacity erode/
+        //     deposit (conserving bed↔suspended), then conservative flux-driven
+        //     advection (the suspended load rides the same water it flows in).
+        if p.capacity > 0.0 {
+            self.transport_sediment(p);
+        }
 
         // 5. Reservoir transfers — all conserved (reservoir → reservoir):
         //    infiltration (surface → groundwater, capped by remaining capacity),
@@ -348,6 +350,126 @@ impl WaterSim {
         // 7. Re-pin the sea (exchange counted into the ocean store).
         if let Some(s) = p.sea_level {
             self.hold_sea(s);
+        }
+    }
+
+    /// **Total solid across reservoirs** — bed + suspended sediment (metres,
+    /// unit-area cells). Conserved by erosion (bed→suspended), deposition
+    /// (suspended→bed) and advection; the only legitimate change is an explicit
+    /// external transfer (tectonic uplift adding bed). The sediment conservation
+    /// test asserts this holds.
+    pub fn total_solid(&self) -> f64 {
+        let bed: f64 = self.bed.iter().map(|&b| b as f64).sum();
+        let sed: f64 = self.sediment.iter().map(|&s| s as f64).sum();
+        bed + sed
+    }
+
+    /// One step of sediment transport (called from `step` when capacity > 0).
+    /// Velocity-capacity erosion/deposition then conservative advection — solid
+    /// mass (`bed + sediment`) is invariant across this.
+    fn transport_sediment(&mut self, p: &WaterParams) {
+        let nx = self.nx;
+        let n = nx * nx;
+        let (l, dt) = (p.cell, p.dt);
+        let area = l * l;
+        let eps = 1e-6f32;
+
+        // --- Erosion / deposition. Capacity rises with flow speed and bed slope
+        //     (Joseph's intuition: more velocity ⇒ more carrying power); the load
+        //     relaxes toward it (the lag that lets sediment travel). Conserves
+        //     bed ↔ suspended exactly. ---
+        for y in 0..nx {
+            for x in 0..nx {
+                let i = y * nx + x;
+                let d = self.depth[i];
+                if d <= eps {
+                    // Dry ground can carry nothing — drop the whole load.
+                    self.bed[i] += self.sediment[i];
+                    self.sediment[i] = 0.0;
+                    continue;
+                }
+                // Flow speed from the net pipe flux through the cell (Mei §4).
+                let frl = if x > 0 { self.fr[i - 1] } else { 0.0 };
+                let flr = if x < nx - 1 { self.fl[i + 1] } else { 0.0 };
+                let dwx = 0.5 * ((frl - self.fl[i]) + (self.fr[i] - flr));
+                let fbt = if y > 0 { self.fb[i - nx] } else { 0.0 };
+                let ftb = if y < nx - 1 { self.ft[i + nx] } else { 0.0 };
+                let dwy = 0.5 * ((fbt - self.ft[i]) + (self.fb[i] - ftb));
+                // Froude-limited flow speed: the raw flux/(depth) estimate diverges
+                // when a large head sits over a thin film (hundreds of m/s), which
+                // is what makes naive hydraulic erosion explode. Real open-channel
+                // flow is bounded by the gravity-wave speed √(g·d); cap a few × that
+                // so capacity — and therefore erosion — stays physical and stable.
+                let raw = (dwx * dwx + dwy * dwy).sqrt() / (d * l);
+                let v_max = 4.0 * (p.gravity * d).sqrt();
+                let speed = raw.min(v_max);
+
+                // Bed tilt for the capacity law.
+                let bl = self.bed[y * nx + x.saturating_sub(1)];
+                let br = self.bed[y * nx + (x + 1).min(nx - 1)];
+                let bd = self.bed[y.saturating_sub(1) * nx + x];
+                let bu = self.bed[(y + 1).min(nx - 1) * nx + x];
+                let slope = ((br - bl).powi(2) + (bu - bd).powi(2)).sqrt() / (2.0 * l);
+                let sin_tilt = (slope / (1.0 + slope * slope).sqrt()).max(p.min_slope);
+
+                let cap = p.capacity * sin_tilt * speed;
+                let s = self.sediment[i];
+                if cap > s {
+                    // Under capacity: lift bed into suspension. (3D material
+                    // hardness will divide `erode` here once Strata lands — softer
+                    // rock yields more, so strata and waterfalls emerge.)
+                    let amt = p.erode * (cap - s);
+                    self.bed[i] -= amt;
+                    self.sediment[i] = s + amt;
+                } else {
+                    // Over capacity: settle the excess back to the bed.
+                    let amt = p.deposit * (s - cap);
+                    self.bed[i] += amt;
+                    self.sediment[i] = s - amt;
+                }
+            }
+        }
+
+        // --- Conservative advection: suspended sediment rides the *same* pipe
+        //     fluxes the water used, so the fraction that leaves a cell arrives in
+        //     its neighbours — nothing invented or lost. The leaving fraction is
+        //     capped at 1 (the cell can't export more sediment than it holds, even
+        //     if its water thinned after the fluxes were set), which keeps it
+        //     bounded *and* exactly conservative. ---
+        let mut delta = vec![0.0f32; n];
+        for i in 0..n {
+            let s = self.sediment[i];
+            let total_flux = self.fl[i] + self.fr[i] + self.ft[i] + self.fb[i];
+            if s <= 0.0 || total_flux <= 0.0 {
+                continue;
+            }
+            let vol = (self.depth[i] * area).max(eps);
+            let leave = (total_flux * dt / vol).min(1.0) * s; // ≤ s, always
+            let per = leave / total_flux; // split by each pipe's share of the flow
+            let (x, y) = (i % nx, i / nx);
+            if x > 0 {
+                let m = self.fl[i] * per;
+                delta[i] -= m;
+                delta[i - 1] += m;
+            }
+            if x < nx - 1 {
+                let m = self.fr[i] * per;
+                delta[i] -= m;
+                delta[i + 1] += m;
+            }
+            if y > 0 {
+                let m = self.ft[i] * per;
+                delta[i] -= m;
+                delta[i - nx] += m;
+            }
+            if y < nx - 1 {
+                let m = self.fb[i] * per;
+                delta[i] -= m;
+                delta[i + nx] += m;
+            }
+        }
+        for i in 0..n {
+            self.sediment[i] = (self.sediment[i] + delta[i]).max(0.0);
         }
     }
 
@@ -446,6 +568,48 @@ mod tests {
         let gw: f64 = sim.groundwater.iter().map(|&g| g as f64).sum();
         assert!(gw > 0.0, "groundwater never filled — the cycle didn't run");
         assert!(sim.depth.iter().all(|&d| d >= 0.0), "negative depth appeared");
+    }
+
+    /// Sediment transport must (a) actually reshape the bed — erode where flow is
+    /// fast, settle where it slows — and (b) **conserve solid mass**: `bed +
+    /// suspended` is invariant (no uplift here), the build-to-last guard for the
+    /// erosion half. Erosion/deposition move material between bed and suspension;
+    /// advection moves it between cells; neither creates or destroys it.
+    #[test]
+    fn sediment_transport_carves_and_conserves_solid() {
+        let nx = 64;
+        let bed0 = bowl(nx);
+        let mut sim = WaterSim::new(nx, bed0.clone()).with_atmosphere(1.0e6);
+        let p = WaterParams {
+            precip_rate: 0.05,
+            evaporation: 0.0,
+            infiltration: 0.0,
+            baseflow: 0.0,
+            capacity: 0.4,
+            erode: 0.5,
+            deposit: 0.5,
+            min_slope: 0.05,
+            ..Default::default()
+        };
+        let s0 = sim.total_solid();
+        sim.run(&p, 3000);
+        let drift = (sim.total_solid() - s0).abs() / s0.abs().max(1.0);
+        assert!(drift < 1e-3, "solid mass not conserved: drift {drift:.2e}");
+        let max_move = sim
+            .bed
+            .iter()
+            .zip(&bed0)
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0f32, f32::max);
+        assert!(max_move > 0.05, "bed never moved — sediment transport inert ({max_move})");
+        // Stability: erosion must stay *physical*, not run away. (Conservation
+        // alone can't catch a blow-up — an exploding bed still balances suspension —
+        // so we bound the magnitude relative to the ~20 m bowl relief.)
+        assert!(
+            sim.bed.iter().all(|b| b.is_finite() && b.abs() < 1.0e3),
+            "bed exploded — erosion unstable (max |bed| {})",
+            sim.bed.iter().fold(0.0f32, |m, b| m.max(b.abs()))
+        );
     }
 
     /// Determinism — the tether-to-truth property the whole core holds.
