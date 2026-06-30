@@ -428,9 +428,22 @@ impl Volume {
             ..params.clone()
         };
         eprintln!("[vivarium] worldgen: fine erosion, {surf_nx}×{surf_nx} grid, {} epochs…", Self::FINE_EPOCHS);
-        let surf_h = crate::geo::Heightfield::from_heights(surf_nx, surf_cell, hf)
-            .erode(&fine_params)
-            .h;
+        let fine = crate::geo::Heightfield::from_heights(surf_nx, surf_cell, hf).erode(&fine_params);
+
+        // Sealed-channel infiltration field — baked from the erosion's drainage.
+        // Channel beds (high upslope drainage) armor and colmate over geological
+        // time → near-zero infiltration, so a stream stays on the surface instead of
+        // leaking underground and re-gushing as an over-large spring; porous slopes
+        // (low drainage) keep the full rate. This is the *erosion phase* doing the
+        // sealing (Joseph), the water phase just inherits it.
+        const DRAIN_REF_M2: f32 = 5.0e4; // ~0.05 km²: channel-onset drainage scale
+        const BASE_INFIL: f32 = 0.02; // m/s on porous ground (matches the scalar)
+        let infil_field: Vec<f32> = fine
+            .drainage
+            .iter()
+            .map(|&dr| BASE_INFIL / (1.0 + dr / DRAIN_REF_M2))
+            .collect();
+        let surf_h = fine.h;
 
         // === Phase 3 — WATER (hydrological time), then FREEZE ============
         // The land is finished. Now run *real water* on the fixed bed — rain, flow,
@@ -479,7 +492,8 @@ impl Volume {
             * 1.5;
         let mut sim = crate::hydro::WaterSim::new(surf_nx, surf_h)
             .with_atmosphere(atm)
-            .with_hardness(crate::geo::Strata::new(v.seed), origin);
+            .with_hardness(crate::geo::Strata::new(v.seed), origin)
+            .with_infiltration_field(infil_field);
         // Run in chunks so worldgen can report progress — this is the slow tier and
         // a frozen window with no feedback is miserable to wait on. The chunking is
         // pure book-keeping; it does not change the result (still deterministic).

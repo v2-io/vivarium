@@ -59,7 +59,9 @@ pub struct WaterParams {
     /// **Infiltration** rate (m/s) — surface water soaking *into the groundwater
     /// store*, capped by the water present and the remaining `gw_capacity`. The
     /// mechanism that concentrates flow into a network: where input is below this
-    /// the ground absorbs it and stays dry; only concentrated flow runs.
+    /// the ground absorbs it and stays dry; only concentrated flow runs. A *spatial*
+    /// infiltration field (sealed channel beds — see [`WaterSim::with_infiltration_field`])
+    /// overrides this scalar per cell when present.
     pub infiltration: f32,
     /// **Groundwater capacity** per cell (m of water): the soil's storage =
     /// porosity × soil depth. Water above this **exfiltrates** to the surface — a
@@ -186,6 +188,12 @@ pub struct WaterSim {
     /// rock yields and hard bands resist — strata and waterfalls emerge. `None` =
     /// uniform erodibility.
     pub hardness: Option<crate::geo::Strata>,
+    /// Optional per-cell **infiltration rate** (m/s) — the *sealed-channel* field
+    /// baked from the erosion's drainage (channel beds armor/colmate over
+    /// geological time → low infiltration; porous slopes → high). Overrides the
+    /// scalar `WaterParams::infiltration` where present, so flowing channels keep
+    /// their water on the surface instead of leaking underground and re-gushing.
+    pub infiltration_field: Option<Vec<f32>>,
     // Outgoing flux on each axial pipe (m³/s), held between steps so momentum
     // persists. Non-negative: a pipe only ever carries water *out* of its cell;
     // the neighbour's opposite pipe is the return path.
@@ -210,6 +218,7 @@ impl WaterSim {
             ocean: 0.0,
             origin_m: 0.0,
             hardness: None,
+            infiltration_field: None,
             fl: z.clone(),
             fr: z.clone(),
             ft: z.clone(),
@@ -229,6 +238,14 @@ impl WaterSim {
     pub fn with_hardness(mut self, strata: crate::geo::Strata, origin_m: f32) -> Self {
         self.hardness = Some(strata);
         self.origin_m = origin_m;
+        self
+    }
+
+    /// Give the sim a per-cell **infiltration field** (m/s) — the sealed-channel
+    /// map baked from erosion drainage (see the field's doc). Returns `self`.
+    pub fn with_infiltration_field(mut self, field: Vec<f32>) -> Self {
+        assert_eq!(field.len(), self.nx * self.nx, "infiltration field must be nx*nx");
+        self.infiltration_field = Some(field);
         self
     }
 
@@ -375,8 +392,16 @@ impl WaterSim {
             //     bearing limit: a saturated channel/lake bed stops absorbing, so
             //     surface water there persists and *flows* instead of vanishing
             //     underground. Without the cap the ground swallows its own rivers.
-            let inf = p.infiltration * dt;
             for i in 0..n {
+                // Per-cell infiltration: the sealed-channel field if present,
+                // else the uniform rate. Sealed channel beds barely absorb, so
+                // their water stays on the surface and flows.
+                let inf = self
+                    .infiltration_field
+                    .as_ref()
+                    .map(|f| f[i])
+                    .unwrap_or(p.infiltration)
+                    * dt;
                 let cap_i = p.gw_capacity * mat[i]; // soft rock stores more
                 let room = (cap_i - self.groundwater[i]).max(0.0);
                 let into_gw = inf.min(self.depth[i]).min(room);
