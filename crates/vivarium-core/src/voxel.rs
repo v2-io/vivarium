@@ -104,16 +104,10 @@ pub const SEA_LEVEL: i32 = 3000;
 /// regolith; below it is stone. Scales to voxels via [`Detail`].
 pub const SOIL_DEPTH: i32 = 4;
 
-/// Max edge length of the **water** simulation grid. Water runs on its own grid
-/// (see [`ErodedSurface`]); capping it keeps the [`crate::hydro`] sim tractable
-/// at continental span — at the cost of coarser water than terrain for now. A
-/// dedicated finer water grid is the follow-up.
-const WATER_GRID_CAP: usize = 320;
-
 /// Minimum water depth (metres) that renders as water. Below this is a thin
 /// transient runoff film, not standing water; thresholding it keeps hillslopes
-/// dry rather than sheened. Roughly one render voxel at `detail = 2`.
-const MIN_WATER_M: f32 = 0.4;
+/// dry rather than sheened.
+const MIN_WATER_M: f32 = 1.0;
 
 /// Continental-shelf floor, **in metres** — the elevation the land grades *down*
 /// to beyond the eroded patch. 300 m below sea, so the engineered region reads as
@@ -159,30 +153,18 @@ struct ErodedSurface {
     cell_m: f32,
     /// Grid edge length (square), in nodes.
     nx: usize,
-    /// Row-major elevations in **metres**, length `nx · nx`.
+    /// Row-major **carved** elevations in **metres**, length `nx · nx` — the bed
+    /// after the coupled water+sediment sim. This *is* the terrain; there is no
+    /// fractal-noise overlay any more (the detail is earned by erosion).
     h_m: Vec<f32>,
-    /// Per-node **roughness** in `[0, 1]` derived from local slope: ~0 on flat
-    /// valley floors and graded reaches, ~1 on steep flanks. Scales the sub-grid
-    /// detail noise so it does not add bumps where a river would have smoothed the
-    /// ground — the fidelity invariant applied to materialization (DESIGN.md), and
-    /// the reason slack valley floors stop reading as a chain of pools.
-    rough: Vec<f32>,
-    /// Metres per cell of the **water** grid (see `depth_m`). Independent of the
-    /// terrain `cell_m` — water runs on its own (currently coarser) resolution.
-    water_cell_m: f32,
-    /// Water-grid edge length in nodes.
-    water_nx: usize,
-    /// Per-node **water depth** in metres (≥ 0) on the water grid, from the
-    /// [`crate::hydro`] sim. Used only as the *wet mask* (depth ≥ threshold ⇒
-    /// render water here); safe to bilinearly sample since dry is a true 0.
+    /// Per-node **water depth** in metres (≥ 0), from the [`crate::hydro`] sim, on
+    /// the *same* grid as `h_m`. The wet mask (depth ≥ threshold ⇒ render water);
+    /// safe to bilinearly sample since dry is a true 0.
     depth_m: Vec<f32>,
-    /// Per-node **water-surface elevation** `bed + depth` in metres on the water
-    /// grid — the level the water actually stands at. This is what the renderer
-    /// uses for the waterline, **not** `terrain_bed + depth`: in a lake the sim's
-    /// surface is flat, so sampling it directly gives a flat lake, whereas adding a
-    /// coarse depth back onto the fine terrain bed would drape the water over every
-    /// sub-grid bump (the dome/staircase bug). In dry cells it equals the coarse
-    /// bed, harmless because the depth mask gates them out.
+    /// Per-node **water-surface elevation** `bed + depth` in metres, same grid.
+    /// The level the water stands at — sampled directly so a lake reads flat
+    /// (reconstructing it from the bed + depth at a mismatched resolution is what
+    /// draped water over sub-grid bumps; same grid means no mismatch).
     water_surf_m: Vec<f32>,
 }
 
@@ -213,39 +195,18 @@ impl ErodedSurface {
         smoothstep(0.0, SHELF_FALLOFF_M, d)
     }
 
-    /// Bilinearly sampled roughness `[0, 1]` at a metre position (see [`Self::rough`]).
-    fn roughness(&self, xm: f32, zm: f32) -> f32 {
-        self.bilinear(&self.rough, xm, zm)
-    }
-
-    /// Bilinearly sampled water depth (metres, ≥ 0) at a metre position, on the
-    /// **water** grid (see [`Self::depth_m`]). Faded out by the exterior weight so
-    /// the open ocean beyond the patch stays the clean flat sea, not a smear of
-    /// edge channels.
+    /// Bilinearly sampled water depth (metres, ≥ 0) at a metre position. Faded out
+    /// by the exterior weight so the open ocean beyond the patch stays the clean
+    /// flat sea, not a smear of edge channels.
     fn water_depth(&self, xm: f32, zm: f32) -> f32 {
-        let d = sample_grid_bilinear(
-            &self.depth_m,
-            self.water_nx,
-            self.x0_m,
-            self.water_cell_m,
-            xm,
-            zm,
-        );
-        d * (1.0 - self.exterior_t(xm, zm))
+        self.bilinear(&self.depth_m, xm, zm) * (1.0 - self.exterior_t(xm, zm))
     }
 
-    /// Bilinearly sampled water-*surface* elevation (metres) on the water grid (see
-    /// [`Self::water_surf_m`]). The flat level a lake stands at; gated by
-    /// [`Self::water_depth`] so it only renders where there is actually water.
+    /// Bilinearly sampled water-*surface* elevation (metres). The flat level a lake
+    /// stands at; gated by [`Self::water_depth`] so it only renders where there is
+    /// actually water.
     fn water_surface(&self, xm: f32, zm: f32) -> f32 {
-        sample_grid_bilinear(
-            &self.water_surf_m,
-            self.water_nx,
-            self.x0_m,
-            self.water_cell_m,
-            xm,
-            zm,
-        )
+        self.bilinear(&self.water_surf_m, xm, zm)
     }
 
     /// Shared bilinear sampler over a row-major `nx·nx` grid, clamped to the edge.
@@ -412,75 +373,63 @@ impl Volume {
             (coarse, cell, nx)
         };
 
-        let surf_h = surf_field.h; // move the kept heights out for the surface below
+        let surf_h = surf_field.h; // the macro-eroded bed the fine sim carves from
 
-        // Roughness from local slope on the *kept* field: smooth (0) on flat/graded
-        // floors, rough (1) on steep flanks — so the sub-grid detail noise textures
-        // slopes but leaves valley floors graded (no spurious pools).
-        let mut rough = vec![0.0f32; surf_nx * surf_nx];
-        for j in 0..surf_nx {
-            for i in 0..surf_nx {
-                let l = surf_h[j * surf_nx + i.saturating_sub(1)];
-                let r = surf_h[j * surf_nx + (i + 1).min(surf_nx - 1)];
-                let d = surf_h[j.saturating_sub(1) * surf_nx + i];
-                let u = surf_h[(j + 1).min(surf_nx - 1) * surf_nx + i];
-                let slope = ((r - l).powi(2) + (u - d).powi(2)).sqrt() / (2.0 * surf_cell);
-                rough[j * surf_nx + i] = smoothstep(0.05, 0.40, slope); // flat→0, steep→1
-            }
-        }
-
-        // --- Water: an actual fluid simulation, run to a quasi-steady snapshot ---
-        // The posed water surface is gone; this rains on the matured bed and lets
-        // the shallow-water `hydro` model carry it downhill, concentrate it into
-        // channels (infiltration soaks the slopes), and pond it flat in any basin.
-        // Run on its own grid, capped so worldgen stays tractable at continental
-        // span — coarser than the terrain for now; a finer water grid is the
-        // follow-up. Deterministic: a fixed bed + fixed step count.
-        let water_nx = surf_nx.min(WATER_GRID_CAP);
-        let water_cell = span_m / water_nx as f32;
-        let mut water_bed = vec![0.0f32; water_nx * water_nx];
-        for vv in 0..water_nx {
-            for uu in 0..water_nx {
-                let xm = origin + uu as f32 * water_cell;
-                let zm = origin + vv as f32 * water_cell;
-                water_bed[vv * water_nx + uu] =
-                    sample_grid_bilinear(&surf_h, surf_nx, origin, surf_cell, xm, zm);
-            }
-        }
+        // --- The coupled, conserved fine pass: water + sediment + hardness ---
+        // One principled simulation on the terrain grid (no separate coarse water
+        // grid, no fractal-noise overlay). Rain falls (drawn from the atmosphere
+        // store), runs off the mountains, soaks into groundwater, concentrates into
+        // channels and *carves the bed* (velocity-capacity sediment transport,
+        // resisted by 3D material hardness), ponds flat in basins, and drains to
+        // the sea. We freeze the quasi-steady snapshot: the carved bed becomes the
+        // terrain, the water surface becomes the streams and lakes. Deterministic
+        // (fixed bed + seed + step count); mass-conserving by construction.
         let wp = crate::hydro::WaterParams {
-            cell: water_cell,
+            cell: surf_cell,
             gravity: 9.81,
-            dt: 0.01 * water_cell, // ~CFL: scales with cell size
-            pipe_area: water_cell * water_cell,
+            dt: 0.01 * surf_cell, // ~CFL: scales with cell size
+            pipe_area: surf_cell * surf_cell,
             precip_rate: 0.03,
-            evaporation: 0.004,
-            infiltration: 0.026, // just under precip → slopes soak, channels run
+            evaporation: 0.006,
+            // Infiltration just under precip: unsaturated slopes absorb most of
+            // their rain (Hortonian), the small excess runs off and concentrates
+            // into channels. (This balance is the open tuning knob — too high and
+            // the land goes bone-dry, too low and a film sheets the slopes.)
+            infiltration: 0.028,
+            gw_capacity: 12.0,
+            baseflow: 0.0008, // slow seep → springs/baseflow feed the channels
             sea_level: Some(SEA_LEVEL as f32),
-            ..Default::default() // erosion off for now; groundwater/ocean defaults
+            capacity: 0.25, // sediment transport ON — the bed carves as water runs
+            erode: 0.4,
+            deposit: 0.4,
+            min_slope: 0.05,
+            ..Default::default()
         };
-        // Steps ~ a few domain crossings so channels reach the outlets; capped.
-        let steps = (water_nx as u32 * 14).clamp(800, 6000);
-        // Charge the atmosphere so the cycle has water to rain (≈ precip budget for
-        // the whole run, summed over cells).
-        let atm = wp.precip_rate as f64 * wp.dt as f64 * steps as f64 * (water_nx * water_nx) as f64;
-        let mut sim = crate::hydro::WaterSim::new(water_nx, water_bed).with_atmosphere(atm * 1.5);
+        // A few domain crossings so channels reach the sea and the bed matures.
+        let steps = (surf_nx as u32 * 8).clamp(800, 4000);
+        // Charge the atmosphere with ~the run's precipitation budget (it recycles
+        // via evaporation, so this only has to prime the cycle).
+        let atm = wp.precip_rate as f64 * wp.dt as f64 * steps as f64
+            * (surf_nx * surf_nx) as f64
+            * 1.5;
+        let mut sim = crate::hydro::WaterSim::new(surf_nx, surf_h)
+            .with_atmosphere(atm)
+            .with_hardness(crate::geo::Strata::new(v.seed), origin);
         sim.run(&wp, steps);
-        // Surface elevation = the sim's own bed + depth, kept on the water grid so
-        // it stays flat across a lake. (Reconstructing it from the fine terrain bed
-        // at render time is what draped the water — see `water_surf_m`.)
-        let water_surf_m: Vec<f32> =
-            sim.bed.iter().zip(&sim.depth).map(|(&b, &d)| b + d).collect();
+
+        let carved = sim.bed; // the fine-carved terrain (replaces the macro bed)
         let depth_m = sim.depth;
+        // Water surface = carved bed + depth, on the *same* grid as the terrain, so
+        // a lake reads flat and there is no grid-mismatch draping.
+        let water_surf_m: Vec<f32> =
+            carved.iter().zip(&depth_m).map(|(&b, &d)| b + d).collect();
 
         v.eroded = Some(ErodedSurface {
             x0_m: origin,
             z0_m: origin,
             cell_m: surf_cell,
             nx: surf_nx,
-            h_m: surf_h,
-            rough,
-            water_cell_m: water_cell,
-            water_nx,
+            h_m: carved,
             depth_m,
             water_surf_m,
         });
@@ -616,55 +565,23 @@ impl Volume {
         let d = self.detail as f32;
         let (xm, zm) = (x as f32 / d, z as f32 / d);
         let h_m = match &self.eroded {
-            // Macro form from the erosion tier, plus sub-grid detail relief —
-            // scaled by local roughness so it textures steep flanks but leaves
-            // graded valley floors smooth (no pooled bumps; see [`Self::detail_relief`]
-            // and [`ErodedSurface::rough`]).
+            // The carved bed *is* the terrain — the fine detail was earned by the
+            // water+sediment sim, so there is no fractal-noise overlay. Beyond the
+            // patch, grade the (edge-clamped) height down to the ocean floor so the
+            // engineered region reads as a continent in open sea. `t` is 0 inside
+            // the patch, so this is a no-op there.
             //
-            // Beyond the patch, grade the (edge-clamped) macro height down to the
-            // ocean floor and fade the detail noise out, so the engineered region
-            // reads as a continent in open sea rather than its boundary extruded to
-            // the horizon. `t` is 0 inside the patch, so this is a no-op there.
+            // (At the 16 m tier the bilinear bed still quantizes into terraces on
+            // steep slopes at 0.5 m voxels — the honest consequence of a coarse grid
+            // with no noise to hide it; the fix is finer resolution, not noise.)
             Some(e) => {
                 let t = e.exterior_t(xm, zm);
                 let macro_m = e.sample(xm, zm);
-                let shelf_m = macro_m + (OCEAN_FLOOR_M - macro_m) * t;
-                shelf_m + e.roughness(xm, zm) * self.detail_relief(xm, zm) * (1.0 - t)
+                macro_m + (OCEAN_FLOOR_M - macro_m) * t
             }
             None => self.fbm_height_world(xm, zm),
         };
         (h_m * d).round() as i32
-    }
-
-    /// Sub-erosion-grid relief, in **metres**, added on top of the eroded macro
-    /// field. This is the render-voxel tier of the scale ladder (NOTES §0a): the
-    /// erosion tier resolves the landscape only to ~16 m, so without this a real
-    /// slope materializes as a smooth ramp that *quantizes into terraces* at 0.5 m
-    /// — exactly the artifact a first-person view exposes that a macro hillshade
-    /// hides. A few octaves of fractal roughness at the tens-of-metres scale give
-    /// the surface walkable texture (knolls, gullies, broken ground) and break the
-    /// 16 m grid periodicity.
-    ///
-    /// It is **zero-mean over the plane**, which is *necessary but not sufficient*
-    /// for the fidelity invariant — and the earlier comment here overstated it.
-    /// DESIGN.md's invariant (sharpened in NOTES §7) is a *per-coarse-cell
-    /// conservation* property: the fine voxels inside a given ~16 m cell must sum
-    /// back to that cell's aggregate elevation. Plane-zero-mean noise does **not**
-    /// guarantee that — within any single cell the noise has a nonzero local
-    /// integral, so it shifts that cell's materialized mean off the abstraction.
-    /// So this is honestly a **first, non-conservative approximation** — the
-    /// "simple-noise start" NOTES §0a explicitly licenses for now — and the
-    /// conservative-refinement gap (NOTES §7) remains **open**, not satisfied. The
-    /// principled version constrains the noise to conserve each coarse cell's mean
-    /// (a multigrid/wavelet detail that integrates to zero *per cell*); that is the
-    /// same shape as the AAT fidelity-invariant concern, so it is not throwaway.
-    /// Coordinates are offset so this stream is decorrelated from the continental FBM.
-    fn detail_relief(&self, xm: f32, zm: f32) -> f32 {
-        const FREQ: f32 = 1.0 / 220.0; // ~220 m base wavelength
-        const AMPLITUDE: f32 = 28.0; // metres of roughness about the macro slope
-        const OCTAVES: u32 = 5; // down to ~14 m features — the erosion-cell scale
-        const OFFSET: f32 = 9173.0; // decorrelate from the macro relief stream
-        self.fbm((xm + OFFSET) * FREQ, (zm + OFFSET) * FREQ, OCTAVES) * AMPLITUDE
     }
 
     /// Continuous terrain height in **metres** (detail-independent) from the raw

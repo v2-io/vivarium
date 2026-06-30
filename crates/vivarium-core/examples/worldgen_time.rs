@@ -8,10 +8,14 @@ use vivarium_core::voxel::{Volume, Voxel};
 use std::time::Instant;
 
 fn main() {
+    // args: [region_half_m] [epochs]  (defaults: full 6 km world, 70 epochs)
+    let mut a = std::env::args().skip(1);
+    let region: i32 = a.next().and_then(|s| s.parse().ok()).unwrap_or(6000);
+    let epochs: u32 = a.next().and_then(|s| s.parse().ok()).unwrap_or(70);
     let t = Instant::now();
-    let v = Volume::eroded(0x00C0_FFEE, 2, 6000, 70);
+    let v = Volume::eroded(0x00C0_FFEE, 2, region, epochs);
     let dt = t.elapsed();
-    println!("worldgen (detail 2, ±6 km, 70 epochs): {:.1} s", dt.as_secs_f32());
+    println!("worldgen (detail 2, ±{region} m, {epochs} epochs): {:.1} s", dt.as_secs_f32());
 
     // Cross-section of the ACTUAL rendered voxels along z=0 — terrain (▓) and the
     // water column on top (≈), read only through the public voxel API. A real lake
@@ -56,4 +60,33 @@ fn main() {
     }
     let wet = wtop.iter().zip(&ground).filter(|(w, g)| *w > *g).count();
     println!("wet columns: {wet}/{cols}");
+
+    // Top-down water map: '~' = sea, '#' = inland water (a stream/lake standing
+    // above sea level), ' ' = dry land. Shows whether a river network formed.
+    let sea = v.sea_level();
+    let rows = 50usize;
+    let zstep = (2 * half / rows as i32).max(1);
+    let xstep = (2 * half / 110).max(1);
+    println!("\ntop-down water  (' ' land, '~' sea, '#' inland water):");
+    for r in 0..rows {
+        let z = -half + r as i32 * zstep;
+        let line: String = (0..110)
+            .map(|c| {
+                let x = -half + c as i32 * xstep;
+                let g = v.surface_height(x, z).unwrap_or(0);
+                let mut yy = g + 1;
+                while v.voxel(x, yy, z) == Voxel::WATER && yy < g + 4000 {
+                    yy += 1;
+                }
+                if yy - 1 <= g {
+                    ' ' // dry
+                } else if g < sea {
+                    '~' // sea
+                } else {
+                    '#' // inland water above sea
+                }
+            })
+            .collect();
+        println!("{line}");
+    }
 }
