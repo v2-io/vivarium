@@ -707,6 +707,35 @@ impl WaterSim {
             self.step(p);
         }
     }
+
+    /// **Flow velocity** (m/s) per cell from the pipe fluxes — the direction and
+    /// speed of the water at this instant (`vx` east-positive, `vy` south-positive).
+    /// Part of the frozen snapshot: lets the view show currents and agents feel a
+    /// flow, and marks still water (≈0) vs flowing. Zero where dry.
+    pub fn velocity(&self, cell: f32) -> (Vec<f32>, Vec<f32>) {
+        let nx = self.nx;
+        let n = nx * nx;
+        let (mut vx, mut vy) = (vec![0.0f32; n], vec![0.0f32; n]);
+        let eps = 1e-4f32;
+        for y in 0..nx {
+            for x in 0..nx {
+                let i = y * nx + x;
+                let d = self.depth[i];
+                if d <= eps {
+                    continue;
+                }
+                let frl = if x > 0 { self.fr[i - 1] } else { 0.0 };
+                let flr = if x < nx - 1 { self.fl[i + 1] } else { 0.0 };
+                let dwx = 0.5 * ((frl - self.fl[i]) + (self.fr[i] - flr));
+                let fbt = if y > 0 { self.fb[i - nx] } else { 0.0 };
+                let ftb = if y < nx - 1 { self.ft[i + nx] } else { 0.0 };
+                let dwy = 0.5 * ((fbt - self.ft[i]) + (self.fb[i] - ftb));
+                vx[i] = dwx / (d * cell);
+                vy[i] = dwy / (d * cell);
+            }
+        }
+        (vx, vy)
+    }
 }
 
 #[cfg(test)]

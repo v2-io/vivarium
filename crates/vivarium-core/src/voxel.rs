@@ -166,6 +166,12 @@ struct ErodedSurface {
     /// (reconstructing it from the bed + depth at a mismatched resolution is what
     /// draped water over sub-grid bumps; same grid means no mismatch).
     water_surf_m: Vec<f32>,
+    /// Per-node **flow velocity** (m/s) at the frozen instant — `vx` east-positive,
+    /// `vy` south-positive. The other half of the snapshot (with `depth_m` as the
+    /// volume): direction + speed for currents, agents, and still-vs-flowing. Not
+    /// rendered yet, but frozen so the view/agents can use it.
+    vx_m: Vec<f32>,
+    vy_m: Vec<f32>,
 }
 
 impl ErodedSurface {
@@ -401,9 +407,14 @@ impl Volume {
         // the equilibrium hydrology on top of it. Hardness still feeds the
         // groundwater (springs at lithologic contacts).
         let wp = crate::hydro::WaterParams {
-            cell: surf_cell,                  // m
-            gravity: 9.81,                    // m/s²
-            dt: 0.01 * surf_cell,             // s — CFL: scales with cell size
+            cell: surf_cell, // m
+            gravity: 9.81,   // m/s²
+            // s — well inside the CFL limit (cell/√(g·d)) for inland water. The old
+            // 0.01·cell was a ~10× over-conservative holdover from when erosion ran
+            // *inside* the water phase and blew up; pure water is stable far higher,
+            // and a bigger dt is what lets lakes actually reach their flat
+            // equilibrium in the step budget (more physical time per step).
+            dt: 0.03 * surf_cell,
             pipe_area: surf_cell * surf_cell, // m²
             precip_rate: 0.03,                // m/s of water
             evaporation: 0.005,               // 1/s
@@ -416,8 +427,12 @@ impl Volume {
             capacity: 0.0,                     // sediment OFF — land is already shaped
             ..Default::default()
         };
-        // A few domain crossings so channels reach the sea and the bed matures.
-        let steps = (surf_nx as u32 * 8).clamp(800, 4000);
+        // Enough steps for the water to approach hydrological steady state — flow
+        // to reach the sea/lakes, lakes to level. Pure water is cheap per step, so
+        // we can afford a generous budget. (Wide shallow lakes still level
+        // asymptotically slowly — gravity waves — which is why the proper fix for
+        // their final flatness is a volume-conserving fill, not just more steps.)
+        let steps = (surf_nx as u32 * 10).clamp(800, 5000);
         // Charge the atmosphere with ~the run's precipitation budget (it recycles
         // via evaporation, so this only has to prime the cycle).
         let atm = wp.precip_rate as f64 * wp.dt as f64 * steps as f64
@@ -439,10 +454,12 @@ impl Volume {
             eprintln!("[vivarium] worldgen: {:>3}%", done * 100 / steps);
         }
 
+        // Freeze the full water state: heights, the continuous (partial) depth =
+        // volume, AND the velocity field (direction + speed) — the snapshot Joseph
+        // asked for, for flow rendering / agents / still-vs-flowing.
+        let (vx_m, vy_m) = sim.velocity(surf_cell);
         let carved = sim.bed; // == the geo-eroded bed (water phase carves nothing)
         let depth_m = sim.depth;
-        // Water surface = carved bed + depth, on the *same* grid as the terrain, so
-        // a lake reads flat and there is no grid-mismatch draping.
         let water_surf_m: Vec<f32> =
             carved.iter().zip(&depth_m).map(|(&b, &d)| b + d).collect();
 
@@ -454,6 +471,8 @@ impl Volume {
             h_m: carved,
             depth_m,
             water_surf_m,
+            vx_m,
+            vy_m,
         });
         v
     }
