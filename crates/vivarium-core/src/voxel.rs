@@ -395,14 +395,20 @@ impl Volume {
             // threshold: slopes soak their rain (and stay dry on the surface), the
             // groundwater flows downhill, saturates the valleys, and exfiltrates
             // there as concentrated springs. Dry hillsides + wet channels, earned.
-            infiltration: 0.02,    // m/s into unsaturated soil
-            gw_capacity: 1.5,      // m of water (porosity × soil depth) — PLACEHOLDER, should be material
-            gw_conductivity: 0.15, // dimensionless flow fraction/step — PLACEHOLDER, should be permeability
-            baseflow: 0.0004,      // 1/s (fraction of groundwater per s)
+            infiltration: 0.02, // m/s into unsaturated soil
+            gw_capacity: 1.5,   // m of water (porosity × soil depth) — PLACEHOLDER, should be material
+            // 1/s — a per-cell relaxation rate, NOT a true Darcy conductivity
+            // (which would be m/s). PLACEHOLDER: should derive from rock permeability.
+            gw_conductivity: 0.15,
+            baseflow: 0.0004,                  // 1/s (fraction of groundwater per s)
             sea_level: Some(SEA_LEVEL as f32), // m
-            capacity: 0.25,  // dimensionless — sediment carrying capacity coefficient
-            erode: 0.4,      // dimensionless — fraction of (capacity−load) lifted per step
-            deposit: 0.4,    // dimensionless — fraction of (load−capacity) dropped per step
+            // capacity C = Kc·slope·speed, with C and speed unit-bearing ⇒ Kc is in
+            // SECONDS, not dimensionless. erode/deposit are dimensionless fractions
+            // but applied PER STEP (dt-coupled), not clean per-second rates — the
+            // dimensions of this whole sediment law want a principled rework.
+            capacity: 0.25,  // s
+            erode: 0.4,      // fraction per step (dt-coupled)
+            deposit: 0.4,    // fraction per step (dt-coupled)
             min_slope: 0.05, // dimensionless (rise/run) slope floor in the capacity law
             ..Default::default() // repose (rise/run), gw fields, ocean_evap
         };
