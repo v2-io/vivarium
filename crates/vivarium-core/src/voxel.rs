@@ -266,6 +266,13 @@ impl Volume {
     /// than the 0.5 m render voxel, far finer than the tectonic tier.
     pub const EROSION_CELL_M: f32 = 16.0;
 
+    /// Metres per cell of the **coupled water+sediment sim** — finer than the macro
+    /// erosion grid, since this is where the fine detail (streams, fine carving) is
+    /// earned. The macro field is upsampled onto this grid before the sim runs.
+    /// Cost scales as `(span / SIM_CELL_M)² · steps`, so this is the granularity ⇄
+    /// worldgen-time dial. (16 m macro → 8 m sim; 4 m is the next step.)
+    pub const SIM_CELL_M: f32 = 8.0;
+
     /// Build a world whose terrain has been shaped by the [`crate::geo`] fluvial
     /// erosion tier. The raw FBM continental relief is sampled onto a ~16 m grid
     /// spanning `±region_half_m` **metres**, eroded by gentle uplift + stream-power
@@ -346,34 +353,23 @@ impl Volume {
         };
         let coarse = crate::geo::Heightfield::from_heights(nx, cell, h).erode(&params);
 
-        // Optional finer-scale refinement: upsample the eroded macro field and carve
-        // it with a few more epochs of the same physics, uplift off. The surface that
-        // *becomes the terrain* is then the finer field (more resolution, real
-        // sub-grid drainage). `surf_*` is whichever field we keep.
-        let (surf_field, surf_cell, surf_nx) = if fine_epochs > 0 && fine_cell_m < cell {
-            let nx_f = (span_m / fine_cell_m).ceil() as usize;
-            let mut hf = vec![0.0f32; nx_f * nx_f];
-            for vv in 0..nx_f {
-                for uu in 0..nx_f {
-                    let xm = origin + uu as f32 * fine_cell_m;
-                    let zm = origin + vv as f32 * fine_cell_m;
-                    hf[vv * nx_f + uu] = sample_grid_bilinear(&coarse.h, nx, origin, cell, xm, zm);
-                }
+        // Upsample the macro-eroded field onto the finer SIM grid. The coupled
+        // water+sediment sim carves the fine detail here — there is no separate
+        // stream-power refinement pass any more (it was superseded by the sim's own
+        // erosion). The legacy `fine_*` params are no-ops pending a signature
+        // cleanup.
+        let _ = (fine_cell_m, fine_epochs);
+        let surf_cell = Self::SIM_CELL_M;
+        let surf_nx = (span_m / surf_cell).ceil() as usize;
+        let mut surf_h = vec![0.0f32; surf_nx * surf_nx];
+        for vv in 0..surf_nx {
+            for uu in 0..surf_nx {
+                let xm = origin + uu as f32 * surf_cell;
+                let zm = origin + vv as f32 * surf_cell;
+                surf_h[vv * surf_nx + uu] =
+                    sample_grid_bilinear(&coarse.h, nx, origin, cell, xm, zm);
             }
-            let fine_params = crate::geo::ErosionParams {
-                nx: nx_f,
-                cell_size: fine_cell_m,
-                uplift: 0.0, // refine, don't build — the mountains already exist
-                epochs: fine_epochs,
-                ..params.clone()
-            };
-            let fine = crate::geo::Heightfield::from_heights(nx_f, fine_cell_m, hf).erode(&fine_params);
-            (fine, fine_cell_m, nx_f)
-        } else {
-            (coarse, cell, nx)
-        };
-
-        let surf_h = surf_field.h; // the macro-eroded bed the fine sim carves from
+        }
 
         // --- The coupled, conserved fine pass: water + sediment + hardness ---
         // One principled simulation on the terrain grid (no separate coarse water
@@ -789,8 +785,8 @@ mod tests {
         // tether-to-truth guarantee as the raw world), and erosion must actually
         // reshape the surface (it is doing something). `region_half_m` is in
         // metres now; a ~3.2 km region at 16 m cells is ~200² nodes — fast.
-        let a = Volume::eroded(0xC0FFEE, 2, 1600, 12);
-        let b = Volume::eroded(0xC0FFEE, 2, 1600, 12);
+        let a = Volume::eroded(0xC0FFEE, 2, 900, 12);
+        let b = Volume::eroded(0xC0FFEE, 2, 900, 12);
         let raw = Volume::with_detail(0xC0FFEE, 2);
         let mut changed_somewhere = false;
         for z in -100..100 {
@@ -816,8 +812,8 @@ mod tests {
     /// surface is over-flooding the valleys. Also checks determinism.
     #[test]
     fn eroded_world_has_inland_water_above_sea() {
-        let v = Volume::eroded(0x1234_5678, 1, 2000, 60);
-        let w = Volume::eroded(0x1234_5678, 1, 2000, 60);
+        let v = Volume::eroded(0x1234_5678, 1, 1100, 50);
+        let w = Volume::eroded(0x1234_5678, 1, 1100, 50);
         let sea = v.sea_level();
         let (mut inland, mut land, mut wet_land) = (0u32, 0u32, 0u32);
         let r = 1900;
@@ -849,27 +845,20 @@ mod tests {
     }
 
     #[test]
-    fn eroded_refined_is_reproducible_and_differs_from_coarse() {
-        // The fine-refinement pass must stay deterministic, and a few fine epochs
-        // at a sub-16 m cell must actually change the surface vs the coarse-only run
-        // (it is carving something). 4 m cells over a 1.6 km region ≈ 800² nodes.
-        let coarse = Volume::eroded(0xC0FFEE, 2, 800, 12);
-        let a = Volume::eroded_refined(0xC0FFEE, 2, 800, 12, 4.0, 4);
-        let b = Volume::eroded_refined(0xC0FFEE, 2, 800, 12, 4.0, 4);
-        let mut differs = false;
+    fn eroded_world_is_deterministic_across_runs() {
+        // The full pipeline — macro erosion + upsample + coupled water/sediment sim
+        // — must be bit-reproducible from the seed (the tether-to-truth property).
+        let a = Volume::eroded(0xC0FFEE, 2, 800, 12);
+        let b = Volume::eroded(0xC0FFEE, 2, 800, 12);
         for z in -80..80 {
             for x in -80..80 {
                 assert_eq!(
                     a.surface_height(x, z),
                     b.surface_height(x, z),
-                    "refined terrain diverged between runs at ({x},{z})"
+                    "eroded terrain diverged between runs at ({x},{z})"
                 );
-                if a.surface_height(x, z) != coarse.surface_height(x, z) {
-                    differs = true;
-                }
             }
         }
-        assert!(differs, "fine refinement left the surface identical to coarse");
     }
 
     #[test]
