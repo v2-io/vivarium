@@ -406,11 +406,11 @@ impl Volume {
             // SECONDS, not dimensionless. erode/deposit are dimensionless fractions
             // but applied PER STEP (dt-coupled), not clean per-second rates — the
             // dimensions of this whole sediment law want a principled rework.
-            capacity: 0.25,  // s
-            erode: 0.4,      // fraction per step (dt-coupled)
-            deposit: 0.4,    // fraction per step (dt-coupled)
+            capacity: 0.25,  // dimensionless equilibrium-concentration coefficient
+            erode: 4.0,      // 1/s erosion relaxation rate
+            deposit: 4.0,    // 1/s deposition relaxation rate
             min_slope: 0.05, // dimensionless (rise/run) slope floor in the capacity law
-            ..Default::default() // repose (rise/run), gw fields, ocean_evap
+            ..Default::default() // settling (m/s), repose (rise/run), gw, ocean_evap
         };
         // A few domain crossings so channels reach the sea and the bed matures.
         let steps = (surf_nx as u32 * 8).clamp(800, 4000);

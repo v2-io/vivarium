@@ -85,21 +85,30 @@ pub struct WaterParams {
     /// not vanished. `None` for a closed test world with no sea.
     pub sea_level: Option<f32>,
 
-    // --- Sediment transport (hydraulic erosion), Mei/Decaudin/Hu §4. The water
-    // run is *also* the fine-erosion run: fast flow lifts bed into suspension and
-    // slow flow drops it, so channels deepen and slack reaches/deltas aggrade. Set
-    // `capacity = 0` to disable (pure water, the default). ---
-    /// Sediment **capacity** coefficient `Kc`: how much sediment a unit of fast,
-    /// steep flow can hold, `C = Kc · slope · speed`. The master erosion knob.
+    // --- Sediment transport (hydraulic erosion). The water run is *also* the
+    // fine-erosion run: fast flow lifts bed into suspension and slow flow drops it,
+    // so channels deepen and slack reaches/deltas aggrade. `capacity = 0` disables
+    // it (pure water). Dimensionally honest: the equilibrium suspended *height* is
+    //     C = capacity · (slope · speed / settling) · depth        [m]
+    // i.e. an equilibrium *concentration* (capacity·slope·speed/settling, a
+    // dimensionless volume fraction) carried over the water depth. Erosion and
+    // deposition then relax the load toward C at a *per-second* rate. ---
+    /// Equilibrium-concentration coefficient (**dimensionless**): the master
+    /// erosion knob. Higher ⇒ the flow carries more for the same stream power.
     pub capacity: f32,
-    /// **Erosion** rate `Ks`: how fast under-loaded flow (`C > s`) lifts bed into
-    /// suspension. Higher ⇒ faster down-cutting.
+    /// **Settling velocity** of the sediment (**m/s**) — a grain property: fast
+    /// flow relative to settling ⇒ high concentration. Coarse grains settle fast
+    /// (low concentration), fines stay up. Makes the capacity dimensionless.
+    pub settling: f32,
+    /// **Erosion rate** (**1/s**): how fast under-loaded flow relaxes the bed up
+    /// into suspension, `Δ = erode · (C − load) · dt`. A real per-second rate now,
+    /// not a per-step fraction.
     pub erode: f32,
-    /// **Deposition** rate `Kd`: how fast over-loaded flow (`s > C`) drops sediment
-    /// back to the bed. Builds floodplains, deltas, the floors of slack reaches.
+    /// **Deposition rate** (**1/s**): how fast over-loaded flow settles suspension
+    /// back to the bed, `Δ = deposit · (load − C) · dt`. Builds floodplains/deltas.
     pub deposit: f32,
-    /// Floor on the slope term in the capacity law, so even near-flat channels keep
-    /// a little carrying capacity instead of instantly dumping their whole load.
+    /// Floor on the slope term in the capacity law (**dimensionless**, rise/run),
+    /// so even near-flat channels keep a little carrying capacity.
     pub min_slope: f32,
     /// **Angle of repose** as a max stable bed slope (rise/run): material steeper
     /// than this slumps to its lower neighbours each step (thermal erosion / talus),
@@ -125,10 +134,11 @@ impl Default for WaterParams {
             baseflow: 0.0005, // small secondary seep
             ocean_evap: 0.0, // no ocean by default (closed world)
             sea_level: None,
-            capacity: 0.0, // erosion off by default — pure water
-            erode: 0.3,
-            deposit: 0.3,
-            min_slope: 0.05,
+            capacity: 0.0,   // dimensionless — erosion off by default (pure water)
+            settling: 0.05,  // m/s — sediment settling velocity
+            erode: 4.0,      // 1/s — erosion relaxation rate
+            deposit: 4.0,    // 1/s — deposition relaxation rate
+            min_slope: 0.05, // dimensionless (rise/run)
             repose: 1.2, // ~50° max stable slope; caps spikes, allows steep flanks
         }
     }
@@ -348,6 +358,10 @@ impl WaterSim {
         //    water to the atmosphere. This is the principled distribution: slopes
         //    infiltrate and drain underground (dry), valleys collect and exfiltrate
         //    (wet), with no tuned threshold deciding it.
+        // Lithology factor (1/hardness, clamped) — groundwater permeability AND
+        // porosity come from the rock, so storage and flow vary with the material
+        // and water backs up at soft→hard contacts (→ springs). 1.0 with no Strata.
+        let mat = self.gw_material(l);
         {
             // 5a. Infiltration: surface → groundwater, **only into unsaturated
             //     soil** (capped by the remaining capacity). This is the load-
@@ -356,7 +370,8 @@ impl WaterSim {
             //     underground. Without the cap the ground swallows its own rivers.
             let inf = p.infiltration * dt;
             for i in 0..n {
-                let room = (p.gw_capacity - self.groundwater[i]).max(0.0);
+                let cap_i = p.gw_capacity * mat[i]; // soft rock stores more
+                let room = (cap_i - self.groundwater[i]).max(0.0);
                 let into_gw = inf.min(self.depth[i]).min(room);
                 self.depth[i] -= into_gw;
                 self.groundwater[i] += into_gw;
@@ -364,18 +379,19 @@ impl WaterSim {
         }
         // 5b. Lateral groundwater flow (Darcy) — the missing basic.
         if p.gw_conductivity > 0.0 {
-            self.lateral_groundwater(p);
+            self.lateral_groundwater(p, &mat);
         }
         {
-            // 5c–e. Exfiltration (gw above capacity → surface = springs), a small
-            //       baseflow seep, then evaporation.
+            // 5c–e. Exfiltration (gw above the local capacity → surface = springs),
+            //       a small baseflow seep, then evaporation.
             let keep = 1.0 - p.evaporation * dt;
             let bf = p.baseflow * dt;
             let mut evaporated = 0.0f64;
             for i in 0..n {
-                if self.groundwater[i] > p.gw_capacity {
-                    let ex = self.groundwater[i] - p.gw_capacity;
-                    self.groundwater[i] = p.gw_capacity;
+                let cap_i = p.gw_capacity * mat[i];
+                if self.groundwater[i] > cap_i {
+                    let ex = self.groundwater[i] - cap_i;
+                    self.groundwater[i] = cap_i;
                     self.depth[i] += ex;
                 }
                 let out_gw = bf * self.groundwater[i];
@@ -429,10 +445,32 @@ impl WaterSim {
     /// drains the slopes and concentrates groundwater in the valleys, where it
     /// exfiltrates as springs — the mechanism that makes dry-hillside / wet-channel
     /// distribution *emerge* instead of being thresholded.
-    fn lateral_groundwater(&mut self, p: &WaterParams) {
+    /// Per-cell hydraulic **lithology factor** = 1/hardness at the bed (clamped to
+    /// `[0.25, 4]`), `1.0` with no [`crate::geo::Strata`]. Soft rock → larger (more
+    /// permeable *and* more porous); hard rock → smaller. It scales both groundwater
+    /// conductivity and storage, so groundwater slows and backs up — exfiltrating as
+    /// springs — at soft→hard contacts. That makes spring *location* emergent from
+    /// the lithology, the same field that drives erosion and waterfalls.
+    fn gw_material(&self, l: f32) -> Vec<f32> {
+        let nx = self.nx;
+        let mut mat = vec![1.0f32; nx * nx];
+        if let Some(st) = &self.hardness {
+            for y in 0..nx {
+                for x in 0..nx {
+                    let i = y * nx + x;
+                    let xm = self.origin_m + x as f32 * l;
+                    let ym = self.origin_m + y as f32 * l;
+                    mat[i] = (1.0 / st.hardness(xm, ym, self.bed[i])).clamp(0.25, 4.0);
+                }
+            }
+        }
+        mat
+    }
+
+    fn lateral_groundwater(&mut self, p: &WaterParams, mat: &[f32]) {
         let nx = self.nx;
         let n = nx * nx;
-        let k = p.gw_conductivity * p.dt;
+        let kdt = p.gw_conductivity * p.dt;
         let mut dgw = vec![0.0f32; n];
         for y in 0..nx {
             for x in 0..nx {
@@ -441,6 +479,8 @@ impl WaterSim {
                 if g <= 0.0 {
                     continue;
                 }
+                // Conductivity from the rock: soft = permeable (fast), hard = slow.
+                let k = kdt * mat[i];
                 let head_i = self.bed[i] + g;
                 let nbr = [
                     if x > 0 { Some(i - 1) } else { None },
@@ -500,7 +540,7 @@ impl WaterSim {
                     // Dry ground can carry nothing, but *settle gradually* — dumping
                     // the whole suspended load at once builds vertical spikes where
                     // a cell flickers wet/dry. Deposit at the normal rate instead.
-                    let amt = p.deposit * self.sediment[i];
+                    let amt = (p.deposit * dt).min(1.0) * self.sediment[i];
                     self.bed[i] += amt;
                     self.sediment[i] -= amt;
                     continue;
@@ -529,13 +569,20 @@ impl WaterSim {
                 let slope = ((br - bl).powi(2) + (bu - bd).powi(2)).sqrt() / (2.0 * l);
                 let sin_tilt = (slope / (1.0 + slope * slope).sqrt()).max(p.min_slope);
 
-                let cap = p.capacity * sin_tilt * speed;
+                // Equilibrium suspended height C = concentration · depth, where the
+                // concentration (a dimensionless volume fraction) rises with stream
+                // power (slope·speed) relative to how fast grains settle, capped so
+                // the flow can't carry an absurd fraction of solids. Dimensionally
+                // clean: [-]·([-]·[m/s]/[m/s])·[m] = [m].
+                const MAX_CONC: f32 = 0.5;
+                let conc = (p.capacity * sin_tilt * speed / p.settling).min(MAX_CONC);
+                let cap = conc * d;
                 let s = self.sediment[i];
                 if cap > s {
-                    // Under capacity: lift bed into suspension, resisted by the
-                    // material hardness at *this bed elevation* — soft rock yields,
-                    // hard bands hold, so strata, knickpoints and hard-sill lakes
-                    // emerge as the channel incises through the column.
+                    // Under capacity: lift bed into suspension at a per-second rate,
+                    // resisted by the material hardness at *this bed elevation* —
+                    // soft rock yields, hard bands hold, so strata, knickpoints and
+                    // hard-sill lakes emerge as the channel incises the column.
                     let hard = match &self.hardness {
                         Some(st) => {
                             let xm = self.origin_m + x as f32 * l;
@@ -544,12 +591,13 @@ impl WaterSim {
                         }
                         None => 1.0,
                     };
-                    let amt = p.erode / hard * (cap - s);
+                    let rate = (p.erode * dt / hard).min(1.0); // relaxation ≤ 1 (no overshoot)
+                    let amt = rate * (cap - s);
                     self.bed[i] -= amt;
                     self.sediment[i] = s + amt;
                 } else {
-                    // Over capacity: settle the excess back to the bed.
-                    let amt = p.deposit * (s - cap);
+                    // Over capacity: settle the excess back to the bed (per-second).
+                    let amt = (p.deposit * dt).min(1.0) * (s - cap);
                     self.bed[i] += amt;
                     self.sediment[i] = s - amt;
                 }
@@ -754,8 +802,8 @@ mod tests {
             infiltration: 0.0,
             baseflow: 0.0,
             capacity: 0.4,
-            erode: 0.5,
-            deposit: 0.5,
+            erode: 4.0,
+            deposit: 4.0,
             min_slope: 0.05,
             ..Default::default()
         };
@@ -794,8 +842,8 @@ mod tests {
             infiltration: 0.0,
             baseflow: 0.0,
             capacity: 0.4,
-            erode: 0.5,
-            deposit: 0.5,
+            erode: 4.0,
+            deposit: 4.0,
             min_slope: 0.05,
             ..Default::default()
         };
