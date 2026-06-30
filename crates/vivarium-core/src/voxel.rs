@@ -381,28 +381,30 @@ impl Volume {
         // the sea. We freeze the quasi-steady snapshot: the carved bed becomes the
         // terrain, the water surface becomes the streams and lakes. Deterministic
         // (fixed bed + seed + step count); mass-conserving by construction.
+        // NB: these are spike-tuned coefficients, not measured constants — and the
+        // groundwater ones in particular are *placeholders* (uniform soil), see the
+        // `gw_conductivity` doc on what would make them principled (material-derived).
         let wp = crate::hydro::WaterParams {
-            cell: surf_cell,
-            gravity: 9.81,
-            dt: 0.01 * surf_cell, // ~CFL: scales with cell size
-            pipe_area: surf_cell * surf_cell,
-            precip_rate: 0.03,
-            evaporation: 0.005,
-            // The distribution now EMERGES from lateral groundwater, not a tuned
-            // threshold: infiltration is high so slopes soak their rain and stay
-            // dry on the surface; the groundwater flows downhill (gw_conductivity),
-            // saturates the valleys, and exfiltrates there as concentrated springs
-            // once it passes gw_capacity. Dry hillsides + wet channels, earned.
-            infiltration: 0.06,
-            gw_capacity: 4.0,
-            gw_conductivity: 0.15,
-            baseflow: 0.0004,
-            sea_level: Some(SEA_LEVEL as f32),
-            capacity: 0.25, // sediment transport ON — the bed carves as water runs
-            erode: 0.4,
-            deposit: 0.4,
-            min_slope: 0.05,
-            ..Default::default()
+            cell: surf_cell,                  // m (the 8 m sim grid)
+            gravity: 9.81,                    // m/s²
+            dt: 0.01 * surf_cell,             // s — CFL: scales with cell size
+            pipe_area: surf_cell * surf_cell, // m² (pipe cross-section ≈ cell area)
+            precip_rate: 0.03,                // m/s of water (rain intensity)
+            evaporation: 0.005,               // 1/s (fraction of surface depth per s)
+            // The distribution EMERGES from lateral groundwater, not a tuned
+            // threshold: slopes soak their rain (and stay dry on the surface), the
+            // groundwater flows downhill, saturates the valleys, and exfiltrates
+            // there as concentrated springs. Dry hillsides + wet channels, earned.
+            infiltration: 0.02,    // m/s into unsaturated soil
+            gw_capacity: 1.5,      // m of water (porosity × soil depth) — PLACEHOLDER, should be material
+            gw_conductivity: 0.15, // dimensionless flow fraction/step — PLACEHOLDER, should be permeability
+            baseflow: 0.0004,      // 1/s (fraction of groundwater per s)
+            sea_level: Some(SEA_LEVEL as f32), // m
+            capacity: 0.25,  // dimensionless — sediment carrying capacity coefficient
+            erode: 0.4,      // dimensionless — fraction of (capacity−load) lifted per step
+            deposit: 0.4,    // dimensionless — fraction of (load−capacity) dropped per step
+            min_slope: 0.05, // dimensionless (rise/run) slope floor in the capacity law
+            ..Default::default() // repose (rise/run), gw fields, ocean_evap
         };
         // A few domain crossings so channels reach the sea and the bed matures.
         let steps = (surf_nx as u32 * 8).clamp(800, 4000);

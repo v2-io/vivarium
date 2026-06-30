@@ -349,11 +349,15 @@ impl WaterSim {
         //    infiltrate and drain underground (dry), valleys collect and exfiltrate
         //    (wet), with no tuned threshold deciding it.
         {
-            // 5a. Infiltration: surface → groundwater (the soil takes what it can;
-            //     any over-saturation comes back out at 5c, not here).
+            // 5a. Infiltration: surface → groundwater, **only into unsaturated
+            //     soil** (capped by the remaining capacity). This is the load-
+            //     bearing limit: a saturated channel/lake bed stops absorbing, so
+            //     surface water there persists and *flows* instead of vanishing
+            //     underground. Without the cap the ground swallows its own rivers.
             let inf = p.infiltration * dt;
             for i in 0..n {
-                let into_gw = inf.min(self.depth[i]);
+                let room = (p.gw_capacity - self.groundwater[i]).max(0.0);
+                let into_gw = inf.min(self.depth[i]).min(room);
                 self.depth[i] -= into_gw;
                 self.groundwater[i] += into_gw;
             }
