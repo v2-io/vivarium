@@ -5120,6 +5120,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "vivarium-bevy-iso"
+version = "0.0.0"
+dependencies = [
+ "bevy",
+ "vivarium-core",
+]
+
+[[package]]
 name = "vivarium-bevy-voxel"
 version = "0.0.0"
 dependencies = [
@@ -5137,6 +5145,14 @@ name = "vivarium-godot"
 version = "0.0.0"
 dependencies = [
  "godot",
+ "vivarium-core",
+]
+
+[[package]]
+name = "vivarium-iso-tiles"
+version = "0.0.0"
+dependencies = [
+ "bevy",
  "vivarium-core",
 ]
 

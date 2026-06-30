@@ -1,0 +1,16 @@
+# vivarium-bevy-iso — the "own the renderer" spike (see SPEC.md).
+#
+# Unlike spikes/bevy-voxel, this does NOT depend on bevy_voxel_world: the whole
+# point is to render the visible surface ourselves (chunked heightmap meshes,
+# decoupled async loading) rather than drive a voxel octree. So the only deps are
+# bevy itself and the engine-agnostic core. Like every view, it depends on the
+# core; the core never depends on it.
+[package]
+name = "vivarium-bevy-iso"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+bevy = "0.18"
+vivarium-core = { path = "../../crates/vivarium-core" }
