@@ -22,6 +22,7 @@ extends Camera3D
 var world: Object = null       # VivariumWorld bridge (for surface_height focus-follow)
 var terrain: Object = null     # VoxelLodTerrain (kept for symmetry / future picking)
 var view_distance: int = 16384 # voxel streaming reach ceiling, passed from main.gd
+var fog_env: Object = null     # Environment — its depth-fog band is the iso depth cue (set by main.gd)
 
 # --- Iso framing -----------------------------------------------------------------
 # True isometric tilt: looking down the diagonal of a cube projects its three
@@ -51,6 +52,19 @@ const ZOOM_STEP := 1.12        # multiplicative per wheel notch (feels linear-in
 # under the cursor at a constant felt rate whether zoomed in or out.
 const PAN_KEY_RATE := 0.9      # fraction of the visible span per second at full tilt
 const ROT_LERP := 12.0         # how snappily yaw eases to its target (higher = snappier)
+
+# Depth-fog band for the iso depth cue. The focus always sits at view-axis depth
+# == STANDOFF (the camera looks straight at it), so the band is anchored there:
+# everything at or nearer than the focus depth is clear (this is the foreground
+# AND the left/right of focus, which share the focus' depth), and terrain *deeper*
+# than the focus — toward the horizon, up the screen — hazes out. The far edge is
+# a multiple of the current zoom so the gradient stays proportional as you zoom.
+const FOG_FAR_MULT := 1.0      # fully hazed this many zooms of depth past the focus
+# Vertical streaming slab: an overhead view only needs the near-surface band, not
+# the full ~8 km voxel column. Squashing the viewer's vertical reach is a cheap,
+# honest cut at "stream only what we can see" (see the note in _ready). 1.0 = full
+# column (engine default); lower = thinner slab around the surface.
+const VIEWER_VRATIO := 0.35
 
 var _focus := Vector3.ZERO     # the ground point the camera orbits/looks at
 var _yaw := YAW_START
@@ -82,13 +96,20 @@ func _ready() -> void:
 	# whole reason streaming stays cheap when the eye is 12 km away — and it's
 	# exactly the focus-centred streaming the future abstract navigator wants.
 	_viewer = VoxelViewer.new()
+	# Stream only the near-surface slab, not the full vertical column — see VIEWER_VRATIO.
+	_viewer.view_distance_vertical_ratio = VIEWER_VRATIO
 	add_child(_viewer)   # must be in-tree before we set its GLOBAL position
 	_sync_viewer()
 
 	if OS.get_environment("VIVARIUM_AUTOSHOT") != "":
 		# Automated verification run: main.gd's timer grabs the frame. Frame a
 		# wide vista of the whole region and then hand off — don't process input.
+		# VIVARIUM_ISO_ZOOM overrides the vista zoom (e.g. to inspect fog/detail
+		# closer on a small test region).
 		_zoom = 5000.0
+		var z := OS.get_environment("VIVARIUM_ISO_ZOOM")
+		if z != "":
+			_zoom = float(z)
 		size = _zoom
 		_place_camera(true)
 		_sync_viewer()
@@ -127,6 +148,7 @@ func _process(delta: float) -> void:
 	_ground_focus()
 	_place_camera(false)
 	_sync_viewer()
+	_update_fog()
 
 # Move the focus by (right, up) screen amounts, where "up" is forward-on-ground.
 func _pan_screen(screen: Vector2) -> void:
@@ -165,6 +187,17 @@ func _sync_viewer() -> void:
 	# Visible span ~= zoom; stream ~1.6× that radius so panning has headroom.
 	var reach := int(clampf(_zoom * 1.6, 256.0, float(view_distance)))
 	_viewer.view_distance = reach
+
+# Drive the depth-fog band to hug the camera stand-off, so the haze reads as
+# distance-toward-the-horizon (the iso depth cue), not as a flat grey wash. The
+# focus is at view-axis depth == STANDOFF; fog begins there and fully closes
+# `FOG_FAR_MULT` zooms deeper. Cheap (two property writes); called each frame so
+# it tracks zoom. main.gd hands us `fog_env` after the camera is built.
+func _update_fog() -> void:
+	if fog_env == null:
+		return
+	fog_env.fog_depth_begin = STANDOFF
+	fog_env.fog_depth_end = STANDOFF + FOG_FAR_MULT * _zoom
 
 # --- Input ----------------------------------------------------------------------
 

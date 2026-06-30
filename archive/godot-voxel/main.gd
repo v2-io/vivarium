@@ -321,23 +321,29 @@ func _ready() -> void:
 	# Fog drowns the whole-landmass vista in grey (it's tuned to dissolve the far
 	# edge, but at 16 km everything is "far"). Toggle off with VIVARIUM_FOG=0 when
 	# the goal is to read the real terrain shape rather than an atmospheric mood.
-	# Depth fog is a first-person atmospheric mood (dissolve the far horizon). The
-	# iso navigator floats ~12 km back orthographically, so EVERYTHING is past
-	# fog_depth_begin and the whole scene washes to flat grey — useless for an
-	# overhead map view. Off by default in iso; VIVARIUM_FOG=1 forces it on.
-	if _iso:
-		env.fog_enabled = OS.get_environment("VIVARIUM_FOG") == "1"
-	else:
-		env.fog_enabled = OS.get_environment("VIVARIUM_FOG") != "0"
+	# Both views use the engine's DEPTH fog (haze ∝ distance along the camera's
+	# view axis), but for opposite reasons:
+	#  - WALK (perspective): atmospheric mood — near valleys crisp, far massifs
+	#    dissolve into the sky, hiding the LOD/streaming edge.
+	#  - ISO (orthographic): depth fog IS the depth cue. With no perspective, an
+	#    ortho frame gives the eye no way to tell "one ridge back" from "right
+	#    here". View-axis fog supplies it: terrain *toward the horizon* (up the
+	#    screen) hazes, while blocks at the same depth (left/right of focus) are
+	#    untouched — because depth fog keys on forward distance only, not lateral.
+	#    The trick the first attempt missed: the band must hug the camera
+	#    stand-off (the navigator drives begin/end per-zoom in _update_fog), not
+	#    sit at 1500..view_distance where a few-hundred-voxel scene is a ~2 %
+	#    gradient that reads as flat grey. Values below are placeholders the
+	#    navigator overwrites on frame one.
+	env.fog_enabled = OS.get_environment("VIVARIUM_FOG") != "0"
 	env.fog_mode = Environment.FOG_MODE_DEPTH
 	env.fog_light_color = sky_color
 	# Fog the sky too, fully — so the whole sky becomes the same fog colour the
 	# distant terrain dissolves into. Both end up one uniform grey: no horizon.
 	env.fog_sky_affect = 1.0
-	# Geology scale: the toy-world fog (grey by ~90 units) hid everything in a
-	# 12 km landmass. Pull it out to atmospheric distance so near valleys read
-	# crisp, far massifs haze blue-grey, and the LOD/streaming edge dissolves
-	# rather than ending in a hard line. In voxels (1:1 with metres at detail 2).
+	# Geology scale (walk): pull fog out to atmospheric distance so near valleys
+	# read crisp and far massifs haze. In voxels (1:1 with metres at detail 2).
+	# Iso overrides both bounds from the navigator each frame.
 	env.fog_depth_begin = 1500.0
 	env.fog_depth_end = float(_view_distance)   # dissolve by the view edge
 	env.fog_depth_curve = 1.0         # linear: opacity ∝ distance
@@ -353,6 +359,15 @@ func _ready() -> void:
 	env.ssao_detail = 0.5
 	we.environment = env
 	add_child(we)
+
+	# Hand the iso navigator the environment so it can drive the depth-fog band to
+	# hug the camera stand-off per-zoom (see navigator._update_fog). Done here, after
+	# the env exists, because the camera was built earlier in _ready.
+	if _iso:
+		cam.fog_env = env
+		# In an automated shot the navigator's _process is off, so set the band once
+		# here; interactively _process keeps it tracking the zoom.
+		cam.call("_update_fog")
 
 	# Interactive by default. In an automated run (VIVARIUM_AUTOSHOT set) give the
 	# streaming threads a few seconds, then screenshot and quit — used to verify
