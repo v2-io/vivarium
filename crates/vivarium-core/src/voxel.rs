@@ -424,7 +424,11 @@ impl Volume {
             // equilibrium in the step budget (more physical time per step).
             dt: 0.03 * surf_cell,
             pipe_area: surf_cell * surf_cell, // m²
-            precip_rate: 0.03,                // m/s of water
+            // Lighter rain — below the infiltration rate, so slopes soak it in and
+            // streams emerge from groundwater concentrating in the valleys rather
+            // than a surface deluge. (Still ~100s× real rain, to fill in 40 min not
+            // weeks — but no longer a flood.)
+            precip_rate: 0.006,               // m/s of water
             evaporation: 0.005,               // 1/s
             infiltration: 0.02,               // m/s into unsaturated soil
             gw_capacity: 1.5,                 // m (porosity × soil depth) — PLACEHOLDER (uniform)
@@ -440,7 +444,7 @@ impl Volume {
         // we can afford a generous budget. (Wide shallow lakes still level
         // asymptotically slowly — gravity waves — which is why the proper fix for
         // their final flatness is a volume-conserving fill, not just more steps.)
-        let steps = (surf_nx as u32 * 10).clamp(800, 5000);
+        let steps = (surf_nx as u32 * 20).clamp(1600, 10000);
         // Charge the atmosphere with ~the run's precipitation budget (it recycles
         // via evaporation, so this only has to prime the cycle).
         let atm = wp.precip_rate as f64 * wp.dt as f64 * steps as f64
