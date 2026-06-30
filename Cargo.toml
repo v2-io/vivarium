@@ -9,7 +9,7 @@
 # wrong.
 [workspace]
 resolver = "2"
-members = ["crates/vivarium-core", "crates/vivarium-app", "spikes/bevy-voxel", "spikes/bevy-iso", "spikes/iso-voxels", "archive/vivarium-godot"]
+members = ["crates/vivarium-core", "crates/vivarium-app", "spikes/bevy-voxel", "spikes/bevy-iso", "spikes/iso-voxels", "spikes/topdown", "spikes/tilemap", "archive/vivarium-godot"]
 # The Godot voxel-view spike chose Bevy (see spikes/FINDINGS.md) and is archived.
 # Its gdext bridge is *temporarily revived* as a member so the current geology tier
 # can be viewed through Godot — the archived bridge predated the erosion stack and
