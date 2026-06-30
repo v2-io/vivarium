@@ -72,6 +72,12 @@ pub struct WaterParams {
     /// concentrated springs, leaving dry hillsides. Without it there is no
     /// principled way to get dry slopes *and* wet channels.
     pub gw_conductivity: f32,
+    /// **Exfiltration rate** (**1/s**): how fast over-saturated soil discharges its
+    /// excess water to the surface (a spring's finite flow). The excess above
+    /// capacity leaves at `excess · exfil_rate · dt`, not all at once — releasing it
+    /// instantly dumps a whole catchment's groundwater into one lake cell faster
+    /// than the flow can spread it, which is what made the lakes spike.
+    pub exfil_rate: f32,
     /// **Baseflow** as a fraction of groundwater per second — a slow uniform seep
     /// back to the surface, on top of saturation exfiltration. Keep small (it is a
     /// secondary trickle; lateral flow + exfiltration do the real concentrating).
@@ -131,6 +137,7 @@ impl Default for WaterParams {
             infiltration: 0.010, // just under precip: slopes soak, channels run
             gw_capacity: 2.0,
             gw_conductivity: 0.1, // lateral groundwater flow → concentrated springs
+            exfil_rate: 4.0,  // 1/s — springs discharge at a finite rate
             baseflow: 0.0005, // small secondary seep
             ocean_evap: 0.0, // no ocean by default (closed world)
             sea_level: None,
@@ -390,8 +397,12 @@ impl WaterSim {
             for i in 0..n {
                 let cap_i = p.gw_capacity * mat[i];
                 if self.groundwater[i] > cap_i {
-                    let ex = self.groundwater[i] - cap_i;
-                    self.groundwater[i] = cap_i;
+                    // Spring discharge at a finite rate, not an instantaneous dump —
+                    // otherwise a whole catchment's groundwater surfaces in one lake
+                    // cell and spikes. The excess self-regulates (leaky bucket): at
+                    // steady state discharge balances inflow.
+                    let ex = (self.groundwater[i] - cap_i) * (p.exfil_rate * dt).min(1.0);
+                    self.groundwater[i] -= ex;
                     self.depth[i] += ex;
                 }
                 let out_gw = bf * self.groundwater[i];

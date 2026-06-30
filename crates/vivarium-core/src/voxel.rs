@@ -400,6 +400,7 @@ impl Volume {
             // 1/s — a per-cell relaxation rate, NOT a true Darcy conductivity
             // (which would be m/s). PLACEHOLDER: should derive from rock permeability.
             gw_conductivity: 0.15,
+            exfil_rate: 4.0,                   // 1/s — springs discharge gradually (no lake spikes)
             baseflow: 0.0004,                  // 1/s (fraction of groundwater per s)
             sea_level: Some(SEA_LEVEL as f32), // m
             // capacity C = Kc·slope·speed, with C and speed unit-bearing ⇒ Kc is in
