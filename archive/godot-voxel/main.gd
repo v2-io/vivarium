@@ -152,13 +152,16 @@ func _ready() -> void:
 	# Water shades — must mirror the bridge's generate_block encoding:
 	#   index = WATER_BASE(64) + depth_level*SPEED_LEVELS(8) + speed_level
 	# Deeper column → darker blue; faster flow → toward white (foam).
-	var shallow := Color(0.55, 0.69, 0.80)   # light blue, thin water
-	var deep := Color(0.06, 0.16, 0.42)      # dark blue, deep water
+	var shallow := Color(0.33, 0.55, 0.82)   # saturated medium blue, thin water
+	var deep := Color(0.04, 0.12, 0.40)      # dark blue, deep water
 	var foam := Color(0.92, 0.96, 1.0)       # near-white, fast water
 	for dl in 24:
 		for sl in 8:
 			var c: Color = shallow.lerp(deep, float(dl) / 23.0)
-			c = c.lerp(foam, (float(sl) / 7.0) * 0.7)
+			# Whiten only genuinely fast water (nonlinear), so slow shallow water
+			# stays clearly blue rather than looking like fast foam.
+			var speed_t := float(sl) / 7.0
+			c = c.lerp(foam, pow(speed_t, 1.6) * 0.85)
 			palette.set_color(64 + dl * 8 + sl, c)
 
 	var mesher := VoxelMesherCubes.new()

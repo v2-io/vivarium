@@ -208,11 +208,38 @@ impl ErodedSurface {
         self.bilinear(&self.depth_m, xm, zm) * (1.0 - self.exterior_t(xm, zm))
     }
 
-    /// Bilinearly sampled water-*surface* elevation (metres). The flat level a lake
-    /// stands at; gated by [`Self::water_depth`] so it only renders where there is
-    /// actually water.
+    /// Water-*surface* elevation (metres) — the flat level a lake stands at —
+    /// sampled by a **wet-masked** bilinear: only cells that actually hold water
+    /// contribute. A plain bilinear would blend in dry bank cells (whose stored
+    /// surface is just the high bank `bed + 0`) and drag the rendered surface *up*
+    /// the slope, making water climb the banks at every shoreline. Masking to wet
+    /// cells keeps the lake level flat to its true edge; a column whose terrain
+    /// rises above that level simply renders dry (the bank). Returns a very low
+    /// value when no corner is wet (→ renders dry).
     fn water_surface(&self, xm: f32, zm: f32) -> f32 {
-        self.bilinear(&self.water_surf_m, xm, zm)
+        let gx = ((xm - self.x0_m) / self.cell_m).clamp(0.0, (self.nx - 1) as f32);
+        let gz = ((zm - self.z0_m) / self.cell_m).clamp(0.0, (self.nx - 1) as f32);
+        let (x0, z0) = (gx.floor() as usize, gz.floor() as usize);
+        let (x1, z1) = ((x0 + 1).min(self.nx - 1), (z0 + 1).min(self.nx - 1));
+        let (tx, tz) = (gx - x0 as f32, gz - z0 as f32);
+        let corners = [
+            (z0 * self.nx + x0, (1.0 - tx) * (1.0 - tz)),
+            (z0 * self.nx + x1, tx * (1.0 - tz)),
+            (z1 * self.nx + x0, (1.0 - tx) * tz),
+            (z1 * self.nx + x1, tx * tz),
+        ];
+        let (mut sum, mut wsum) = (0.0f32, 0.0f32);
+        for (i, w) in corners {
+            if self.depth_m[i] > 0.05 {
+                sum += self.water_surf_m[i] * w;
+                wsum += w;
+            }
+        }
+        if wsum > 1e-6 {
+            sum / wsum
+        } else {
+            -1.0e9 // no wet corner → render dry
+        }
     }
 
     /// Bilinearly sampled flow **speed** (m/s) at a metre position — the magnitude
