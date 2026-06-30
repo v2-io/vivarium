@@ -273,6 +273,12 @@ impl Volume {
     /// worldgen-time dial. (16 m macro → 8 m sim; 4 m is the next step.)
     pub const SIM_CELL_M: f32 = 8.0;
 
+    /// Epochs of fine stream-power erosion at [`Self::SIM_CELL_M`] — the geological
+    /// phase that carves the *fine* channels into the upsampled macro field (uplift
+    /// off). This is where the carving lives; the water phase that follows does
+    /// none (it just settles water on the finished bed).
+    pub const FINE_EPOCHS: u32 = 50;
+
     /// Build a world whose terrain has been shaped by the [`crate::geo`] fluvial
     /// erosion tier. The raw FBM continental relief is sampled onto a ~16 m grid
     /// spanning `±region_half_m` **metres**, eroded by gentle uplift + stream-power
@@ -354,64 +360,61 @@ impl Volume {
         eprintln!("[vivarium] worldgen: macro erosion, {nx}×{nx} grid, {epochs} epochs…");
         let coarse = crate::geo::Heightfield::from_heights(nx, cell, h).erode(&params);
 
-        // Upsample the macro-eroded field onto the finer SIM grid. The coupled
-        // water+sediment sim carves the fine detail here — there is no separate
-        // stream-power refinement pass any more (it was superseded by the sim's own
-        // erosion). The legacy `fine_*` params are no-ops pending a signature
-        // cleanup.
-        let _ = (fine_cell_m, fine_epochs);
+        let _ = (fine_cell_m, fine_epochs); // legacy API params, unused
+
+        // === Phase 2 — FINE EROSION (geological time) ===================
+        // Upsample the macro field to the sim resolution and incise finer channels
+        // with the *same stream-power physics* (uplift off — the mountains already
+        // exist; this refines). The carving lives HERE, on the geological clock,
+        // where water is the steady-state drainage (discharge ∝ area), NOT in the
+        // water sim. That separation is what makes the timescales honest: erosion
+        // over millennia here, hydrology over hours/days below.
         let surf_cell = Self::SIM_CELL_M;
         let surf_nx = (span_m / surf_cell).ceil() as usize;
-        let mut surf_h = vec![0.0f32; surf_nx * surf_nx];
+        let mut hf = vec![0.0f32; surf_nx * surf_nx];
         for vv in 0..surf_nx {
             for uu in 0..surf_nx {
                 let xm = origin + uu as f32 * surf_cell;
                 let zm = origin + vv as f32 * surf_cell;
-                surf_h[vv * surf_nx + uu] =
-                    sample_grid_bilinear(&coarse.h, nx, origin, cell, xm, zm);
+                hf[vv * surf_nx + uu] = sample_grid_bilinear(&coarse.h, nx, origin, cell, xm, zm);
             }
         }
+        let fine_params = crate::geo::ErosionParams {
+            nx: surf_nx,
+            cell_size: surf_cell,
+            uplift: 0.0, // refine, don't build
+            epochs: Self::FINE_EPOCHS,
+            ..params.clone()
+        };
+        eprintln!("[vivarium] worldgen: fine erosion, {surf_nx}×{surf_nx} grid, {} epochs…", Self::FINE_EPOCHS);
+        let surf_h = crate::geo::Heightfield::from_heights(surf_nx, surf_cell, hf)
+            .erode(&fine_params)
+            .h;
 
-        // --- The coupled, conserved fine pass: water + sediment + hardness ---
-        // One principled simulation on the terrain grid (no separate coarse water
-        // grid, no fractal-noise overlay). Rain falls (drawn from the atmosphere
-        // store), runs off the mountains, soaks into groundwater, concentrates into
-        // channels and *carves the bed* (velocity-capacity sediment transport,
-        // resisted by 3D material hardness), ponds flat in basins, and drains to
-        // the sea. We freeze the quasi-steady snapshot: the carved bed becomes the
-        // terrain, the water surface becomes the streams and lakes. Deterministic
-        // (fixed bed + seed + step count); mass-conserving by construction.
-        // NB: these are spike-tuned coefficients, not measured constants — and the
-        // groundwater ones in particular are *placeholders* (uniform soil), see the
-        // `gw_conductivity` doc on what would make them principled (material-derived).
+        // === Phase 3 — WATER (hydrological time), then FREEZE ============
+        // The land is finished. Now run *real water* on the fixed bed — rain, flow,
+        // groundwater, springs — to its hydrological steady state (lakes level,
+        // streams settle), and freeze the snapshot. **Sediment is OFF** here
+        // (capacity = 0): the carving already happened, on the geological clock;
+        // this phase is hours-to-days of water settling, which carves nothing. So
+        // nothing is time-conflated — the bed is the erosion result, the water is
+        // the equilibrium hydrology on top of it. Hardness still feeds the
+        // groundwater (springs at lithologic contacts).
         let wp = crate::hydro::WaterParams {
-            cell: surf_cell,                  // m (the 8 m sim grid)
+            cell: surf_cell,                  // m
             gravity: 9.81,                    // m/s²
             dt: 0.01 * surf_cell,             // s — CFL: scales with cell size
-            pipe_area: surf_cell * surf_cell, // m² (pipe cross-section ≈ cell area)
-            precip_rate: 0.03,                // m/s of water (rain intensity)
-            evaporation: 0.005,               // 1/s (fraction of surface depth per s)
-            // The distribution EMERGES from lateral groundwater, not a tuned
-            // threshold: slopes soak their rain (and stay dry on the surface), the
-            // groundwater flows downhill, saturates the valleys, and exfiltrates
-            // there as concentrated springs. Dry hillsides + wet channels, earned.
-            infiltration: 0.02, // m/s into unsaturated soil
-            gw_capacity: 1.5,   // m of water (porosity × soil depth) — PLACEHOLDER, should be material
-            // 1/s — a per-cell relaxation rate, NOT a true Darcy conductivity
-            // (which would be m/s). PLACEHOLDER: should derive from rock permeability.
-            gw_conductivity: 0.15,
-            exfil_rate: 4.0,                   // 1/s — springs discharge gradually (no lake spikes)
-            baseflow: 0.0004,                  // 1/s (fraction of groundwater per s)
+            pipe_area: surf_cell * surf_cell, // m²
+            precip_rate: 0.03,                // m/s of water
+            evaporation: 0.005,               // 1/s
+            infiltration: 0.02,               // m/s into unsaturated soil
+            gw_capacity: 1.5,                 // m (porosity × soil depth) — PLACEHOLDER (uniform)
+            gw_conductivity: 0.15,            // 1/s relaxation — PLACEHOLDER (should be permeability)
+            exfil_rate: 4.0,                  // 1/s — springs discharge gradually
+            baseflow: 0.0004,                 // 1/s
             sea_level: Some(SEA_LEVEL as f32), // m
-            // capacity C = Kc·slope·speed, with C and speed unit-bearing ⇒ Kc is in
-            // SECONDS, not dimensionless. erode/deposit are dimensionless fractions
-            // but applied PER STEP (dt-coupled), not clean per-second rates — the
-            // dimensions of this whole sediment law want a principled rework.
-            capacity: 0.25,  // dimensionless equilibrium-concentration coefficient
-            erode: 4.0,      // 1/s erosion relaxation rate
-            deposit: 4.0,    // 1/s deposition relaxation rate
-            min_slope: 0.05, // dimensionless (rise/run) slope floor in the capacity law
-            ..Default::default() // settling (m/s), repose (rise/run), gw, ocean_evap
+            capacity: 0.0,                     // sediment OFF — land is already shaped
+            ..Default::default()
         };
         // A few domain crossings so channels reach the sea and the bed matures.
         let steps = (surf_nx as u32 * 8).clamp(800, 4000);
@@ -426,9 +429,7 @@ impl Volume {
         // Run in chunks so worldgen can report progress — this is the slow tier and
         // a frozen window with no feedback is miserable to wait on. The chunking is
         // pure book-keeping; it does not change the result (still deterministic).
-        eprintln!(
-            "[vivarium] worldgen: {surf_nx}×{surf_nx} water+sediment sim, {steps} steps…"
-        );
+        eprintln!("[vivarium] worldgen: water settling, {surf_nx}×{surf_nx}, {steps} steps…");
         let chunk = (steps / 20).max(1);
         let mut done = 0;
         while done < steps {
@@ -438,7 +439,7 @@ impl Volume {
             eprintln!("[vivarium] worldgen: {:>3}%", done * 100 / steps);
         }
 
-        let carved = sim.bed; // the fine-carved terrain (replaces the macro bed)
+        let carved = sim.bed; // == the geo-eroded bed (water phase carves nothing)
         let depth_m = sim.depth;
         // Water surface = carved bed + depth, on the *same* grid as the terrain, so
         // a lake reads flat and there is no grid-mismatch draping.
