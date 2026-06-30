@@ -351,6 +351,7 @@ impl Volume {
             dt: 1.0,
             sea_level: Some(SEA_LEVEL as f32),
         };
+        eprintln!("[vivarium] worldgen: macro erosion, {nx}×{nx} grid, {epochs} epochs…");
         let coarse = crate::geo::Heightfield::from_heights(nx, cell, h).erode(&params);
 
         // Upsample the macro-eroded field onto the finer SIM grid. The coupled
@@ -411,7 +412,20 @@ impl Volume {
         let mut sim = crate::hydro::WaterSim::new(surf_nx, surf_h)
             .with_atmosphere(atm)
             .with_hardness(crate::geo::Strata::new(v.seed), origin);
-        sim.run(&wp, steps);
+        // Run in chunks so worldgen can report progress — this is the slow tier and
+        // a frozen window with no feedback is miserable to wait on. The chunking is
+        // pure book-keeping; it does not change the result (still deterministic).
+        eprintln!(
+            "[vivarium] worldgen: {surf_nx}×{surf_nx} water+sediment sim, {steps} steps…"
+        );
+        let chunk = (steps / 20).max(1);
+        let mut done = 0;
+        while done < steps {
+            let n = chunk.min(steps - done);
+            sim.run(&wp, n);
+            done += n;
+            eprintln!("[vivarium] worldgen: {:>3}%", done * 100 / steps);
+        }
 
         let carved = sim.bed; // the fine-carved terrain (replaces the macro bed)
         let depth_m = sim.depth;
