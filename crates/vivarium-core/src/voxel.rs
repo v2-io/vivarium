@@ -215,6 +215,14 @@ impl ErodedSurface {
         self.bilinear(&self.water_surf_m, xm, zm)
     }
 
+    /// Bilinearly sampled flow **speed** (m/s) at a metre position — the magnitude
+    /// of the frozen velocity field. For shading fast water toward white.
+    fn speed(&self, xm: f32, zm: f32) -> f32 {
+        let vx = self.bilinear(&self.vx_m, xm, zm);
+        let vy = self.bilinear(&self.vy_m, xm, zm);
+        (vx * vx + vy * vy).sqrt()
+    }
+
     /// Shared bilinear sampler over a row-major `nx·nx` grid, clamped to the edge.
     fn bilinear(&self, grid: &[f32], xm: f32, zm: f32) -> f32 {
         let gx = ((xm - self.x0_m) / self.cell_m).clamp(0.0, (self.nx - 1) as f32);
@@ -591,6 +599,24 @@ impl Volume {
         // `generated` renders no water in that column).
         let surf_m = e.water_surface(xm, zm);
         sea.max((surf_m * d).round() as i32)
+    }
+
+    /// Depth of standing water at column `(x, z)`, **in voxels** (waterline minus
+    /// ground; 0 where dry). A view can shade water darker where this is larger.
+    pub fn water_depth_voxels(&self, x: i32, z: i32) -> i32 {
+        (self.waterline(x, z) - self.terrain_height(x, z)).max(0)
+    }
+
+    /// Flow **speed** (m/s) at column `(x, z)` from the frozen velocity field
+    /// (0 with no eroded surface). A view can shade fast water toward white.
+    pub fn water_speed(&self, x: i32, z: i32) -> f32 {
+        match &self.eroded {
+            Some(e) => {
+                let d = self.detail as f32;
+                e.speed(x as f32 / d, z as f32 / d)
+            }
+            None => 0.0,
+        }
     }
 
     /// Terrain surface height at voxel column `(x, z)`, in voxels. Deterministic.

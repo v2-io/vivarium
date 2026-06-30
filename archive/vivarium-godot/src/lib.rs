@@ -170,15 +170,31 @@ impl VivariumWorld {
         out.resize((size.x * size.y * size.z) as usize);
         let slice = out.as_mut_slice();
         let mut i = 0;
+        // Water is rendered as a *range* of palette indices, not the flat WATER id,
+        // so the view can read depth and flow at a glance: deeper column → higher
+        // depth level (darker blue in the palette), faster flow → higher speed level
+        // (toward white). Encoding (mirrored in main.gd's palette builder):
+        //   index = WATER_BASE + depth_level*SPEED_LEVELS + speed_level
+        // depth_level 0..DEPTH_LEVELS-1, speed_level 0..SPEED_LEVELS-1.
+        const WATER_ID: u8 = 4;
+        const WATER_BASE: u8 = 64;
+        const DEPTH_LEVELS: i32 = 24;
+        const SPEED_LEVELS: i32 = 8;
         for z in 0..size.z {
             for y in 0..size.y {
                 for x in 0..size.x {
-                    let v = vol.voxel(
-                        origin.x + x * stride,
-                        origin.y + y * stride + y_off,
-                        origin.z + z * stride,
-                    );
-                    slice[i] = v.0 as u8;
+                    let (wx, wz) = (origin.x + x * stride, origin.z + z * stride);
+                    let v = vol.voxel(wx, origin.y + y * stride + y_off, wz);
+                    slice[i] = if v.0 as u8 == WATER_ID {
+                        // ~2 m per depth level (0.5 m voxels → /4); ~0.25 m/s per
+                        // speed level.
+                        let dl = (vol.water_depth_voxels(wx, wz) / 4).clamp(0, DEPTH_LEVELS - 1);
+                        let sl = (vol.water_speed(wx, wz) * 4.0) as i32;
+                        let sl = sl.clamp(0, SPEED_LEVELS - 1);
+                        WATER_BASE + (dl * SPEED_LEVELS + sl) as u8
+                    } else {
+                        v.0 as u8
+                    };
                     i += 1;
                 }
             }
