@@ -11,8 +11,11 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use bevy::asset::RenderAssetUsages;
 use bevy::camera::ScalingMode;
 use bevy::ecs::message::{MessageReader, MessageWriter};
+use bevy::mesh::{Indices, PrimitiveTopology};
+use bevy::pbr::{DistanceFog, FogFalloff};
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 use bevy_voxel_world::prelude::*;
@@ -70,17 +73,37 @@ impl VoxelWorldConfig for VivWorld {
 
     /// Stream a generous bubble — the ortho eye floats back at the iso angle, so the
     /// sphere must reach past the eye to the focus and cover the visible footprint.
+    /// NB: this is a sphere with no frustum culling, so cost grows with its VOLUME —
+    /// raising it is the dominant perf knob (≈8× the chunks per doubling).
     fn spawning_distance(&self) -> u32 {
-        32
+        48
     }
 
     fn voxel_lookup_delegate(&self) -> VoxelLookupDelegate<Self::MaterialIndex> {
         let volume = Arc::clone(&self.volume);
+        let sea = volume.sea_level();
+        // Hollow-shell depth (voxels). The deep interior of every hill is permanently
+        // occluded in a surface view, so we return AIR below `surface - shell` — the
+        // buried mass is never meshed, which is the bulk of the saving. `shell` must
+        // be deep enough to back cliff faces (a column must stay solid down to its
+        // lower neighbours) or you'd see air behind a cliff; 96 voxels = 48 m backs
+        // typical relief. VIVARIUM_SHELL tunes it.
+        let shell: i32 = std::env::var("VIVARIUM_SHELL").ok().and_then(|s| s.parse().ok()).unwrap_or(96);
         Box::new(move |_chunk_pos, _lod, _prev| {
             let volume = Arc::clone(&volume);
             Box::new(move |pos: IVec3, _prev| {
+                // Below the shell → air (occluded interior, never meshed).
+                let h = volume.surface_height(pos.x, pos.z).unwrap_or(sea);
+                if pos.y < h - shell {
+                    return WorldVoxel::Air;
+                }
                 let v = volume.voxel(pos.x, pos.y, pos.z);
-                if v.is_air() {
+                // Water (material 4) is rendered as a separate TRANSLUCENT surface
+                // mesh (see spawn_water_mesh), so the opaque terrain mesher treats it
+                // as air — this exposes the solid bed beneath, which then shows
+                // through the translucent water (Minecraft-style). bevy_voxel_world's
+                // WorldVoxel has no translucent variant, hence the two-layer split.
+                if v.is_air() || v.0 == 4 {
                     WorldVoxel::Air
                 } else {
                     WorldVoxel::Solid(v.0 as u8)
@@ -109,7 +132,7 @@ fn main() {
         .insert_resource(world)
         .insert_resource(Navigator::default())
         .add_systems(Startup, setup)
-        .add_systems(Update, (navigator_update, maybe_screenshot))
+        .add_systems(Update, (navigator_update, update_water, maybe_screenshot))
         .run();
 }
 
@@ -167,12 +190,29 @@ struct Navigator {
     yaw: f32,
     yaw_target: f32,
     zoom: f32,
+    /// Depth-fog dials (read once from env; live-tunable at launch).
+    fog_on: bool,
+    fog_start: f32, // clear margin past the pawn, as a fraction of zoom
+    fog_span: f32,  // additional distance to full haze, as a fraction of zoom
 }
 
 impl Default for Navigator {
     fn default() -> Self {
-        Self { focus: Vec2::ZERO, focus_h: 0.0, yaw: YAW_START, yaw_target: YAW_START, zoom: ZOOM_START }
+        Self {
+            focus: Vec2::ZERO,
+            focus_h: 0.0,
+            yaw: YAW_START,
+            yaw_target: YAW_START,
+            zoom: ZOOM_START,
+            fog_on: std::env::var("VIVARIUM_FOG").map(|v| v != "0").unwrap_or(true),
+            fog_start: env_f32("VIVARIUM_FOG_START", 0.3),
+            fog_span: env_f32("VIVARIUM_FOG_SPAN", 3.0),
+        }
     }
+}
+
+fn env_f32(key: &str, default: f32) -> f32 {
+    std::env::var(key).ok().and_then(|s| s.parse().ok()).unwrap_or(default)
 }
 
 /// The ortho rendering camera (floats at the iso angle).
@@ -203,6 +243,15 @@ fn setup(
         IsoCamera,
         // bevy_voxel_world streams chunks around this marker (the camera).
         VoxelWorldCamera::<VivWorld>::default(),
+        // Depth fog: terrain receding up-screen (away from the pawn) hazes toward
+        // the sky. The band is set each frame to bracket the pawn's distance
+        // (navigator_update), so the pawn plane is clear and only the distance
+        // fuzzes. Placeholder range until the first frame.
+        DistanceFog {
+            color: SKY,
+            falloff: FogFalloff::Linear { start: STANDOFF, end: STANDOFF + 400.0 },
+            ..default()
+        },
     ));
 
     // The pawn: a ~2 m red cube standing on the surface (4 voxels at detail 2).
@@ -221,7 +270,186 @@ fn setup(
     ));
     commands.insert_resource(GlobalAmbientLight { color: SKY, brightness: 650.0, affects_lightmapped_meshes: true });
 
+    // Water is a focus-following translucent mesh, (re)built by update_water. One
+    // shared material; per-vertex colour carries blue→foam + alpha.
+    let water_mat = materials.add(StandardMaterial {
+        base_color: Color::WHITE,
+        alpha_mode: AlphaMode::Blend,
+        perceptual_roughness: 0.25,
+        reflectance: 0.3,
+        double_sided: true,
+        cull_mode: None,
+        ..default()
+    });
+    commands.insert_resource(WaterState {
+        entity: None,
+        center: Vec2::splat(1.0e9), // force a build on frame one
+        zoom: 0.0,
+        material: water_mat,
+        foam_speed: env_f32("VIVARIUM_WATER_FOAM", 4.0),
+        min_flow: env_f32("VIVARIUM_WATER_MIN_FLOW", 0.12),
+    });
+
     println!("[iso-voxels] WASD/arrows pan · wheel zoom · Q/E rotate 45°");
+}
+
+#[derive(Component)]
+struct Water;
+
+#[derive(Resource)]
+struct WaterState {
+    entity: Option<Entity>,
+    center: Vec2,
+    zoom: f32,
+    material: Handle<StandardMaterial>,
+    foam_speed: f32,
+    min_flow: f32,
+}
+
+/// (Re)build the water mesh around the focus when it moves far enough or zoom
+/// changes — so water exists wherever the pawn goes, sized to the view (not a fixed
+/// patch around the origin). Synchronous, but bounded to the visible area so the
+/// rebuild is cheap and only fires on significant movement.
+fn update_water(
+    mut commands: Commands,
+    world: Res<VivWorld>,
+    nav: Res<Navigator>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut ws: ResMut<WaterState>,
+) {
+    let radius = (nav.zoom * 1.6 + 250.0).min(2200.0);
+    let moved = ws.center.distance(nav.focus);
+    let zoom_changed = (ws.zoom - nav.zoom).abs() > 1.0;
+    if ws.entity.is_some() && moved < radius * 0.3 && !zoom_changed {
+        return;
+    }
+    if let Some(e) = ws.entity.take() {
+        commands.entity(e).despawn();
+    }
+    if let Some(mesh) = build_water_mesh(&world.volume, nav.focus, radius, ws.foam_speed, ws.min_flow) {
+        let h = meshes.add(mesh);
+        ws.entity = Some(commands.spawn((Mesh3d(h), MeshMaterial3d(ws.material.clone()), Water)).id());
+    }
+    ws.center = nav.focus;
+    ws.zoom = nav.zoom;
+}
+
+/// Per-cell water stride in voxels (~3 m). Fine enough for one-cell streams.
+const WATER_STRIDE: i32 = 6;
+
+/// Build a water surface mesh over a square of `2·radius` voxels centred on
+/// `center`. Standing water sits at its waterline; thin fast films sit on the bed.
+/// Crucially it also emits **vertical quads** down every drop between a water cell
+/// and a lower neighbour (wet OR dry bed), so falls/steps/banks render — that is
+/// the "falling water on vertical faces" a flat surface can't show. Colour is per
+/// vertex: calm deep = translucent blue → fast = (mostly) opaque white foam.
+fn build_water_mesh(volume: &Volume, center: Vec2, radius: f32, foam_speed: f32, min_flow: f32) -> Option<Mesh> {
+    let sea = volume.sea_level();
+    let s = WATER_STRIDE;
+    let half = s as f32 * 0.5;
+    // Snap the grid origin to the stride so panning doesn't shimmer the cells.
+    let gx0 = (((center.x - radius) / s as f32).floor() as i32) * s;
+    let gz0 = (((center.y - radius) / s as f32).floor() as i32) * s;
+    let n = ((2.0 * radius) as i32 / s) as usize + 2;
+
+    // Sample the grid once: wet mask, surface height (water surface, or bed if dry —
+    // dry is the fall target), and flow speed.
+    let mut wet = vec![false; n * n];
+    let mut ys = vec![0.0f32; n * n];
+    let mut spd = vec![0.0f32; n * n];
+    for j in 0..n {
+        for i in 0..n {
+            let x = gx0 + i as i32 * s;
+            let z = gz0 + j as i32 * s;
+            let bed = volume.surface_height(x, z).unwrap_or(sea);
+            let depth = volume.water_depth_voxels(x, z);
+            let speed = volume.water_speed(x, z);
+            spd[j * n + i] = speed;
+            if depth > 0 || speed > min_flow {
+                wet[j * n + i] = true;
+                ys[j * n + i] = if depth > 0 { (bed + depth) as f32 } else { bed as f32 + 1.0 };
+            } else {
+                ys[j * n + i] = bed as f32; // fall target for a wet higher neighbour
+            }
+        }
+    }
+
+    let color_for = |speed: f32| -> [f32; 4] {
+        // Gentle curve so rivers stay blue; only genuinely fast water foams. Foam is
+        // *mostly* opaque (0.85), not fully, so it still reads as water.
+        let t = (speed / foam_speed).clamp(0.0, 1.0).powf(1.6);
+        let calm = [0.20f32, 0.44, 0.70, 0.5];
+        let foam = [0.93f32, 0.96, 1.0, 0.85];
+        [
+            calm[0] + (foam[0] - calm[0]) * t,
+            calm[1] + (foam[1] - calm[1]) * t,
+            calm[2] + (foam[2] - calm[2]) * t,
+            calm[3] + (foam[3] - calm[3]) * t,
+        ]
+    };
+
+    let mut positions: Vec<[f32; 3]> = Vec::new();
+    let mut normals: Vec<[f32; 3]> = Vec::new();
+    let mut colors: Vec<[f32; 4]> = Vec::new();
+    let mut indices: Vec<u32> = Vec::new();
+    let mut quad = |p: [[f32; 3]; 4], nrm: [f32; 3], col: [f32; 4], out_p: &mut Vec<[f32; 3]>, out_n: &mut Vec<[f32; 3]>, out_c: &mut Vec<[f32; 4]>, out_i: &mut Vec<u32>| {
+        let b = out_p.len() as u32;
+        out_p.extend_from_slice(&p);
+        out_n.extend_from_slice(&[nrm; 4]);
+        out_c.extend_from_slice(&[col; 4]);
+        out_i.extend_from_slice(&[b, b + 2, b + 1, b + 1, b + 2, b + 3]);
+    };
+
+    for j in 0..n {
+        for i in 0..n {
+            if !wet[j * n + i] {
+                continue;
+            }
+            let x = (gx0 + i as i32 * s) as f32;
+            let z = (gz0 + j as i32 * s) as f32;
+            let y0 = ys[j * n + i];
+            let col = color_for(spd[j * n + i]);
+
+            // Horizontal surface quad.
+            quad(
+                [[x - half, y0, z - half], [x + half, y0, z - half], [x - half, y0, z + half], [x + half, y0, z + half]],
+                [0.0, 1.0, 0.0],
+                col,
+                &mut positions, &mut normals, &mut colors, &mut indices,
+            );
+
+            // Vertical fall faces: for each lower neighbour, a quad down the shared edge.
+            let neigh: [(i32, i32); 4] = [(1, 0), (-1, 0), (0, 1), (0, -1)];
+            for (di, dj) in neigh {
+                let (ni, nj) = (i as i32 + di, j as i32 + dj);
+                if ni < 0 || nj < 0 || ni >= n as i32 || nj >= n as i32 {
+                    continue;
+                }
+                let ns = ys[nj as usize * n + ni as usize];
+                if y0 - ns <= 1.0 {
+                    continue; // neighbour not meaningfully lower
+                }
+                // Falling water is fast → bias the colour toward foam.
+                let fcol = color_for(spd[j * n + i].max(spd[nj as usize * n + ni as usize]).max(foam_speed * 0.5));
+                let (q, nrm) = match (di, dj) {
+                    (1, 0) => ([[x + half, y0, z - half], [x + half, y0, z + half], [x + half, ns, z - half], [x + half, ns, z + half]], [1.0, 0.0, 0.0]),
+                    (-1, 0) => ([[x - half, y0, z - half], [x - half, y0, z + half], [x - half, ns, z - half], [x - half, ns, z + half]], [-1.0, 0.0, 0.0]),
+                    (0, 1) => ([[x - half, y0, z + half], [x + half, y0, z + half], [x - half, ns, z + half], [x + half, ns, z + half]], [0.0, 0.0, 1.0]),
+                    _ => ([[x - half, y0, z - half], [x + half, y0, z - half], [x - half, ns, z - half], [x + half, ns, z - half]], [0.0, 0.0, -1.0]),
+                };
+                quad(q, nrm, fcol, &mut positions, &mut normals, &mut colors, &mut indices);
+            }
+        }
+    }
+    if indices.is_empty() {
+        return None;
+    }
+    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::RENDER_WORLD);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+    mesh.insert_indices(Indices::U32(indices));
+    Some(mesh)
 }
 
 /// World focus as a 3D point (voxels = bevy units; bevy_voxel_world is 1 voxel/unit).
@@ -249,7 +477,7 @@ fn navigator_update(
     mut wheel: MessageReader<bevy::input::mouse::MouseWheel>,
     world: Res<VivWorld>,
     mut nav: ResMut<Navigator>,
-    mut cam: Query<(&mut Transform, &mut Projection), (With<IsoCamera>, Without<Pawn>)>,
+    mut cam: Query<(&mut Transform, &mut Projection, &mut DistanceFog), (With<IsoCamera>, Without<Pawn>)>,
     mut pawn: Query<&mut Transform, (With<Pawn>, Without<IsoCamera>)>,
 ) {
     let dt = time.delta_secs();
@@ -284,10 +512,20 @@ fn navigator_update(
 
     nav.focus_h = world.volume.surface_height(nav.focus.x.round() as i32, nav.focus.y.round() as i32).unwrap_or(world.volume.sea_level()) as f32;
 
-    if let Ok((mut tf, mut proj)) = cam.single_mut() {
+    if let Ok((mut tf, mut proj, mut fog)) = cam.single_mut() {
         *tf = camera_transform(&nav);
         if let Projection::Orthographic(o) = proj.as_mut() {
             o.scaling_mode = ScalingMode::FixedVertical { viewport_height: nav.zoom };
+        }
+        // Fog band tracks the pawn's distance: clear up to the pawn (+a margin),
+        // hazing as terrain recedes up-screen. Distance-from-camera under ortho ≈
+        // depth ≈ screen-vertical, so left/right is unaffected.
+        let dist = (tf.translation - focus3(&nav)).length();
+        if nav.fog_on {
+            let start = dist + nav.fog_start * nav.zoom;
+            fog.falloff = FogFalloff::Linear { start, end: start + nav.fog_span * nav.zoom };
+        } else {
+            fog.falloff = FogFalloff::Linear { start: 1.0e9, end: 1.0e9 + 1.0 };
         }
     }
     if let Ok(mut tf) = pawn.single_mut() {
