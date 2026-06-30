@@ -23,11 +23,23 @@ fn main() {
     let seed: u64 = args.next().and_then(|s| s.parse().ok()).unwrap_or(0xC0FFEE);
     let steps: u32 = args.next().and_then(|s| s.parse().ok()).unwrap_or(6000);
 
-    // A matured landscape to rain on. Strong uplift so there is real relief for
-    // water to find, and enough epochs for a dendritic network.
-    let nx = 96;
-    let ep = ErosionParams { nx, uplift: 0.6, k: 0.30, epochs: 60, ..Default::default() };
+    // A matured landscape to rain on, at REAL scale: 16 m cells, hundreds of
+    // metres of relief — the regime worldgen actually runs in, so the dt/rain
+    // numbers found here transfer to the integration.
+    let nx = 200;
+    let cell = 16.0_f32;
+    let ep = ErosionParams {
+        nx,
+        cell_size: cell,
+        uplift: 4.0,
+        k: 0.05,
+        epochs: 60,
+        deposition: 0.5,
+        ..Default::default()
+    };
     let mut bed = Heightfield::simulate(&ep, seed).h;
+    let (elo, ehi) = bed.iter().fold((f32::MAX, f32::MIN), |(a, b), &v| (a.min(v), b.max(v)));
+    eprintln!("terrain relief: {elo:.0}..{ehi:.0} m ({:.0} m)", ehi - elo);
 
     // The eroded field is depression-free (erosion fills pits), so it can show
     // rivers but never a lake. Stamp one real basin — a crater gouged into a
@@ -35,7 +47,7 @@ fn main() {
     // will earn basins like this for real; this is the instrument, carving one by
     // hand to verify the water responds correctly.)
     let basin_y = nx / 2;
-    let (bx, by, br, bdepth) = (nx as f32 * 0.42, basin_y as f32, 9.0_f32, 30.0_f32);
+    let (bx, by, br, bdepth) = (nx as f32 * 0.42, basin_y as f32, 12.0_f32, 120.0_f32);
     for y in 0..nx {
         for x in 0..nx {
             let r = ((x as f32 - bx).powi(2) + (y as f32 - by).powi(2)).sqrt();
@@ -47,24 +59,33 @@ fn main() {
     }
 
     let mut sim = WaterSim::new(nx, bed.clone());
-    // Closed test world (no sea). High evaporation keeps the flat-area balance
-    // (rain/evap) shallow so slopes shed water, while convergent flow in channels
-    // and the basin still stands deep enough to read.
-    let p = WaterParams { rain: 0.06, evaporation: 0.5, ..Default::default() };
+    // Real-scale water params. dt from CFL (cell / sqrt(g·d_max)); pipe area ~cell²;
+    // rain/evap so slopes shed but channels + basin hold. Edges drain (no sea).
+    let p = WaterParams {
+        cell,
+        gravity: 9.81,
+        dt: 0.15,
+        pipe_area: cell * cell,
+        rain: 0.03,
+        evaporation: 0.0,
+        infiltration: 0.026, // ~87% soaks in; the excess concentrates into rivers
+        sea_level: None,
+    };
 
     println!("vivarium water spike — seed {seed:#x}, {nx}×{nx}, {steps} steps\n");
 
     // Run in chunks so we can trace convergence to quasi-steady state.
-    print!("volume trace (Σ depth): ");
+    println!("trace  step: Σdepth / max-depth  (steady Σ = converged; max blowing up = unstable)");
     let chunk = (steps / 12).max(1);
     let mut done = 0;
     while done < steps {
         let n = chunk.min(steps - done);
         sim.run(&p, n);
         done += n;
-        print!("{:.0} ", sim.total_water());
+        let maxd = sim.depth.iter().cloned().fold(0.0f32, f32::max);
+        println!("  {done:>6}: {:>8.0} / {maxd:.1} m", sim.total_water());
     }
-    println!("\n");
+    println!();
 
     plan_view(&sim, &bed);
     println!();

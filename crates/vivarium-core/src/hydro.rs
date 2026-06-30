@@ -47,10 +47,20 @@ pub struct WaterParams {
     /// Uniform rain rate (metres of water added per second). The source term;
     /// a spatial rain field (Perlin / orographic) is a later refinement.
     pub rain: f32,
-    /// Evaporation/infiltration rate as a *fraction of depth per second* — the
-    /// sink that lets steady state exist and keeps thin hillslope films from
-    /// reading as a wet sheet (Joseph's saturation/seepage list lives here, later).
+    /// Evaporation as a *fraction of depth per second* — a proportional sink,
+    /// mostly relevant to closed (endorheic) lakes so they reach a steady level
+    /// instead of filling forever. Usually small or zero when basins have spills.
     pub evaporation: f32,
+    /// **Infiltration** as a *constant* sink (metres of water absorbed per second,
+    /// up to the water present) — soil soaking up rain. This is the mechanism that
+    /// makes water a *network* rather than a sheet: where the local input (rain +
+    /// inflow) is below this capacity it is fully absorbed and the ground stays
+    /// dry; only where flow **concentrates** past it does a channel run. Set just
+    /// below `rain` so bare slopes shed only their excess and rivers earn their
+    /// water by accumulation. (Joseph's saturation/seepage/porosity list begins
+    /// here; a saturation *state* — capacity that fills and drains — is the next
+    /// refinement.)
+    pub infiltration: f32,
     /// Sea level (metres). When `Some`, every cell at or below it is held as a
     /// fixed reservoir filled to the waterline — the ocean rivers run to. `None`
     /// for a closed test world with no sea.
@@ -65,7 +75,8 @@ impl Default for WaterParams {
             dt: 0.02,
             pipe_area: 1.0,
             rain: 0.012,
-            evaporation: 0.015,
+            evaporation: 0.0,
+            infiltration: 0.010, // just under rain: slopes soak, channels run
             sea_level: None,
         }
     }
@@ -202,11 +213,14 @@ impl WaterSim {
             }
         }
 
-        // 5. Evaporation / infiltration sink.
-        if p.evaporation > 0.0 {
+        // 5. Sinks: proportional evaporation, then constant infiltration (capped
+        //    at the water present). Infiltration is what concentrates flow into a
+        //    network — see `WaterParams::infiltration`.
+        if p.evaporation > 0.0 || p.infiltration > 0.0 {
             let keep = 1.0 - p.evaporation * dt;
+            let inf = p.infiltration * dt;
             for d in self.depth.iter_mut() {
-                *d = (*d * keep).max(0.0);
+                *d = (*d * keep - inf).max(0.0);
             }
         }
 
@@ -263,7 +277,12 @@ mod tests {
     fn basin_fills_to_a_flat_lake() {
         let nx = 48;
         let mut sim = WaterSim::new(nx, bowl(nx));
-        let p = WaterParams { rain: 0.05, evaporation: 0.002, ..Default::default() };
+        let p = WaterParams {
+            rain: 0.05,
+            evaporation: 0.002,
+            infiltration: 0.0, // isolate the fill behaviour from the soak sink
+            ..Default::default()
+        };
         sim.run(&p, 4000);
 
         // Collect the surface of every well-submerged cell (depth above a small
@@ -303,7 +322,12 @@ mod tests {
                 sim.depth[y * nx + x] = 3.0;
             }
         }
-        let p = WaterParams { rain: 0.0, evaporation: 0.0, ..Default::default() };
+        let p = WaterParams {
+            rain: 0.0,
+            evaporation: 0.0,
+            infiltration: 0.0, // a closed system: no source, no sink
+            ..Default::default()
+        };
         let v0 = sim.total_water();
         sim.run(&p, 2000);
         let v1 = sim.total_water();

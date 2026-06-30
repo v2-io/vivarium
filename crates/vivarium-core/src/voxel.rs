@@ -104,6 +104,17 @@ pub const SEA_LEVEL: i32 = 3000;
 /// regolith; below it is stone. Scales to voxels via [`Detail`].
 pub const SOIL_DEPTH: i32 = 4;
 
+/// Max edge length of the **water** simulation grid. Water runs on its own grid
+/// (see [`ErodedSurface`]); capping it keeps the [`crate::hydro`] sim tractable
+/// at continental span — at the cost of coarser water than terrain for now. A
+/// dedicated finer water grid is the follow-up.
+const WATER_GRID_CAP: usize = 320;
+
+/// Minimum water depth (metres) that renders as water. Below this is a thin
+/// transient runoff film, not standing water; thresholding it keeps hillslopes
+/// dry rather than sheened. Roughly one render voxel at `detail = 2`.
+const MIN_WATER_M: f32 = 0.4;
+
 /// Continental-shelf floor, **in metres** — the elevation the land grades *down*
 /// to beyond the eroded patch. 300 m below sea, so the engineered region reads as
 /// a continent sitting in open ocean (DESIGN: bounded continent, 2026-06-23).
@@ -156,10 +167,15 @@ struct ErodedSurface {
     /// ground — the fidelity invariant applied to materialization (DESIGN.md), and
     /// the reason slack valley floors stop reading as a chain of pools.
     rough: Vec<f32>,
-    /// Per-node **static water depth** in metres (≥ 0), from the baked hydrology
-    /// pass ([`crate::geo::Heightfield::water_depth`]). The water *surface* is
-    /// `h_m + depth_m`; 0 means dry. Sampled bilinearly like the others — safe
-    /// because dry is a true 0, so interpolation never smears a sentinel.
+    /// Metres per cell of the **water** grid (see `depth_m`). Independent of the
+    /// terrain `cell_m` — water runs on its own (currently coarser) resolution.
+    water_cell_m: f32,
+    /// Water-grid edge length in nodes.
+    water_nx: usize,
+    /// Per-node **water depth** in metres (≥ 0) on the water grid, the quasi-steady
+    /// snapshot of the [`crate::hydro`] shallow-water simulation. The water
+    /// *surface* is `bed + depth`; 0 means dry. Bilinearly sampled — safe because
+    /// dry is a true 0, so interpolation never smears a sentinel.
     depth_m: Vec<f32>,
 }
 
@@ -195,11 +211,20 @@ impl ErodedSurface {
         self.bilinear(&self.rough, xm, zm)
     }
 
-    /// Bilinearly sampled static water depth (metres, ≥ 0) at a metre position
-    /// (see [`Self::depth_m`]). Faded out by the exterior weight so the open ocean
-    /// beyond the patch stays the clean flat sea, not a smear of edge channels.
+    /// Bilinearly sampled water depth (metres, ≥ 0) at a metre position, on the
+    /// **water** grid (see [`Self::depth_m`]). Faded out by the exterior weight so
+    /// the open ocean beyond the patch stays the clean flat sea, not a smear of
+    /// edge channels.
     fn water_depth(&self, xm: f32, zm: f32) -> f32 {
-        self.bilinear(&self.depth_m, xm, zm) * (1.0 - self.exterior_t(xm, zm))
+        let d = sample_grid_bilinear(
+            &self.depth_m,
+            self.water_nx,
+            self.x0_m,
+            self.water_cell_m,
+            xm,
+            zm,
+        );
+        d * (1.0 - self.exterior_t(xm, zm))
     }
 
     /// Shared bilinear sampler over a row-major `nx·nx` grid, clamped to the edge.
@@ -366,13 +391,6 @@ impl Volume {
             (coarse, cell, nx)
         };
 
-        // Static hydrology on the *kept* field — computed here, in continuous
-        // metre-space, **before** voxel quantization, so terrace steps can't fake
-        // pools: the water surface follows the smooth graded bed, not the snapped
-        // one. `depth_m` (metres, ≥ 0) is the baked stream-and-pool layer; the
-        // voxel tier renders inland water up to `bed + depth` (see `generated`).
-        let depth_m = surf_field
-            .water_depth(&crate::geo::HydrologyParams::default(), Some(SEA_LEVEL as f32));
         let surf_h = surf_field.h; // move the kept heights out for the surface below
 
         // Roughness from local slope on the *kept* field: smooth (0) on flat/graded
@@ -390,6 +408,40 @@ impl Volume {
             }
         }
 
+        // --- Water: an actual fluid simulation, run to a quasi-steady snapshot ---
+        // The posed water surface is gone; this rains on the matured bed and lets
+        // the shallow-water `hydro` model carry it downhill, concentrate it into
+        // channels (infiltration soaks the slopes), and pond it flat in any basin.
+        // Run on its own grid, capped so worldgen stays tractable at continental
+        // span — coarser than the terrain for now; a finer water grid is the
+        // follow-up. Deterministic: a fixed bed + fixed step count.
+        let water_nx = surf_nx.min(WATER_GRID_CAP);
+        let water_cell = span_m / water_nx as f32;
+        let mut water_bed = vec![0.0f32; water_nx * water_nx];
+        for vv in 0..water_nx {
+            for uu in 0..water_nx {
+                let xm = origin + uu as f32 * water_cell;
+                let zm = origin + vv as f32 * water_cell;
+                water_bed[vv * water_nx + uu] =
+                    sample_grid_bilinear(&surf_h, surf_nx, origin, surf_cell, xm, zm);
+            }
+        }
+        let wp = crate::hydro::WaterParams {
+            cell: water_cell,
+            gravity: 9.81,
+            dt: 0.01 * water_cell, // ~CFL: scales with cell size
+            pipe_area: water_cell * water_cell,
+            rain: 0.03,
+            evaporation: 0.0,
+            infiltration: 0.026, // just under rain → slopes soak, channels run
+            sea_level: Some(SEA_LEVEL as f32),
+        };
+        // Steps ~ a few domain crossings so channels reach the outlets; capped.
+        let steps = (water_nx as u32 * 14).clamp(800, 6000);
+        let mut sim = crate::hydro::WaterSim::new(water_nx, water_bed);
+        sim.run(&wp, steps);
+        let depth_m = sim.depth;
+
         v.eroded = Some(ErodedSurface {
             x0_m: origin,
             z0_m: origin,
@@ -397,6 +449,8 @@ impl Volume {
             nx: surf_nx,
             h_m: surf_h,
             rough,
+            water_cell_m: water_cell,
+            water_nx,
             depth_m,
         });
         v
@@ -497,14 +551,17 @@ impl Volume {
     /// and the baked **inland** water surface (eroded bed + hydrology depth). This
     /// is the `y` up to which an above-ground column fills with [`Voxel::WATER`].
     /// Pure function of worldgen — deterministic, edit-blind, and `None`-eroded
-    /// worlds simply see the sea. See [`crate::geo::Heightfield::water_depth`].
+    /// worlds simply see the sea. See [`crate::hydro`] for the water model.
     fn waterline(&self, x: i32, z: i32) -> i32 {
         let sea = self.sea_level();
         let Some(e) = &self.eroded else { return sea };
         let d = self.detail as f32;
         let (xm, zm) = (x as f32 / d, z as f32 / d);
         let depth = e.water_depth(xm, zm);
-        if depth <= 0.0 {
+        if depth < MIN_WATER_M {
+            // Below the render threshold: a thin transient film, not standing
+            // water. Treating it as dry keeps slopes from reading as a wet sheen
+            // and leaves only channels and pools.
             return sea;
         }
         // Surface = the *smooth* eroded bed + depth, not the noisy terrain_height:
