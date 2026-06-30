@@ -58,7 +58,9 @@ fn main() {
         }
     }
 
-    let mut sim = WaterSim::new(nx, bed.clone());
+    // Charge the atmosphere generously so the cycle never starves for rain.
+    let mut sim = WaterSim::new(nx, bed.clone())
+        .with_atmosphere(0.03 * 0.15 * steps as f64 * (nx * nx) as f64 * 2.0);
     // Real-scale water params. dt from CFL (cell / sqrt(g·d_max)); pipe area ~cell²;
     // rain/evap so slopes shed but channels + basin hold. Edges drain (no sea).
     let p = WaterParams {
@@ -66,10 +68,11 @@ fn main() {
         gravity: 9.81,
         dt: 0.15,
         pipe_area: cell * cell,
-        rain: 0.03,
-        evaporation: 0.0,
+        precip_rate: 0.03,
+        evaporation: 0.004,
         infiltration: 0.026, // ~87% soaks in; the excess concentrates into rivers
         sea_level: None,
+        ..Default::default()
     };
 
     println!("vivarium water spike — seed {seed:#x}, {nx}×{nx}, {steps} steps\n");

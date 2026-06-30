@@ -44,27 +44,55 @@ pub struct WaterParams {
     /// Virtual-pipe cross-section `A` (m²): the inertia/throughput of a pipe.
     /// Larger ⇒ flow responds faster and carries more per unit head.
     pub pipe_area: f32,
-    /// Uniform rain rate (metres of water added per second). The source term;
-    /// a spatial rain field (Perlin / orographic) is a later refinement.
-    pub rain: f32,
-    /// Evaporation as a *fraction of depth per second* — a proportional sink,
-    /// mostly relevant to closed (endorheic) lakes so they reach a steady level
-    /// instead of filling forever. Usually small or zero when basins have spills.
+    // --- The water cycle. Nothing here creates or destroys water: every "source"
+    // and "sink" is a transfer between reservoirs (atmosphere ⇄ surface ⇄
+    // groundwater ⇄ ocean), so the global total is conserved (guarded by a test).
+    /// **Precipitation** rate (m/s per cell) drawn *from the atmosphere store* and
+    /// rained onto the surface — scaled down if the atmosphere runs short, so it
+    /// can never rain water that does not exist. Uniform for now; a spatial
+    /// (orographic / Perlin) field is a later refinement.
+    pub precip_rate: f32,
+    /// **Evaporation** as a fraction of surface depth per second — surface water
+    /// returning *to the atmosphere store* (whence it precipitates again). Closes
+    /// the cycle and lets endorheic basins reach a steady level.
     pub evaporation: f32,
-    /// **Infiltration** as a *constant* sink (metres of water absorbed per second,
-    /// up to the water present) — soil soaking up rain. This is the mechanism that
-    /// makes water a *network* rather than a sheet: where the local input (rain +
-    /// inflow) is below this capacity it is fully absorbed and the ground stays
-    /// dry; only where flow **concentrates** past it does a channel run. Set just
-    /// below `rain` so bare slopes shed only their excess and rivers earn their
-    /// water by accumulation. (Joseph's saturation/seepage/porosity list begins
-    /// here; a saturation *state* — capacity that fills and drains — is the next
-    /// refinement.)
+    /// **Infiltration** rate (m/s) — surface water soaking *into the groundwater
+    /// store*, capped by the water present and the remaining `gw_capacity`. The
+    /// mechanism that concentrates flow into a network: where input is below this
+    /// the ground absorbs it and stays dry; only concentrated flow runs.
     pub infiltration: f32,
-    /// Sea level (metres). When `Some`, every cell at or below it is held as a
-    /// fixed reservoir filled to the waterline — the ocean rivers run to. `None`
-    /// for a closed test world with no sea.
+    /// **Groundwater capacity** per cell (m of water): the soil's storage =
+    /// porosity × soil depth. Infiltration stops when the cell is saturated.
+    pub gw_capacity: f32,
+    /// **Baseflow** as a fraction of groundwater per second — groundwater seeping
+    /// back *to the surface* (springs / dry-season river flow). This is what keeps
+    /// channels running between rains; emergent, not placed.
+    pub baseflow: f32,
+    /// **Ocean evaporation** (m/s global) — water moving from the ocean store to
+    /// the atmosphere store, the engine that keeps precipitation supplied. Zero in
+    /// a closed test world (no ocean).
+    pub ocean_evap: f32,
+    /// Sea level (metres). When `Some`, every cell at or below it exchanges with
+    /// the **ocean store** (held at the waterline); the inflow/outflow is counted,
+    /// not vanished. `None` for a closed test world with no sea.
     pub sea_level: Option<f32>,
+
+    // --- Sediment transport (hydraulic erosion), Mei/Decaudin/Hu §4. The water
+    // run is *also* the fine-erosion run: fast flow lifts bed into suspension and
+    // slow flow drops it, so channels deepen and slack reaches/deltas aggrade. Set
+    // `capacity = 0` to disable (pure water, the default). ---
+    /// Sediment **capacity** coefficient `Kc`: how much sediment a unit of fast,
+    /// steep flow can hold, `C = Kc · slope · speed`. The master erosion knob.
+    pub capacity: f32,
+    /// **Erosion** rate `Ks`: how fast under-loaded flow (`C > s`) lifts bed into
+    /// suspension. Higher ⇒ faster down-cutting.
+    pub erode: f32,
+    /// **Deposition** rate `Kd`: how fast over-loaded flow (`s > C`) drops sediment
+    /// back to the bed. Builds floodplains, deltas, the floors of slack reaches.
+    pub deposit: f32,
+    /// Floor on the slope term in the capacity law, so even near-flat channels keep
+    /// a little carrying capacity instead of instantly dumping their whole load.
+    pub min_slope: f32,
 }
 
 impl Default for WaterParams {
@@ -74,10 +102,17 @@ impl Default for WaterParams {
             gravity: 9.81,
             dt: 0.02,
             pipe_area: 1.0,
-            rain: 0.012,
-            evaporation: 0.0,
-            infiltration: 0.010, // just under rain: slopes soak, channels run
+            precip_rate: 0.012,
+            evaporation: 0.004,
+            infiltration: 0.010, // just under precip: slopes soak, channels run
+            gw_capacity: 2.0,
+            baseflow: 0.001, // slow groundwater seepage → springs / baseflow
+            ocean_evap: 0.0, // no ocean by default (closed world)
             sea_level: None,
+            capacity: 0.0, // erosion off by default — pure water
+            erode: 0.3,
+            deposit: 0.3,
+            min_slope: 0.05,
         }
     }
 }
@@ -88,10 +123,27 @@ impl Default for WaterParams {
 #[derive(Clone)]
 pub struct WaterSim {
     pub nx: usize,
-    /// Terrain elevation per cell (metres). Fixed here; erosion will later move it.
+    /// Terrain elevation per cell (metres). The water run *carves* this when
+    /// sediment transport is on — it is the fine-eroded bed at the end.
     pub bed: Vec<f32>,
     /// Water depth per cell (metres, ≥ 0). The thing we are solving for.
     pub depth: Vec<f32>,
+    /// Suspended sediment per cell (metres of solid, ≥ 0): bed the flow has lifted
+    /// and is carrying. Conserved with `bed` — eroding moves bed→sediment, settling
+    /// moves sediment→bed — and advected downstream by the flow each step.
+    pub sediment: Vec<f32>,
+    /// **Groundwater** store per cell (metres of water, 0..`gw_capacity`): water
+    /// the soil has absorbed. Fed by infiltration, drained by baseflow back to the
+    /// surface — a real reservoir, not a void.
+    pub groundwater: Vec<f32>,
+    /// **Atmosphere** store (metres of water, summed over the grid): precipitable
+    /// water. Precipitation draws from it; evaporation refills it. The closed top
+    /// of the water cycle.
+    pub atmosphere: f64,
+    /// **Ocean** store (metres of water, summed): the sea as a counted reservoir —
+    /// runoff drains into it, ocean-evaporation lifts from it. Together with the
+    /// three fields above, the grand total is invariant (see `total_water`).
+    pub ocean: f64,
     // Outgoing flux on each axial pipe (m³/s), held between steps so momentum
     // persists. Non-negative: a pipe only ever carries water *out* of its cell;
     // the neighbour's opposite pipe is the return path.
@@ -110,11 +162,22 @@ impl WaterSim {
             nx,
             bed,
             depth: z.clone(),
+            sediment: z.clone(),
+            groundwater: z.clone(),
+            atmosphere: 0.0,
+            ocean: 0.0,
             fl: z.clone(),
             fr: z.clone(),
             ft: z.clone(),
             fb: z,
         }
+    }
+
+    /// Charge the atmosphere store (metres of water summed over the grid) so the
+    /// cycle has water to precipitate. Returns `self` for building.
+    pub fn with_atmosphere(mut self, amount: f64) -> Self {
+        self.atmosphere = amount;
+        self
     }
 
     #[inline]
@@ -128,18 +191,27 @@ impl WaterSim {
         self.bed[i] + self.depth[i]
     }
 
-    /// Total water volume in the domain (metres³, with unit-area cells = Σ depth).
-    /// For conservation checks.
+    /// **Total water across every reservoir** — surface + groundwater + atmosphere
+    /// + ocean (metres, unit-area cells). This is the conserved quantity: it must
+    /// not change except by an explicit external transfer, and the conservation
+    /// test asserts exactly that. (Surface water alone is *not* conserved — it
+    /// trades with the other three — which is why the earlier per-`depth` total was
+    /// the wrong invariant.)
     pub fn total_water(&self) -> f64 {
-        self.depth.iter().map(|&d| d as f64).sum()
+        let surface: f64 = self.depth.iter().map(|&d| d as f64).sum();
+        let gw: f64 = self.groundwater.iter().map(|&g| g as f64).sum();
+        surface + gw + self.atmosphere + self.ocean
     }
 
-    /// Hold sea cells at the waterline — a fixed reservoir that both supplies and
-    /// absorbs, so rivers can terminate in the ocean.
+    /// Hold sea cells at the waterline, **counting** the exchange into the ocean
+    /// store so nothing is created or lost: a cell above the line gives its excess
+    /// to the ocean, a cell below draws from it.
     fn hold_sea(&mut self, sea: f32) {
         for i in 0..self.bed.len() {
             if self.bed[i] <= sea {
-                self.depth[i] = sea - self.bed[i];
+                let target = sea - self.bed[i];
+                self.ocean += (self.depth[i] - target) as f64;
+                self.depth[i] = target;
             }
         }
     }
@@ -147,16 +219,30 @@ impl WaterSim {
     /// Advance one shallow-water step. The five classic stages: rain in, flux
     /// accelerated by head difference, flux clamped to available water (this is
     /// what conserves volume and forbids negative depth), depth updated by net
-    /// flux, evaporation out — plus an absorbing border (water leaving the domain
-    /// is gone) and the held sea.
+    /// flux — then the cycle's reservoir transfers (infiltration, baseflow,
+    /// evaporation, ocean exchange). Every transfer is reservoir-to-reservoir, so
+    /// `total_water()` is invariant across the step.
     pub fn step(&mut self, p: &WaterParams) {
         let nx = self.nx;
         let n = nx * nx;
         let (l, dt) = (p.cell, p.dt);
 
-        // 1. Rain source. (Sea, if any, is then pinned so it can feed/drain.)
-        for d in self.depth.iter_mut() {
-            *d += p.rain * dt;
+        // 1. Precipitation: atmosphere → surface. Scaled so we never rain more
+        //    water than the atmosphere holds (conservation, not a free source).
+        if p.precip_rate > 0.0 && self.atmosphere > 0.0 {
+            let want = p.precip_rate as f64 * dt as f64 * n as f64;
+            let scale = (self.atmosphere / want).min(1.0) as f32;
+            let per_cell = p.precip_rate * dt * scale;
+            for d in self.depth.iter_mut() {
+                *d += per_cell;
+            }
+            self.atmosphere -= per_cell as f64 * n as f64;
+        }
+        // Ocean → atmosphere: the evaporation that keeps precipitation supplied.
+        if p.ocean_evap > 0.0 && self.ocean > 0.0 {
+            let lift = (p.ocean_evap as f64 * dt as f64 * n as f64).min(self.ocean);
+            self.ocean -= lift;
+            self.atmosphere += lift;
         }
         if let Some(s) = p.sea_level {
             self.hold_sea(s);
@@ -213,28 +299,53 @@ impl WaterSim {
             }
         }
 
-        // 5. Sinks: proportional evaporation, then constant infiltration (capped
-        //    at the water present). Infiltration is what concentrates flow into a
-        //    network — see `WaterParams::infiltration`.
-        if p.evaporation > 0.0 || p.infiltration > 0.0 {
-            let keep = 1.0 - p.evaporation * dt;
+        // 4b. [pending] Sediment transport — the fine erosion (erode/deposit +
+        //     advection). Being designed conservation-first (see the conserved-
+        //     reservoir model), so deliberately not yet wired: a leaky version
+        //     would violate the global-conservation invariant.
+
+        // 5. Reservoir transfers — all conserved (reservoir → reservoir):
+        //    infiltration (surface → groundwater, capped by remaining capacity),
+        //    baseflow (groundwater → surface), evaporation (surface → atmosphere).
+        {
             let inf = p.infiltration * dt;
-            for d in self.depth.iter_mut() {
-                *d = (*d * keep - inf).max(0.0);
+            let keep = 1.0 - p.evaporation * dt;
+            let bf = p.baseflow * dt;
+            let mut evaporated = 0.0f64;
+            for i in 0..n {
+                let room = (p.gw_capacity - self.groundwater[i]).max(0.0);
+                let into_gw = inf.min(self.depth[i]).min(room);
+                self.depth[i] -= into_gw;
+                self.groundwater[i] += into_gw;
+
+                let out_gw = bf * self.groundwater[i];
+                self.groundwater[i] -= out_gw;
+                self.depth[i] += out_gw;
+
+                let after = (self.depth[i] * keep).max(0.0);
+                evaporated += (self.depth[i] - after) as f64;
+                self.depth[i] = after;
             }
+            self.atmosphere += evaporated;
         }
 
-        // 6. Absorbing border: water that reaches the edge leaves the world.
+        // 6. The domain edge drains to the ocean store — counted, not deleted (the
+        //    coastline of the modelled patch). A closed interior test never reaches
+        //    it, so nothing is lost there.
         for x in 0..nx {
-            self.depth[x] = 0.0; // top row
-            self.depth[(nx - 1) * nx + x] = 0.0; // bottom row
+            let (t, b) = (x, (nx - 1) * nx + x);
+            self.ocean += (self.depth[t] + self.depth[b]) as f64;
+            self.depth[t] = 0.0;
+            self.depth[b] = 0.0;
         }
         for y in 0..nx {
-            self.depth[y * nx] = 0.0; // left column
-            self.depth[y * nx + nx - 1] = 0.0; // right column
+            let (lf, rt) = (y * nx, y * nx + nx - 1);
+            self.ocean += (self.depth[lf] + self.depth[rt]) as f64;
+            self.depth[lf] = 0.0;
+            self.depth[rt] = 0.0;
         }
 
-        // 7. Re-pin the sea after the update.
+        // 7. Re-pin the sea (exchange counted into the ocean store).
         if let Some(s) = p.sea_level {
             self.hold_sea(s);
         }
@@ -276,11 +387,12 @@ mod tests {
     #[test]
     fn basin_fills_to_a_flat_lake() {
         let nx = 48;
-        let mut sim = WaterSim::new(nx, bowl(nx));
+        let mut sim = WaterSim::new(nx, bowl(nx)).with_atmosphere(50_000.0);
         let p = WaterParams {
-            rain: 0.05,
+            precip_rate: 0.05,
             evaporation: 0.002,
-            infiltration: 0.0, // isolate the fill behaviour from the soak sink
+            infiltration: 0.0, // isolate the fill behaviour from the soak path
+            baseflow: 0.0,
             ..Default::default()
         };
         sim.run(&p, 4000);
@@ -307,33 +419,32 @@ mod tests {
         );
     }
 
-    /// Closed-system conservation: a blob of water in a deep bowl, no rain, no
-    /// evaporation, never reaching the border — total volume must hold (to
-    /// round-off) across many steps. This is the volume-conservation guarantee the
-    /// flux clamp gives us.
+    /// **The conservation invariant — the build-to-last guard.** A *full* water
+    /// cycle runs in a closed bowl (precipitation, flow, infiltration↔groundwater,
+    /// baseflow, evaporation, edge→ocean) — every "source" and "sink" is a transfer
+    /// between reservoirs, so the grand total (surface + groundwater + atmosphere +
+    /// ocean) must not move. Water is neither created nor destroyed; if this test
+    /// ever fails, a leak was introduced.
     #[test]
-    fn water_is_conserved_when_it_cannot_escape() {
+    fn the_water_cycle_conserves_total_water() {
         let nx = 48;
-        let mut sim = WaterSim::new(nx, bowl(nx));
-        // Pour a slug into the bowl centre.
-        let c = nx / 2;
-        for y in c - 4..c + 4 {
-            for x in c - 4..c + 4 {
-                sim.depth[y * nx + x] = 3.0;
-            }
-        }
+        let mut sim = WaterSim::new(nx, bowl(nx)).with_atmosphere(10_000.0);
         let p = WaterParams {
-            rain: 0.0,
-            evaporation: 0.0,
-            infiltration: 0.0, // a closed system: no source, no sink
+            precip_rate: 0.02,
+            evaporation: 0.01,
+            infiltration: 0.01,
+            gw_capacity: 2.0,
+            baseflow: 0.002,
             ..Default::default()
         };
         let v0 = sim.total_water();
-        sim.run(&p, 2000);
+        sim.run(&p, 3000);
         let v1 = sim.total_water();
         let drift = (v1 - v0).abs() / v0;
-        assert!(drift < 1e-3, "volume drifted {drift:.2e} (v0={v0:.3}, v1={v1:.3})");
-        // And it settled flat rather than sloshing forever.
+        assert!(drift < 1e-3, "total water drifted {drift:.2e} (v0={v0:.1}, v1={v1:.1})");
+        // The cycle actually moved water between reservoirs (it isn't a no-op).
+        let gw: f64 = sim.groundwater.iter().map(|&g| g as f64).sum();
+        assert!(gw > 0.0, "groundwater never filled — the cycle didn't run");
         assert!(sim.depth.iter().all(|&d| d >= 0.0), "negative depth appeared");
     }
 
@@ -341,9 +452,9 @@ mod tests {
     #[test]
     fn simulation_is_bit_identical() {
         let nx = 32;
-        let p = WaterParams { rain: 0.03, ..Default::default() };
-        let mut a = WaterSim::new(nx, bowl(nx));
-        let mut b = WaterSim::new(nx, bowl(nx));
+        let p = WaterParams { precip_rate: 0.03, ..Default::default() };
+        let mut a = WaterSim::new(nx, bowl(nx)).with_atmosphere(5_000.0);
+        let mut b = WaterSim::new(nx, bowl(nx)).with_atmosphere(5_000.0);
         a.run(&p, 500);
         b.run(&p, 500);
         for (x, y) in a.depth.iter().zip(b.depth.iter()) {

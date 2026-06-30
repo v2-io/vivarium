@@ -172,11 +172,18 @@ struct ErodedSurface {
     water_cell_m: f32,
     /// Water-grid edge length in nodes.
     water_nx: usize,
-    /// Per-node **water depth** in metres (≥ 0) on the water grid, the quasi-steady
-    /// snapshot of the [`crate::hydro`] shallow-water simulation. The water
-    /// *surface* is `bed + depth`; 0 means dry. Bilinearly sampled — safe because
-    /// dry is a true 0, so interpolation never smears a sentinel.
+    /// Per-node **water depth** in metres (≥ 0) on the water grid, from the
+    /// [`crate::hydro`] sim. Used only as the *wet mask* (depth ≥ threshold ⇒
+    /// render water here); safe to bilinearly sample since dry is a true 0.
     depth_m: Vec<f32>,
+    /// Per-node **water-surface elevation** `bed + depth` in metres on the water
+    /// grid — the level the water actually stands at. This is what the renderer
+    /// uses for the waterline, **not** `terrain_bed + depth`: in a lake the sim's
+    /// surface is flat, so sampling it directly gives a flat lake, whereas adding a
+    /// coarse depth back onto the fine terrain bed would drape the water over every
+    /// sub-grid bump (the dome/staircase bug). In dry cells it equals the coarse
+    /// bed, harmless because the depth mask gates them out.
+    water_surf_m: Vec<f32>,
 }
 
 impl ErodedSurface {
@@ -225,6 +232,20 @@ impl ErodedSurface {
             zm,
         );
         d * (1.0 - self.exterior_t(xm, zm))
+    }
+
+    /// Bilinearly sampled water-*surface* elevation (metres) on the water grid (see
+    /// [`Self::water_surf_m`]). The flat level a lake stands at; gated by
+    /// [`Self::water_depth`] so it only renders where there is actually water.
+    fn water_surface(&self, xm: f32, zm: f32) -> f32 {
+        sample_grid_bilinear(
+            &self.water_surf_m,
+            self.water_nx,
+            self.x0_m,
+            self.water_cell_m,
+            xm,
+            zm,
+        )
     }
 
     /// Shared bilinear sampler over a row-major `nx·nx` grid, clamped to the edge.
@@ -431,15 +452,24 @@ impl Volume {
             gravity: 9.81,
             dt: 0.01 * water_cell, // ~CFL: scales with cell size
             pipe_area: water_cell * water_cell,
-            rain: 0.03,
-            evaporation: 0.0,
-            infiltration: 0.026, // just under rain → slopes soak, channels run
+            precip_rate: 0.03,
+            evaporation: 0.004,
+            infiltration: 0.026, // just under precip → slopes soak, channels run
             sea_level: Some(SEA_LEVEL as f32),
+            ..Default::default() // erosion off for now; groundwater/ocean defaults
         };
         // Steps ~ a few domain crossings so channels reach the outlets; capped.
         let steps = (water_nx as u32 * 14).clamp(800, 6000);
-        let mut sim = crate::hydro::WaterSim::new(water_nx, water_bed);
+        // Charge the atmosphere so the cycle has water to rain (≈ precip budget for
+        // the whole run, summed over cells).
+        let atm = wp.precip_rate as f64 * wp.dt as f64 * steps as f64 * (water_nx * water_nx) as f64;
+        let mut sim = crate::hydro::WaterSim::new(water_nx, water_bed).with_atmosphere(atm * 1.5);
         sim.run(&wp, steps);
+        // Surface elevation = the sim's own bed + depth, kept on the water grid so
+        // it stays flat across a lake. (Reconstructing it from the fine terrain bed
+        // at render time is what draped the water — see `water_surf_m`.)
+        let water_surf_m: Vec<f32> =
+            sim.bed.iter().zip(&sim.depth).map(|(&b, &d)| b + d).collect();
         let depth_m = sim.depth;
 
         v.eroded = Some(ErodedSurface {
@@ -452,6 +482,7 @@ impl Volume {
             water_cell_m: water_cell,
             water_nx,
             depth_m,
+            water_surf_m,
         });
         v
     }
@@ -564,11 +595,11 @@ impl Volume {
             // and leaves only channels and pools.
             return sea;
         }
-        // Surface = the *smooth* eroded bed + depth, not the noisy terrain_height:
-        // roughness is damped to ~0 on channels and floors, so the two agree where
-        // water lives, and sampling the smooth bed keeps the surface flat where the
-        // sub-grid noise would otherwise ripple it into a false chop.
-        let surf_m = e.sample(xm, zm) + depth;
+        // The level is the sim's own flat water surface — NOT terrain_bed + depth,
+        // which would drape the water over sub-grid terrain bumps. A terrain bump
+        // poking above this level simply becomes an island (terrain_height > wl, so
+        // `generated` renders no water in that column).
+        let surf_m = e.water_surface(xm, zm);
         sea.max((surf_m * d).round() as i32)
     }
 
