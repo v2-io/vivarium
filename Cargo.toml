@@ -9,13 +9,13 @@
 # wrong.
 [workspace]
 resolver = "2"
-members = ["crates/vivarium-core", "crates/vivarium-app", "spikes/bevy-voxel", "spikes/bevy-iso", "spikes/iso-tiles", "archive/vivarium-godot"]
+members = ["crates/vivarium-core", "crates/vivarium-app", "spikes/bevy-voxel", "spikes/bevy-iso", "archive/vivarium-godot"]
 # The Godot voxel-view spike chose Bevy (see spikes/FINDINGS.md) and is archived.
 # Its gdext bridge is *temporarily revived* as a member so the current geology tier
 # can be viewed through Godot — the archived bridge predated the erosion stack and
 # only ever showed raw-FBM terrain. The Godot project dir (archive/godot-voxel) is
 # not a cargo crate; the rest of archive/ stays out of the build via this exclude.
-exclude = ["archive/godot-voxel"]
+exclude = ["archive/godot-voxel", "archive/iso-tiles"]
 
 [workspace.package]
 edition = "2021"

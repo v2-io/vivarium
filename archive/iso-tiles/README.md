@@ -1,3 +1,15 @@
+# vivarium-iso-tiles — ARCHIVED (2026-06-30)
+
+> **Retired.** The memoization thesis held (cost independent of world size, tile
+> vocabulary in the hundreds), but a smoothed heightfield-tile look was a
+> **non-starter aesthetically** — "neither fun nor interesting" (Joseph). Kept for
+> the record. The successor renders *real voxel cubes* in an ortho-iso camera and
+> lets the engine do the work (no custom LOD/memoization). What survives from here:
+> the worldgen cache (now in the Godot path), the iso projection + 8-orientation
+> math, and the pawn-marker idea.
+
+---
+
 # vivarium-iso-tiles
 
 A memoized-tile **isometric navigator** over `vivarium-core` — the strategic/map

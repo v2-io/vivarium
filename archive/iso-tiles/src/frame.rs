@@ -51,20 +51,12 @@ pub fn make_framebuffer(images: &mut Assets<Image>, w: usize, h: usize) -> Frame
     Framebuffer { handle, w, h }
 }
 
-/// One drawable, collected before sorting (we cannot hold a cache borrow while
-/// sorting, so keys are gathered first, then rasterised/drawn in depth order).
+/// One drawable terrain cell, collected before sorting (we cannot hold a cache
+/// borrow while sorting, so keys are gathered first, then rasterised in depth order).
 struct Item {
     depth: f32,
     anchor: Vec2,
-    draw: Draw,
-}
-
-enum Draw {
-    /// A memoized terrain tile.
-    Tile(crate::tile::TileKey),
-    /// The pivot/avatar marker — a real ~2 m block standing on the focus cell,
-    /// depth-sorted with the terrain so relief occludes it correctly.
-    Marker,
+    key: crate::tile::TileKey,
 }
 
 pub fn rebuild_framebuffer(
@@ -149,16 +141,9 @@ pub fn rebuild_framebuffer(
                 continue;
             }
             let depth = proj.depth(cxf, czf);
-            items.push(Item { depth, anchor, draw: Draw::Tile(key) });
+            items.push(Item { depth, anchor, key });
         }
     }
-    // The marker block, depth-sorted with the terrain. Slightly nearer than its own
-    // cell (−0.01) so it draws just after that cell's tile (on top of it).
-    items.push(Item {
-        depth: proj.depth(focus_cell.x, focus_cell.y) - 0.01,
-        anchor: Vec2::ZERO,
-        draw: Draw::Marker,
-    });
     // Painter's order: farthest (largest depth) first so nearer tiles draw over.
     items.sort_by(|a, b| b.depth.partial_cmp(&a.depth).unwrap_or(std::cmp::Ordering::Equal));
 
@@ -167,31 +152,21 @@ pub fn rebuild_framebuffer(
     for px in frame.chunks_exact_mut(4) {
         px.copy_from_slice(&SKY);
     }
-    // Marker geometry: a fixed ~2 m footprint × ~2 m tall block sitting on the
-    // focus cell's (banded) surface — a world-space object, not a screen overlay.
+    for it in &items {
+        let tile = get_or_raster(&mut cache.0, it.key, &proj, world.sea_level);
+        blit(&mut frame, fb.w, fb.h, tile, it.anchor);
+    }
+
+    // The marker is drawn LAST, on top of the terrain. A per-cell painter's order
+    // cannot correctly occlude a TALL object — a nearer-but-lower tile would clip
+    // across the pawn (the jagged occlusion Joseph saw). Since the pawn is the
+    // user's orientation anchor, always-visible is the right call; it is still a
+    // real 3D block sitting on the focus cell's (banded) surface.
     let cell_m = stride as f32 / world.detail as f32;
     let half_foot_cells = (MARKER_FOOT_M / cell_m) * 0.5;
     let marker_h_vox = MARKER_TALL_M * world.detail as f32;
     let marker_base = crate::tile::banded_height_vox(nav.focus_h_vox as i32);
-
-    for it in &items {
-        match it.draw {
-            Draw::Tile(key) => {
-                let tile = get_or_raster(&mut cache.0, key, &proj, world.sea_level);
-                blit(&mut frame, fb.w, fb.h, tile, it.anchor);
-            }
-            Draw::Marker => draw_marker_block(
-                &mut frame,
-                fb.w,
-                fb.h,
-                &proj,
-                focus_cell,
-                half_foot_cells,
-                marker_base,
-                marker_h_vox,
-            ),
-        }
-    }
+    draw_marker_block(&mut frame, fb.w, fb.h, &proj, focus_cell, half_foot_cells, marker_base, marker_h_vox);
 
     // --- Upload. ---
     if let Some(img) = images.get_mut(&fb.handle) {

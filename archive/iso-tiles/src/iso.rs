@@ -13,14 +13,21 @@ use bevy::math::Vec2;
 /// Number of discrete orientations (45° apart).
 pub const N_ORIENT: u8 = 8;
 
-/// Depth-axis foreshortening for a 2:1 isometric (ground "into the screen" moves
-/// half as fast vertically as "across").
-const ISO_Y: f32 = 0.5;
+/// Depth-axis foreshortening. 0.5 is classic 2:1 isometric; HIGHER is more
+/// top-down (the ground recedes more vertically, tops read as a plan-view grid);
+/// 1.0 is straight-down. Default leans top-down — far more readable than the
+/// oblique 2:1 for a map navigator. Live-tunable via VIVARIUM_ISO_Y.
+const ISO_Y_DEFAULT: f32 = 0.82;
 
-/// Vertical exaggeration: screen pixels of *up* per metre of terrain height,
-/// expressed as a fraction of the horizontal pixels-per-metre. 0.5 keeps cube
-/// proportions honest for the 2:1 diamond; a touch more reads as nicer relief.
-const HEIGHT_VE: f32 = 0.6;
+/// Vertical exaggeration: screen px of *up* per metre of terrain height, as a
+/// fraction of horizontal px/metre. Lower = gentler relief (and shorter, cleaner
+/// column risers — less "cutting into the mountainside"). Live-tunable via
+/// VIVARIUM_HEIGHT_VE.
+const HEIGHT_VE_DEFAULT: f32 = 0.3;
+
+fn env_f32(key: &str, default: f32) -> f32 {
+    std::env::var(key).ok().and_then(|s| s.parse().ok()).unwrap_or(default)
+}
 
 /// A discrete zoom level: how many voxels one map cell spans (the LOD stride) and
 /// how many screen pixels one world metre occupies across the screen.
@@ -80,19 +87,24 @@ impl Projector {
         let (s, c) = yaw.sin_cos();
         let cell_m = zoom.stride_vox as f32 / detail as f32;
         let pm = zoom.px_per_m;
+        let iso_y = env_f32("VIVARIUM_ISO_Y", ISO_Y_DEFAULT);
+        let height_ve = env_f32("VIVARIUM_HEIGHT_VE", HEIGHT_VE_DEFAULT);
+        // Put the focus in the lower third of the screen (not dead centre), so most
+        // of the view is the terrain *ahead* — the RTS/colony-sim convention.
+        let origin_frac = env_f32("VIVARIUM_ORIGIN_Y", 0.68);
         // +cx step: world (+cell_m, 0) rotated by yaw, projected. Image space is
         // y-DOWN, and depth (into the screen) must read as *up* the screen, so the
-        // depth-axis (ISO_Y) contribution is negated.
-        let ex = Vec2::new(cell_m * c * pm, -cell_m * s * pm * ISO_Y);
+        // depth-axis (iso_y) contribution is negated.
+        let ex = Vec2::new(cell_m * c * pm, -cell_m * s * pm * iso_y);
         // +cz step: world (0, +cell_m) rotated by yaw, projected.
-        let ez = Vec2::new(cell_m * -s * pm, -cell_m * c * pm * ISO_Y);
+        let ez = Vec2::new(cell_m * -s * pm, -cell_m * c * pm * iso_y);
         // Height: up on screen (negative y). Metres = 1/detail per voxel.
-        let hy = -(1.0 / detail as f32) * pm * HEIGHT_VE;
+        let hy = -(1.0 / detail as f32) * pm * height_ve;
         Self {
             ex,
             ez,
             hy,
-            origin: screen * 0.5,
+            origin: Vec2::new(screen.x * 0.5, screen.y * origin_frac),
             fx: focus_cell.x,
             fz: focus_cell.y,
             focus_h_vox,

@@ -17,8 +17,10 @@ use bevy::math::Vec2;
 
 /// Voxels per height band. Heights are quantized to bands before keying — this is
 /// neworld's hard `/45` quantization, the thing that bounds the tile vocabulary.
-/// At detail 2, 6 voxels = 3 m steps.
-pub const BAND_VOX: i32 = 6;
+/// Coarser bands read as distinct terraces/plateaus (calmer, more legible, more
+/// neworld-like) and shrink the vocabulary; finer bands read as a busy faceted
+/// mesh. At detail 2, 12 voxels = 6 m steps.
+pub const BAND_VOX: i32 = 12;
 
 /// Neighbour slope deltas (in bands) are clamped to ±this for the key. Real terrain
 /// is locally smooth, so this rarely bites; it caps the worst-case key space.
