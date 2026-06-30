@@ -93,6 +93,13 @@ pub struct WaterParams {
     /// Floor on the slope term in the capacity law, so even near-flat channels keep
     /// a little carrying capacity instead of instantly dumping their whole load.
     pub min_slope: f32,
+    /// **Angle of repose** as a max stable bed slope (rise/run): material steeper
+    /// than this slumps to its lower neighbours each step (thermal erosion / talus),
+    /// mass-conserving. This is what stops deposition spikes and erosion pits from
+    /// growing without bound — a stable hydraulic-erosion model needs it. `0`
+    /// disables. Set high enough (~steep) that it caps thin towers without
+    /// flattening real mountain flanks.
+    pub repose: f32,
 }
 
 impl Default for WaterParams {
@@ -113,6 +120,7 @@ impl Default for WaterParams {
             erode: 0.3,
             deposit: 0.3,
             min_slope: 0.05,
+            repose: 1.2, // ~50° max stable slope; caps spikes, allows steep flanks
         }
     }
 }
@@ -401,9 +409,12 @@ impl WaterSim {
                 let i = y * nx + x;
                 let d = self.depth[i];
                 if d <= eps {
-                    // Dry ground can carry nothing — drop the whole load.
-                    self.bed[i] += self.sediment[i];
-                    self.sediment[i] = 0.0;
+                    // Dry ground can carry nothing, but *settle gradually* — dumping
+                    // the whole suspended load at once builds vertical spikes where
+                    // a cell flickers wet/dry. Deposit at the normal rate instead.
+                    let amt = p.deposit * self.sediment[i];
+                    self.bed[i] += amt;
+                    self.sediment[i] -= amt;
                     continue;
                 }
                 // Flow speed from the net pipe flux through the cell (Mei §4).
@@ -497,6 +508,48 @@ impl WaterSim {
         }
         for i in 0..n {
             self.sediment[i] = (self.sediment[i] + delta[i]).max(0.0);
+        }
+
+        // --- Talus / thermal erosion: bed steeper than the angle of repose slumps
+        //     toward its steepest-downhill neighbour (mass-conserving). This is what
+        //     keeps deposition spikes and erosion pits from growing without bound —
+        //     they collapse back to a stable slope over a few steps. ---
+        if p.repose > 0.0 {
+            const NB: [(i32, i32); 8] = [
+                (-1, 0), (1, 0), (0, -1), (0, 1),
+                (-1, -1), (1, -1), (-1, 1), (1, 1),
+            ];
+            let diag = l * std::f32::consts::SQRT_2;
+            let mut dz = vec![0.0f32; n];
+            for y in 0..nx {
+                for x in 0..nx {
+                    let i = y * nx + x;
+                    let bi = self.bed[i];
+                    // Steepest-descent neighbour and its excess over the repose slope.
+                    let (mut best_j, mut best_excess) = (i, 0.0f32);
+                    for (dx, dy) in NB {
+                        let (nx_, ny_) = (x as i32 + dx, y as i32 + dy);
+                        if nx_ < 0 || ny_ < 0 || nx_ >= nx as i32 || ny_ >= nx as i32 {
+                            continue;
+                        }
+                        let j = ny_ as usize * nx + nx_ as usize;
+                        let dist = if dx != 0 && dy != 0 { diag } else { l };
+                        let excess = (bi - self.bed[j]) - p.repose * dist;
+                        if excess > best_excess {
+                            best_excess = excess;
+                            best_j = j;
+                        }
+                    }
+                    if best_j != i {
+                        let m = 0.5 * best_excess; // under-relax: converges over steps
+                        dz[i] -= m;
+                        dz[best_j] += m;
+                    }
+                }
+            }
+            for i in 0..n {
+                self.bed[i] += dz[i];
+            }
         }
     }
 
