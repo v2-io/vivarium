@@ -107,6 +107,10 @@ struct WaterMsg {
     froude: (f32, f32),
     /// Weather right now: (raining, seconds until it changes — ∞ while settling).
     weather: (bool, f32),
+    /// While settling: (the plateau target the per-burst delta must fall to
+    /// = 0.15 × filling-phase peak, seconds left before the 6000 sim-s cap).
+    /// Honest progress instead of a bare "SETTLING" (Joseph).
+    settle: Option<(f32, f32)>,
 }
 
 /// Nominal years per erosion epoch — a stated calibration constant (the epoch is
@@ -118,9 +122,20 @@ struct TierRx(Mutex<std::sync::mpsc::Receiver<TierMsg>>);
 struct WaterRx(Mutex<std::sync::mpsc::Receiver<WaterMsg>>);
 #[derive(Resource, Default)]
 struct WaterRes(Option<WaterRegion>);
-/// (last update, sim-s/wall-s, mean |Δdepth| m, total sim-s, settling?)
+/// The water worker's latest vitals, for the HUD.
+struct WaterStat {
+    at: std::time::Instant,
+    rate: f32,
+    delta_m: f32,
+    total_ss: f32,
+    settling: bool,
+    froude: (f32, f32),
+    weather: (bool, f32),
+    settle: Option<(f32, f32)>,
+}
+
 #[derive(Resource, Default)]
-struct WaterMeta(Option<(std::time::Instant, f32, f32, f32, bool, (f32, f32), (bool, f32))>);
+struct WaterMeta(Option<WaterStat>);
 
 /// Wall-clock + maturity metadata per tier level (a VIEW concern — the world
 /// crate stays wall-clock-free): (level, last update, total epochs, aging speed
@@ -207,7 +222,6 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
     let fine_total = fine_epochs * fine_passes;
     let f21 = view.focus * 2f64.powi(21 - view.level as i32);
     const CADENCE: std::time::Duration = std::time::Duration::from_millis(500);
-    const SUBSTEPS: u32 = 40;
 
     std::thread::spawn(move || {
         let mut tiers = base;
@@ -348,7 +362,8 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
                 let ph = sim_total % (storm_on + storm_off);
                 if ph < storm_on { (true, storm_on - ph) } else { (false, storm_on + storm_off - ph) }
             };
-            if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * dt, delta_m: delta_mean, settling, froude: w.froude(), weather }).is_err() {
+            let settle_info = if settling { Some((0.15 * delta_peak, (6000.0 - sim_total).max(0.0))) } else { None };
+            if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * dt, delta_m: delta_mean, settling, froude: w.froude(), weather, settle: settle_info }).is_err() {
                 return;
             }
             // Write the carved bed back to the L21 tier (block-mean downsample
@@ -532,6 +547,7 @@ fn spawn_telescope(
                         settling: false,
                         froude: w.froude(),
                         weather: (true, f32::INFINITY),
+                        settle: None,
                     };
                     if wtx.send(msg).is_err() {
                         return;
@@ -602,9 +618,18 @@ fn water_update(rx: Res<WaterRx>, mut water: ResMut<WaterRes>, mut meta: ResMut<
         newest = Some(msg);
     }
     if let Some(msg) = newest {
-        let rate = meta.0.map(|(at, ..)| sim_s / at.elapsed().as_secs_f32().max(1e-3)).unwrap_or(0.0);
-        let total = meta.0.map(|(_, _, _, t, _, _, _)| t).unwrap_or(0.0) + sim_s;
-        meta.0 = Some((std::time::Instant::now(), rate, msg.delta_m, total, msg.settling, msg.froude, msg.weather));
+        let rate = meta.0.as_ref().map(|w| sim_s / w.at.elapsed().as_secs_f32().max(1e-3)).unwrap_or(0.0);
+        let total = meta.0.as_ref().map(|w| w.total_ss).unwrap_or(0.0) + sim_s;
+        meta.0 = Some(WaterStat {
+            at: std::time::Instant::now(),
+            rate,
+            delta_m: msg.delta_m,
+            total_ss: total,
+            settling: msg.settling,
+            froude: msg.froude,
+            weather: msg.weather,
+            settle: msg.settle,
+        });
         water.0 = Some(msg.region);
         ts.water_dirty = true; // water-only refresh; no throttle — every state shows
     }
@@ -668,7 +693,11 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "vivarium — worldview (cube-sphere frame)".into(),
+                title: if std::env::var_os("VIVARIUM_AUTOSHOT").is_some() {
+                    "[autoshot] vivarium — worldview (verification run)".into()
+                } else {
+                    "vivarium — worldview (cube-sphere frame)".into()
+                },
                 resolution: bevy::window::WindowResolution::new(1280, 720),
                 ..default()
             }),
@@ -843,6 +872,34 @@ struct HudText;
 
 #[derive(Component)]
 struct ModeText;
+
+/// A value slot in the HUD table (see the layout in `setup`).
+#[derive(Component)]
+struct HudSlot(u16);
+
+#[derive(Component)]
+struct LegendText;
+
+/// Present ONLY in VIVARIUM_AUTOSHOT runs: tells a human who wanders in whose
+/// window this is and what touching it does (input only moves the camera —
+/// the sim is untouched; it just reframes the capture).
+#[derive(Component)]
+struct AutoshotBanner;
+
+const LEGEND: &str = "\
+legend                                            [H] hide
+fps/gen    frame rate / terrain mesh rebuild cost (ms)
+place      face + level, cell size, window ground-width, focus cell
+L19/L21    erosion tiers: epochs run, aging speed (y/s), d = relief change/epoch
+ss  s/s    water sim-seconds total / sim-seconds per wall-second
+d mm       mean |depth change| per burst - the convergence gauge
+Fr a/b%    Froude v/sqrt(g*d): <1 tranquil, >1 rushing, ~2 = breaking cap
+           a = max on grid (thin cells overread), b% = share supercritical
+settling   deluge to steady state: current d -> target (0.15 x peak), cap left
+pawn row   water at the pawn: depth, flow speed, local Fr, suspended load,
+           alluvium (loose settled bed), seal (pores plugged by fines)
+modes [T]  normal > tiers (fidelity tint) > water (+pawn hydrology, flow arrow)
+           > float (pawn drifts with the current)";
 #[derive(Component)]
 struct ScaleBar;
 #[derive(Component)]
@@ -917,13 +974,71 @@ fn setup(mut commands: Commands, view: Res<View>, mut meshes: ResMut<Assets<Mesh
     ));
     commands.insert_resource(GlobalAmbientLight { color: SKY, brightness: 190.0, affects_lightmapped_meshes: true });
 
+    // The HUD is a table of fixed slots: static labels (dim) + value spans
+    // (ink) that FLASH briefly when a value changes after being stable — the
+    // `watch -d` idea as an instrument, self-muting for per-frame counters.
+    let font = TextFont { font_size: 15.0, ..default() };
+    let ink = TextColor(Color::srgb(0.08, 0.09, 0.10));
+    let dim = TextColor(Color::srgb(0.36, 0.38, 0.40));
+    // (label-before, slot-id) pairs; a trailing label closes each row.
+    let layout: &[(&str, Option<u16>)] = &[
+        ("worldview  fps ", Some(0)), ("  gen ", Some(1)), ("\n", None),
+        ("place   ", Some(2)), ("  cell ", Some(3)), ("  window ", Some(4)), ("  at ", Some(5)), ("\n", None),
+        ("view    facing ", Some(6)), ("  angle ", Some(7)), ("  zoom ", Some(8)), ("  vert ", Some(9)), ("\n", None),
+        ("land    elev ", Some(10)), ("  relief ", Some(11)), ("  age ", Some(12)), ("\n", None),
+        ("sim     ", Some(13)), ("", Some(14)), ("", Some(15)), ("\n", None),
+        ("water   ", Some(16)), ("", Some(17)), ("", Some(18)), ("", Some(19)), ("", Some(20)), ("\n", None),
+        ("", Some(21)), ("", Some(22)), ("", Some(23)), ("", Some(24)), ("", Some(25)), ("", Some(26)), ("", Some(27)),
+    ];
+    commands
+        .spawn((
+            Text::new(""),
+            font.clone(),
+            ink,
+            Node { position_type: PositionType::Absolute, top: Val::Px(8.0), left: Val::Px(10.0), padding: UiRect::all(Val::Px(6.0)), ..default() },
+            BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.2)),
+            HudText,
+        ))
+        .with_children(|p| {
+            for (label, slot) in layout {
+                if !label.is_empty() {
+                    p.spawn((TextSpan::new(label.replace("\\n", "\n")), font.clone(), dim));
+                }
+                if let Some(id) = slot {
+                    p.spawn((TextSpan::new(""), font.clone(), ink, HudSlot(*id)));
+                }
+            }
+        });
+    if std::env::var_os("VIVARIUM_AUTOSHOT").is_some() {
+        commands
+            .spawn((Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(210.0),
+                left: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                ..default()
+            },))
+            .with_children(|p| {
+                p.spawn((
+                    Text::new("AUTOSHOT VERIFICATION"),
+                    TextFont { font_size: 16.0, ..default() },
+                    TextColor(Color::srgb(0.12, 0.07, 0.0)),
+                    Node { padding: UiRect::all(Val::Px(8.0)), ..default() },
+                    BackgroundColor(Color::srgba(1.0, 0.72, 0.18, 0.88)),
+                    AutoshotBanner,
+                ));
+            });
+    }
+
+    // Legend ([H] toggles) — the key that explains the instruments.
     commands.spawn((
-        Text::new("…"),
-        TextFont { font_size: 15.0, ..default() },
-        TextColor(Color::srgb(0.08, 0.09, 0.10)),
-        Node { position_type: PositionType::Absolute, top: Val::Px(8.0), left: Val::Px(10.0), padding: UiRect::all(Val::Px(6.0)), ..default() },
-        BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.2)),
-        HudText,
+        Text::new(LEGEND),
+        TextFont { font_size: 14.0, ..default() },
+        ink,
+        Node { position_type: PositionType::Absolute, top: Val::Px(150.0), left: Val::Px(10.0), padding: UiRect::all(Val::Px(6.0)), display: Display::None, ..default() },
+        BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.28)),
+        LegendText,
     ));
     commands.spawn((
         Text::new("mode: normal"),
@@ -950,7 +1065,7 @@ fn setup(mut commands: Commands, view: Res<View>, mut meshes: ResMut<Assets<Mesh
         ScaleLabel,
     ));
 
-    println!("[worldview] WASD pan · wheel zoom · Q/E rotate · K/J angle · Y auto-angle · [ ] sampling level");
+    println!("[worldview] WASD pan · wheel zoom · Q/E rotate · K/J angle · Y auto-angle · [ ] sampling level · T mode · H legend");
 }
 
 /// Keep the scale bar honest: pick the 1/2/5×10ᵏ length nearest ~220 px at the
@@ -1014,7 +1129,7 @@ fn view_update(
             if let (Some(d), Some((vx, vy))) = (wr.depth_m(c), wr.velocity_m_s(c)) {
                 if d > 0.05 && (vx != 0.0 || vy != 0.0) {
                     use vivarium_world::noise::hash01;
-                    let rate = wmeta.0.map(|(_, r, ..)| r).unwrap_or(1.0).clamp(0.0, 30.0) as f64;
+                    let rate = wmeta.0.as_ref().map(|w| w.rate).unwrap_or(1.0).clamp(0.0, 30.0) as f64;
                     let wob = (hash01(13, (view.focus.x * 4.0) as i64, (view.focus.y * 4.0) as i64) - 0.5) * 0.9;
                     let (sw, cw) = wob.sin_cos();
                     let (rx, ry) = (vx * cw - vy * sw, vx * sw + vy * cw);
@@ -1167,7 +1282,7 @@ fn sampled_height(view: &View, ts: &TerrainState, fi: f64, fj: f64) -> Option<f3
 /// Height (m above sea, un-exaggerated) under the focus.
 /// Flow arrow above the pawn (Water/Float modes): direction = local current,
 /// length = normalized speed. Drawn above the water surface when submerged.
-fn flow_arrow(view: Res<View>, ts: Res<TerrainState>, water: Res<WaterRes>, pawn: Query<&Transform, With<Pawn>>, mut gizmos: Gizmos) {
+fn flow_arrow(view: Res<View>, _ts: Res<TerrainState>, water: Res<WaterRes>, pawn: Query<&Transform, With<Pawn>>, mut gizmos: Gizmos) {
     if !matches!(view.mode, ViewMode::Water | ViewMode::Float) {
         return;
     }
@@ -1552,30 +1667,60 @@ fn compass(yaw: f32) -> &'static str {
     L[(((deg + 22.5) / 45.0) as usize) % 8]
 }
 
-fn hud_update(view: Res<View>, ts: Res<TerrainState>, meta: Res<TierMeta>, wmeta: Res<WaterMeta>, water: Res<WaterRes>, eroded: Res<Eroded>, diag: Res<bevy::diagnostic::DiagnosticsStore>, mut q: Query<&mut Text, (With<HudText>, Without<ModeText>)>, mut mq: Query<&mut Text, (With<ModeText>, Without<HudText>)>) {
+fn hud_update(
+    time: Res<Time>,
+    keys: Res<ButtonInput<KeyCode>>,
+    view: Res<View>,
+    ts: Res<TerrainState>,
+    meta: Res<TierMeta>,
+    wmeta: Res<WaterMeta>,
+    water: Res<WaterRes>,
+    eroded: Res<Eroded>,
+    diag: Res<bevy::diagnostic::DiagnosticsStore>,
+    mut spans: Query<(&HudSlot, &mut TextSpan, &mut TextColor)>,
+    mut mq: Query<&mut Text, With<ModeText>>,
+    mut legend: Query<&mut Node, With<LegendText>>,
+    mut hist: Local<std::collections::HashMap<u16, (String, f64, f64)>>,
+) {
+    if keys.just_pressed(KeyCode::KeyH) {
+        if let Ok(mut n) = legend.single_mut() {
+            n.display = if n.display == Display::None { Display::Flex } else { Display::None };
+        }
+    }
+    // Top-right: mode + weather + (autoshot countdown when scripted).
     if let Ok(mut mt) = mq.single_mut() {
-        let weather = wmeta.0.map(|(.., w)| w);
-        let wx = match weather {
-            Some((true, left)) if left.is_infinite() => "  ··· deluge".to_string(),
-            Some((true, left)) => format!("  🌧 rain {left:.0}s"),
-            Some((false, left)) => format!("  ☀ clear {left:.0}s"),
+        let wx = match wmeta.0.as_ref().map(|w| w.weather) {
+            Some((true, left)) if left.is_infinite() => "   deluge".to_string(),
+            Some((true, left)) => format!("   rain {left:.0}s"),
+            Some((false, left)) => format!("   clear {left:.0}s"),
             None => String::new(),
         };
-        **mt = format!("[T] mode: {}{wx}", view.mode.name());
+        **mt = format!("[T] {}{wx}   [H] legend", view.mode.name());
     }
+
+    // ---- values, one string per slot (fixed widths keep the table aligned) ----
+    let mut vals: Vec<String> = vec![String::new(); 28];
     let fps = diag.get(&bevy::diagnostic::FrameTimeDiagnosticsPlugin::FPS).and_then(|d| d.smoothed()).unwrap_or(0.0);
+    vals[0] = format!("{fps:<4.0}");
+    vals[1] = format!("{:<7}", format!("{:.0} ms", ts.gen_ms));
     let cell = view.cell_m();
     let span_m = view.w as f64 * cell;
-    let span_txt = if span_m >= 2000.0 { format!("{:.0} km", span_m / 1000.0) } else { format!("{span_m:.0} m") };
-    let cell_txt = if cell >= 2.0 { format!("{cell:.0} m") } else { format!("{:.1} m", cell) };
-    let elev = height_at_focus(&view, &ts);
-    // Sim-age of the visible window: probe corners + centre, map each to its
-    // covering tier's last-update age; anything uncovered = the raw prior.
+    vals[2] = format!("{:?} L{}", view.face, view.level);
+    vals[3] = format!("{:<7}", if cell >= 2.0 { format!("{cell:.0} m") } else { format!("{cell:.1} m") });
+    vals[4] = format!("{:<8}", if span_m >= 2000.0 { format!("{:.1} km", span_m / 1000.0) } else { format!("{span_m:.0} m") });
+    vals[5] = format!("({:.0}, {:.0})", view.focus.x, view.focus.y);
+    vals[6] = format!("{:<2}", compass(view.yaw_target));
+    vals[7] = format!("{:<6}", format!("{:.0} deg", view.pitch.to_degrees()));
+    vals[8] = format!("{:<7}", format!("{:.0} m", view.zoom));
+    vals[9] = format!("{:.1}", view.vert);
+    vals[10] = format!("{:<7}", format!("{:.0} m", height_at_focus(&view, &ts)));
+    vals[11] = format!("{:<14}", format!("{:.0}..{:.0} m", ts.h_min, ts.h_max));
+    // Sim-age of the visible window: probe corners + centre against tier ages.
     let (mut newest, mut oldest, mut prior_seen) = (f32::INFINITY, 0.0f32, false);
     let wm1 = (view.w - 1) as u32;
     for (px, py) in [(0, 0), (wm1, 0), (0, wm1), (wm1, wm1), (wm1 / 2, wm1 / 2)] {
-        let cell = CellId::from_face_ij(view.face, ts.origin.0 + px, ts.origin.1 + py, ts.built_level.min(25));
-        match erosion::tier_at(cell, &eroded.0) {
+        let c = CellId::from_face_ij(view.face, ts.origin.0 + px, ts.origin.1 + py, ts.built_level.min(25));
+        match erosion::tier_at(c, &eroded.0) {
             Some(l) => {
                 if let Some((_, at, ..)) = meta.0.iter().find(|(ml, ..)| *ml == l) {
                     let age = at.elapsed().as_secs_f32();
@@ -1586,67 +1731,109 @@ fn hud_update(view: Res<View>, ts: Res<TerrainState>, meta: Res<TierMeta>, wmeta
             None => prior_seen = true,
         }
     }
-    let sim_line = if meta.0.is_empty() {
-        "sim OFF".to_string()
+    vals[12] = if meta.0.is_empty() {
+        "-".into()
     } else {
-        let tiers: Vec<String> = meta
-            .0
-            .iter()
-            .map(|(l, _, e, rate, delta)| {
-                let d = if delta.is_finite() { format!(" d{:.0}cm", delta * 100.0) } else { String::new() };
-                if *rate > 0.0 { format!("L{l} {e}e ~{rate:.0}y/s{d}") } else { format!("L{l} {e}e{d}") }
-            })
-            .collect();
-        let newest_txt = if newest.is_finite() { format!("{newest:.1}s") } else { "-".into() };
-        let oldest_txt = if prior_seen { "prior(unsimulated)".to_string() } else { format!("{oldest:.0}s") };
-        let water_txt = wmeta
-            .0
-            .map(|(_, rate, delta, total, settling, (fr_max, fr_sup), _)| {
-                let phase = if settling { " SETTLING" } else { "" };
-                // Pawn-local hydrology (Joseph): everything about the water at
-                // the spot the pawn is standing, when it is standing in water.
-                let local = water.0.as_ref().filter(|_| matches!(view.mode, ViewMode::Water | ViewMode::Float)).and_then(|wr| {
-                    let c = CellId::from_face_ij(view.face, view.focus.x as u32, view.focus.y as u32, view.level);
-                    let d = wr.depth_m(c)?;
-                    if d < 0.005 {
-                        return None;
-                    }
-                    let v = wr.speed_m_s(c).unwrap_or(0.0);
-                    let fr = v / (9.8 * d).sqrt().max(1e-6);
-                    let susp = wr.suspended_m(c).unwrap_or(0.0);
-                    let sand = wr.sed_bed_m(c).unwrap_or(0.0);
-                    let seal = wr.colmation_at(c).unwrap_or(0.0);
-                    Some(format!("\nPAWN IN WATER  d {d:.2} m  v {v:.2} m/s  Fr {fr:.2}  susp {:.0} mm  alluvium {sand:.2} m  seal {:.0}%", susp * 1000.0, seal * 100.0))
-                }).unwrap_or_default();
-                format!("   W {total:.0}ss ~{rate:.1}s/s d{:.1}mm Fr{fr_max:.1}/{:.0}%{phase}{local}", delta * 1000.0, fr_sup * 100.0)
-            })
-            .unwrap_or_default();
-        format!("sim {}{water_txt}   screen newest {newest_txt} oldest {oldest_txt}{}", tiers.join("  "), if view.tier_debug { "   [T]int ON" } else { "" })
+        let n = if newest.is_finite() { format!("{newest:.1}s") } else { "-".into() };
+        let o = if prior_seen { "prior(unsimulated)".into() } else { format!("{oldest:.0}s") };
+        format!("{n}..{o}")
     };
-    if let Ok(mut text) = q.single_mut() {
-        text.0 = format!(
-            "worldview    {fps:>4.0} fps    gen {:.0} ms\n{:?}  L{}  cell {cell_txt}  window {span_txt}  relief {:.0}..{:.0} m\nfocus ({:.0}, {:.0})    elev {elev:.0} m\nfacing {}    angle {:.0} deg    zoom {:.0} m    vert {:.1}\n{sim_line}",
-            ts.gen_ms,
-            view.face,
-            view.level,
-            ts.h_min,
-            ts.h_max,
-            view.focus.x,
-            view.focus.y,
-            compass(view.yaw_target),
-            view.pitch.to_degrees(),
-            view.zoom,
-            view.vert,
-        );
+    for (k, (l, _, e, rate, delta)) in meta.0.iter().take(3).enumerate() {
+        let d = if delta.is_finite() { format!(" d{:.0}cm", delta * 100.0) } else { String::new() };
+        let chunk = if *rate > 0.0 { format!("L{l} {e}e ~{rate:.0}y/s{d}") } else { format!("L{l} {e}e{d}") };
+        vals[13 + k] = format!("{chunk:<29}");
+    }
+    if let Some(w) = wmeta.0.as_ref() {
+        vals[16] = format!("{:<10}", format!("{:.0} ss", w.total_ss));
+        vals[17] = format!("{:<11}", format!("~{:.1} s/s", w.rate));
+        vals[18] = format!("{:<11}", format!("d {:.1} mm", w.delta_m * 1000.0));
+        vals[19] = format!("{:<12}", format!("Fr {:.1}/{:.0}%", w.froude.0, w.froude.1 * 100.0));
+        vals[20] = match w.settle {
+            Some((target, cap_left)) => format!(
+                "SETTLING d{:.0}->{:.0}mm cap {:.0}ss",
+                w.delta_m * 1000.0,
+                target * 1000.0,
+                cap_left
+            ),
+            None if w.settling => "SETTLING".into(),
+            None => "living".into(),
+        };
+    } else {
+        vals[16] = "off".into();
+    }
+    // Pawn hydrology (Water/Float modes, when actually in water).
+    let pawn = water
+        .0
+        .as_ref()
+        .filter(|_| matches!(view.mode, ViewMode::Water | ViewMode::Float))
+        .and_then(|wr| {
+            let c = CellId::from_face_ij(view.face, view.focus.x as u32, view.focus.y as u32, view.level);
+            let d = wr.depth_m(c)?;
+            if d < 0.005 {
+                return None;
+            }
+            let v = wr.speed_m_s(c).unwrap_or(0.0);
+            Some((
+                d,
+                v,
+                v / (9.8 * d).sqrt().max(1e-6),
+                wr.suspended_m(c).unwrap_or(0.0),
+                wr.sed_bed_m(c).unwrap_or(0.0),
+                wr.colmation_at(c).unwrap_or(0.0),
+            ))
+        });
+    if let Some((d, v, fr, susp, sand, seal)) = pawn {
+        vals[21] = "pawn    ".into();
+        vals[22] = format!("{:<10}", format!("d {d:.2} m"));
+        vals[23] = format!("{:<11}", format!("v {v:.2} m/s"));
+        vals[24] = format!("{:<10}", format!("Fr {fr:.2}"));
+        vals[25] = format!("{:<12}", format!("susp {:.0} mm", susp * 1000.0));
+        vals[26] = format!("{:<14}", format!("alluv {sand:.2} m"));
+        vals[27] = format!("seal {:.0}%", seal * 100.0);
+    }
+
+    // ---- apply to spans, flashing values that changed after being stable ----
+    let now = time.elapsed_secs_f64();
+    const INK: (f32, f32, f32) = (0.08, 0.09, 0.10);
+    const FLASH: (f32, f32, f32) = (0.82, 0.16, 0.04);
+    for (slot, mut span, mut color) in spans.iter_mut() {
+        let s = &vals[slot.0 as usize];
+        let st = hist.entry(slot.0).or_insert_with(|| (String::new(), now, 0.0));
+        if &st.0 != s {
+            // Flash only when the previous value had HELD ≥1 s — per-frame
+            // counters (fps, streaming ss) self-mute; real transitions pop.
+            if now - st.1 > 1.0 {
+                st.2 = now + 0.8;
+            }
+            st.1 = now;
+            st.0 = s.clone();
+            span.0 = s.clone();
+        }
+        let t = ((st.2 - now) / 0.8).clamp(0.0, 1.0) as f32;
+        *color = TextColor(Color::srgb(
+            INK.0 + (FLASH.0 - INK.0) * t,
+            INK.1 + (FLASH.1 - INK.1) * t,
+            INK.2 + (FLASH.2 - INK.2) * t,
+        ));
     }
 }
 
-fn maybe_screenshot(time: Res<Time>, mut commands: Commands, mut shot: Local<bool>, mut exit: MessageWriter<AppExit>) {
+fn maybe_screenshot(time: Res<Time>, mut commands: Commands, mut shot: Local<bool>, mut exit: MessageWriter<AppExit>, mut banner: Query<&mut Text, With<AutoshotBanner>>) {
     if std::env::var_os("VIVARIUM_AUTOSHOT").is_none() {
         return;
     }
     let t = time.elapsed_secs();
     let settle: f32 = std::env::var("VIVARIUM_SETTLE").ok().and_then(|s| s.parse().ok()).unwrap_or(2.5);
+    if let Ok(mut b) = banner.single_mut() {
+        **b = if *shot {
+            "AUTOSHOT VERIFICATION   |   shot saved - safe to close or play".to_string()
+        } else {
+            format!(
+                "AUTOSHOT VERIFICATION   |   screenshot in {:.0}s   |   input only moves the camera (reframes the capture)",
+                (settle - t).max(0.0)
+            )
+        };
+    }
     if t > settle && !*shot {
         let path = PathBuf::from("/tmp/vivarium_worldview_shot.png");
         eprintln!("[worldview] SHOT_PATH={}", path.display());
