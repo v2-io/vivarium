@@ -131,7 +131,10 @@ fn build_tier0(view: &View) -> Vec<ErodedRegion> {
         return Vec::new();
     }
     const SIM_LEVEL: u8 = 19; // ~19 m cells (core ran 16 m)
-    let nx: usize = std::env::var("VIVARIUM_ERODE_NX").ok().and_then(|s| s.parse().ok()).unwrap_or(512);
+    // 256 ≈ 4.9 km world: settles to the full river network in minutes (the
+    // whole pipeline scales ~cells²·substeps — 512 ≈ 9.8 km takes tens of
+    // minutes to settle; grow it deliberately via env).
+    let nx: usize = std::env::var("VIVARIUM_ERODE_NX").ok().and_then(|s| s.parse().ok()).unwrap_or(256);
     let scale = 2f64.powi(SIM_LEVEL as i32 - view.level as i32);
     let (ci, cj) = ((view.focus.x * scale) as u32, (view.focus.y * scale) as u32);
     let t = std::time::Instant::now();
@@ -272,6 +275,7 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
         }
         let mut w = WaterSim::new(face, wl, (woi, woj), wnx, cell, wbed, atmos_m);
         let mut sim_total: f32 = 0.0;
+        let (mut prev_delta, mut plateau_bursts) = (0.0f32, 0u32);
         // Phase 3a — THE OLD ENGINE'S RECIPE: deluge to steady state with
         // sediment OFF (core's deliberate kill-switch, used for its final look),
         // so the river network and lakes FILL and equilibrate first. Hands off to
@@ -283,11 +287,13 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
             // aim ~8 sim-s per burst, capped so deep basins can't stall the loop.
             let dt = w.stable_dt(9.8);
             let substeps: u32 = ((8.0 / dt) as u32).clamp(1, 400);
-            // Settling: continuous rain, no sediment. Living: storms + sediment.
+            // Settling: DELUGE (core's recipe — the rain fudge exists to reach
+            // steady state fast), no sediment. Living: the user's rain + storms.
             let phase = sim_total % (storm_on + storm_off);
             let raining = settling || storm_off <= 0.0 || phase < storm_on;
+            let mult = if settling { rain_mult.max(60.0) } else { rain_mult };
             let wp = WaterParams {
-                precip: if raining { WaterParams::default().precip * rain_mult } else { 0.0 },
+                precip: if raining { WaterParams::default().precip * mult } else { 0.0 },
                 sed_capacity: if settling { 0.0 } else { WaterParams::default().sed_capacity },
                 dt,
                 ..Default::default()
@@ -299,9 +305,20 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
             }
             let delta: f64 = w.depth.iter().zip(before.iter()).map(|(a, b)| (a - b).abs() as f64).sum();
             let delta_mean = (delta / before.len() as f64) as f32;
-            if settling && sim_total > 600.0 && (delta_mean < 0.002 || sim_total > 6000.0) {
-                settling = false;
-                eprintln!("[worldview] water settled at {sim_total:.0} sim-s (d {:.1} mm) — living phase (storms + sediment)", delta_mean * 1000.0);
+            // PLATEAU detection (Joseph): settled = the differential has stopped
+            // decreasing (< 3% improvement per burst, sustained), not an absolute
+            // magic threshold. Cap at 6000 sim-s regardless.
+            if settling {
+                if prev_delta > 0.0 && delta_mean > prev_delta * 0.97 {
+                    plateau_bursts += 1;
+                } else {
+                    plateau_bursts = 0;
+                }
+                prev_delta = delta_mean;
+                if sim_total > 400.0 && (plateau_bursts >= 5 || sim_total > 6000.0) {
+                    settling = false;
+                    eprintln!("[worldview] water settled at {sim_total:.0} sim-s (d {:.1} mm, plateaued) — living phase (storms + sediment)", delta_mean * 1000.0);
+                }
             }
             if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * dt, delta_m: delta_mean }).is_err() {
                 return;
