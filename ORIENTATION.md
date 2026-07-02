@@ -33,7 +33,11 @@ and `DESIGN.md`.
   (CellId→Column baseline; **two-band prior**: continents λ~1250 km ±1500 m +
   mountains λ~25 km modulated by continental height — slope is what makes terrain
   read, measured 9%/36% mean/max) · `chunk` (Cartesian `Patch<T>` + halo — the
-  stencil substrate) · `erosion` (hillslope diffusion — **the port has begun**) ·
+  stencil substrate) · `erosion` (**the fluvial pipeline, ported from core**:
+  Priority-Flood fill → D8 receivers → MFD drainage → implicit stream-power n=1 →
+  Davy-Lague deposition → talus; plus `ErodedRegion` sampling — bilinear + the
+  detail increment — and `column_at`, the ladder dispatch; `examples/erosion_preview`
+  is the ASCII instrument) ·
   `sample` (face region → height/water field patches for views). The foundation
   generates a world of columns on the sphere, runs a real erosion stencil on
   materialized patches, and renders through its own view (`spikes/worldview`).
@@ -72,12 +76,13 @@ and `DESIGN.md`.
 `column` · `noise` · `gen` · `chunk` (Patch + halo). **Erosion port begun**:
 hillslope diffusion (`erosion::diffuse`) runs on a Patch. Remaining, in order:
 
-0. **Erosion, next increments** (`ref/erosion-port/NOTES.md`): **stream-power
-   fluvial incision** (needs non-local *flow accumulation* over the patch — the
-   real work), **per-material erodibility** (differential erosion → Bryce), a
-   **column↔patch loader** (materialize `(b,d,r)` fields from `Column`s + fill
-   cross-face halos), then the **multirate water coupling** (§4) that keeps erosion
-   on during settling. Wire results back through `gen::column_from_surface`.
+0. **Erosion: LANDED** (fba5402) — worldview erodes a 9.8 km L19 region at
+   startup (~3 s) and shows dendritic valley networks at honest scale. Next
+   increments (`ref/erosion-port/NOTES.md`): per-material erodibility
+   (differential erosion → Bryce), the **hydrology settle** (streams/lakes as
+   water, not just carved beds) via the multirate coupling (§4, erosion stays ON),
+   **memoize the region to disk** (§13 store — kills both the 3 s startup and the
+   ~142 ms rebuilds; the gen-ms HUD is waiting), and region-edge blending (§7.1).
 1. `chunk.rs` — ✅ done (`Patch<T>` + halo, API driven by the erosion consumer).
 2. **Port erosion** as a *native frame tier*, feeding `gen::column_from_surface` —
    the fidelity ladder made real. **Bridge recommendation (confirm with Joseph):
