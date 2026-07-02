@@ -241,38 +241,70 @@ impl WaterSim {
         //    flow cross-section is depth × width, so df = dt·g·d̄·Δh), then apply
         //    Manning friction implicitly: f ← f / (1 + dt·g·n²·|v| / d̄^{4/3}).
         //    Border neighbours are treated as equal-surface (the edge hold drains).
+        // θ flux smoothing (de Almeida & Bates 2013): each pipe blends with its
+        // along-axis neighbours — the stand-in for the neglected momentum-
+        // advection term. Without it, a local-inertial scheme on steep slopes
+        // organises the flux field into travelling solitons decoupled from the
+        // depth field (Joseph's multi-metre blobs winding down channels, shape
+        // intact — probe-confirmed: Fr max 226, 75% cell-to-cell depth swings).
+        // In-place (Gauss–Seidel) sweep: slightly asymmetric, faster-damping.
+        let theta = 0.8f32;
+        for y in 0..nx {
+            for x in 1..nx - 1 {
+                let i = y * nx + x;
+                self.fl[i] = theta * self.fl[i] + (1.0 - theta) * 0.5 * (self.fl[i - 1] + self.fl[i + 1]);
+                self.fr[i] = theta * self.fr[i] + (1.0 - theta) * 0.5 * (self.fr[i - 1] + self.fr[i + 1]);
+            }
+        }
+        for y in 1..nx - 1 {
+            for x in 0..nx {
+                let i = y * nx + x;
+                self.ft[i] = theta * self.ft[i] + (1.0 - theta) * 0.5 * (self.ft[i - nx] + self.ft[i + nx]);
+                self.fb[i] = theta * self.fb[i] + (1.0 - theta) * 0.5 * (self.fb[i - nx] + self.fb[i + nx]);
+            }
+        }
+        // Conveyance depth is the FLOW DEPTH OVER THE SILL between the cells —
+        // max(surface) − max(bed) — not the average of the two depths. The
+        // average lets a deep cell shove mass over a rim its own surface does
+        // not clear ("gravity not leveling the blob out"), and computes friction
+        // on a depth the constriction doesn't have. Standard in the
+        // local-inertial literature (h_flow).
         #[inline]
-        fn pipe_step(f: f32, head: f32, dbar: f32, dt: f32, g: f32, n2g: f32, l: f32) -> f32 {
-            let dbar = dbar.max(1e-4);
-            let accel = (f + dt * g * dbar * head).max(0.0);
-            let v = accel / (dbar * l);
-            accel / (1.0 + dt * n2g * v / dbar.powf(4.0 / 3.0))
+        fn pipe_step(f: f32, eta_i: f32, eta_j: f32, b_i: f32, b_j: f32, dt: f32, g: f32, n2g: f32, l: f32) -> f32 {
+            let hflow = eta_i.max(eta_j) - b_i.max(b_j);
+            if hflow < 1e-4 {
+                return 0.0; // no conveyance over the sill
+            }
+            let accel = (f + dt * g * hflow * (eta_i - eta_j)).max(0.0);
+            let v = accel / (hflow * l);
+            let f = accel / (1.0 + dt * n2g * v / hflow.powf(4.0 / 3.0));
+            // Breaking limit: natural steep streams self-organise to Fr ≈ 1
+            // (Grant 1997) — surge fronts that outrun ~2× critical BREAK and
+            // shed momentum as turbulence. Without this loss the roll waves a
+            // deluge excites grow unbounded (Joseph's multi-metre travelling
+            // blobs; probe: near-dry gaps between 3 m lumps).
+            f.min(2.0 * (g * hflow).sqrt() * hflow * l)
         }
         let n2g = p.gravity * p.manning_n * p.manning_n;
         for y in 0..nx {
             for x in 0..nx {
                 let i = y * nx + x;
-                let s = self.bed[i] + self.depth[i];
-                let di = self.depth[i];
+                let (bi, eta_i) = (self.bed[i], self.bed[i] + self.depth[i]);
                 if x > 0 {
                     let j = i - 1;
-                    let head = s - (self.bed[j] + self.depth[j]);
-                    self.fl[i] = pipe_step(self.fl[i], head, 0.5 * (di + self.depth[j]), dt, p.gravity, n2g, l);
+                    self.fl[i] = pipe_step(self.fl[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n2g, l);
                 }
                 if x < nx - 1 {
                     let j = i + 1;
-                    let head = s - (self.bed[j] + self.depth[j]);
-                    self.fr[i] = pipe_step(self.fr[i], head, 0.5 * (di + self.depth[j]), dt, p.gravity, n2g, l);
+                    self.fr[i] = pipe_step(self.fr[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n2g, l);
                 }
                 if y > 0 {
                     let j = i - nx;
-                    let head = s - (self.bed[j] + self.depth[j]);
-                    self.ft[i] = pipe_step(self.ft[i], head, 0.5 * (di + self.depth[j]), dt, p.gravity, n2g, l);
+                    self.ft[i] = pipe_step(self.ft[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n2g, l);
                 }
                 if y < nx - 1 {
                     let j = i + nx;
-                    let head = s - (self.bed[j] + self.depth[j]);
-                    self.fb[i] = pipe_step(self.fb[i], head, 0.5 * (di + self.depth[j]), dt, p.gravity, n2g, l);
+                    self.fb[i] = pipe_step(self.fb[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n2g, l);
                 }
                 // Clamp: a cell cannot ship more water than it holds. THIS is
                 // the conservation/stability guarantee of the pipe method.
@@ -463,7 +495,10 @@ impl WaterSim {
                 continue;
             }
             wet += 1;
-            let v = (self.fl[i] + self.fr[i] + self.ft[i] + self.fb[i]) / (d * l);
+            // NET velocity vector (gross 4-pipe sum counts slosh as speed).
+            let vx = (self.fr[i] - self.fl[i]) / (d * l);
+            let vy = (self.fb[i] - self.ft[i]) / (d * l);
+            let v = (vx * vx + vy * vy).sqrt();
             let fr = v / (9.8 * d).sqrt();
             fmax = fmax.max(fr);
             if fr > 1.5 {
