@@ -464,16 +464,18 @@ fn spawn_telescope(
                     w.set_bed(l21.h.clone());
                 }
                 if let Some(w) = water.as_mut() {
-                    let wp = WaterParams { precip: WaterParams::default().precip * rain_mult, ..Default::default() };
+                    // CFL-adaptive, same as settle mode (deep water = fast waves).
+                    let wdt = w.stable_dt(9.8);
+                    let substeps: u32 = ((8.0 / wdt) as u32).clamp(1, 400);
+                    let wp = WaterParams { precip: WaterParams::default().precip * rain_mult, dt: wdt, ..Default::default() };
                     let before = w.depth.clone();
-                    const SUBSTEPS: u32 = 40;
-                    for _ in 0..SUBSTEPS {
+                    for _ in 0..substeps {
                         w.step(&wp);
                     }
                     let delta: f64 = w.depth.iter().zip(before.iter()).map(|(a, b)| (a - b).abs() as f64).sum();
                     let msg = WaterMsg {
                         region: w.to_region(),
-                        sim_seconds: SUBSTEPS as f32 * wp.dt,
+                        sim_seconds: substeps as f32 * wdt,
                         delta_m: (delta / before.len() as f64) as f32,
                     };
                     if wtx.send(msg).is_err() {
