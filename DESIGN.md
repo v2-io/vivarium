@@ -206,6 +206,11 @@ Bevy (Rust), for reasons specific to *this* project's axes, not graphics:
 
 ## Where things actually stand (2026-06-22)
 
+> **(2026-07-03) This and the following two sections are frozen history** — they
+> describe the pre-frame `vivarium-core`/slabs generation. Current ground truth
+> lives in [`ORIENTATION.md`](ORIENTATION.md); the elaborated design thinking in
+> `DESIGN-REDUX.md` / `DESIGN-MATERIAL.md` / `DESIGN-SYSTEMS.md`.
+
 - `vivarium-core`: a **deterministic 3D voxel world** — `seed + sparse edits` (no
   materialized array), Perlin/FBM terrain with emergent micro-relief, voxel
   resolution as a runtime `detail` knob, and **view-resolution decoupled from

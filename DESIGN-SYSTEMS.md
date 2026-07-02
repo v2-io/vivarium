@@ -21,12 +21,12 @@ conditions for fast responders).
 | **Volcanism / magmatism** | eruptions days–yr; provinces Myr | local–regional (10s–100s km) | med (features, ore, basalt) | hard | edifices + intrusions per hotspot/rift field | — |
 | **Glaciation / ice sheets** | 10–100 Kyr (Milankovitch) | continental | med–high (distinctive terrain) | hard | ice where temp<thr + simple flow → U-valleys, cirques, fjords, moraines | — |
 | **Weathering + pedogenesis** (soil) | 100s–10 Kyr | **local (per-column)** | **high** (soil for agents/farming; differential erosion) | hard (soil chemistry) | rate f(climate, rock, slope, time) → soil depth/type + differential hardness | — |
-| **Erosion / sediment** (fluvial + hillslope) | Kyr–Myr | local–regional | **very high** (valleys, canyons, deltas) | med–hard | stream-power + hillslope diffusion | **done ✓** |
+| **Erosion / sediment** (fluvial + hillslope) | Kyr–Myr | local–regional | **very high** (valleys, canyons, deltas) | med–hard | stream-power + hillslope diffusion | **crude rung ✓** |
 | **Karst / dissolution** (caves) | 10 Kyr–Myr | local | med (caves, gameplay) | med–hard | dissolution in carbonate + water table → cave networks, sinkholes | — |
 | **Hydrothermal / ore genesis** | Kyr–Myr | local | med (mining) | med | deposition where fluid + heat + host-rock meet → veins, deposits | — |
 | **Aeolian** (wind, dunes) | yr–Kyr | regional | med (deserts, dunes) | med | wind field deposition/erosion of loose material → dunes, loess | — |
 | **Coastal / sea-level** | erosion decades; eustatic Kyr | local–regional | med (beaches, cliffs, deltas) | med | wave erosion + sea level | partial (flat sea) |
-| **Hydrology** (surface + groundwater) | flow days–yr; drainage Kyr | watershed (10s–1000s km) | **high** (rivers, lakes) | hard (full hydrodynamics + groundwater) | flow accumulation + shallow-water | **done ✓** |
+| **Hydrology** (surface + groundwater) | flow days–yr; drainage Kyr | watershed (10s–1000s km) | **high** (rivers, lakes) | hard (full hydrodynamics + groundwater) | flow accumulation + shallow-water | **crude rung ✓** |
 | **Biomes** (high-level ecosystems) | shift centuries–millennia | regional–continental | **high** (biosphere character) | easy–med | Whittaker (temp × precip) → biome lookup | — |
 | **Ecosystems / vegetation** (succession) | succession yr–centuries | local–regional | **high** (visible flora, agent food) | med | biome → plant community + simple succession | — |
 | **Biogeochemical cycles** (C, N, P, O) | biotic days–yr; geologic Myr | local–global | med (fertility, productivity) | hard | nutrient pools per soil/biome | partial (soil params) |
@@ -83,3 +83,36 @@ present in quantities* + *systems run*.
 Each is a small recipe over the same substrate — which is the whole point of the
 stable property interface (`DESIGN-MATERIAL` §6): features are *compositions*, not
 new engines.
+
+## Fluvial ladder — named next rungs (Joseph, 2026-07-03; parentheses = processes rather than attributes)
+
+Within the erosion/hydrology rows above — physics we are knowingly not yet
+tracking, listed so the ladder is honest:
+
+- **Armoring** — winnowing of fines leaves a coarse surface lag that caps
+  incision; interface state (`DESIGN-MATERIAL` §5), the persistent partner of
+  the flow-seal.
+- **Colmation as part of the column** — live in the sim (2026-07-02); needs its
+  Column interface-state home (`DESIGN-MATERIAL` §5).
+- **Aggradation & transient debris flows** — bed *rise* when supply exceeds
+  capacity (we deposit, but no supply-driven regime shift); debris flows are the
+  high-concentration slurry regime — ties to the μ(I)/Paste rung
+  (`DESIGN-MATERIAL` §6).
+- **(Traction)** — bedload as a transport *mode* distinct from suspension
+  (rolls/slides along the bed, different capacity law, builds bars).
+- **(Better, finer-tuned bank erosion)** — lateral erosion from cross-channel
+  shear, distinct from bed incision.
+- **(→ meandering, oxbows, cutoffs)** — river/stream *evolution* on flatter
+  terrain; emerges from bank erosion + point-bar deposition, not from a
+  meander model.
+
+## Instruments (regime probes — see DESIGN-REDUX §2b)
+
+Every system rung ships with renderer-free probes asserting invariants nature
+guarantees in a known regime; known issues get their probe written FIRST
+(domain TDD). Current: `topo` (prior slope statistics), `spike_probe` (erosion
+spire instability), `channel_profile` (two-regime water: subcritical must be
+smooth). Wanted next: **the differential-aging ridge probe** — cross-seam
+slope/curvature continuity where adjacent regions have run different epoch
+counts (a physically-implausible ridge can develop along the boundary today);
+it would make seam quality measured, not anecdotal.

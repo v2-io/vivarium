@@ -54,6 +54,17 @@ Naming it once is the point: every LOD, precision, and cognitive-swap decision
 should cite this invariant and its "bounded deficiencies" clause, so consistency
 across tiers is designed in, not retrofitted (retrofitting it is brutal).
 
+**Co-fidelity corollary** *(added 2026-07-03, from the first live violation)*:
+the invariant as stated is coarse↔fine *within* one aspect. Its first violation
+in practice was *across* aspects: terrain painted to L24 detail while water
+simulated on the L21 bed — a consumer (the view) reading the two jointly
+manufactured artifacts the sim never contained (level pools shredded into
+"bubbles" at the painted-noise wavelength). The rule that resolved it:
+**detail must be earned, not decorated — the finest *simulated* tier is
+authoritative, and painted (coordinate-noise) detail yields to any simulated
+field that overlaps it.** All aspects queried at a place must be mutually
+consistent at the coarsest of their materialized resolutions.
+
 ---
 
 ## 2. When to be reductionist — and when you can't (three cases, not one)
@@ -76,6 +87,30 @@ hides which mechanism a given aspect needs:
 
 The interesting failures will cluster at (3): the model runs, looks plausible,
 and silently fails to reproduce the macro it replaced.
+
+### 2b. The reconciliation harness, concretized: regime probes *(added 2026-07-03, empirically grounded)*
+
+The harness case (3) demands existed for one day before proving itself. The
+2026-07-02 "travelling blob" hunt (multi-metre water solitons winding down
+channels) was won not by staring at the render but by an **instrument asserting
+a falsifiable physical invariant per flow regime**: *subcritical flow must be
+smooth* (`crates/vivarium-world/examples/channel_profile.rs`). The subcritical
+control passing acquitted the kernel's core; the supercritical case failing
+localized the bug to three missing physical terms (θ momentum-diffusion,
+sill-depth conveyance, Fr-capped breaking — de Almeida & Bates 2013; Grant
+1997). Siblings: `spike_probe` (erosion spire instability), `topo` (prior
+slope statistics).
+
+**The methodology (Joseph's TDD framing):** every aspect rung ships with
+**regime probes** — cheap, renderer-free instruments asserting invariants
+nature guarantees in a known regime — and **known issues get their probe
+written first**, then the physics is fixed until the probe passes. This is
+domain-level test-driven development, and it keeps us *strictly honest at the
+seams*, where artifacts hide best. First named seam invariant, currently
+failing in the wild: **the differential-aging ridge** — where localized erosion
+has run more epochs than an adjacent region, a physically-implausible ridge
+can develop along the boundary; a cross-seam slope/curvature-continuity probe
+makes that seam's quality measurable instead of anecdotal.
 
 ---
 
@@ -116,6 +151,15 @@ unvisited regions left young (fine, if never observed). Three regimes govern it:
   (fast-forward under the time-uniform global forcings), a bounded, memoizable
   temporal-LOD "pop." Reconciling the caught-up state with the *current* macro is
   the §5↔§6 **detail→abstract** problem — i.e. this regime *is* the open frontier.
+
+- **Equilibrium (attractor-seeking) local aspects** *(added 2026-07-03)* — a
+  fourth regime the water system forced: history-free *in principle* (steady
+  state is a function of the current macro + forcing) but the function is
+  **implicit** — it cannot be evaluated, only *relaxed to* (the settle-to-
+  steady-state phase, with plateau-detection on the per-step differential as
+  the convergence gate). Water surfaces, soil moisture, temperature profiles,
+  climax vegetation live here. Cheaper than history-dependent replay, dearer
+  than lazy evaluation — and it makes reversion nearly free (see §6).
 
 Temporally-different neighbours stay consistent because terrain is quasi-static on
 the lag timescale (the same multirate assumption): the lag just scales with
@@ -203,6 +247,14 @@ return.**
 
 So: **forget along the irreversible axis (time); conserve along the reversible
 axis (space).** The instinct was right; this is the reason.
+
+*(2026-07-03)* The §3 equilibrium regime sharpens the split: **attractor-seeking
+aspects are evictable almost for free** — their state regenerates by
+re-relaxation from the (kept) macro, no history required; only genuinely
+path-dependent aspects (erosion's carved record) need checkpoints. A living
+region the pawn left does not need "what the river did while we were gone"
+stored — re-settling against the absorbed bed *is* the honest regeneration,
+provided the macro received the sediment deltas (the §5↔§6 tie again).
 
 **The ratchet is real but slowable.** As irreducible residual accumulates
 (permanent structures, long-lived objects, history), the must-keep set grows
@@ -317,6 +369,11 @@ Where they would earn their keep here — and where plain `f32` is fine:
   cross-platform float concern).
 - **The interval-carrying macro cell (§5)** — the ubit *is* the "guaranteed vs.
   approximate" flag the seam needs.
+
+*(2026-07-03 — first §9-style call made in code before this section was adopted:
+the water sim keeps its conserved reservoirs in `f64`, field arrays in `f32`,
+with conservation asserted by test as the sentinel. Precision by consequence,
+practiced.)*
 
 The through-line: the ubit is the computational analog of the project's epistemic
 discipline — *mark the guess as a guess.* A world-model whose values know whether

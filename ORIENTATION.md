@@ -132,6 +132,9 @@ Everything else has prior art.
 ## Next directions (Joseph, 2026-07-02, end of the water night — verbatim intent)
 
 1. Suspension / sealing / deposition — deepen the sediment loop.
+   (Named rungs recorded in `DESIGN-SYSTEMS.md` §Fluvial ladder: armoring,
+   colmation-in-column, aggradation & debris flows, traction, bank erosion →
+   meandering/oxbows/cutoffs.)
 2. State of the column — what information do we now have column-wise?
    (Water adds per-cell: alluvium thickness, colmation, groundwater store,
    suspended load — vs DESIGN-MATERIAL's strata Column. Reconcile.)

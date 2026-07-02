@@ -120,6 +120,19 @@ Grouped by where each property lives; **(+)** = surfaced by the survey as missin
 - **erodibility** `K` and an **explicit incision threshold** **(+)** — stream power
   `I = K·Aᵐ·Sⁿ` above threshold, nothing below
 
+**Per-interface state** *(added 2026-07-03 — surfaced by the live water system;
+TENTATIVE placement)*: some state belongs to the **surface between water and the
+top stratum**, not to any stratum's bulk — the schema needs an explicit
+interface-state slot on the column. Known residents: **colmation** (0..1
+pore-plug fraction — persistent between storms until scour re-opens it; live in
+`water.rs` since 2026-07-02), **armoring** (winnowing of fines leaves a coarse
+surface lag that caps erosion — Joseph's list, not yet modeled), and later
+surface crusts and snowpack. The 2026-07-02 reconciliation mapping for the rest
+of the water state: alluvium thickness → a loose `Stratum` (deposition should
+literally create/thicken one); groundwater store → `Stratum::saturation`;
+suspended load → the water column; velocity → transient *aspect* state,
+correctly not Column data at all.
+
 **Per-stratum / per-column dynamic state** (time-varying):
 - **saturation / pore-water pressure** `u` — cuts strength via effective stress
   `σ′ = σ − u`; slope-parallel seepage ~halves the factor-of-safety (dominant
