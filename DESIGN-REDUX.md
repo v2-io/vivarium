@@ -155,9 +155,10 @@ unvisited regions left young (fine, if never observed). Three regimes govern it:
 - **Equilibrium (attractor-seeking) local aspects** *(added 2026-07-03)* — a
   fourth regime the water system forced: history-free *in principle* (steady
   state is a function of the current macro + forcing) but the function is
-  **implicit** — it cannot be evaluated, only *relaxed to* (the settle-to-
-  steady-state phase, with plateau-detection on the per-step differential as
-  the convergence gate). Water surfaces, soil moisture, temperature profiles,
+  **implicit** — often it can only be *relaxed to*; where a direct solve
+  exists, prefer it (first planned instance: the analytic hydrological
+  initialization replacing the deluge fill —
+  `ref/erosion-port/NOTES.md` §Next). Water surfaces, soil moisture, temperature profiles,
   climax vegetation live here. Cheaper than history-dependent replay, dearer
   than lazy evaluation — and it makes reversion nearly free (see §6).
 
@@ -499,6 +500,13 @@ Then swapping erosion-v1 (single hardness) for erosion-v2 (layered hardness)
 changes erosion's key ⇒ **its cached outputs and everything downstream invalidate;
 everything else stays cached. No more, no less.** Independent aspects are
 untouched; the rerun is minimal *by construction*.
+
+**Accelerated backends are rungs too** *(2026-07-03)*: a GPU implementation of
+a kernel is a swappable rung behind the same flux interface — with the CPU
+kernel kept forever as the *reference implementation* (canon for tests,
+replay, probes), backend identity in the recipe key (GPU bit-reproducibility
+is per-device, not universal), and agreement validated by probe within a
+written tolerance. Plan: `ref/research/water-parallelism.md`.
 
 **Correctness discipline (this is where it's actually hard):**
 - **The key must capture every input that affects the output** — upstream data,

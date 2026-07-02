@@ -87,3 +87,48 @@ beds (alluvium, colmation, armor) before the living phase begins.
 OPEN: discharge→A coupling into the erosion tiers (real flow driving stream
 power); watershed-boundary inflows (nested water grids); seams/persistence
 (§13 store) — the next session's agenda; per-material erodibility/permeability.
+
+## Next: analytic hydrological initialization (planned 2026-07-03; replaces the fill)
+
+*Intent, constraints, and shape — not a prescription. Whoever builds this will
+see things we can't from here.*
+
+**The realization (Joseph + the day's fill pain):** the deluge fill was never
+about which physics ran during it — it was a *time-integration through a false
+regime* to reach a state that is actually a **function, not a history**. The
+water distribution is an equilibrium aspect (`DESIGN-REDUX` §3, the 07-03
+amendment): steady state = f(terrain, climatological forcing). Functions get
+solved. Twenty minutes of unearthly rain (with either sediment switch state)
+was us evaluating that function by the most expensive and least honest method
+available.
+
+**The shape of the solve** — every piece already exists in the erosion tier:
+- Lakes: Priority-Flood with spill volumes (basins fill to their outlets).
+- Rivers: steady discharge from drainage area × MEAN living forcing (rain ×
+  storm duty cycle — the forcing the world will actually experience), then
+  Manning normal depth per reach — the live sim's own friction law, inverted.
+  Use the same slope-dependent (Jarrett) roughness or the estimate will
+  disagree with the sim it seeds.
+- Groundwater: recharge/baseflow balance, one line of algebra.
+- Interface state (the path-dependent part): handed over by the SLOW tier,
+  which already time-integrated the eons — alluvium where Davy–Lague
+  net-deposited, armor where stream-power net-incised, colmation from
+  equilibrium fines flux in channels. This is §4's multirate contract done
+  properly: slow provides time-averaged state to fast; fast never fudges eons.
+- Then a SHORT true relaxation (~a minute of sim-time) from the analytic seed,
+  because the estimates are estimates. Cache the result: "an ordinary morning
+  of year zero." Live + storms from second one, every launch.
+
+**What dies:** the deluge, the FILLING phase, the plateau detector, the fill's
+compressed-clock geomorphic work (which sealed/washed the whole world in a
+regime that never existed). **What keeps us honest:** a new regime probe —
+*the analytic seed must be near-stationary under the live sim* (small
+per-burst delta from step one). If the seed drifts hard, the solver and the
+sim disagree about equilibrium, and that disagreement is a finding, not a
+nuisance.
+
+**Known unknowns:** closed-basin lake levels want an evaporation balance, not
+just spill; braided/multi-thread reaches violate the single-normal-depth
+assumption (probably fine at 4.8 m cells; check); how much interface-state
+detail the slow tier can honestly claim to know (alluvium yes, colmation is
+shakier — mark exactness accordingly, §9).

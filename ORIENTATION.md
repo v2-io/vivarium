@@ -152,6 +152,13 @@ Landed, all probe- or screenshot-verified (details in the commit log):
   seam fix), `velocity_histogram` (two-regime fingerprint), `channel_profile`
   (+sediment regimes). Hex grid: considered & declined (DESIGN-MATERIAL §8).
 
+**Two plans written 2026-07-03, waiting for their builders:** the analytic
+hydrological initialization that deletes the deluge fill entirely
+(`ref/erosion-port/NOTES.md` §Next — solve the equilibrium, seed the sim,
+brief relaxation, cache "an ordinary morning of year zero"), and the water
+parallelism path (`ref/research/water-parallelism.md` — gather rewrite →
+rayon 5–8× → wgpu compute 20–40×, with the CPU-reference determinism policy).
+
 ## Next directions (Joseph, 2026-07-02, end of the water night — verbatim intent)
 
 1. Suspension / sealing / deposition — deepen the sediment loop.
