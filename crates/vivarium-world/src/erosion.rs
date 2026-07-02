@@ -171,6 +171,9 @@ pub struct Fluvial {
     pub origin: (u32, u32),
     /// Cached per-cell uplift weights (built on first uplifting epoch).
     uplift_w: Option<Vec<f32>>,
+    /// Mean |Δh| (m) of the LAST epoch — Joseph's convergence instrument: when
+    /// this levels out, further epochs are polishing a steady state.
+    pub last_delta_m: f32,
 }
 
 const NEIGHBORS: [(i32, i32); 8] =
@@ -195,14 +198,14 @@ impl Fluvial {
                 h[y * nx + x] = surf(cell) as f32;
             }
         }
-        Self { nx, cell_m, h, drainage: vec![0.0; nx * nx], face, level, origin: (oi, oj), uplift_w: None }
+        Self { nx, cell_m, h, drainage: vec![0.0; nx * nx], face, level, origin: (oi, oj), uplift_w: None, last_delta_m: f32::INFINITY }
     }
 
     /// Resume a simulation over an existing eroded field (e.g. the startup tier),
     /// so the live loop can keep running epochs without redoing the initial work.
     pub fn from_region(r: &ErodedRegion) -> Self {
         let cell_m = crate::sample::cell_size_m(r.level, crate::planet::Planet::EARTH.radius_m) as f32;
-        Self { nx: r.nx, cell_m, h: r.h.clone(), drainage: vec![0.0; r.nx * r.nx], face: r.face, level: r.level, origin: (r.oi, r.oj), uplift_w: None }
+        Self { nx: r.nx, cell_m, h: r.h.clone(), drainage: vec![0.0; r.nx * r.nx], face: r.face, level: r.level, origin: (r.oi, r.oj), uplift_w: None, last_delta_m: f32::INFINITY }
     }
 
     /// Snapshot into a sampleable region.
@@ -495,9 +498,10 @@ impl Fluvial {
         }
     }
 
-    /// Run the full pipeline for `p.epochs`.
+    /// Run the full pipeline for `p.epochs`, tracking the last epoch's mean |Δh|.
     pub fn erode(&mut self, p: &FluvialParams) {
-        for _ in 0..p.epochs {
+        for e in 0..p.epochs {
+            let track_before = if e + 1 == p.epochs { Some(self.h.clone()) } else { None };
             let outlets = self.outlets();
             if p.uplift_m > 0.0 {
                 // DIFFERENTIAL uplift (Joseph): weight the rate by low-frequency
@@ -535,6 +539,10 @@ impl Fluvial {
             }
             self.talus(p);
             self.creep(p);
+            if let Some(tb) = track_before {
+                let sum: f64 = self.h.iter().zip(tb.iter()).map(|(a, b)| (a - b).abs() as f64).sum();
+                self.last_delta_m = (sum / self.h.len() as f64) as f32;
+            }
         }
     }
 

@@ -47,6 +47,7 @@ use vivarium_world::erosion::{self, ErodedRegion, Fluvial, FluvialParams};
 use vivarium_world::gen::SEA_LEVEL_M;
 use vivarium_world::planet::Planet;
 use vivarium_world::sample::{cell_size_m, sample_surface_with, SurfacePatch};
+use vivarium_world::water::{WaterParams, WaterRegion, WaterSim};
 use vivarium_world::sphere::{CellId, Face};
 
 const SKY: Color = Color::srgb(0.80, 0.82, 0.84);
@@ -85,14 +86,39 @@ struct Eroded(Vec<ErodedRegion>);
 struct TierMsg {
     region: ErodedRegion,
     epochs_total: u32,
+    /// Nominal sim-years advanced by this update (EPOCH_YEARS × epochs run) —
+    /// the aging-speed instrument's numerator.
+    sim_years: f32,
+    /// Mean |Δh| of the last epoch (m) — the convergence instrument.
+    delta_m: f32,
 }
+
+/// Water tier updates (the FAST band).
+struct WaterMsg {
+    region: WaterRegion,
+    sim_seconds: f32,
+    /// Mean |Δdepth| over the burst (m) — steady-state indicator.
+    delta_m: f32,
+}
+
+/// Nominal years per erosion epoch — a stated calibration constant (the epoch is
+/// unitless in the solver; this is the display anchor for aging speed).
+const EPOCH_YEARS: f32 = 100.0;
 #[derive(Resource)]
 struct TierRx(Mutex<std::sync::mpsc::Receiver<TierMsg>>);
+#[derive(Resource)]
+struct WaterRx(Mutex<std::sync::mpsc::Receiver<WaterMsg>>);
+#[derive(Resource, Default)]
+struct WaterRes(Option<WaterRegion>);
+/// (last update, sim-seconds/wall-second, mean |Δdepth| m, total sim-seconds)
+#[derive(Resource, Default)]
+struct WaterMeta(Option<(std::time::Instant, f32, f32, f32)>);
 
 /// Wall-clock + maturity metadata per tier level (a VIEW concern — the world
-/// crate stays wall-clock-free): (level, last-update Instant, total epochs run).
+/// crate stays wall-clock-free): (level, last update, total epochs, aging speed
+/// sim-years/wall-second, mean |Δh| m of the last epoch).
 #[derive(Resource, Default)]
-struct TierMeta(Vec<(u8, std::time::Instant, u32)>);
+struct TierMeta(Vec<(u8, std::time::Instant, u32, f32, f32)>);
 
 /// The pawn's whereabouts, shared with the erosion worker (face cells at the
 /// view's level, plus the level) — how the telescope re-anchors as you move.
@@ -123,7 +149,13 @@ fn build_tier0(view: &View) -> Vec<ErodedRegion> {
 ///   • otherwise → run a few MORE epochs on the same field (incremental maturing —
 ///     the watchable part).
 /// Each update is snapshot to the ECS; VIVARIUM_LIVE=0 falls back to one-shot.
-fn spawn_fine_tiers(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sender<TierMsg>, focus: SharedFocus) {
+fn spawn_fine_tiers(
+    view: &View,
+    base: Vec<ErodedRegion>,
+    tx: std::sync::mpsc::Sender<TierMsg>,
+    wtx: std::sync::mpsc::Sender<WaterMsg>,
+    focus: SharedFocus,
+) {
     if base.is_empty() {
         return;
     }
@@ -136,20 +168,26 @@ fn spawn_fine_tiers(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::S
         nx: usize,
         init_epochs: u32,
         inc_epochs: u32,
+        /// Fine tiers are FINISHERS, not accumulators: Joseph observed (live,
+        /// 2026-07-02) that 1–2 animated fine passes are near-ideal — smoothing
+        /// + micro-channels — while long accumulation overcooks into deluge
+        /// ripples. Incremental epochs stop at this cap (re-seed on move resets).
+        max_epochs: u32,
         /// Uplift per epoch (m), fBm-differential — the slow band's tectonic
         /// forcing lives at the MACRO tier (§4); fine tiers inherit it on re-seed.
         uplift_m: f32,
         sim: Option<(Fluvial, u32, u32, u32)>, // (field, oi, oj, epochs_total)
     }
     let mut states = [
-        TierState { level: 19, nx: 512, init_epochs: 0, inc_epochs: 1, uplift_m: 0.05, sim: None },
-        TierState { level: 21, nx: 512, init_epochs: 30, inc_epochs: 2, uplift_m: 0.0, sim: None },
-        TierState { level: 24, nx: 256, init_epochs: 10, inc_epochs: 2, uplift_m: 0.0, sim: None },
+        TierState { level: 19, nx: 512, init_epochs: 0, inc_epochs: 1, max_epochs: u32::MAX, uplift_m: 0.05, sim: None },
+        TierState { level: 21, nx: 512, init_epochs: 4, inc_epochs: 2, max_epochs: 10, uplift_m: 0.0, sim: None },
+        TierState { level: 24, nx: 256, init_epochs: 2, inc_epochs: 2, max_epochs: 6, uplift_m: 0.0, sim: None },
     ];
 
     std::thread::spawn(move || {
         // tiers, coarse→fine, as the seeding context for (re)builds.
         let mut tiers = base;
+        let mut water: Option<WaterSim> = None;
         // Resume the macro tier's simulation from the startup field.
         if let Some(t0) = tiers.iter().find(|r| r.level == 19) {
             states[0].sim = Some((Fluvial::from_region(t0), t0.oi, t0.oj, FluvialParams::default().epochs));
@@ -157,6 +195,7 @@ fn spawn_fine_tiers(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::S
         loop {
             let t0 = std::time::Instant::now();
             let (fx, fy, flevel) = *focus.0.lock().unwrap();
+            let mut l21_reseeded = false;
             for st in states.iter_mut() {
                 let scale = 2f64.powi(st.level as i32 - flevel as i32);
                 let (ci, cj) = ((fx * scale) as i64, (fy * scale) as i64);
@@ -169,19 +208,29 @@ fn spawn_fine_tiers(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::S
                         (noi as i64 - *oi as i64).abs().max((noj as i64 - *oj as i64).abs()) > (st.nx as i64) / 4
                     }
                 };
+                // Finished maturing and not moving? Nothing to do for this tier.
+                if !needs_seed && st.sim.as_ref().unwrap().3 >= st.max_epochs {
+                    continue;
+                }
                 let epochs_run;
+                let epochs_this;
                 if needs_seed {
+                    if st.level == 21 {
+                        l21_reseeded = true;
+                    }
                     // Seed from the tiers COARSER than this one only.
                     let coarser: Vec<ErodedRegion> = tiers.iter().filter(|r| r.level < st.level).cloned().collect();
                     let mut f = Fluvial::from_surface(face, st.level, noi, noj, st.nx, |c| erosion::surface_at(c, &coarser));
                     f.erode(&FluvialParams { epochs: st.init_epochs.max(1), uplift_m: st.uplift_m, ..Default::default() });
                     st.sim = Some((f, noi, noj, st.init_epochs));
                     epochs_run = st.init_epochs;
+                    epochs_this = st.init_epochs;
                 } else {
                     let (f, _, _, total) = st.sim.as_mut().unwrap();
                     f.erode(&FluvialParams { epochs: st.inc_epochs, uplift_m: st.uplift_m, ..Default::default() });
                     *total += st.inc_epochs;
                     epochs_run = *total;
+                    epochs_this = st.inc_epochs;
                 }
                 // Joseph's conservation constraint: fine tiers REDISTRIBUTE relief
                 // within the coarse surface (pin block means to the parent tier's
@@ -202,8 +251,40 @@ fn spawn_fine_tiers(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::S
                 tiers.retain(|r| r.level != st.level);
                 tiers.push(region.clone());
                 tiers.sort_by_key(|r| r.level);
-                if tx.send(TierMsg { region, epochs_total: epochs_run }).is_err() {
+                let delta_m = st.sim.as_ref().unwrap().0.last_delta_m;
+                if tx.send(TierMsg { region, epochs_total: epochs_run, sim_years: epochs_this as f32 * EPOCH_YEARS, delta_m }).is_err() {
                     return; // view closed
+                }
+            }
+
+            // --- The FAST band: shallow water over the live L21 bed (§4). The
+            // water sees terrain quasi-static (bed refreshed each cycle from the
+            // still-eroding tier); erosion keeps running — the coupling schedule
+            // replaces core's kill-switch. Sediment coupling is the NEXT rung.
+            if let Some(l21) = tiers.iter().find(|r| r.level == 21) {
+                let rebuild = water.as_ref().map(|w: &WaterSim| w.origin != (l21.oi, l21.oj)).unwrap_or(true) || l21_reseeded;
+                if rebuild {
+                    let cell = vivarium_world::sample::cell_size_m(21, vivarium_world::planet::Planet::EARTH.radius_m) as f32;
+                    water = Some(WaterSim::new(face, 21, (l21.oi, l21.oj), l21.nx, cell, l21.h.clone(), 0.05));
+                } else if let Some(w) = water.as_mut() {
+                    w.set_bed(l21.h.clone());
+                }
+                if let Some(w) = water.as_mut() {
+                    let wp = WaterParams::default();
+                    let before = w.depth.clone();
+                    const SUBSTEPS: u32 = 40;
+                    for _ in 0..SUBSTEPS {
+                        w.step(&wp);
+                    }
+                    let delta: f64 = w.depth.iter().zip(before.iter()).map(|(a, b)| (a - b).abs() as f64).sum();
+                    let msg = WaterMsg {
+                        region: w.to_region(),
+                        sim_seconds: SUBSTEPS as f32 * wp.dt,
+                        delta_m: (delta / before.len() as f64) as f32,
+                    };
+                    if wtx.send(msg).is_err() {
+                        return;
+                    }
                 }
             }
             if !live {
@@ -220,12 +301,19 @@ fn tier_update(rx: Res<TierRx>, mut eroded: ResMut<Eroded>, mut meta: ResMut<Tie
     let mut any = false;
     while let Ok(msg) = rx.0.lock().unwrap().try_recv() {
         let level = msg.region.level;
+        // Aging speed = sim-years in this update / wall-time since the last one.
+        let rate = meta
+            .0
+            .iter()
+            .find(|(l, ..)| *l == level)
+            .map(|(_, at, ..)| msg.sim_years / at.elapsed().as_secs_f32().max(1e-3))
+            .unwrap_or(0.0);
         eroded.0.retain(|r| r.level != level);
         eroded.0.push(msg.region);
         eroded.0.sort_by_key(|r| r.level);
-        meta.0.retain(|(l, _, _)| *l != level);
-        meta.0.push((level, std::time::Instant::now(), msg.epochs_total));
-        meta.0.sort_by_key(|(l, _, _)| *l);
+        meta.0.retain(|(l, ..)| *l != level);
+        meta.0.push((level, std::time::Instant::now(), msg.epochs_total, rate, msg.delta_m));
+        meta.0.sort_by_key(|(l, ..)| *l);
         any = true;
     }
     // Rebuilds are ~300 ms synchronous at walk-scale defaults, so refresh the
@@ -237,13 +325,33 @@ fn tier_update(rx: Res<TierRx>, mut eroded: ResMut<Eroded>, mut meta: ResMut<Tie
     }
 }
 
+/// Fold arriving water snapshots in; water changes ride the same rebuild
+/// throttle as tiers (the mesh shows the latest snapshot at each rebuild).
+fn water_update(rx: Res<WaterRx>, mut water: ResMut<WaterRes>, mut meta: ResMut<WaterMeta>, mut ts: ResMut<TerrainState>, mut last: Local<Option<std::time::Instant>>) {
+    let mut newest: Option<WaterMsg> = None;
+    while let Ok(msg) = rx.0.lock().unwrap().try_recv() {
+        newest = Some(msg);
+    }
+    if let Some(msg) = newest {
+        let rate = meta.0.map(|(at, ..)| msg.sim_seconds / at.elapsed().as_secs_f32().max(1e-3)).unwrap_or(0.0);
+        let total = meta.0.map(|(.., t)| t).unwrap_or(0.0) + msg.sim_seconds;
+        meta.0 = Some((std::time::Instant::now(), rate, msg.delta_m, total));
+        water.0 = Some(msg.region);
+        if last.map(|t| t.elapsed().as_secs_f32() > 1.5).unwrap_or(true) {
+            ts.built_level = u8::MAX;
+            *last = Some(std::time::Instant::now());
+        }
+    }
+}
+
 fn main() {
     let view = View::default();
     let tier0 = build_tier0(&view);
     let focus = SharedFocus(Arc::new(Mutex::new((view.focus.x, view.focus.y, view.level))));
     let (tx, rx) = std::sync::mpsc::channel::<TierMsg>();
-    spawn_fine_tiers(&view, tier0.clone(), tx, focus.clone());
-    let meta = TierMeta(tier0.iter().map(|r| (r.level, std::time::Instant::now(), FluvialParams::default().epochs)).collect());
+    let (wtx, wrx) = std::sync::mpsc::channel::<WaterMsg>();
+    spawn_fine_tiers(&view, tier0.clone(), tx, wtx, focus.clone());
+    let meta = TierMeta(tier0.iter().map(|r| (r.level, std::time::Instant::now(), FluvialParams::default().epochs, 0.0, f32::INFINITY)).collect());
     let eroded = Eroded(tier0);
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -259,10 +367,13 @@ fn main() {
         .insert_resource(view)
         .insert_resource(eroded)
         .insert_resource(TierRx(Mutex::new(rx)))
+        .insert_resource(WaterRx(Mutex::new(wrx)))
+        .insert_resource(WaterRes::default())
+        .insert_resource(WaterMeta::default())
         .insert_resource(meta)
         .insert_resource(focus)
         .add_systems(Startup, setup)
-        .add_systems(Update, (view_update, tier_update, terrain_update, hud_update, scale_update, maybe_screenshot))
+        .add_systems(Update, (view_update, tier_update, water_update, terrain_update, hud_update, scale_update, maybe_screenshot))
         .run();
 }
 
@@ -694,7 +805,7 @@ fn required_pitch(view: &View, ts: &TerrainState, focus_h_raw: f32) -> f32 {
 
 // --- Terrain sampling + meshing ------------------------------------------------------
 
-fn terrain_update(mut commands: Commands, view: Res<View>, eroded: Res<Eroded>, mut meshes: ResMut<Assets<Mesh>>, mut ts: ResMut<TerrainState>) {
+fn terrain_update(mut commands: Commands, view: Res<View>, eroded: Res<Eroded>, water: Res<WaterRes>, mut meshes: ResMut<Assets<Mesh>>, mut ts: ResMut<TerrainState>) {
     // Rebuild when the level changed or the focus has drifted toward the window edge.
     let needs = match (&ts.fields, ts.built_level == view.level) {
         (None, _) => true,
@@ -716,7 +827,22 @@ fn terrain_update(mut commands: Commands, view: Res<View>, eroded: Res<Eroded>, 
     let oj = (view.focus.y.round().max(0.0) as u64).clamp(half, n - half) - half;
     let (oi, oj) = (oi as u32, oj as u32);
 
-    let fields = sample_surface_with(view.face, view.level, oi, oj, view.w, |c| erosion::column_at(c, &eroded.0));
+    let mut fields = sample_surface_with(view.face, view.level, oi, oj, view.w, |c| erosion::column_at(c, &eroded.0));
+    // Overlay the LIVE water tier: within its region, the sim's depth replaces
+    // the static sea-fill (take the max so the sea itself is never lost).
+    if let Some(w) = &water.0 {
+        for j in 0..view.w {
+            for i in 0..view.w {
+                let cell = CellId::from_face_ij(view.face, oi + i as u32, oj + j as u32, view.level);
+                if let Some(d) = w.depth_m(cell) {
+                    let cur = fields.water.get(i as isize, j as isize);
+                    if (d as f32) > cur {
+                        fields.water.set(i as isize, j as isize, d as f32);
+                    }
+                }
+            }
+        }
+    }
     let cell = view.cell_m();
     let anchor = DVec2::new((oi as f64 + view.w as f64 * 0.5) * cell, (oj as f64 + view.w as f64 * 0.5) * cell);
 
@@ -900,7 +1026,7 @@ fn compass(yaw: f32) -> &'static str {
     L[(((deg + 22.5) / 45.0) as usize) % 8]
 }
 
-fn hud_update(view: Res<View>, ts: Res<TerrainState>, meta: Res<TierMeta>, eroded: Res<Eroded>, diag: Res<bevy::diagnostic::DiagnosticsStore>, mut q: Query<&mut Text, With<HudText>>) {
+fn hud_update(view: Res<View>, ts: Res<TerrainState>, meta: Res<TierMeta>, wmeta: Res<WaterMeta>, eroded: Res<Eroded>, diag: Res<bevy::diagnostic::DiagnosticsStore>, mut q: Query<&mut Text, With<HudText>>) {
     let fps = diag.get(&bevy::diagnostic::FrameTimeDiagnosticsPlugin::FPS).and_then(|d| d.smoothed()).unwrap_or(0.0);
     let cell = view.cell_m();
     let span_m = view.w as f64 * cell;
@@ -915,7 +1041,7 @@ fn hud_update(view: Res<View>, ts: Res<TerrainState>, meta: Res<TierMeta>, erode
         let cell = CellId::from_face_ij(view.face, ts.origin.0 + px, ts.origin.1 + py, ts.built_level.min(25));
         match erosion::tier_at(cell, &eroded.0) {
             Some(l) => {
-                if let Some((_, at, _)) = meta.0.iter().find(|(ml, _, _)| *ml == l) {
+                if let Some((_, at, ..)) = meta.0.iter().find(|(ml, ..)| *ml == l) {
                     let age = at.elapsed().as_secs_f32();
                     newest = newest.min(age);
                     oldest = oldest.max(age);
@@ -927,10 +1053,21 @@ fn hud_update(view: Res<View>, ts: Res<TerrainState>, meta: Res<TierMeta>, erode
     let sim_line = if meta.0.is_empty() {
         "sim OFF".to_string()
     } else {
-        let tiers: Vec<String> = meta.0.iter().map(|(l, at, e)| format!("L{l} {:.0}s/{e}e", at.elapsed().as_secs_f32())).collect();
+        let tiers: Vec<String> = meta
+            .0
+            .iter()
+            .map(|(l, _, e, rate, delta)| {
+                let d = if delta.is_finite() { format!(" d{:.0}cm", delta * 100.0) } else { String::new() };
+                if *rate > 0.0 { format!("L{l} {e}e ~{rate:.0}y/s{d}") } else { format!("L{l} {e}e{d}") }
+            })
+            .collect();
         let newest_txt = if newest.is_finite() { format!("{newest:.1}s") } else { "-".into() };
         let oldest_txt = if prior_seen { "prior(unsimulated)".to_string() } else { format!("{oldest:.0}s") };
-        format!("sim {}   screen newest {newest_txt} oldest {oldest_txt}{}", tiers.join("  "), if view.tier_debug { "   [T]int ON" } else { "" })
+        let water_txt = wmeta
+            .0
+            .map(|(_, rate, delta, total)| format!("   W {total:.0}ss ~{rate:.1}s/s d{:.1}mm", delta * 1000.0))
+            .unwrap_or_default();
+        format!("sim {}{water_txt}   screen newest {newest_txt} oldest {oldest_txt}{}", tiers.join("  "), if view.tier_debug { "   [T]int ON" } else { "" })
     };
     if let Ok(mut text) = q.single_mut() {
         text.0 = format!(
