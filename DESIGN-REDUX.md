@@ -97,6 +97,31 @@ been run*. Both axes drive both.
   1 iteration ≈ 1 year for the last few epochs.) Time is the *safer* axis to
   coarsen along — see §6.
 
+**The two axes are one gradient for *local* aspects** *(our stance)*. Distance
+from interest is really "how far the lazy computation has been pulled" (§11), and
+that is *simultaneously* how-fine and how-far-in-sim-time: far = un-pulled = coarse
+**and** early (the raw prior); near = fully pulled = fine **and** now. So a world
+naturally "ages toward the pawn" — a wavefront of *now* it drags around, with
+unvisited regions left young (fine, if never observed). Three regimes govern it:
+- **Global aspects (tectonics, climate, sea level) — the exception: cannot be
+  time-lagged by distance.** A plate is one planet-spanning object; you can't hold
+  half of it in the past. The global spine advances **time-uniformly** (cheap,
+  because coarse).
+- **History-*free* local aspects** (soil, vegetation, minor relief) — not "behind
+  in time," just **un-materialized**: approach evaluates the lazy function at the
+  *current* macro + coordinate noise (§10). No replay; "far = raw Perlin" means
+  "not yet materialized from the current macro."
+- **History-*dependent* local aspects** (a specific carved canyon, a dune field) —
+  genuinely at an earlier sim-time; approach triggers a **deterministic catch-up**
+  (fast-forward under the time-uniform global forcings), a bounded, memoizable
+  temporal-LOD "pop." Reconciling the caught-up state with the *current* macro is
+  the §5↔§6 **detail→abstract** problem — i.e. this regime *is* the open frontier.
+
+Temporally-different neighbours stay consistent because terrain is quasi-static on
+the lag timescale (the same multirate assumption): the lag just scales with
+distance so `lag × local-rate-of-change < coupling tolerance`, and locality means
+nothing near couples to the raw-prior far side.
+
 ---
 
 ## 4. Multi-aspect, multi-timescale: coupled multirate, not one grid
