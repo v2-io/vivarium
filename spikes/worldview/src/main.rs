@@ -159,7 +159,7 @@ fn build_tier0(view: &View) -> Vec<ErodedRegion> {
 /// SETTLE — a few more macro epochs, one wide fine pass, then RAIN ONLY (no
 /// re-anchoring, no re-seeding: the water's work persists). The live telescope
 /// stays available via VIVARIUM_MODE=telescope.
-fn spawn_fine_tiers(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sender<TierMsg>, wtx: std::sync::mpsc::Sender<WaterMsg>, focus: SharedFocus) {
+fn spawn_fine_tiers(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sender<TierMsg>, wtx: std::sync::mpsc::SyncSender<WaterMsg>, focus: SharedFocus) {
     if std::env::var("VIVARIUM_MODE").map(|v| v == "telescope").unwrap_or(false) {
         spawn_telescope(view, base, tx, wtx, focus);
     } else {
@@ -173,7 +173,7 @@ fn spawn_fine_tiers(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::S
 ///  2. one L21 fine pass over VIVARIUM_FINE_NX (1024 ≈ 4.9 km ≈ 3 mi) cells,
 ///     VIVARIUM_FINE_EPOCHS (6) epochs, mean-pinned to L19;
 ///  3. rain + sediment on that bed, indefinitely — the ONLY thing running.
-fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sender<TierMsg>, wtx: std::sync::mpsc::Sender<WaterMsg>) {
+fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sender<TierMsg>, wtx: std::sync::mpsc::SyncSender<WaterMsg>) {
     if base.is_empty() {
         return;
     }
@@ -283,12 +283,23 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
         // so the river network and lakes FILL and equilibrate first. Hands off to
         // the living phase (storms + sediment) once the water levels out.
         let mut settling = true;
+        // VIVARIUM_WATER_SHOW: all | burst | (default: burst while settling —
+        // fast-forward through the fill — then stream EVERY step once living,
+        // so the water visibly flows; sim-time slows to the view's pace).
+        let show = std::env::var("VIVARIUM_WATER_SHOW").unwrap_or_default();
+        let mut last_writeback = std::time::Instant::now();
         loop {
             let t0 = std::time::Instant::now();
+            let stream = match show.as_str() {
+                "all" => true,
+                "burst" => false,
+                _ => !settling,
+            };
             // CFL dt from the CURRENT deepest water (the ocean is real water now);
-            // aim ~8 sim-s per burst, capped so deep basins can't stall the loop.
+            // burst mode aims ~8 sim-s per burst, capped so deep basins can't
+            // stall the loop; streaming shows every single step.
             let dt = w.stable_dt(9.8);
-            let substeps: u32 = ((8.0 / dt) as u32).clamp(1, 400);
+            let substeps: u32 = if stream { 1 } else { ((8.0 / dt) as u32).clamp(1, 400) };
             // Settling: DELUGE (core's recipe — the rain fudge exists to reach
             // steady state fast), no sediment. Living: the user's rain + storms.
             let phase = sim_total % (storm_on + storm_off);
@@ -330,8 +341,12 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
                 return;
             }
             // Write the carved bed back to the L21 tier (block-mean downsample
-            // when the water runs finer — conservative, means preserved).
-            if let Some(entry) = tiers.iter_mut().find(|r| r.level == 21) {
+            // when the water runs finer — conservative, means preserved). Bed
+            // only moves in the living phase (sediment), and the write-back
+            // clones a full tier — throttle it by wall time, not by step.
+            if !settling && last_writeback.elapsed().as_secs_f32() > 5.0 {
+                last_writeback = std::time::Instant::now();
+                if let Some(entry) = tiers.iter_mut().find(|r| r.level == 21) {
                 let f = wscale as usize;
                 if f == 1 {
                     entry.h.copy_from_slice(&w.bed);
@@ -351,8 +366,11 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
                 if tx.send(TierMsg { region: entry.clone(), epochs_total: fine_total, sim_years: 0.0, delta_m: 0.0 }).is_err() {
                     return;
                 }
+                }
             }
-            std::thread::sleep(CADENCE.saturating_sub(t0.elapsed()));
+            if !stream {
+                std::thread::sleep(CADENCE.saturating_sub(t0.elapsed()));
+            }
         }
     });
 }
@@ -361,7 +379,7 @@ fn spawn_telescope(
     view: &View,
     base: Vec<ErodedRegion>,
     tx: std::sync::mpsc::Sender<TierMsg>,
-    wtx: std::sync::mpsc::Sender<WaterMsg>,
+    wtx: std::sync::mpsc::SyncSender<WaterMsg>,
     focus: SharedFocus,
 ) {
     if base.is_empty() {
@@ -563,20 +581,55 @@ fn tier_update(rx: Res<TierRx>, mut eroded: ResMut<Eroded>, mut meta: ResMut<Tie
 
 /// Fold arriving water snapshots in; water changes ride the same rebuild
 /// throttle as tiers (the mesh shows the latest snapshot at each rebuild).
-fn water_update(rx: Res<WaterRx>, mut water: ResMut<WaterRes>, mut meta: ResMut<WaterMeta>, mut ts: ResMut<TerrainState>, mut last: Local<Option<std::time::Instant>>) {
+fn water_update(rx: Res<WaterRx>, mut water: ResMut<WaterRes>, mut meta: ResMut<WaterMeta>, mut ts: ResMut<TerrainState>) {
     let mut newest: Option<WaterMsg> = None;
+    let mut sim_s = 0.0f32;
     while let Ok(msg) = rx.0.lock().unwrap().try_recv() {
+        sim_s += msg.sim_seconds;
         newest = Some(msg);
     }
     if let Some(msg) = newest {
-        let rate = meta.0.map(|(at, ..)| msg.sim_seconds / at.elapsed().as_secs_f32().max(1e-3)).unwrap_or(0.0);
-        let total = meta.0.map(|(_, _, _, t, _)| t).unwrap_or(0.0) + msg.sim_seconds;
+        let rate = meta.0.map(|(at, ..)| sim_s / at.elapsed().as_secs_f32().max(1e-3)).unwrap_or(0.0);
+        let total = meta.0.map(|(_, _, _, t, _)| t).unwrap_or(0.0) + sim_s;
         meta.0 = Some((std::time::Instant::now(), rate, msg.delta_m, total, msg.settling));
         water.0 = Some(msg.region);
-        if last.map(|t| t.elapsed().as_secs_f32() > 1.5).unwrap_or(true) {
-            ts.built_level = u8::MAX;
-            *last = Some(std::time::Instant::now());
+        ts.water_dirty = true; // water-only refresh; no throttle — every state shows
+    }
+}
+
+/// Rebuild ONLY the water mesh from the latest live state — the cheap path that
+/// lets every sim step reach the screen. The ground mesh, tier sampling, and
+/// normals are untouched; we re-overlay the live depths onto the pre-overlay
+/// (static sea-fill) water field and re-mesh just the water surface.
+fn water_refresh(mut commands: Commands, view: Res<View>, water: Res<WaterRes>, mut meshes: ResMut<Assets<Mesh>>, mut ts: ResMut<TerrainState>) {
+    if !ts.water_dirty {
+        return;
+    }
+    ts.water_dirty = false;
+    if ts.built_level != view.level {
+        return; // full rebuild pending; it overlays water itself
+    }
+    let ts = &mut *ts; // split borrows across the struct's fields
+    let (Some(fields), Some(base), Some(live)) = (ts.fields.as_mut(), ts.base_water.as_ref(), water.0.as_ref()) else {
+        return;
+    };
+    let (oi, oj) = ts.origin;
+    for j in 0..view.w {
+        for i in 0..view.w {
+            let mut wtr = base[j * view.w + i];
+            let cell = CellId::from_face_ij(view.face, oi + i as u32, oj + j as u32, view.level);
+            if let Some(d) = live.depth_m(cell) {
+                wtr = wtr.max(d as f32);
+            }
+            fields.water.set(i as isize, j as isize, wtr);
         }
+    }
+    if let Some(e) = ts.water.take() {
+        commands.entity(e).despawn();
+    }
+    let cell = view.cell_m();
+    if let Some(mesh) = build_water_mesh(fields, view.w, cell, ts.anchor_m, (oi, oj), view.vert) {
+        ts.water = Some(commands.spawn((Mesh3d(meshes.add(mesh)), MeshMaterial3d(ts.water_mat.clone()), Transform::default())).id());
     }
 }
 
@@ -585,7 +638,10 @@ fn main() {
     let tier0 = build_tier0(&view);
     let focus = SharedFocus(Arc::new(Mutex::new((view.focus.x, view.focus.y, view.level))));
     let (tx, rx) = std::sync::mpsc::channel::<TierMsg>();
-    let (wtx, wrx) = std::sync::mpsc::channel::<WaterMsg>();
+    // Bounded: when streaming per-step, the worker's blocking send paces the
+    // sim to exactly what the view consumes — sim-time slows instead of frames
+    // being skipped. (Burst mode sends rarely and never fills 2 slots.)
+    let (wtx, wrx) = std::sync::mpsc::sync_channel::<WaterMsg>(2);
     spawn_fine_tiers(&view, tier0.clone(), tx, wtx, focus.clone());
     let meta = TierMeta(tier0.iter().map(|r| (r.level, std::time::Instant::now(), FluvialParams::default().epochs, 0.0, f32::INFINITY)).collect());
     let eroded = Eroded(tier0);
@@ -609,7 +665,7 @@ fn main() {
         .insert_resource(meta)
         .insert_resource(focus)
         .add_systems(Startup, setup)
-        .add_systems(Update, (view_update, tier_update, water_update, terrain_update, hud_update, scale_update, maybe_screenshot))
+        .add_systems(Update, (view_update, tier_update, water_update, terrain_update, water_refresh, hud_update, scale_update, maybe_screenshot))
         .run();
 }
 
@@ -708,6 +764,13 @@ struct TerrainState {
     anchor_m: DVec2,
     /// The sampled fields (kept so the camera/HUD can read the height under the focus).
     fields: Option<SurfacePatch>,
+    /// The water field as sampled (static sea-fill), BEFORE the live overlay —
+    /// kept so a water-only refresh can re-overlay against the original.
+    base_water: Option<Vec<f32>>,
+    /// A new live water state arrived: rebuild ONLY the water mesh (cheap),
+    /// leaving the ground mesh alone — this is what makes per-step streaming
+    /// affordable (a full rebuild is ~300 ms; the water alone is a fraction).
+    water_dirty: bool,
     /// Relief range of the sampled window (m above sea) — the HUD's honest answer
     /// to "is there height here, and how much?"
     h_min: f32,
@@ -771,6 +834,8 @@ fn setup(mut commands: Commands, view: Res<View>, mut meshes: ResMut<Assets<Mesh
         origin: (0, 0),
         anchor_m: DVec2::ZERO,
         fields: None,
+        base_water: None,
+        water_dirty: false,
         h_min: 0.0,
         h_max: 0.0,
         gen_ms: 0.0,
@@ -1064,6 +1129,14 @@ fn terrain_update(mut commands: Commands, view: Res<View>, eroded: Res<Eroded>, 
     let (oi, oj) = (oi as u32, oj as u32);
 
     let mut fields = sample_surface_with(view.face, view.level, oi, oj, view.w, |c| erosion::column_at(c, &eroded.0));
+    // Keep the pre-overlay water (static sea-fill) so water_refresh can cheaply
+    // re-overlay each new live state without resampling the terrain.
+    let mut base_water = vec![0.0f32; view.w * view.w];
+    for j in 0..view.w {
+        for i in 0..view.w {
+            base_water[j * view.w + i] = fields.water.get(i as isize, j as isize);
+        }
+    }
     // Overlay the LIVE water tier: within its region, the sim's depth replaces
     // the static sea-fill (take the max so the sea itself is never lost).
     if let Some(w) = &water.0 {
@@ -1098,6 +1171,8 @@ fn terrain_update(mut commands: Commands, view: Res<View>, eroded: Res<Eroded>, 
     ts.origin = (oi, oj);
     ts.anchor_m = anchor;
     ts.fields = Some(fields);
+    ts.base_water = Some(base_water);
+    ts.water_dirty = false;
     let (mut lo, mut hi) = (f32::INFINITY, f32::NEG_INFINITY);
     if let Some(f) = &ts.fields {
         for y in 0..view.w as isize {
