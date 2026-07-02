@@ -1558,10 +1558,10 @@ fn spawn_mesher() -> (MesherTx, MesherRx) {
         while let Ok(job) = jrx.recv() {
             let done = match job {
                 MeshJob::Full { face, level, w, oi, oj, vert, tier_debug, tiers, water } => {
-                    build_full(face, level, w, oi, oj, vert, tier_debug, &tiers, water.as_deref())
+                    build_full(face, level, w, oi, oj, vert, tier_debug, false, &tiers, water.as_deref())
                 }
                 MeshJob::Ring { face, level, w, oi, oj, vert, tier_debug, tiers, water } => {
-                    match build_full(face, level, w, oi, oj, vert, tier_debug, &tiers, water.as_deref()) {
+                    match build_full(face, level, w, oi, oj, vert, tier_debug, true, &tiers, water.as_deref()) {
                         MeshDone::Full { level, origin, anchor, ground, water, .. } => MeshDone::Ring { level, origin, anchor, ground, water },
                         other => other,
                     }
@@ -1600,7 +1600,7 @@ fn spawn_mesher() -> (MesherTx, MesherRx) {
 /// The full pipeline, off-thread: sample the telescope, overlay live water by
 /// SURFACE elevation on the SIMULATED bed (the honesty rules), mesh both.
 #[allow(clippy::too_many_arguments)]
-fn build_full(face: Face, level: u8, w: usize, oi: u32, oj: u32, vert: f32, tier_debug: bool, tiers: &[ErodedRegion], live: Option<&WaterRegion>) -> MeshDone {
+fn build_full(face: Face, level: u8, w: usize, oi: u32, oj: u32, vert: f32, tier_debug: bool, edge_lines: bool, tiers: &[ErodedRegion], live: Option<&WaterRegion>) -> MeshDone {
     let t0 = std::time::Instant::now();
     let mut fields = sample_surface_with(face, level, oi, oj, w, |c| erosion::column_at(c, tiers));
     let mut base_water = vec![0.0f32; w * w];
@@ -1653,7 +1653,7 @@ fn build_full(face: Face, level: u8, w: usize, oi: u32, oj: u32, vert: f32, tier
             ((sm / d) as f32 * 8.0).clamp(0.0, 0.75)
         })
     };
-    let ground = build_ground_mesh(&fields, w, cell, anchor, (oi, oj), vert, &tier_of, tier_debug, &soil_of);
+    let ground = build_ground_mesh(&fields, w, cell, anchor, (oi, oj), vert, &tier_of, tier_debug, edge_lines, &soil_of);
     let (mut heights, mut wtr) = (vec![0.0f32; w * w], vec![0.0f32; w * w]);
     let (mut lo, mut hi) = (f32::INFINITY, f32::NEG_INFINITY);
     for j in 0..w {
@@ -1896,6 +1896,7 @@ fn build_ground_mesh(
     vert: f32,
     tier_of: &dyn Fn(usize, usize) -> Option<u8>,
     tier_debug: bool,
+    edge_lines: bool,
     soil_of: &dyn Fn(usize, usize) -> (f32, f32, f32, f32),
 ) -> Mesh {
     use vivarium_world::noise::hash01;
@@ -1964,6 +1965,14 @@ fn build_ground_mesh(
                 let t = tier_tint(tier_of(i, j));
                 for k in 0..3 {
                     col[k] = col[k] * 0.55 + t[k] * 0.45;
+                }
+            }
+            // Deliberate NON-physical chunk-boundary lines (Joseph's vote): the
+            // accidental crack-strips were useful orientation info; these keep
+            // the information without the holes.
+            if edge_lines && (i == 0 || j == 0 || i == w - 1 || j == w - 1) {
+                for k in 0..3 {
+                    col[k] = col[k] * 0.62 + 0.92 * 0.38;
                 }
             }
             colors.push(col);
