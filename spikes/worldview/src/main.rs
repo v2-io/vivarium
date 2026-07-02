@@ -122,7 +122,10 @@ impl Default for View {
         // at 0.5 m/voxel, and L24 cells (~0.6 m) are the nearest sampling to slabs'
         // 0.5 m voxels. Coarser survey views: VIVARIUM_LEVEL=14 + [ / ].
         let level: u8 = std::env::var("VIVARIUM_LEVEL").ok().and_then(|s| s.parse().ok()).unwrap_or(24);
-        let w: usize = std::env::var("VIVARIUM_W").ok().and_then(|s| s.parse().ok()).unwrap_or(256);
+        // 1024 cells ≈ 614 m at L24 — comparable ground coverage to slabs at its
+        // default zoom (radius ~537 m). Gen cost scales with w²; the HUD's gen-ms
+        // reports it honestly (memoization is the eventual fix, not smaller worlds).
+        let w: usize = std::env::var("VIVARIUM_W").ok().and_then(|s| s.parse().ok()).unwrap_or(1024);
         let n = (1u64 << level) as f64;
         let span = w as f64 * cell_size_m(level, Planet::EARTH.radius_m);
         let _ = span;
