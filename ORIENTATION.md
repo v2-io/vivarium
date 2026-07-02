@@ -25,13 +25,15 @@ and `DESIGN.md`.
 ## The code
 - `crates/vivarium-core` — the **working** deterministic voxel world (FBM +
   erosion + hydrology, flat `i32` patch). The proven **physics donor** to port from.
-- `crates/vivarium-world` — the **clean-room frame**, zero deps, **20 tests green**:
+- `crates/vivarium-world` — the **clean-room frame**, zero deps, **26 tests green**:
   `quantity` (rich units + exactness) · `time` (`i64` dsec from Holocene) · `sphere`
-  (CubeCoord/Geo + **`CellId`**, the S2 Hilbert key) · `planet` (insolation) ·
-  `material` (Material/MaterialId + refinement ladder) · `column` (Stratum/Column
-  + derived queries) · `noise` (coordinate-hashed, §8) · `gen` (CellId→Column
-  baseline). **The foundation is complete** — it can deterministically generate a
-  world of columns on the sphere.
+  (CubeCoord/Geo + **`CellId`** S2 Hilbert key, `from_face_ij`) · `planet`
+  (insolation) · `material` (Material/MaterialId + refinement ladder) · `column`
+  (Stratum/Column + derived queries) · `noise` (coordinate-hashed, §8) · `gen`
+  (CellId→Column baseline) · `chunk` (Cartesian `Patch<T>` + halo — the stencil
+  substrate) · `erosion` (hillslope diffusion — **the port has begun**). The
+  foundation generates a world of columns on the sphere and runs a real erosion
+  stencil on materialized patches.
 - `spikes/slabs` — the current 3-D view (ortho point-mesh); a **disposable
   instrument**, not the real renderer.
 - `spikes/tilemap`, `archive/*` — older / superseded.
@@ -47,12 +49,17 @@ and `DESIGN.md`.
   a stateless coordinate/key hash (never a shared mutable stream).
 
 ## Next: build order
-**Foundation done** (all tested + committed): `CellId` · `material` · `column` ·
-`noise` · `gen` (CellId→Column). What remains is the design-sensitive **integration**:
+**Foundation + substrate done** (all tested + committed): `CellId` · `material` ·
+`column` · `noise` · `gen` · `chunk` (Patch + halo). **Erosion port begun**:
+hillslope diffusion (`erosion::diffuse`) runs on a Patch. Remaining, in order:
 
-1. `chunk.rs` — the Cartesian patch (dense row-major interior + halo, keyed by
-   `CellId`) that automata run on. **Drive the API from its first consumer**
-   (erosion), not speculatively. (DESIGN-MATERIAL §8; `ref/research/spatial-key-bench.md`.)
+0. **Erosion, next increments** (`ref/erosion-port/NOTES.md`): **stream-power
+   fluvial incision** (needs non-local *flow accumulation* over the patch — the
+   real work), **per-material erodibility** (differential erosion → Bryce), a
+   **column↔patch loader** (materialize `(b,d,r)` fields from `Column`s + fill
+   cross-face halos), then the **multirate water coupling** (§4) that keeps erosion
+   on during settling. Wire results back through `gen::column_from_surface`.
+1. `chunk.rs` — ✅ done (`Patch<T>` + halo, API driven by the erosion consumer).
 2. **Port erosion** as a *native frame tier*, feeding `gen::column_from_surface` —
    the fidelity ladder made real. **Bridge recommendation (confirm with Joseph):
    port the *algorithm*, not the *data*** — re-implement core's stream-power +
