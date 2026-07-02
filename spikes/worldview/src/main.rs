@@ -843,6 +843,7 @@ fn main() {
         .insert_resource(WaterRx(Mutex::new(wrx)))
         .insert_resource(mesher_tx)
         .insert_resource(mesher_rx)
+        .insert_resource(RingChunks::default())
         .insert_resource(WaterRes::default())
         .insert_resource(WaterMeta::default())
         .insert_resource(meta)
@@ -1521,12 +1522,28 @@ fn required_pitch(view: &View, ts: &TerrainState, focus_h_raw: f32) -> f32 {
 
 enum MeshJob {
     Full { face: Face, level: u8, w: usize, oi: u32, oj: u32, vert: f32, tier_debug: bool, tiers: Arc<Vec<ErodedRegion>>, water: Option<Arc<WaterRegion>> },
+    /// A horizon chunk beyond the primary window — built with its OWN anchor
+    /// (entity Transform bridges to the global one, so pans are free).
+    Ring { face: Face, level: u8, w: usize, oi: u32, oj: u32, vert: f32, tier_debug: bool, tiers: Arc<Vec<ErodedRegion>>, water: Option<Arc<WaterRegion>> },
     WaterOnly { face: Face, level: u8, w: usize, oi: u32, oj: u32, vert: f32, anchor: DVec2, heights: Arc<Vec<f32>>, base_water: Arc<Vec<f32>>, live: Arc<WaterRegion> },
 }
 
 enum MeshDone {
     Full { level: u8, origin: (u32, u32), anchor: DVec2, fields: SurfacePatch, heights: Arc<Vec<f32>>, base_water: Arc<Vec<f32>>, ground: Mesh, water: Option<Mesh>, h_min: f32, h_max: f32, gen_ms: f32 },
+    Ring { level: u8, origin: (u32, u32), anchor: DVec2, ground: Mesh, water: Option<Mesh> },
     WaterOnly { level: u8, origin: (u32, u32), water: Option<Mesh> },
+}
+
+/// Horizon chunks beyond the primary window (Joseph: expand the rendered mesh
+/// progressively as cycles free up, Hilbert-ordered). Same view level (stage 1;
+/// coarser far rings are stage 2). Keyed by chunk origin in view-level cells.
+#[derive(Resource, Default)]
+struct RingChunks {
+    chunks: std::collections::HashMap<(u32, u32), (Entity, Option<Entity>, DVec2)>,
+    inflight: Option<(u32, u32)>,
+    /// Bumped when tiers/tint change: chunks built before this are stale.
+    rev: u64,
+    built_rev: std::collections::HashMap<(u32, u32), u64>,
 }
 
 #[derive(Resource)]
@@ -1542,6 +1559,12 @@ fn spawn_mesher() -> (MesherTx, MesherRx) {
             let done = match job {
                 MeshJob::Full { face, level, w, oi, oj, vert, tier_debug, tiers, water } => {
                     build_full(face, level, w, oi, oj, vert, tier_debug, &tiers, water.as_deref())
+                }
+                MeshJob::Ring { face, level, w, oi, oj, vert, tier_debug, tiers, water } => {
+                    match build_full(face, level, w, oi, oj, vert, tier_debug, &tiers, water.as_deref()) {
+                        MeshDone::Full { level, origin, anchor, ground, water, .. } => MeshDone::Ring { level, origin, anchor, ground, water },
+                        other => other,
+                    }
                 }
                 MeshJob::WaterOnly { face, level, w, oi, oj, vert, anchor, heights, base_water, live } => {
                     let cell = cell_size_m(level, Planet::EARTH.radius_m);
@@ -1659,7 +1682,7 @@ fn build_full(face: Face, level: u8, w: usize, oi: u32, oj: u32, vert: f32, tier
 }
 
 /// Decide what the mesher should work on next (one job of each kind at a time).
-fn mesh_dispatch(view: Res<View>, eroded: Res<Eroded>, water: Res<WaterRes>, mut ts: ResMut<TerrainState>, tx: Res<MesherTx>) {
+fn mesh_dispatch(view: Res<View>, eroded: Res<Eroded>, water: Res<WaterRes>, mut ts: ResMut<TerrainState>, mut rings: ResMut<RingChunks>, tx: Res<MesherTx>) {
     let drifted = ts.fields.is_some() && {
         let cx = ts.origin.0 as f64 + view.w as f64 * 0.5;
         let cy = ts.origin.1 as f64 + view.w as f64 * 0.5;
@@ -1684,10 +1707,69 @@ fn mesh_dispatch(view: Res<View>, eroded: Res<Eroded>, water: Res<WaterRes>, mut
             }
         }
     }
+
+    // RINGS: with the center current and the mesher otherwise idle, grow the
+    // horizon — nearest ring first, Hilbert order within a ring (the CellId's
+    // raw curve index IS the order; spatially coherent jobs, warm caches).
+    if ts.full_inflight || ts.water_inflight || rings.inflight.is_some() || ts.fields.is_none() || ts.built_level != view.level {
+        return;
+    }
+    if ts.terrain_dirty {
+        rings.rev += 1; // tiers/tint changed; chunks go stale (rebuilt lazily)
+    }
+    let cw = (view.w / 4).max(64) as u32; // chunk span in cells (¼ window)
+    let max_rings: u32 = std::env::var("VIVARIUM_RINGS").ok().and_then(|s| s.parse().ok()).unwrap_or(2);
+    let n = (1u64 << view.level) as i64;
+    let (o_i, o_j, wv) = (ts.origin.0 as i64, ts.origin.1 as i64, view.w as i64);
+    let mut best: Option<(u32, u64, (u32, u32))> = None; // (ring, hilbert, origin)
+    for ring in 1..=max_rings as i64 {
+        // Chunk origins forming the ring band around the window.
+        let (lo_i, hi_i) = (o_i - ring * cw as i64, o_i + wv + (ring - 1) * cw as i64);
+        let (lo_j, hi_j) = (o_j - ring * cw as i64, o_j + wv + (ring - 1) * cw as i64);
+        let mut cand = Vec::new();
+        let mut push = |ci: i64, cj: i64| {
+            if ci >= 0 && cj >= 0 && ci + (cw as i64) < n && cj + (cw as i64) < n {
+                cand.push((ci as u32, cj as u32));
+            }
+        };
+        let step = cw as i64;
+        let mut ci = lo_i;
+        while ci <= hi_i {
+            push(ci, lo_j);
+            push(ci, hi_j);
+            ci += step;
+        }
+        let mut cj = lo_j + step;
+        while cj < hi_j {
+            push(lo_i, cj);
+            push(hi_i, cj);
+            cj += step;
+        }
+        for (ci, cj) in cand {
+            let fresh = rings.built_rev.get(&(ci, cj)).map(|r| *r == rings.rev).unwrap_or(false);
+            if rings.chunks.contains_key(&(ci, cj)) && fresh {
+                continue;
+            }
+            let h = CellId::from_face_ij(view.face, ci, cj, view.level).0; // Hilbert curve index
+            if best.map(|(br, bh, _)| (ring as u32, h) < (br, bh)).unwrap_or(true) {
+                best = Some((ring as u32, h, (ci, cj)));
+            }
+        }
+        if best.is_some() {
+            break; // nearest ring first
+        }
+    }
+    if let Some((_, _, (ci, cj))) = best {
+        // +1 cell overlap: each chunk meshes w-1 quads, so without overlap a
+        // one-cell strip goes missing between neighbours (white crack lines).
+        if tx.0.send(MeshJob::Ring { face: view.face, level: view.level, w: cw as usize + 1, oi: ci, oj: cj, vert: view.vert, tier_debug: view.tier_debug, tiers: eroded.0.clone(), water: water.0.clone() }).is_ok() {
+            rings.inflight = Some((ci, cj));
+        }
+    }
 }
 
 /// Swap in finished meshes (stale results from a level change are dropped).
-fn mesh_apply(mut commands: Commands, view: Res<View>, mut meshes: ResMut<Assets<Mesh>>, mut ts: ResMut<TerrainState>, rx: Res<MesherRx>) {
+fn mesh_apply(mut commands: Commands, view: Res<View>, mut meshes: ResMut<Assets<Mesh>>, mut ts: ResMut<TerrainState>, mut rings: ResMut<RingChunks>, rx: Res<MesherRx>) {
     while let Ok(done) = rx.0.lock().unwrap().try_recv() {
         match done {
             MeshDone::Full { level, origin, anchor, fields, heights, base_water, ground, water, h_min, h_max, gen_ms } => {
@@ -1705,12 +1787,58 @@ fn mesh_apply(mut commands: Commands, view: Res<View>, mut meshes: ResMut<Assets
                 ts.built_level = level;
                 ts.origin = origin;
                 ts.anchor_m = anchor;
+                // Re-bridge ring transforms to the (possibly moved) anchor, and
+                // evict chunks that fell behind the horizon (§6: regenerable).
+                let cw = (view.w / 4).max(64) as i64;
+                let max_r = std::env::var("VIVARIUM_RINGS").ok().and_then(|s| s.parse().ok()).unwrap_or(2i64) + 1;
+                let keep_lo_i = origin.0 as i64 - max_r * cw;
+                let keep_hi_i = origin.0 as i64 + view.w as i64 + max_r * cw;
+                let keep_lo_j = origin.1 as i64 - max_r * cw;
+                let keep_hi_j = origin.1 as i64 + view.w as i64 + max_r * cw;
+                let mut dead = Vec::new();
+                for (&k, &(g, wtr, ca)) in rings.chunks.iter() {
+                    if (k.0 as i64) < keep_lo_i || (k.0 as i64) > keep_hi_i || (k.1 as i64) < keep_lo_j || (k.1 as i64) > keep_hi_j {
+                        commands.entity(g).despawn();
+                        if let Some(e) = wtr {
+                            commands.entity(e).despawn();
+                        }
+                        dead.push(k);
+                    } else {
+                        let off = Vec3::new((ca.x - anchor.x) as f32, 0.0, (ca.y - anchor.y) as f32);
+                        commands.entity(g).insert(Transform::from_translation(off));
+                        if let Some(e) = wtr {
+                            commands.entity(e).insert(Transform::from_translation(off));
+                        }
+                    }
+                }
+                for k in dead {
+                    rings.chunks.remove(&k);
+                    rings.built_rev.remove(&k);
+                }
                 ts.fields = Some(fields);
                 ts.heights = Some(heights);
                 ts.base_water = Some(base_water);
                 ts.h_min = h_min;
                 ts.h_max = h_max;
                 ts.gen_ms = gen_ms;
+            }
+            MeshDone::Ring { level, origin, anchor, ground, water } => {
+                rings.inflight = None;
+                if level != view.level {
+                    continue; // stale level; eviction below clears the rest
+                }
+                if let Some((g, wtr, _)) = rings.chunks.remove(&origin) {
+                    commands.entity(g).despawn();
+                    if let Some(e) = wtr {
+                        commands.entity(e).despawn();
+                    }
+                }
+                let off = Vec3::new((anchor.x - ts.anchor_m.x) as f32, 0.0, (anchor.y - ts.anchor_m.y) as f32);
+                let g = commands.spawn((Mesh3d(meshes.add(ground)), MeshMaterial3d(ts.ground_mat.clone()), Transform::from_translation(off))).id();
+                let wtr = water.map(|wm| commands.spawn((Mesh3d(meshes.add(wm)), MeshMaterial3d(ts.water_mat.clone()), Transform::from_translation(off))).id());
+                let rev = rings.rev;
+                rings.chunks.insert(origin, (g, wtr, anchor));
+                rings.built_rev.insert(origin, rev);
             }
             MeshDone::WaterOnly { level, origin, water } => {
                 ts.water_inflight = false;
