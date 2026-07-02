@@ -117,10 +117,15 @@ struct View {
 
 impl Default for View {
     fn default() -> Self {
-        let level: u8 = std::env::var("VIVARIUM_LEVEL").ok().and_then(|s| s.parse().ok()).unwrap_or(14);
+        // Defaults match the original vivarium-slabs start view for an honest
+        // apples-to-apples: slabs' ZOOM_START was 260 voxel-units = 130 m viewport
+        // at 0.5 m/voxel, and L24 cells (~0.6 m) are the nearest sampling to slabs'
+        // 0.5 m voxels. Coarser survey views: VIVARIUM_LEVEL=14 + [ / ].
+        let level: u8 = std::env::var("VIVARIUM_LEVEL").ok().and_then(|s| s.parse().ok()).unwrap_or(24);
         let w: usize = std::env::var("VIVARIUM_W").ok().and_then(|s| s.parse().ok()).unwrap_or(256);
         let n = (1u64 << level) as f64;
         let span = w as f64 * cell_size_m(level, Planet::EARTH.radius_m);
+        let _ = span;
         // Start focus in face cells at `level` (env for scripted/reproducible views —
         // the scan_land example in vivarium-world prints good coastal candidates).
         let fi = std::env::var("VIVARIUM_FOCUS_I").ok().and_then(|s| s.parse().ok()).unwrap_or(n * 0.5);
@@ -138,7 +143,7 @@ impl Default for View {
             pitch: manual_pitch.unwrap_or(ISO_PITCH),
             pitch_manual: manual_pitch.unwrap_or(ISO_PITCH),
             auto_pitch: manual_pitch.is_none(),
-            zoom: std::env::var("VIVARIUM_ZOOM").ok().and_then(|s| s.parse().ok()).unwrap_or((span * 0.6) as f32),
+            zoom: std::env::var("VIVARIUM_ZOOM").ok().and_then(|s| s.parse().ok()).unwrap_or(130.0),
             vert: std::env::var("VIVARIUM_VERT").ok().and_then(|s| s.parse().ok()).unwrap_or(1.0),
         }
     }
@@ -379,7 +384,7 @@ fn view_update(
 
     // Sampling level: same geographic point, finer/coarser cells. Focus is in cells
     // at the current level, so it rescales by 2 exactly.
-    if keys.just_pressed(KeyCode::BracketRight) && view.level < 22 {
+    if keys.just_pressed(KeyCode::BracketRight) && view.level < vivarium_world::sphere::MAX_LEVEL {
         view.level += 1;
         view.focus *= 2.0;
         view.clamp_focus();
@@ -672,16 +677,16 @@ fn compass(yaw: f32) -> &'static str {
 fn hud_update(view: Res<View>, ts: Res<TerrainState>, diag: Res<bevy::diagnostic::DiagnosticsStore>, mut q: Query<&mut Text, With<HudText>>) {
     let fps = diag.get(&bevy::diagnostic::FrameTimeDiagnosticsPlugin::FPS).and_then(|d| d.smoothed()).unwrap_or(0.0);
     let cell = view.cell_m();
-    let span_km = view.w as f64 * cell / 1000.0;
+    let span_m = view.w as f64 * cell;
+    let span_txt = if span_m >= 2000.0 { format!("{:.0} km", span_m / 1000.0) } else { format!("{span_m:.0} m") };
+    let cell_txt = if cell >= 2.0 { format!("{cell:.0} m") } else { format!("{:.1} m", cell) };
     let elev = height_at_focus(&view, &ts);
     if let Ok(mut text) = q.single_mut() {
         text.0 = format!(
-            "worldview    {fps:>4.0} fps    gen {:.0} ms\n{:?}  L{}  cell {:.0} m  window {:.0} km  relief {:.0}..{:.0} m\nfocus ({:.0}, {:.0})    elev {elev:.0} m\nfacing {}    angle {:.0} deg    zoom {:.0} m    vert {:.1}",
+            "worldview    {fps:>4.0} fps    gen {:.0} ms\n{:?}  L{}  cell {cell_txt}  window {span_txt}  relief {:.0}..{:.0} m\nfocus ({:.0}, {:.0})    elev {elev:.0} m\nfacing {}    angle {:.0} deg    zoom {:.0} m    vert {:.1}",
             ts.gen_ms,
             view.face,
             view.level,
-            cell,
-            span_km,
             ts.h_min,
             ts.h_max,
             view.focus.x,

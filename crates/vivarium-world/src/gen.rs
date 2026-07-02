@@ -61,7 +61,17 @@ pub fn baseline_column(cell: CellId) -> Column {
     let (su, sv) = (c.u + 1.0, c.v + 1.0);
     let cont_m = (fbm(0, su * CONT_PER_FACE, sv * CONT_PER_FACE, 4, 2.0, 0.5) - 0.5) * 3000.0;
     let mtn_amp = 1800.0 * ((cont_m + 200.0) / 800.0).clamp(0.0, 1.0);
-    let mtn_m = (fbm(1, su * MTN_PER_FACE, sv * MTN_PER_FACE, 7, 2.0, 0.5) - 0.5) * 2.0 * mtn_amp;
+    // Mountain octaves run from the 25 km base down to the SAMPLE's Nyquist (2
+    // cells at this cell's level): un-eroded terrain is epic at every scale it is
+    // looked at — just bubblier than carved terrain (erosion adds the organized
+    // channels, not the bulk verticality). Truncating fBm at the Nyquist is a
+    // low-pass, so a coarse-level sample is the honest smoothed view of the fine
+    // one (§5 consistency; abstraction-as-prefix, §8) rather than an alias.
+    let face_edge_m = std::f64::consts::FRAC_PI_2 * crate::planet::Planet::EARTH.radius_m;
+    let cell_m = face_edge_m / (1u64 << cell.level()) as f64;
+    let base_lambda_m = face_edge_m / MTN_PER_FACE; // ~25 km
+    let n_oct = ((base_lambda_m / (2.0 * cell_m)).log2().floor() as i64 + 1).clamp(1, 16) as u32;
+    let mtn_m = (fbm(1, su * MTN_PER_FACE, sv * MTN_PER_FACE, n_oct, 2.0, 0.5) - 0.5) * 2.0 * mtn_amp;
     column_from_surface(cell, SEA_LEVEL_M + cont_m + mtn_m, 2.0)
 }
 
