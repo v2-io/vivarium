@@ -105,6 +105,8 @@ struct WaterMsg {
     /// (max Froude, fraction of wet cells supercritical Fr>1.5) — the roll-wave
     /// gauge: surges are honest physics only while this shows supercritical flow.
     froude: (f32, f32),
+    /// Weather right now: (raining, seconds until it changes — ∞ while settling).
+    weather: (bool, f32),
 }
 
 /// Nominal years per erosion epoch — a stated calibration constant (the epoch is
@@ -118,7 +120,7 @@ struct WaterRx(Mutex<std::sync::mpsc::Receiver<WaterMsg>>);
 struct WaterRes(Option<WaterRegion>);
 /// (last update, sim-s/wall-s, mean |Δdepth| m, total sim-s, settling?)
 #[derive(Resource, Default)]
-struct WaterMeta(Option<(std::time::Instant, f32, f32, f32, bool, (f32, f32))>);
+struct WaterMeta(Option<(std::time::Instant, f32, f32, f32, bool, (f32, f32), (bool, f32))>);
 
 /// Wall-clock + maturity metadata per tier level (a VIEW concern — the world
 /// crate stays wall-clock-free): (level, last update, total epochs, aging speed
@@ -191,7 +193,7 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
             let mut it = v.split(',').filter_map(|t| t.trim().parse::<f32>().ok());
             Some((it.next()?, it.next()?))
         })
-        .unwrap_or((400.0, 800.0));
+        .unwrap_or((400.0, 400.0));
     let macro_extra: u32 = std::env::var("VIVARIUM_MACRO_EXTRA").ok().and_then(|s| s.parse().ok()).unwrap_or(40);
     // Fine + water cover the WHOLE macro region (Joseph: one consistent border,
     // not nested ones you trip over while wandering). L21 = L19 × 4 exactly, so
@@ -340,7 +342,13 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
                     eprintln!("[worldview] water settled at {sim_total:.0} sim-s (d {:.1} mm vs peak {:.1} mm) — living phase (storms + sediment)", delta_mean * 1000.0, delta_peak * 1000.0);
                 }
             }
-            if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * dt, delta_m: delta_mean, settling, froude: w.froude() }).is_err() {
+            let weather = if settling || storm_off <= 0.0 {
+                (true, f32::INFINITY)
+            } else {
+                let ph = sim_total % (storm_on + storm_off);
+                if ph < storm_on { (true, storm_on - ph) } else { (false, storm_on + storm_off - ph) }
+            };
+            if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * dt, delta_m: delta_mean, settling, froude: w.froude(), weather }).is_err() {
                 return;
             }
             // Write the carved bed back to the L21 tier (block-mean downsample
@@ -523,6 +531,7 @@ fn spawn_telescope(
                         delta_m: (delta / before.len() as f64) as f32,
                         settling: false,
                         froude: w.froude(),
+                        weather: (true, f32::INFINITY),
                     };
                     if wtx.send(msg).is_err() {
                         return;
@@ -594,8 +603,8 @@ fn water_update(rx: Res<WaterRx>, mut water: ResMut<WaterRes>, mut meta: ResMut<
     }
     if let Some(msg) = newest {
         let rate = meta.0.map(|(at, ..)| sim_s / at.elapsed().as_secs_f32().max(1e-3)).unwrap_or(0.0);
-        let total = meta.0.map(|(_, _, _, t, _, _)| t).unwrap_or(0.0) + sim_s;
-        meta.0 = Some((std::time::Instant::now(), rate, msg.delta_m, total, msg.settling, msg.froude));
+        let total = meta.0.map(|(_, _, _, t, _, _, _)| t).unwrap_or(0.0) + sim_s;
+        meta.0 = Some((std::time::Instant::now(), rate, msg.delta_m, total, msg.settling, msg.froude, msg.weather));
         water.0 = Some(msg.region);
         ts.water_dirty = true; // water-only refresh; no throttle — every state shows
     }
@@ -676,11 +685,35 @@ fn main() {
         .insert_resource(meta)
         .insert_resource(focus)
         .add_systems(Startup, setup)
-        .add_systems(Update, (view_update, tier_update, water_update, terrain_update, water_refresh, hud_update, scale_update, maybe_screenshot))
+        .add_systems(Update, (view_update, tier_update, water_update, terrain_update, water_refresh, flow_arrow, hud_update, scale_update, maybe_screenshot))
         .run();
 }
 
 // --- View state --------------------------------------------------------------------
+
+/// Display/interaction modes, cycled by T and shown top-right.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ViewMode {
+    /// Plain terrain + water.
+    Normal,
+    /// Erosion-tier fidelity tint (the old T toggle).
+    Tiers,
+    /// Pawn-local hydrology on the HUD + a flow arrow above the pawn.
+    Water,
+    /// Water mode + the pawn drifts with the current (stochastic but plausible).
+    Float,
+}
+
+impl ViewMode {
+    fn name(self) -> &'static str {
+        match self {
+            ViewMode::Normal => "normal",
+            ViewMode::Tiers => "tiers",
+            ViewMode::Water => "water",
+            ViewMode::Float => "float",
+        }
+    }
+}
 
 #[derive(Resource)]
 struct View {
@@ -705,8 +738,9 @@ struct View {
     zoom: f32,
     /// Vertical exaggeration (1 = honest).
     vert: f32,
-    /// Tint terrain by its erosion-tier fidelity (T toggles; the debug overlay).
+    /// Tint terrain by its erosion-tier fidelity (derived: mode == Tiers).
     tier_debug: bool,
+    mode: ViewMode,
 }
 
 impl Default for View {
@@ -744,6 +778,7 @@ impl Default for View {
             zoom: std::env::var("VIVARIUM_ZOOM").ok().and_then(|s| s.parse().ok()).unwrap_or(130.0),
             vert: std::env::var("VIVARIUM_VERT").ok().and_then(|s| s.parse().ok()).unwrap_or(1.0),
             tier_debug: std::env::var("VIVARIUM_TIERDEBUG").map(|v| v != "0").unwrap_or(false),
+            mode: if std::env::var("VIVARIUM_TIERDEBUG").map(|v| v != "0").unwrap_or(false) { ViewMode::Tiers } else { ViewMode::Normal },
         }
     }
 }
@@ -805,6 +840,9 @@ struct Pawn;
 struct FocusRing;
 #[derive(Component)]
 struct HudText;
+
+#[derive(Component)]
+struct ModeText;
 #[derive(Component)]
 struct ScaleBar;
 #[derive(Component)]
@@ -887,6 +925,14 @@ fn setup(mut commands: Commands, view: Res<View>, mut meshes: ResMut<Assets<Mesh
         BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.2)),
         HudText,
     ));
+    commands.spawn((
+        Text::new("mode: normal"),
+        TextFont { font_size: 15.0, ..default() },
+        TextColor(Color::srgb(0.08, 0.09, 0.10)),
+        Node { position_type: PositionType::Absolute, top: Val::Px(8.0), right: Val::Px(10.0), padding: UiRect::all(Val::Px(6.0)), ..default() },
+        BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.2)),
+        ModeText,
+    ));
 
     // Map scale bar (bottom-left): a round-number length whose pixel width is exact
     // (ortho: zoom metres map onto WINDOW_H_PX). The bar is the truth-teller the
@@ -940,13 +986,46 @@ fn view_update(
     mut pawn: Query<&mut Transform, (With<Pawn>, Without<IsoCamera>, Without<FocusRing>)>,
     mut ring: Query<&mut Transform, (With<FocusRing>, Without<IsoCamera>, Without<Pawn>)>,
     shared: Res<SharedFocus>,
+    water: Res<WaterRes>,
+    wmeta: Res<WaterMeta>,
 ) {
     if keys.just_pressed(KeyCode::KeyT) {
-        view.tier_debug = !view.tier_debug;
-        ts.built_level = u8::MAX; // tint is baked into vertex colours — rebuild
+        view.mode = match view.mode {
+            ViewMode::Normal => ViewMode::Tiers,
+            ViewMode::Tiers => ViewMode::Water,
+            ViewMode::Water => ViewMode::Float,
+            ViewMode::Float => ViewMode::Normal,
+        };
+        let tint = view.mode == ViewMode::Tiers;
+        if view.tier_debug != tint {
+            view.tier_debug = tint;
+            ts.built_level = u8::MAX; // tint is baked into vertex colours — rebuild
+        }
     }
     *shared.0.lock().unwrap() = (view.focus.x, view.focus.y, view.level);
     let dt = time.delta_secs();
+    // FLOAT mode: the pawn drifts with the current, at the pace the water
+    // animation itself runs (wall-dt × displayed sim-rate), with a small
+    // deterministic wobble (coordinate-hashed, §8 — no RNG) for the plausible
+    // stochastic wander of a floating body.
+    if view.mode == ViewMode::Float {
+        if let Some(wr) = &water.0 {
+            let c = CellId::from_face_ij(view.face, view.focus.x as u32, view.focus.y as u32, view.level);
+            if let (Some(d), Some((vx, vy))) = (wr.depth_m(c), wr.velocity_m_s(c)) {
+                if d > 0.05 && (vx != 0.0 || vy != 0.0) {
+                    use vivarium_world::noise::hash01;
+                    let rate = wmeta.0.map(|(_, r, ..)| r).unwrap_or(1.0).clamp(0.0, 30.0) as f64;
+                    let wob = (hash01(13, (view.focus.x * 4.0) as i64, (view.focus.y * 4.0) as i64) - 0.5) * 0.9;
+                    let (sw, cw) = wob.sin_cos();
+                    let (rx, ry) = (vx * cw - vy * sw, vx * sw + vy * cw);
+                    let cell = view.cell_m();
+                    view.focus.x += rx * dt as f64 * rate / cell;
+                    view.focus.y += ry * dt as f64 * rate / cell;
+                    view.clamp_focus();
+                }
+            }
+        }
+    }
 
     // Pan in the camera frame, in metres, converted to face cells.
     let mut dir = Vec2::ZERO;
@@ -1086,6 +1165,32 @@ fn sampled_height(view: &View, ts: &TerrainState, fi: f64, fj: f64) -> Option<f3
 }
 
 /// Height (m above sea, un-exaggerated) under the focus.
+/// Flow arrow above the pawn (Water/Float modes): direction = local current,
+/// length = normalized speed. Drawn above the water surface when submerged.
+fn flow_arrow(view: Res<View>, ts: Res<TerrainState>, water: Res<WaterRes>, pawn: Query<&Transform, With<Pawn>>, mut gizmos: Gizmos) {
+    if !matches!(view.mode, ViewMode::Water | ViewMode::Float) {
+        return;
+    }
+    let Some(wr) = &water.0 else { return };
+    let Ok(pt) = pawn.single() else { return };
+    let c = CellId::from_face_ij(view.face, view.focus.x as u32, view.focus.y as u32, view.level);
+    let (Some(d), Some((vx, vy))) = (wr.depth_m(c), wr.velocity_m_s(c)) else { return };
+    if d < 0.01 {
+        return;
+    }
+    let speed = ((vx * vx + vy * vy) as f32).sqrt();
+    if speed < 1e-3 {
+        return;
+    }
+    let dir = Vec3::new(vx as f32, 0.0, vy as f32).normalize();
+    let len = 1.0 + 5.0 * (speed / 2.5).clamp(0.0, 1.0);
+    // Above the head, or above the water surface if that's higher.
+    let ground_y = pt.translation.y - 1.0; // pawn cuboid is 2 m, centered
+    let y = (pt.translation.y + 1.6).max(ground_y + d as f32 * view.vert + 0.6);
+    let start = Vec3::new(pt.translation.x, y, pt.translation.z);
+    gizmos.arrow(start, start + dir * len, Color::srgb(0.15, 0.95, 1.0));
+}
+
 fn height_at_focus(view: &View, ts: &TerrainState) -> f32 {
     sampled_height(view, ts, view.focus.x, view.focus.y).unwrap_or(0.0)
 }
@@ -1385,11 +1490,45 @@ fn build_water_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin
             colors.push([rgb[0], rgb[1], rgb[2], m.clamp(0.0, 0.95)]);
         }
     }
+    // Shoreline (Joseph): do NOT feather the surface down at the water's edge —
+    // extend the level plane one ring INTO the hillside at the wet neighbour's
+    // surface height and let the terrain's depth test cut it. The intersection
+    // line IS the shoreline; the old all-corners-wet rule + bilinear smear was
+    // the "meniscus climbing the banks".
+    let mut ext = vec![false; w * w];
+    for j in 0..w {
+        for i in 0..w {
+            let k = j * w + i;
+            if wet[k] {
+                continue;
+            }
+            let mut best: Option<usize> = None;
+            let mut best_y = f32::NEG_INFINITY;
+            for (dx, dy) in [(-1i64, 0i64), (1, 0), (0, -1), (0, 1)] {
+                let (nx, ny) = (i as i64 + dx, j as i64 + dy);
+                if nx < 0 || ny < 0 || nx >= w as i64 || ny >= w as i64 {
+                    continue;
+                }
+                let nk = ny as usize * w + nx as usize;
+                if wet[nk] && positions[nk][1] > best_y {
+                    best_y = positions[nk][1];
+                    best = Some(nk);
+                }
+            }
+            if let Some(nk) = best {
+                positions[k][1] = positions[nk][1];
+                colors[k] = colors[nk];
+                normals[k] = normals[nk];
+                ext[k] = true;
+            }
+        }
+    }
     let mut indices: Vec<u32> = Vec::new();
     for j in 0..w - 1 {
         for i in 0..w - 1 {
             let (a, b, c, d) = (j * w + i, j * w + i + 1, (j + 1) * w + i, (j + 1) * w + i + 1);
-            if wet[a] && wet[b] && wet[c] && wet[d] {
+            let ok = |k: usize| wet[k] || ext[k];
+            if (wet[a] || wet[b] || wet[c] || wet[d]) && ok(a) && ok(b) && ok(c) && ok(d) {
                 indices.extend_from_slice(&[a as u32, c as u32, b as u32, b as u32, c as u32, d as u32]);
             }
         }
@@ -1413,7 +1552,17 @@ fn compass(yaw: f32) -> &'static str {
     L[(((deg + 22.5) / 45.0) as usize) % 8]
 }
 
-fn hud_update(view: Res<View>, ts: Res<TerrainState>, meta: Res<TierMeta>, wmeta: Res<WaterMeta>, water: Res<WaterRes>, eroded: Res<Eroded>, diag: Res<bevy::diagnostic::DiagnosticsStore>, mut q: Query<&mut Text, With<HudText>>) {
+fn hud_update(view: Res<View>, ts: Res<TerrainState>, meta: Res<TierMeta>, wmeta: Res<WaterMeta>, water: Res<WaterRes>, eroded: Res<Eroded>, diag: Res<bevy::diagnostic::DiagnosticsStore>, mut q: Query<&mut Text, (With<HudText>, Without<ModeText>)>, mut mq: Query<&mut Text, (With<ModeText>, Without<HudText>)>) {
+    if let Ok(mut mt) = mq.single_mut() {
+        let weather = wmeta.0.map(|(.., w)| w);
+        let wx = match weather {
+            Some((true, left)) if left.is_infinite() => "  ··· deluge".to_string(),
+            Some((true, left)) => format!("  🌧 rain {left:.0}s"),
+            Some((false, left)) => format!("  ☀ clear {left:.0}s"),
+            None => String::new(),
+        };
+        **mt = format!("[T] mode: {}{wx}", view.mode.name());
+    }
     let fps = diag.get(&bevy::diagnostic::FrameTimeDiagnosticsPlugin::FPS).and_then(|d| d.smoothed()).unwrap_or(0.0);
     let cell = view.cell_m();
     let span_m = view.w as f64 * cell;
@@ -1452,11 +1601,11 @@ fn hud_update(view: Res<View>, ts: Res<TerrainState>, meta: Res<TierMeta>, wmeta
         let oldest_txt = if prior_seen { "prior(unsimulated)".to_string() } else { format!("{oldest:.0}s") };
         let water_txt = wmeta
             .0
-            .map(|(_, rate, delta, total, settling, (fr_max, fr_sup))| {
+            .map(|(_, rate, delta, total, settling, (fr_max, fr_sup), _)| {
                 let phase = if settling { " SETTLING" } else { "" };
                 // Pawn-local hydrology (Joseph): everything about the water at
                 // the spot the pawn is standing, when it is standing in water.
-                let local = water.0.as_ref().and_then(|wr| {
+                let local = water.0.as_ref().filter(|_| matches!(view.mode, ViewMode::Water | ViewMode::Float)).and_then(|wr| {
                     let c = CellId::from_face_ij(view.face, view.focus.x as u32, view.focus.y as u32, view.level);
                     let d = wr.depth_m(c)?;
                     if d < 0.005 {

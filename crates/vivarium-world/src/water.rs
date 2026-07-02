@@ -562,9 +562,14 @@ pub struct WaterRegion {
 }
 
 impl WaterRegion {
+    /// Net flow velocity components (m/s along +i, +j) — for flow arrows/float.
+    pub fn velocity_m_s(&self, cell: CellId) -> Option<(f64, f64)> {
+        Some((self.bilinear(&self.vx, cell)?, self.bilinear(&self.vy, cell)?))
+    }
+
     /// Net flow speed (m/s) — pawn-local instrumentation.
     pub fn speed_m_s(&self, cell: CellId) -> Option<f64> {
-        let (x, y) = (self.bilinear(&self.vx, cell)?, self.bilinear(&self.vy, cell)?);
+        let (x, y) = self.velocity_m_s(cell)?;
         Some((x * x + y * y).sqrt())
     }
     fn bilinear(&self, field: &[f32], cell: CellId) -> Option<f64> {
