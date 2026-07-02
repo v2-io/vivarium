@@ -107,6 +107,129 @@ impl CubeCoord {
     }
 }
 
+// ---- CellId: the canonical spatial key (S2-style Hilbert cube-sphere cell) ----
+//
+// A `u64` packing (face, level, Hilbert-distance) — the *canonical* address for
+// columns, memo keys, and the save store (`DESIGN-MATERIAL.md` §8): exact,
+// drift-free, hashable, and Hilbert-ordered so a region is a contiguous id range
+// (storage/streaming locality). The curve orders *chunks*; a chunk's interior is a
+// plain Cartesian array, so per-cell Hilbert ops never happen in a hot loop — see
+// `ref/research/spatial-key-bench.md` (Cartesian neighbours are ~80× faster).
+//
+// Layout, à la Google's S2:
+//   bits 63..61 : face (0..5)
+//   bits 60..0  : Hilbert distance (2 bits/level, MSB-aligned), then a `1` sentinel
+//                 bit marking the level, then zeros.
+// A plain *per-face* Hilbert curve (S2's cross-face continuity is a refinement we
+// don't need for within-face chunk locality).
+
+/// Deepest level: at Earth radius a level-25 cell is a ≤ 0.5 m footprint (the voxel
+/// column); `2^25` cells per face edge.
+pub const MAX_LEVEL: u8 = 25;
+
+const FACE_SHIFT: u32 = 61;
+
+/// The canonical spatial key — a cube-sphere cell at some level (see module notes).
+/// `Ord`/`Hash` so it drops straight into memo keys, the save-store index, and
+/// locality-ordered range scans.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub struct CellId(pub u64);
+
+impl Face {
+    #[inline]
+    pub fn index(self) -> u8 {
+        match self { Face::XPos => 0, Face::XNeg => 1, Face::YPos => 2, Face::YNeg => 3, Face::ZPos => 4, Face::ZNeg => 5 }
+    }
+    #[inline]
+    pub fn from_index(i: u8) -> Face {
+        match i { 0 => Face::XPos, 1 => Face::XNeg, 2 => Face::YPos, 3 => Face::YNeg, 4 => Face::ZPos, _ => Face::ZNeg }
+    }
+}
+
+// Canonical Hilbert curve on a 2^order grid (Wikipedia xy<->d); `n = 2^level`.
+fn hilbert_rot(n: u32, x: &mut u32, y: &mut u32, rx: u32, ry: u32) {
+    if ry == 0 {
+        if rx == 1 { *x = n - 1 - *x; *y = n - 1 - *y; }
+        std::mem::swap(x, y);
+    }
+}
+fn hilbert_xy2d(n: u32, mut x: u32, mut y: u32) -> u64 {
+    let mut d = 0u64;
+    let mut s = n / 2;
+    while s > 0 {
+        let rx = if (x & s) > 0 { 1 } else { 0 };
+        let ry = if (y & s) > 0 { 1 } else { 0 };
+        d += (s as u64) * (s as u64) * ((3 * rx) ^ ry) as u64;
+        hilbert_rot(n, &mut x, &mut y, rx, ry);
+        s /= 2;
+    }
+    d
+}
+fn hilbert_d2xy(n: u32, mut d: u64) -> (u32, u32) {
+    let (mut x, mut y) = (0u32, 0u32);
+    let mut s = 1u32;
+    while s < n {
+        let rx = (1 & (d / 2)) as u32;
+        let ry = (1 & (d ^ rx as u64)) as u32;
+        hilbert_rot(s, &mut x, &mut y, rx, ry);
+        x += s * rx;
+        y += s * ry;
+        d /= 4;
+        s *= 2;
+    }
+    (x, y)
+}
+
+impl CellId {
+    /// The cell containing direction `c` at `level` (0..=[`MAX_LEVEL`]).
+    pub fn from_cube(c: CubeCoord, level: u8) -> CellId {
+        debug_assert!(level <= MAX_LEVEL);
+        let n = 1u32 << level;
+        let quant = |t: f64| -> u32 {
+            let f = ((t + 1.0) * 0.5 * n as f64).floor();
+            (f.max(0.0) as u32).min(n - 1)
+        };
+        let dist = hilbert_xy2d(n, quant(c.u), quant(c.v));
+        let l = level as u32;
+        let pos = (dist << (61 - 2 * l)) | (1u64 << (60 - 2 * l));
+        CellId(((c.face.index() as u64) << FACE_SHIFT) | pos)
+    }
+
+    #[inline]
+    pub fn face(self) -> Face { Face::from_index((self.0 >> FACE_SHIFT) as u8) }
+
+    /// Subdivision level, recovered from the sentinel bit.
+    #[inline]
+    pub fn level(self) -> u8 { ((60u32 - self.0.trailing_zeros()) / 2) as u8 }
+
+    /// Cell-center direction on the sphere.
+    pub fn to_cube(self) -> CubeCoord {
+        let level = self.level();
+        let n = 1u32 << level;
+        let l = level as u32;
+        let dist = (self.0 >> (61 - 2 * l)) & ((1u64 << (2 * l)) - 1);
+        let (i, j) = hilbert_d2xy(n, dist);
+        let center = |k: u32| ((k as f64 + 0.5) / n as f64) * 2.0 - 1.0;
+        CubeCoord { face: self.face(), u: center(i), v: center(j) }
+    }
+
+    /// The parent cell one level coarser — `None` at level 0.
+    pub fn parent(self) -> Option<CellId> {
+        let level = self.level();
+        if level == 0 { return None; }
+        let l = level as u32;
+        let dist = ((self.0 >> (61 - 2 * l)) & ((1u64 << (2 * l)) - 1)) >> 2;
+        let pl = l - 1;
+        let pos = (dist << (61 - 2 * pl)) | (1u64 << (60 - 2 * pl));
+        Some(CellId(((self.face().index() as u64) << FACE_SHIFT) | pos))
+    }
+}
+
+impl CubeCoord {
+    /// Convenience: the [`CellId`] containing this direction at `level`.
+    pub fn cell(self, level: u8) -> CellId { CellId::from_cube(self, level) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -139,6 +262,69 @@ mod tests {
                 assert!((back.lat - lat).abs() < 1e-9, "lat drift: {lat} -> {}", back.lat);
                 assert!((back.lon - lon).abs() < 1e-9, "lon drift: {lon} -> {}", back.lon);
             }
+        }
+    }
+
+    #[test]
+    fn cellid_level_and_face_roundtrip() {
+        for face in faces() {
+            for level in [0u8, 1, 5, 13, 25] {
+                let id = CellId::from_cube(CubeCoord { face, u: 0.1, v: -0.3 }, level);
+                assert_eq!(id.level(), level, "level {face:?} L{level}");
+                assert_eq!(id.face(), face, "face {face:?} L{level}");
+            }
+        }
+    }
+
+    #[test]
+    fn cellid_cube_roundtrip_within_cell() {
+        // from_cube -> to_cube lands within one cell half-width (2^-level in u,v).
+        for face in faces() {
+            for level in [3u8, 8, 16, 25] {
+                let tol = 1.001 / (1u64 << level) as f64;
+                for &u in &[-0.9, -0.2, 0.37, 0.85] {
+                    for &v in &[-0.75, 0.05, 0.6] {
+                        let back = CellId::from_cube(CubeCoord { face, u, v }, level).to_cube();
+                        assert!((back.u - u).abs() <= tol && (back.v - v).abs() <= tol,
+                            "L{level} {face:?} ({u},{v}) -> ({},{})", back.u, back.v);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn cellid_is_stable() {
+        // Re-encoding a cell's own center reproduces the same id.
+        for level in [0u8, 7, 25] {
+            let id = CellId::from_cube(CubeCoord { face: Face::ZPos, u: 0.42, v: -0.17 }, level);
+            assert_eq!(CellId::from_cube(id.to_cube(), level), id, "unstable at L{level}");
+        }
+    }
+
+    #[test]
+    fn cellid_parent() {
+        let id = CellId::from_cube(CubeCoord { face: Face::YNeg, u: 0.3, v: 0.6 }, 20);
+        let p = id.parent().unwrap();
+        assert_eq!(p.level(), 19);
+        assert_eq!(p.face(), Face::YNeg);
+        // the child's centre falls inside the parent cell (± half a parent width)
+        let (cc, pc) = (id.to_cube(), p.to_cube());
+        let half = 1.001 / (1u64 << 19) as f64;
+        assert!((cc.u - pc.u).abs() <= half && (cc.v - pc.v).abs() <= half, "child not inside parent");
+        assert!(CellId::from_cube(CubeCoord { face: Face::XPos, u: 0.0, v: 0.0 }, 0).parent().is_none());
+    }
+
+    #[test]
+    fn hilbert_is_contiguous() {
+        // The defining Hilbert property (⇒ locality): consecutive distances are
+        // Manhattan-adjacent cells. Validates the curve implementation.
+        let n = 1u32 << 6;
+        for d in 0..(n as u64 * n as u64 - 1) {
+            let (x0, y0) = hilbert_d2xy(n, d);
+            let (x1, y1) = hilbert_d2xy(n, d + 1);
+            let man = (x0 as i64 - x1 as i64).abs() + (y0 as i64 - y1 as i64).abs();
+            assert_eq!(man, 1, "d={d} not adjacent to d+1");
         }
     }
 }
