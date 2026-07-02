@@ -272,17 +272,23 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
         }
         let mut w = WaterSim::new(face, wl, (woi, woj), wnx, cell, wbed, atmos_m);
         let mut sim_total: f32 = 0.0;
+        // Phase 3a — THE OLD ENGINE'S RECIPE: deluge to steady state with
+        // sediment OFF (core's deliberate kill-switch, used for its final look),
+        // so the river network and lakes FILL and equilibrate first. Hands off to
+        // the living phase (storms + sediment) once the water levels out.
+        let mut settling = true;
         loop {
             let t0 = std::time::Instant::now();
             // CFL dt from the CURRENT deepest water (the ocean is real water now);
             // aim ~8 sim-s per burst, capped so deep basins can't stall the loop.
             let dt = w.stable_dt(9.8);
             let substeps: u32 = ((8.0 / dt) as u32).clamp(1, 400);
-            // Storm phase from accumulated sim time.
+            // Settling: continuous rain, no sediment. Living: storms + sediment.
             let phase = sim_total % (storm_on + storm_off);
-            let raining = storm_off <= 0.0 || phase < storm_on;
+            let raining = settling || storm_off <= 0.0 || phase < storm_on;
             let wp = WaterParams {
                 precip: if raining { WaterParams::default().precip * rain_mult } else { 0.0 },
+                sed_capacity: if settling { 0.0 } else { WaterParams::default().sed_capacity },
                 dt,
                 ..Default::default()
             };
@@ -292,7 +298,12 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
                 w.step(&wp);
             }
             let delta: f64 = w.depth.iter().zip(before.iter()).map(|(a, b)| (a - b).abs() as f64).sum();
-            if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * dt, delta_m: (delta / before.len() as f64) as f32 }).is_err() {
+            let delta_mean = (delta / before.len() as f64) as f32;
+            if settling && sim_total > 600.0 && (delta_mean < 0.002 || sim_total > 6000.0) {
+                settling = false;
+                eprintln!("[worldview] water settled at {sim_total:.0} sim-s (d {:.1} mm) — living phase (storms + sediment)", delta_mean * 1000.0);
+            }
+            if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * dt, delta_m: delta_mean }).is_err() {
                 return;
             }
             // Write the carved bed back to the L21 tier (block-mean downsample
