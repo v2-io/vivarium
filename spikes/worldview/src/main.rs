@@ -245,21 +245,55 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
 
         // Phase 3 — RAIN ONLY, forever. Fixed anchor; the water's carving is the
         // only process still moving the bed (written back so the view shows it).
-        let cell = vivarium_world::sample::cell_size_m(21, vivarium_world::planet::Planet::EARTH.radius_m) as f32;
-        let mut w = WaterSim::new(face, 21, (oi, oj), fine_nx, cell, fine.h.clone(), atmos_m);
-        let wp = WaterParams { precip: WaterParams::default().precip * rain_mult, ..Default::default() };
+        // VIVARIUM_WATER_LEVEL (21 or 22): finer water needs a CFL-smaller dt
+        // (cost ~8× per level) and 4× memory — 22 (2.4 m cells over the full
+        // region, ~470 MB) is the honest ceiling until the nested water
+        // telescope exists. Bed is sampled through the full telescope, so finer
+        // water flows over correspondingly finer bed detail.
+        let wl: u8 = std::env::var("VIVARIUM_WATER_LEVEL").ok().and_then(|s| s.parse().ok()).unwrap_or(21).clamp(21, 22);
+        let wscale = 1u32 << (wl - 21);
+        let (woi, woj, wnx) = (oi * wscale, oj * wscale, fine_nx * wscale as usize);
+        let cell = vivarium_world::sample::cell_size_m(wl, vivarium_world::planet::Planet::EARTH.radius_m) as f32;
+        let mut wbed = vec![0.0f32; wnx * wnx];
+        for y in 0..wnx {
+            for x in 0..wnx {
+                let c = CellId::from_face_ij(face, woi + x as u32, woj + y as u32, wl);
+                wbed[y * wnx + x] = erosion::surface_at(c, &tiers) as f32;
+            }
+        }
+        let mut w = WaterSim::new(face, wl, (woi, woj), wnx, cell, wbed, atmos_m);
+        let dt = 0.2 * (cell / 4.77);
+        let substeps: u32 = ((40.0 * 0.2 / dt) as u32).max(1);
+        let wp = WaterParams { precip: WaterParams::default().precip * rain_mult, dt, ..Default::default() };
         loop {
             let t0 = std::time::Instant::now();
             let before = w.depth.clone();
-            for _ in 0..SUBSTEPS {
+            for _ in 0..substeps {
                 w.step(&wp);
             }
             let delta: f64 = w.depth.iter().zip(before.iter()).map(|(a, b)| (a - b).abs() as f64).sum();
-            if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: SUBSTEPS as f32 * wp.dt, delta_m: (delta / before.len() as f64) as f32 }).is_err() {
+            if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * wp.dt, delta_m: (delta / before.len() as f64) as f32 }).is_err() {
                 return;
             }
+            // Write the carved bed back to the L21 tier (block-mean downsample
+            // when the water runs finer — conservative, means preserved).
             if let Some(entry) = tiers.iter_mut().find(|r| r.level == 21) {
-                entry.h.copy_from_slice(&w.bed);
+                let f = wscale as usize;
+                if f == 1 {
+                    entry.h.copy_from_slice(&w.bed);
+                } else {
+                    for y in 0..fine_nx {
+                        for x in 0..fine_nx {
+                            let mut sum = 0.0f64;
+                            for by in 0..f {
+                                for bx in 0..f {
+                                    sum += w.bed[(y * f + by) * wnx + x * f + bx] as f64;
+                                }
+                            }
+                            entry.h[y * fine_nx + x] = (sum / (f * f) as f64) as f32;
+                        }
+                    }
+                }
                 if tx.send(TierMsg { region: entry.clone(), epochs_total: fine_total, sim_years: 0.0, delta_m: 0.0 }).is_err() {
                     return;
                 }
