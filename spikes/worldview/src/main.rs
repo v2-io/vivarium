@@ -994,7 +994,10 @@ fn build_water_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin
     for j in 0..w {
         for i in 0..w {
             let depth = f.water.get(i as isize, j as isize);
-            wet[j * w + i] = depth > 0.0;
+            // A rain film is invisible in reality too: only render standing water
+            // (the diagnostic showed the whole window under a mm-scale sheet at
+            // high rain — painting that as "water" would flood the view).
+            wet[j * w + i] = depth > 0.02;
             // Water surface = solid top + depth (baseline: the sea plane at y = 0).
             let surf = (f.height.get(i as isize, j as isize) + depth - SEA_LEVEL_M as f32) * vert;
             let m = 1.0 - (-depth * WATER_ABSORB_PER_M).exp();
