@@ -259,6 +259,22 @@ frontier (§6) is exactly "absorb a body's effect back into the macro."
 - **Isotropy:** voxels are cubic 0.5 m *by choice* (the true-scale geology anchor),
   not by definition — "voxel" is only a 3-D grid sample and can be anisotropic; we
   chose cubic so one length suffices.
+- **Hex grid: considered and declined (2026-07-03).** Hex's real prize is
+  horizontal isotropy (6 equidistant neighbours, 60° flow quantization), but:
+  (a) **hexes don't nest** — hex hierarchies have only approximate parent
+  containment, and exact coarse-cell = union-of-children is load-bearing for
+  the conservation pin, §5 sufficient statistics, and the whole fidelity
+  ladder; (b) hexes don't tile a sphere without 12 pentagonal defects;
+  (c) **3-D symmetry** (Joseph): the cubic voxel shares its symmetry group
+  with the lattice — reflections/90° rotations of edits and stencils stay
+  exact, and vertical ≡ horizontal; hex prisms privilege the vertical axis;
+  (d) movement is already continuous (f64 focus over the grid), so hex's
+  equal-step virtue solves a problem we don't have. Isotropy is instead
+  purchased where it bites: erosion is already 8-directional (D8/MFD); the
+  4-pipe water scheme is the remaining offender — DIAGONAL PIPES (√2 lengths)
+  are the queued fix if channel rectilinearity starts to matter. A hex
+  convention remains open for the agent/tactical layer as a view-side
+  quantization (the core/view wall permits it for free).
 
 ---
 
