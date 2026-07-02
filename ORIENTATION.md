@@ -37,11 +37,18 @@ and `DESIGN.md`.
   `sample` (face region → height/water field patches for views). The foundation
   generates a world of columns on the sphere, runs a real erosion stencil on
   materialized patches, and renders through its own view (`spikes/worldview`).
-- `spikes/worldview` — **the first view over the frame** (depends on
-  `vivarium-world` ONLY): survey instrument on the cube-sphere — ortho point-mesh
-  + depth-shaded water, floating-origin (f64 anchor), `[`/`]` change sampling
-  level live, HUD reports per-rebuild gen time (the memoization instrument).
-  `VIVARIUM_LEVEL/W/FOCUS_I/FOCUS_J/VERT/AUTOSHOT/SETTLE`.
+- `spikes/worldview` — **the view over the frame** (depends on `vivarium-world`
+  ONLY), engine at slabs parity: ortho point-mesh + depth-shaded water, auto-pitch
+  fan probe + look-up near-clip, floating origin, honest 2 m pawn + reticle +
+  pixel-exact scale bar, HUD with relief range + per-rebuild **gen ms** (the
+  memoization instrument — ~142 ms/rebuild at defaults is the number §11 caching
+  exists to kill). Defaults = slabs' start view (L24 ≈ 0.6 m cells, 130 m
+  viewport, 1024-cell ≈ 614 m window). `[`/`]` = live level dial.
+  `VIVARIUM_LEVEL/W/FOCUS_I/FOCUS_J/VERT/ZOOM/PITCH/AUTOSHOT/SETTLE`. Good spot:
+  `VIVARIUM_FOCUS_I=5308416 VIVARIUM_FOCUS_J=13238272` (mountainside, L24 coords).
+  The prior's mountain band is **band-limited to each sample's Nyquist** (≤16
+  octaves from a 25 km base) — human-scale *texture* exists; *structure*
+  (channels, valleys, cliffs) is still the erosion port's job.
 - `crates/vivarium-world/examples/` — **GPU-free world diagnostics** (use these
   FIRST to split world-issues from explorer-issues): `topo` (ASCII elevation map +
   slope stats of any face window), `scan_land` (find peak/coast, prints
