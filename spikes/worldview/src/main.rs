@@ -2118,7 +2118,10 @@ fn build_water_mesh(heights: &[f32], water: &[f32], w: usize, cell: f64, anchor:
 
 fn compass(yaw: f32) -> &'static str {
     const L: [&str; 8] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
-    let deg = yaw.to_degrees().rem_euclid(360.0);
+    // Our yaw increases COUNTERCLOCKWISE (turning left, +z toward +x), but a
+    // compass ring runs clockwise — negate, or every turn reads mirrored
+    // (Joseph: "turn left from North and the HUD says NorthEast").
+    let deg = (-yaw).to_degrees().rem_euclid(360.0);
     L[(((deg + 22.5) / 45.0) as usize) % 8]
 }
 
