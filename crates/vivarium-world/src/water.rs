@@ -161,6 +161,8 @@ pub struct WaterSim {
     /// Counted reservoirs (m of water, cell-area units): conservation partners.
     pub atmosphere: f64,
     pub ocean: f64,
+    /// The conserved total at construction — the budget-drift baseline.
+    initial_total: f64,
     /// Froude stats captured INSIDE the last step, at the instant and against
     /// the same sill depths the breaking cap used (post-step recomputation
     /// against drained depths read as Fr 10+ on capped flow — twice).
@@ -182,7 +184,7 @@ impl WaterSim {
         let z = vec![0.0f32; nx * nx];
         let sea = crate::gen::SEA_LEVEL_M as f32;
         let depth: Vec<f32> = bed.iter().map(|&b| (sea - b).max(0.0)).collect();
-        Self {
+        let mut this = Self {
             nx,
             cell_m,
             face,
@@ -198,11 +200,22 @@ impl WaterSim {
             atmosphere: atmosphere_m * (nx * nx) as f64,
             ocean: 0.0,
             last_froude: (0.0, 0.0),
+            initial_total: 0.0,
             fl: z.clone(),
             fr: z.clone(),
             ft: z.clone(),
             fb: z,
-        }
+        };
+        this.initial_total = this.total_water();
+        this
+    }
+
+    /// Water budget drift since construction (m·cells): the LIVE conservation
+    /// instrument. The physics conserves by construction and by test; what
+    /// this catches is anything that breaks that later, plus honest f32
+    /// rounding accumulated over hours. Should hover near zero.
+    pub fn budget_drift(&self) -> f64 {
+        self.total_water() - self.initial_total
     }
 
     /// The conserved total: surface + groundwater + atmosphere + ocean.

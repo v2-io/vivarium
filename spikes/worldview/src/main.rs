@@ -56,7 +56,7 @@ const SKY: Color = Color::srgb(0.80, 0.82, 0.84);
 /// ~0.25 m reads ~40% opaque, ~1 m ~85%, with a floor so even films register.
 const WATER_SHALLOW: [f32; 3] = [0.46, 0.63, 0.75];
 const WATER_DEEP: [f32; 3] = [0.05, 0.16, 0.38];
-const WATER_ABSORB_PER_M: f32 = 2.0;
+const WATER_ABSORB_PER_M: f32 = 1.2; // gentler Beer–Lambert: see the bed longer
 
 // --- Framing (ortho, true-iso default — slabs' proven constants) -------------------
 const ISO_PITCH: f32 = 0.615_479_7; // atan(1/√2)
@@ -111,6 +111,8 @@ struct WaterMsg {
     /// = 0.15 × filling-phase peak, seconds left before the 6000 sim-s cap).
     /// Honest progress instead of a bare "SETTLING" (Joseph).
     settle: Option<(f32, f32)>,
+    /// Live conservation gauge: total-water drift since the sim began (m·cells).
+    drift: f64,
 }
 
 /// Nominal years per erosion epoch — a stated calibration constant (the epoch is
@@ -132,6 +134,7 @@ struct WaterStat {
     froude: (f32, f32),
     weather: (bool, f32),
     settle: Option<(f32, f32)>,
+    drift: f64,
 }
 
 #[derive(Resource, Default)]
@@ -363,7 +366,7 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
                 if ph < storm_on { (true, storm_on - ph) } else { (false, storm_on + storm_off - ph) }
             };
             let settle_info = if settling { Some((0.15 * delta_peak, (6000.0 - sim_total).max(0.0))) } else { None };
-            if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * dt, delta_m: delta_mean, settling, froude: w.froude(), weather, settle: settle_info }).is_err() {
+            if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * dt, delta_m: delta_mean, settling, froude: w.froude(), weather, settle: settle_info, drift: w.budget_drift() }).is_err() {
                 return;
             }
             // Write the carved bed back to the L21 tier (block-mean downsample
@@ -548,6 +551,7 @@ fn spawn_telescope(
                         froude: w.froude(),
                         weather: (true, f32::INFINITY),
                         settle: None,
+                        drift: w.budget_drift(),
                     };
                     if wtx.send(msg).is_err() {
                         return;
@@ -629,6 +633,7 @@ fn water_update(rx: Res<WaterRx>, mut water: ResMut<WaterRes>, mut meta: ResMut<
             froude: msg.froude,
             weather: msg.weather,
             settle: msg.settle,
+            drift: msg.drift,
         });
         water.0 = Some(msg.region);
         ts.water_dirty = true; // water-only refresh; no throttle — every state shows
@@ -1626,7 +1631,7 @@ fn build_water_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin
             // as the same stream (Joseph's "seeping" was riffles under the old
             // cutoff).
             let fade = ((depth - 0.025) / 0.1).clamp(0.0, 1.0);
-            let m = (1.0 - (-depth * WATER_ABSORB_PER_M).exp()).max(0.25) * fade;
+            let m = (1.0 - (-depth * WATER_ABSORB_PER_M).exp()).max(0.18) * fade;
             positions.push([px(i), surf, pz(j)]);
             let (x, y) = (i as isize, j as isize);
             let nrm = Vec3::new(sv(x - 1, y) - sv(x + 1, y), 2.0 * cell as f32, sv(x, y - 1) - sv(x, y + 1)).normalize();
@@ -1806,6 +1811,10 @@ fn hud_update(
             None if w.settling => "SETTLING".into(),
             None => "living".into(),
         };
+        // Live conservation gauge (m·cells → per-cell µm is noise; show total
+        // as an honest volume number). Near-zero = the physics is keeping its
+        // books; growth = something broke conservation at runtime.
+        vals[20] = format!("{}   budget {:+.2} m³/m²·cells", vals[20], w.drift);
     } else {
         vals[16] = "off".into();
     }
@@ -1835,9 +1844,19 @@ fn hud_update(
         vals[22] = format!("{:<10}", format!("d {d:.2} m"));
         vals[23] = format!("{:<11}", format!("v {v:.2} m/s"));
         vals[24] = format!("{:<10}", format!("Fr {fr:.2}"));
-        vals[25] = format!("{:<12}", format!("susp {:.0} mm", susp * 1000.0));
-        vals[26] = format!("{:<14}", format!("alluv {sand:.2} m"));
-        vals[27] = format!("seal {:.0}%", seal * 100.0);
+        // Sediment runs OFF during the settle deluge (core's recipe) — say so
+        // instead of showing misleading zeros; and print sub-mm loads honestly
+        // ("0 mm" hid real 0.4 mm suspensions).
+        let settling_now = wmeta.0.as_ref().map(|w| w.settling).unwrap_or(false);
+        if settling_now {
+            vals[25] = format!("{:<12}", "susp (off)");
+            vals[26] = format!("{:<14}", "alluv (off)");
+            vals[27] = "seal (off during settle)".into();
+        } else {
+            vals[25] = format!("{:<12}", format!("susp {:.2}mm", susp * 1000.0));
+            vals[26] = format!("{:<14}", format!("alluv {:.0}cm", sand * 100.0));
+            vals[27] = format!("seal {:.0}%", seal * 100.0);
+        }
     }
 
     // ---- apply to spans, flashing values that changed after being stable ----
