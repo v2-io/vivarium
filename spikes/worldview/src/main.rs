@@ -178,6 +178,10 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
     let macro_extra: u32 = std::env::var("VIVARIUM_MACRO_EXTRA").ok().and_then(|s| s.parse().ok()).unwrap_or(40);
     let fine_nx: usize = std::env::var("VIVARIUM_FINE_NX").ok().and_then(|s| s.parse().ok()).unwrap_or(1024);
     let fine_epochs: u32 = std::env::var("VIVARIUM_FINE_EPOCHS").ok().and_then(|s| s.parse().ok()).unwrap_or(6);
+    // Joseph: "two or three fine passes, not just one" — total fine work is
+    // passes × epochs, pinned to the macro after every chunk.
+    let fine_passes: u32 = std::env::var("VIVARIUM_FINE_PASSES").ok().and_then(|s| s.parse().ok()).unwrap_or(3);
+    let fine_total = fine_epochs * fine_passes;
     let f21 = view.focus * 2f64.powi(21 - view.level as i32);
     const CADENCE: std::time::Duration = std::time::Duration::from_millis(500);
     const SUBSTEPS: u32 = 40;
@@ -212,8 +216,8 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
         let mut fine = Fluvial::from_surface(face, 21, oi, oj, fine_nx, |c| erosion::surface_at(c, &coarser));
         let parent = tiers.iter().find(|r| r.level == 19).cloned();
         let mut done = 0u32;
-        while done < fine_epochs {
-            let chunk = 2.min(fine_epochs - done);
+        while done < fine_total {
+            let chunk = 2.min(fine_total - done);
             fine.erode(&FluvialParams { epochs: chunk, ..Default::default() });
             if let Some(par) = &parent {
                 fine.pin_block_means(19, |c| par.surface_bilinear_m(c).unwrap_or_else(|| vivarium_world::gen::surface_prior_m(c, 19)));
@@ -245,7 +249,7 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
             }
             if let Some(entry) = tiers.iter_mut().find(|r| r.level == 21) {
                 entry.h.copy_from_slice(&w.bed);
-                if tx.send(TierMsg { region: entry.clone(), epochs_total: fine_epochs, sim_years: 0.0, delta_m: 0.0 }).is_err() {
+                if tx.send(TierMsg { region: entry.clone(), epochs_total: fine_total, sim_years: 0.0, delta_m: 0.0 }).is_err() {
                     return;
                 }
             }
