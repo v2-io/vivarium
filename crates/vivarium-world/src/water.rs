@@ -38,6 +38,10 @@ pub struct WaterParams {
     pub precip: f32,
     /// Surface evaporation, fraction of depth per second (returns to atmosphere).
     pub evaporation: f32,
+    /// Ocean evaporation (m/s per cell equivalent) — the return path that CLOSES
+    /// the cycle (ocean → atmosphere → rain again); without it the sky empties
+    /// once and weather ends.
+    pub ocean_evap: f32,
     /// Sea level (m, bed datum): cells with bed at/below it are held at the
     /// waterline, exchanging with the counted ocean store.
     pub sea_m: f32,
@@ -66,6 +70,7 @@ impl Default for WaterParams {
             pipe_area: 4.0,
             precip: 3.0e-5,
             evaporation: 1.0e-4,
+            ocean_evap: 1.0e-5,
             sea_m: crate::gen::SEA_LEVEL_M as f32,
             sed_capacity: 0.05,
             sed_erode: 0.1,
@@ -157,6 +162,13 @@ impl WaterSim {
                 *d += per_cell;
             }
             self.atmosphere -= per_cell as f64 * n as f64;
+        }
+
+        // 1b. Ocean → atmosphere: the evaporation that keeps rain supplied.
+        if p.ocean_evap > 0.0 && self.ocean > 0.0 {
+            let lift = (p.ocean_evap as f64 * dt as f64 * n as f64).min(self.ocean);
+            self.ocean -= lift;
+            self.atmosphere += lift;
         }
 
         // 2. Hold sea cells at the waterline (exchange counted with the ocean).
