@@ -48,7 +48,10 @@ pub struct WaterParams {
     // --- Sediment (Mei et al. stage; core had this OFF — the multirate frame is
     // where it can be ON). Capacity ∝ flow speed; erode toward capacity, settle
     // above it, advect with the flow. bed + suspended is exactly conserved.
-    /// Carrying capacity per unit flow speed (m of sediment per m/s).
+    /// Carrying capacity coefficient: `C = k · |v| · slope` (Mei's tilt term).
+    /// Slope in the capacity is what ignites CHANNEL INCEPTION (steep threads
+    /// carve, capture flow, carve deeper) while flats and lake floors deposit
+    /// (slope→0 ⇒ capacity→0 — lakes fill toward meadows for free).
     pub sed_capacity: f32,
     /// Erosion rate toward capacity (fraction of deficit per second).
     pub sed_erode: f32,
@@ -83,12 +86,12 @@ impl Default for WaterParams {
             evaporation: 1.0e-4,
             ocean_evap: 1.0e-5,
             sea_m: crate::gen::SEA_LEVEL_M as f32,
-            sed_capacity: 0.05,
+            sed_capacity: 0.6,
             sed_erode: 0.1,
             sed_deposit: 0.5,
             sed_max_rate: 0.002,
-            sed_min_depth: 0.05,
-            sed_min_discharge: 0.02,
+            sed_min_depth: 0.03,
+            sed_min_discharge: 0.005,
             damping: 0.99,
         }
     }
@@ -118,10 +121,15 @@ pub struct WaterSim {
 }
 
 impl WaterSim {
-    /// A dry domain over `bed`, with `atmosphere_m` of rainable water per cell.
+    /// A domain over `bed` with `atmosphere_m` of rainable water per cell. The
+    /// ocean is NOT a special case (Joseph): the basin below the waterline starts
+    /// as real, simulated water — currents, sediment, deltas all live there; only
+    /// the REGION EDGE is a boundary condition (the rest-of-world ocean).
     pub fn new(face: Face, level: u8, origin: (u32, u32), nx: usize, cell_m: f32, bed: Vec<f32>, atmosphere_m: f64) -> Self {
         assert_eq!(bed.len(), nx * nx);
         let z = vec![0.0f32; nx * nx];
+        let sea = crate::gen::SEA_LEVEL_M as f32;
+        let depth: Vec<f32> = bed.iter().map(|&b| (sea - b).max(0.0)).collect();
         Self {
             nx,
             cell_m,
@@ -129,7 +137,7 @@ impl WaterSim {
             level,
             origin,
             bed,
-            depth: z.clone(),
+            depth,
             sediment: z.clone(),
             atmosphere: atmosphere_m * (nx * nx) as f64,
             ocean: 0.0,
@@ -184,14 +192,9 @@ impl WaterSim {
             self.atmosphere += lift;
         }
 
-        // 2. Hold sea cells at the waterline (exchange counted with the ocean).
-        for i in 0..n {
-            if self.bed[i] <= p.sea_m {
-                let target = p.sea_m - self.bed[i];
-                self.ocean += (self.depth[i] - target) as f64;
-                self.depth[i] = target;
-            }
-        }
+        // 2. Boundary: only EDGE cells at/below the waterline are held (the
+        //    rest-of-world ocean); interior seabed is ordinary simulated ground.
+        self.hold_edge_sea(p.sea_m);
 
         // 3. Accelerate pipes under head differences; border treated as
         //    equal-surface (edges belong to the sea/outside — step 5 drains).
@@ -267,7 +270,13 @@ impl WaterSim {
                         * 0.5
                         / (l * d);
                     let speed = (vx * vx + vy * vy).sqrt();
-                    let capacity = (p.sed_capacity * speed).min(2.0);
+                    // Local downhill bed slope (steepest of the 4 axial drops).
+                    let mut slope = 0.0f32;
+                    if x > 0 { slope = slope.max((self.bed[i] - self.bed[i - 1]) / l); }
+                    if x < nx - 1 { slope = slope.max((self.bed[i] - self.bed[i + 1]) / l); }
+                    if y > 0 { slope = slope.max((self.bed[i] - self.bed[i - nx]) / l); }
+                    if y < nx - 1 { slope = slope.max((self.bed[i] - self.bed[i + nx]) / l); }
+                    let capacity = (p.sed_capacity * speed * slope.clamp(0.0, 1.0)).min(2.0);
                     let s0 = self.sediment[i];
                     if s0 < capacity && (d >= p.sed_min_depth || d * speed >= p.sed_min_discharge) {
                         let e = ((capacity - s0) * p.sed_erode * dt).min(max_step);
@@ -313,7 +322,7 @@ impl WaterSim {
             }
         }
 
-        // 5. Evaporation (surface → atmosphere) and re-hold the sea.
+        // 5. Evaporation (surface → atmosphere) and re-hold the edge boundary.
         if p.evaporation > 0.0 {
             let f = p.evaporation * dt;
             for d in self.depth.iter_mut() {
@@ -322,13 +331,35 @@ impl WaterSim {
                 self.atmosphere += evap as f64;
             }
         }
-        for i in 0..n {
-            if self.bed[i] <= p.sea_m {
-                let target = p.sea_m - self.bed[i];
-                self.ocean += (self.depth[i] - target) as f64;
-                self.depth[i] = target;
+        self.hold_edge_sea(p.sea_m);
+    }
+
+    /// Hold edge cells with bed at/below sea at the waterline, exchange counted.
+    fn hold_edge_sea(&mut self, sea: f32) {
+        let nx = self.nx;
+        let mut hold = |i: usize, s: &mut Self| {
+            if s.bed[i] <= sea {
+                let target = sea - s.bed[i];
+                s.ocean += (s.depth[i] - target) as f64;
+                s.depth[i] = target;
             }
+        };
+        for x in 0..nx {
+            hold(x, self);
+            hold((nx - 1) * nx + x, self);
         }
+        for y in 1..nx - 1 {
+            hold(y * nx, self);
+            hold(y * nx + nx - 1, self);
+        }
+    }
+
+    /// CFL-stable timestep for the CURRENT state: deep water carries fast waves
+    /// (`√(g·d)`), so dt shrinks where the basin is deep. Callers should recompute
+    /// per burst.
+    pub fn stable_dt(&self, gravity: f32) -> f32 {
+        let dmax = self.depth.iter().cloned().fold(0.1f32, f32::max);
+        (0.3 * self.cell_m / (gravity * dmax).sqrt()).clamp(0.005, 0.2)
     }
 
     /// Snapshot for sampling by views.

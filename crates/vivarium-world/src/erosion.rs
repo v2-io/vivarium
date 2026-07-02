@@ -503,6 +503,12 @@ impl Fluvial {
         for e in 0..p.epochs {
             let track_before = if e + 1 == p.epochs { Some(self.h.clone()) } else { None };
             let outlets = self.outlets();
+            // Uplift is TECTONIC: it applies to all interior ground, submarine
+            // included (a seamount may rise past the waterline — the seabed is
+            // not a special case, Joseph). Only the grid edge is pinned. The
+            // `outlets` set (incl. submerged cells) still bounds DRAINAGE —
+            // subaerial fluvial physics ends where standing water begins, which
+            // is a physical boundary, not an elevation convention.
             if p.uplift_m > 0.0 {
                 // DIFFERENTIAL uplift (Joseph): weight the rate by low-frequency
                 // coordinate fBm (λ ≈ 5 km; its own domain), so blocks rise at
@@ -522,8 +528,10 @@ impl Fluvial {
                     self.uplift_w = Some(w);
                 }
                 let w = self.uplift_w.as_ref().unwrap();
-                for (i, &o) in outlets.iter().enumerate() {
-                    if !o {
+                let nx = self.nx;
+                for i in 0..nx * nx {
+                    let (x, y) = (i % nx, i / nx);
+                    if !Self::is_edge(nx, x, y) {
                         self.h[i] += p.uplift_m * w[i];
                     }
                 }

@@ -262,17 +262,19 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
             }
         }
         let mut w = WaterSim::new(face, wl, (woi, woj), wnx, cell, wbed, atmos_m);
-        let dt = 0.2 * (cell / 4.77);
-        let substeps: u32 = ((40.0 * 0.2 / dt) as u32).max(1);
-        let wp = WaterParams { precip: WaterParams::default().precip * rain_mult, dt, ..Default::default() };
         loop {
             let t0 = std::time::Instant::now();
+            // CFL dt from the CURRENT deepest water (the ocean is real water now);
+            // aim ~8 sim-s per burst, capped so deep basins can't stall the loop.
+            let dt = w.stable_dt(9.8);
+            let substeps: u32 = ((8.0 / dt) as u32).clamp(1, 400);
+            let wp = WaterParams { precip: WaterParams::default().precip * rain_mult, dt, ..Default::default() };
             let before = w.depth.clone();
             for _ in 0..substeps {
                 w.step(&wp);
             }
             let delta: f64 = w.depth.iter().zip(before.iter()).map(|(a, b)| (a - b).abs() as f64).sum();
-            if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * wp.dt, delta_m: (delta / before.len() as f64) as f32 }).is_err() {
+            if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * dt, delta_m: (delta / before.len() as f64) as f32 }).is_err() {
                 return;
             }
             // Write the carved bed back to the L21 tier (block-mean downsample
