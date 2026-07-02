@@ -32,11 +32,20 @@ pub struct WaterParams {
     /// Time step (s). CFL: `≲ cell/√(g·d_max)` — 0.2 s is safe to ~5 m depths
     /// on 4.8 m cells.
     pub dt: f32,
-    /// Virtual-pipe cross-section (m²) — flow responsiveness per unit head.
-    pub pipe_area: f32,
-    /// Precipitation (m/s per cell) drawn from the atmosphere store. ~1000× real.
+    /// Manning roughness n (s/m^⅓): real channel friction (≈0.03 smooth earth,
+    /// 0.04–0.05 natural channels, 0.07 rocky). Sets the velocity equilibrium
+    /// v = R^⅔·√S/n — replaces the old unphysical per-step damping knob. The
+    /// pipe cross-section is likewise physical now: depth × cell width, so thin
+    /// films are naturally sluggish and deep channels responsive.
+    pub manning_n: f32,
+    /// Precipitation (m/s per cell) drawn from the atmosphere store. ~1000× real
+    /// climate-average. NOTE the budget: at this default, precip < infiltration +
+    /// evaporation — drizzle soaks in and evaporates, NO surface water persists.
+    /// That is real climatology (most rain never runs off); rivers come from
+    /// STORM bursts well above average (the app's rain multiplier / storm cycle).
     pub precip: f32,
-    /// Surface evaporation, fraction of depth per second (returns to atmosphere).
+    /// Surface evaporation, m/s flat rate (physical form; capped by the water
+    /// present). Real ≈2e-8; carries the same ~1000× cycle fudge as the rain.
     pub evaporation: f32,
     /// Ocean evaporation (m/s per cell equivalent) — the return path that CLOSES
     /// the cycle (ocean → atmosphere → rain again); without it the sky empties
@@ -82,10 +91,6 @@ pub struct WaterParams {
     pub baseflow: f32,
     /// Discharge (m²/s) at which channel sealing halves infiltration.
     pub seal_q: f32,
-    /// Per-step flux damping (friction): undamped pipes ring — water overshoots
-    /// and sloshes in surge waves (Joseph saw pulses running down valleys instead
-    /// of streams). 0.99 ≈ a ~20-step (4 sim-s) momentum memory.
-    pub damping: f32,
 }
 
 impl Default for WaterParams {
@@ -93,9 +98,9 @@ impl Default for WaterParams {
         Self {
             gravity: 9.8,
             dt: 0.2,
-            pipe_area: 4.0,
+            manning_n: 0.04,
             precip: 3.0e-5,
-            evaporation: 1.0e-4,
+            evaporation: 2.0e-5,
             ocean_evap: 1.0e-5,
             sea_m: crate::gen::SEA_LEVEL_M as f32,
             sed_capacity: 0.6,
@@ -107,7 +112,6 @@ impl Default for WaterParams {
             gw_capacity: 0.3,
             baseflow: 2.0e-5,
             seal_q: 0.01,
-            damping: 0.99,
         }
     }
 }
@@ -217,26 +221,42 @@ impl WaterSim {
         //    rest-of-world ocean); interior seabed is ordinary simulated ground.
         self.hold_edge_sea(p.sea_m);
 
-        // 3. Accelerate pipes under head differences; border treated as
-        //    equal-surface (edges belong to the sea/outside — step 5 drains).
-        let k = dt * p.pipe_area * p.gravity / l;
+        // 3. Accelerate pipes under head differences (Saint-Venant momentum: the
+        //    flow cross-section is depth × width, so df = dt·g·d̄·Δh), then apply
+        //    Manning friction implicitly: f ← f / (1 + dt·g·n²·|v| / d̄^{4/3}).
+        //    Border neighbours are treated as equal-surface (the edge hold drains).
+        #[inline]
+        fn pipe_step(f: f32, head: f32, dbar: f32, dt: f32, g: f32, n2g: f32, l: f32) -> f32 {
+            let dbar = dbar.max(1e-4);
+            let accel = (f + dt * g * dbar * head).max(0.0);
+            let v = accel / (dbar * l);
+            accel / (1.0 + dt * n2g * v / dbar.powf(4.0 / 3.0))
+        }
+        let n2g = p.gravity * p.manning_n * p.manning_n;
         for y in 0..nx {
             for x in 0..nx {
                 let i = y * nx + x;
                 let s = self.bed[i] + self.depth[i];
-                let head = |j: usize| s - (self.bed[j] + self.depth[j]);
-                let damp = p.damping;
+                let di = self.depth[i];
                 if x > 0 {
-                    self.fl[i] = (self.fl[i] * damp + k * head(i - 1)).max(0.0);
+                    let j = i - 1;
+                    let head = s - (self.bed[j] + self.depth[j]);
+                    self.fl[i] = pipe_step(self.fl[i], head, 0.5 * (di + self.depth[j]), dt, p.gravity, n2g, l);
                 }
                 if x < nx - 1 {
-                    self.fr[i] = (self.fr[i] * damp + k * head(i + 1)).max(0.0);
+                    let j = i + 1;
+                    let head = s - (self.bed[j] + self.depth[j]);
+                    self.fr[i] = pipe_step(self.fr[i], head, 0.5 * (di + self.depth[j]), dt, p.gravity, n2g, l);
                 }
                 if y > 0 {
-                    self.ft[i] = (self.ft[i] * damp + k * head(i - nx)).max(0.0);
+                    let j = i - nx;
+                    let head = s - (self.bed[j] + self.depth[j]);
+                    self.ft[i] = pipe_step(self.ft[i], head, 0.5 * (di + self.depth[j]), dt, p.gravity, n2g, l);
                 }
                 if y < nx - 1 {
-                    self.fb[i] = (self.fb[i] * damp + k * head(i + nx)).max(0.0);
+                    let j = i + nx;
+                    let head = s - (self.bed[j] + self.depth[j]);
+                    self.fb[i] = pipe_step(self.fb[i], head, 0.5 * (di + self.depth[j]), dt, p.gravity, n2g, l);
                 }
                 // Clamp: a cell cannot ship more water than it holds. THIS is
                 // the conservation/stability guarantee of the pipe method.
@@ -369,9 +389,9 @@ impl WaterSim {
 
         // 5. Evaporation (surface → atmosphere) and re-hold the edge boundary.
         if p.evaporation > 0.0 {
-            let f = p.evaporation * dt;
+            let e = p.evaporation * dt;
             for d in self.depth.iter_mut() {
-                let evap = *d * f;
+                let evap = e.min(*d);
                 *d -= evap;
                 self.atmosphere += evap as f64;
             }
@@ -382,7 +402,7 @@ impl WaterSim {
     /// Hold edge cells with bed at/below sea at the waterline, exchange counted.
     fn hold_edge_sea(&mut self, sea: f32) {
         let nx = self.nx;
-        let mut hold = |i: usize, s: &mut Self| {
+        let hold = |i: usize, s: &mut Self| {
             if s.bed[i] <= sea {
                 let target = sea - s.bed[i];
                 s.ocean += (s.depth[i] - target) as f64;
@@ -467,7 +487,9 @@ mod tests {
                 bed[y * nx + x] = 5000.0 + (cx * cx + cy * cy) * 0.5;
             }
         }
-        WaterSim::new(Face::ZPos, 21, (1000, 1000), nx, 4.8, bed, 0.05)
+        // 1 m of rainable sky: the physical Manning films are honestly slow, so
+        // the test needs a real storm's worth of water and time, not a sprinkle.
+        WaterSim::new(Face::ZPos, 21, (1000, 1000), nx, 4.8, bed, 1.0)
     }
 
     #[test]
@@ -494,8 +516,11 @@ mod tests {
     #[test]
     fn rain_pools_in_the_bowl() {
         let mut w = bowl(32);
-        let p = WaterParams::default();
-        for _ in 0..800 {
+        // STORM forcing: at climate-average rain the budget is negative
+        // (infiltration + evaporation exceed it — drizzle never runs off, which
+        // is real climatology and was verified by probe). Runoff needs a burst.
+        let p = WaterParams { precip: 6.0e-4, ..Default::default() };
+        for _ in 0..1500 {
             w.step(&p);
         }
         let centre = w.depth[16 * 32 + 16];
