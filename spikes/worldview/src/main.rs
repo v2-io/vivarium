@@ -81,7 +81,7 @@ const STANDOFF: f32 = 400_000.0;
 /// window, L24 around the pawn) arrive from a background thread and refine the
 /// live view as they land — the multi-LOD + memoization interaction test.
 #[derive(Resource)]
-struct Eroded(Vec<ErodedRegion>);
+struct Eroded(Arc<Vec<ErodedRegion>>);
 
 /// Channel delivering background-built tiers to the ECS.
 struct TierMsg {
@@ -252,7 +252,7 @@ struct TierRx(Mutex<std::sync::mpsc::Receiver<TierMsg>>);
 #[derive(Resource)]
 struct WaterRx(Mutex<std::sync::mpsc::Receiver<WaterMsg>>);
 #[derive(Resource, Default)]
-struct WaterRes(Option<WaterRegion>);
+struct WaterRes(Option<Arc<WaterRegion>>);
 /// The water worker's latest vitals, for the HUD.
 struct WaterStat {
     at: std::time::Instant,
@@ -754,7 +754,7 @@ fn spawn_telescope(
 
 /// Fold arriving tier updates into the telescope (replace-by-level), stamp their
 /// wall-clock + maturity, and trigger one rebuild for the batch.
-fn tier_update(rx: Res<TierRx>, mut eroded: ResMut<Eroded>, mut meta: ResMut<TierMeta>, mut ts: ResMut<TerrainState>, mut last_rebuild: Local<Option<std::time::Instant>>) {
+fn tier_update(rx: Res<TierRx>, mut eroded: ResMut<Eroded>, mut meta: ResMut<TierMeta>, mut ts: ResMut<TerrainState>) {
     let mut any = false;
     while let Ok(msg) = rx.0.lock().unwrap().try_recv() {
         let level = msg.region.level;
@@ -765,20 +765,19 @@ fn tier_update(rx: Res<TierRx>, mut eroded: ResMut<Eroded>, mut meta: ResMut<Tie
             .find(|(l, ..)| *l == level)
             .map(|(_, at, ..)| msg.sim_years / at.elapsed().as_secs_f32().max(1e-3))
             .unwrap_or(0.0);
-        eroded.0.retain(|r| r.level != level);
-        eroded.0.push(msg.region);
-        eroded.0.sort_by_key(|r| r.level);
+        let tiers = Arc::make_mut(&mut eroded.0);
+        tiers.retain(|r| r.level != level);
+        tiers.push(msg.region);
+        tiers.sort_by_key(|r| r.level);
         meta.0.retain(|(l, ..)| *l != level);
         meta.0.push((level, std::time::Instant::now(), msg.epochs_total, rate, msg.delta_m));
         meta.0.sort_by_key(|(l, ..)| *l);
         any = true;
     }
-    // Rebuilds are ~300 ms synchronous at walk-scale defaults, so refresh the
-    // mesh at most every ~1.5 s: the sim keeps maturing every cycle regardless;
-    // only the VIEW of it is throttled. (Async meshing is the real fix, queued.)
-    if any && last_rebuild.map(|t| t.elapsed().as_secs_f32() > 1.5).unwrap_or(true) {
-        ts.built_level = u8::MAX; // trigger terrain_update
-        *last_rebuild = Some(std::time::Instant::now());
+    // Async meshing (2026-07-03): just mark dirty — the mesher's
+    // one-job-in-flight gate is the pacing, and frames never stall.
+    if any {
+        ts.terrain_dirty = true;
     }
 }
 
@@ -805,56 +804,14 @@ fn water_update(rx: Res<WaterRx>, mut water: ResMut<WaterRes>, mut meta: ResMut<
             settle: msg.settle,
             drift: msg.drift,
         });
-        water.0 = Some(msg.region);
+        water.0 = Some(Arc::new(msg.region));
         ts.water_dirty = true; // water-only refresh; no throttle — every state shows
-    }
-}
-
-/// Rebuild ONLY the water mesh from the latest live state — the cheap path that
-/// lets every sim step reach the screen. The ground mesh, tier sampling, and
-/// normals are untouched; we re-overlay the live depths onto the pre-overlay
-/// (static sea-fill) water field and re-mesh just the water surface.
-fn water_refresh(mut commands: Commands, view: Res<View>, water: Res<WaterRes>, mut meshes: ResMut<Assets<Mesh>>, mut ts: ResMut<TerrainState>) {
-    if !ts.water_dirty {
-        return;
-    }
-    ts.water_dirty = false;
-    if ts.built_level != view.level {
-        return; // full rebuild pending; it overlays water itself
-    }
-    let ts = &mut *ts; // split borrows across the struct's fields
-    let (Some(fields), Some(base), Some(live)) = (ts.fields.as_mut(), ts.base_water.as_ref(), water.0.as_ref()) else {
-        return;
-    };
-    let (oi, oj) = ts.origin;
-    for j in 0..view.w {
-        for i in 0..view.w {
-            let mut wtr = base[j * view.w + i];
-            let cell = CellId::from_face_ij(view.face, oi + i as u32, oj + j as u32, view.level);
-            if let Some(surf) = live.surface_m(cell) {
-                // Surface-based, same as the full rebuild (see terrain_update).
-                wtr = wtr.max(surf as f32 - fields.height.get(i as isize, j as isize));
-            }
-            fields.water.set(i as isize, j as isize, wtr);
-        }
-    }
-    if let Some(e) = ts.water.take() {
-        commands.entity(e).despawn();
-    }
-    let cell = view.cell_m();
-    let turbidity_of = |x: usize, y: usize| -> f32 {
-        let c = CellId::from_face_ij(view.face, oi + x as u32, oj + y as u32, view.level);
-        let s = live.suspended_m(c).unwrap_or(0.0);
-        let d = live.depth_m(c).unwrap_or(0.0).max(0.02);
-        ((s / d) as f32 * 8.0).clamp(0.0, 0.75)
-    };
-    if let Some(mesh) = build_water_mesh(fields, view.w, cell, ts.anchor_m, (oi, oj), view.vert, &turbidity_of) {
-        ts.water = Some(commands.spawn((Mesh3d(meshes.add(mesh)), MeshMaterial3d(ts.water_mat.clone()), Transform::default())).id());
     }
 }
 
 fn main() {
     let view = View::default();
+    let (mesher_tx, mesher_rx) = spawn_mesher();
     let tier0 = build_tier0(&view);
     let focus = SharedFocus(Arc::new(Mutex::new((view.focus.x, view.focus.y, view.level))));
     let (tx, rx) = std::sync::mpsc::channel::<TierMsg>();
@@ -864,7 +821,7 @@ fn main() {
     let (wtx, wrx) = std::sync::mpsc::sync_channel::<WaterMsg>(2);
     spawn_fine_tiers(&view, tier0.clone(), tx, wtx, focus.clone());
     let meta = TierMeta(tier0.iter().map(|r| (r.level, std::time::Instant::now(), FluvialParams::default().epochs, 0.0, f32::INFINITY)).collect());
-    let eroded = Eroded(tier0);
+    let eroded = Eroded(Arc::new(tier0));
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -884,12 +841,14 @@ fn main() {
         .insert_resource(eroded)
         .insert_resource(TierRx(Mutex::new(rx)))
         .insert_resource(WaterRx(Mutex::new(wrx)))
+        .insert_resource(mesher_tx)
+        .insert_resource(mesher_rx)
         .insert_resource(WaterRes::default())
         .insert_resource(WaterMeta::default())
         .insert_resource(meta)
         .insert_resource(focus)
         .add_systems(Startup, setup)
-        .add_systems(Update, (view_update, tier_update, water_update, terrain_update, water_refresh, flow_arrow, hud_update, scale_update, maybe_screenshot))
+        .add_systems(Update, (view_update, tier_update, water_update, mesh_dispatch, mesh_apply, flow_arrow, hud_update, scale_update, maybe_screenshot))
         .run();
 }
 
@@ -1015,12 +974,17 @@ struct TerrainState {
     /// The sampled fields (kept so the camera/HUD can read the height under the focus).
     fields: Option<SurfacePatch>,
     /// The water field as sampled (static sea-fill), BEFORE the live overlay —
-    /// kept so a water-only refresh can re-overlay against the original.
-    base_water: Option<Vec<f32>>,
-    /// A new live water state arrived: rebuild ONLY the water mesh (cheap),
-    /// leaving the ground mesh alone — this is what makes per-step streaming
-    /// affordable (a full rebuild is ~300 ms; the water alone is a fraction).
+    /// kept (Arc: shared with mesher jobs) for water-only refreshes.
+    base_water: Option<Arc<Vec<f32>>>,
+    /// Flat post-overlay terrain heights — the water-only job's ground truth.
+    heights: Option<Arc<Vec<f32>>>,
+    /// A new live water state arrived: rebuild ONLY the water mesh.
     water_dirty: bool,
+    /// Tier state changed (erosion/write-back/tint toggle): full rebuild wanted.
+    terrain_dirty: bool,
+    /// One job of each kind in flight at most — the natural throttle.
+    full_inflight: bool,
+    water_inflight: bool,
     /// Relief range of the sampled window (m above sea) — the HUD's honest answer
     /// to "is there height here, and how much?"
     h_min: f32,
@@ -1118,7 +1082,11 @@ fn setup(mut commands: Commands, view: Res<View>, mut meshes: ResMut<Assets<Mesh
         anchor_m: DVec2::ZERO,
         fields: None,
         base_water: None,
+        heights: None,
         water_dirty: false,
+        terrain_dirty: false,
+        full_inflight: false,
+        water_inflight: false,
         h_min: 0.0,
         h_max: 0.0,
         gen_ms: 0.0,
@@ -1291,7 +1259,7 @@ fn view_update(
         let tint = view.mode == ViewMode::Tiers;
         if view.tier_debug != tint {
             view.tier_debug = tint;
-            ts.built_level = u8::MAX; // tint is baked into vertex colours — rebuild
+            ts.terrain_dirty = true; // tint is baked into vertex colours — rebuild
         }
     }
     *shared.0.lock().unwrap() = (view.focus.x, view.focus.y, view.level);
@@ -1544,53 +1512,85 @@ fn required_pitch(view: &View, ts: &TerrainState, focus_h_raw: f32) -> f32 {
 }
 
 // --- Terrain sampling + meshing ------------------------------------------------------
+//
+// ASYNC (2026-07-03): sampling + mesh construction are pure functions of Arc'd
+// sim state, so they run on a mesher thread; the render thread keeps showing
+// the previous mesh until a finished replacement arrives. No frame stalls, no
+// wall-clock throttles — the one-job-in-flight gate is the natural pacing, and
+// the water sim (paced by the VIEW's drain, not by meshing) runs free.
 
-fn terrain_update(mut commands: Commands, view: Res<View>, eroded: Res<Eroded>, water: Res<WaterRes>, mut meshes: ResMut<Assets<Mesh>>, mut ts: ResMut<TerrainState>) {
-    // Rebuild when the level changed or the focus has drifted toward the window edge.
-    let needs = match (&ts.fields, ts.built_level == view.level) {
-        (None, _) => true,
-        (_, false) => true,
-        (Some(_), true) => {
-            let cx = ts.origin.0 as f64 + view.w as f64 * 0.5;
-            let cy = ts.origin.1 as f64 + view.w as f64 * 0.5;
-            (view.focus.x - cx).abs().max((view.focus.y - cy).abs()) > view.w as f64 / 6.0
+enum MeshJob {
+    Full { face: Face, level: u8, w: usize, oi: u32, oj: u32, vert: f32, tier_debug: bool, tiers: Arc<Vec<ErodedRegion>>, water: Option<Arc<WaterRegion>> },
+    WaterOnly { face: Face, level: u8, w: usize, oi: u32, oj: u32, vert: f32, anchor: DVec2, heights: Arc<Vec<f32>>, base_water: Arc<Vec<f32>>, live: Arc<WaterRegion> },
+}
+
+enum MeshDone {
+    Full { level: u8, origin: (u32, u32), anchor: DVec2, fields: SurfacePatch, heights: Arc<Vec<f32>>, base_water: Arc<Vec<f32>>, ground: Mesh, water: Option<Mesh>, h_min: f32, h_max: f32, gen_ms: f32 },
+    WaterOnly { level: u8, origin: (u32, u32), water: Option<Mesh> },
+}
+
+#[derive(Resource)]
+struct MesherTx(std::sync::mpsc::Sender<MeshJob>);
+#[derive(Resource)]
+struct MesherRx(Mutex<std::sync::mpsc::Receiver<MeshDone>>);
+
+fn spawn_mesher() -> (MesherTx, MesherRx) {
+    let (jtx, jrx) = std::sync::mpsc::channel::<MeshJob>();
+    let (dtx, drx) = std::sync::mpsc::channel::<MeshDone>();
+    std::thread::spawn(move || {
+        while let Ok(job) = jrx.recv() {
+            let done = match job {
+                MeshJob::Full { face, level, w, oi, oj, vert, tier_debug, tiers, water } => {
+                    build_full(face, level, w, oi, oj, vert, tier_debug, &tiers, water.as_deref())
+                }
+                MeshJob::WaterOnly { face, level, w, oi, oj, vert, anchor, heights, base_water, live } => {
+                    let cell = cell_size_m(level, Planet::EARTH.radius_m);
+                    let mut wtr = vec![0.0f32; w * w];
+                    for j in 0..w {
+                        for i in 0..w {
+                            let k = j * w + i;
+                            let mut v = base_water[k];
+                            let c = CellId::from_face_ij(face, oi + i as u32, oj + j as u32, level);
+                            if let Some(surf) = live.surface_m(c) {
+                                v = v.max(surf as f32 - heights[k]);
+                            }
+                            wtr[k] = v;
+                        }
+                    }
+                    let turbidity_of = |x: usize, y: usize| -> f32 {
+                        let c = CellId::from_face_ij(face, oi + x as u32, oj + y as u32, level);
+                        let sm = live.suspended_m(c).unwrap_or(0.0);
+                        let d = live.depth_m(c).unwrap_or(0.0).max(0.02);
+                        ((sm / d) as f32 * 8.0).clamp(0.0, 0.75)
+                    };
+                    MeshDone::WaterOnly { level, origin: (oi, oj), water: build_water_mesh(&heights, &wtr, w, cell, anchor, (oi, oj), vert, &turbidity_of) }
+                }
+            };
+            if dtx.send(done).is_err() {
+                return;
+            }
         }
-    };
-    if !needs {
-        return;
-    }
+    });
+    (MesherTx(jtx), MesherRx(Mutex::new(drx)))
+}
 
+/// The full pipeline, off-thread: sample the telescope, overlay live water by
+/// SURFACE elevation on the SIMULATED bed (the honesty rules), mesh both.
+#[allow(clippy::too_many_arguments)]
+fn build_full(face: Face, level: u8, w: usize, oi: u32, oj: u32, vert: f32, tier_debug: bool, tiers: &[ErodedRegion], live: Option<&WaterRegion>) -> MeshDone {
     let t0 = std::time::Instant::now();
-    let n = 1u64 << view.level;
-    let half = view.w as u64 / 2;
-    let oi = (view.focus.x.round().max(0.0) as u64).clamp(half, n - half) - half;
-    let oj = (view.focus.y.round().max(0.0) as u64).clamp(half, n - half) - half;
-    let (oi, oj) = (oi as u32, oj as u32);
-
-    let mut fields = sample_surface_with(view.face, view.level, oi, oj, view.w, |c| erosion::column_at(c, &eroded.0));
-    // Keep the pre-overlay water (static sea-fill) so water_refresh can cheaply
-    // re-overlay each new live state without resampling the terrain.
-    let mut base_water = vec![0.0f32; view.w * view.w];
-    for j in 0..view.w {
-        for i in 0..view.w {
-            base_water[j * view.w + i] = fields.water.get(i as isize, j as isize);
+    let mut fields = sample_surface_with(face, level, oi, oj, w, |c| erosion::column_at(c, tiers));
+    let mut base_water = vec![0.0f32; w * w];
+    for j in 0..w {
+        for i in 0..w {
+            base_water[j * w + i] = fields.water.get(i as isize, j as isize);
         }
     }
-    // Overlay the LIVE water tier — by SURFACE elevation, not by depth. The
-    // surface (bed + depth) is the physically continuous field; interpolating
-    // depth over view terrain that carries finer detail than the sim's bed
-    // shredded level pools into beads marching down the valleys (Joseph's
-    // "bubbles"). Render depth = sim surface − view terrain: level water is
-    // level, and fine terrain pokes through only where it truly stands proud.
-    // Honesty rule (Joseph): painted sub-sim detail is only shown where no
-    // physics has contradicted it. Where the water sim has meaningfully wetted
-    // a cell, ITS bed (smooth L21, carving included) is the ground truth — the
-    // L24 noise increment there depicts terrain the water never flowed over.
-    if let Some(w) = &water.0 {
-        for j in 0..view.w {
-            for i in 0..view.w {
-                let cell = CellId::from_face_ij(view.face, oi + i as u32, oj + j as u32, view.level);
-                if let (Some(surf), Some(bed), Some(dsim)) = (w.surface_m(cell), w.bed_m(cell), w.depth_m(cell)) {
+    if let Some(wr) = live {
+        for j in 0..w {
+            for i in 0..w {
+                let cell = CellId::from_face_ij(face, oi + i as u32, oj + j as u32, level);
+                if let (Some(surf), Some(bed), Some(dsim)) = (wr.surface_m(cell), wr.bed_m(cell), wr.depth_m(cell)) {
                     if dsim > 0.05 {
                         fields.height.set(i as isize, j as isize, bed as f32);
                     }
@@ -1602,58 +1602,119 @@ fn terrain_update(mut commands: Commands, view: Res<View>, eroded: Res<Eroded>, 
             }
         }
     }
-    let cell = view.cell_m();
-    let anchor = DVec2::new((oi as f64 + view.w as f64 * 0.5) * cell, (oj as f64 + view.w as f64 * 0.5) * cell);
-
-    for e in [ts.ground.take(), ts.water.take()].into_iter().flatten() {
-        commands.entity(e).despawn();
-    }
-    let tier_of = |x: usize, y: usize| {
-        erosion::tier_at(CellId::from_face_ij(view.face, oi + x as u32, oj + y as u32, view.level), &eroded.0)
-    };
+    let cell = cell_size_m(level, Planet::EARTH.radius_m);
+    let anchor = DVec2::new((oi as f64 + w as f64 * 0.5) * cell, (oj as f64 + w as f64 * 0.5) * cell);
+    let tier_of = |x: usize, y: usize| erosion::tier_at(CellId::from_face_ij(face, oi + x as u32, oj + y as u32, level), tiers);
     let soil_of = |x: usize, y: usize| -> (f32, f32, f32) {
-        water.0.as_ref().map_or((0.0, 0.0, 0.0), |wr| {
-            let c = CellId::from_face_ij(view.face, oi + x as u32, oj + y as u32, view.level);
-            (
-                wr.colmation_at(c).unwrap_or(0.0) as f32,
-                wr.sed_bed_m(c).unwrap_or(0.0) as f32,
-                wr.armor_at(c).unwrap_or(0.0) as f32,
-            )
+        live.map_or((0.0, 0.0, 0.0), |wr| {
+            let c = CellId::from_face_ij(face, oi + x as u32, oj + y as u32, level);
+            (wr.colmation_at(c).unwrap_or(0.0) as f32, wr.sed_bed_m(c).unwrap_or(0.0) as f32, wr.armor_at(c).unwrap_or(0.0) as f32)
         })
     };
     let turbidity_of = |x: usize, y: usize| -> f32 {
-        water.0.as_ref().map_or(0.0, |wr| {
-            let c = CellId::from_face_ij(view.face, oi + x as u32, oj + y as u32, view.level);
-            let s = wr.suspended_m(c).unwrap_or(0.0);
+        live.map_or(0.0, |wr| {
+            let c = CellId::from_face_ij(face, oi + x as u32, oj + y as u32, level);
+            let sm = wr.suspended_m(c).unwrap_or(0.0);
             let d = wr.depth_m(c).unwrap_or(0.0).max(0.02);
-            ((s / d) as f32 * 8.0).clamp(0.0, 0.75)
+            ((sm / d) as f32 * 8.0).clamp(0.0, 0.75)
         })
     };
-    let ground = build_ground_mesh(&fields, view.w, cell, anchor, (oi, oj), view.vert, &tier_of, view.tier_debug, &soil_of);
-    ts.ground = Some(commands.spawn((Mesh3d(meshes.add(ground)), MeshMaterial3d(ts.ground_mat.clone()), Transform::default())).id());
-    if let Some(water) = build_water_mesh(&fields, view.w, cell, anchor, (oi, oj), view.vert, &turbidity_of) {
-        ts.water = Some(commands.spawn((Mesh3d(meshes.add(water)), MeshMaterial3d(ts.water_mat.clone()), Transform::default())).id());
-    }
-
-    ts.built_level = view.level;
-    ts.origin = (oi, oj);
-    ts.anchor_m = anchor;
-    ts.fields = Some(fields);
-    ts.base_water = Some(base_water);
-    ts.water_dirty = false;
+    let ground = build_ground_mesh(&fields, w, cell, anchor, (oi, oj), vert, &tier_of, tier_debug, &soil_of);
+    let (mut heights, mut wtr) = (vec![0.0f32; w * w], vec![0.0f32; w * w]);
     let (mut lo, mut hi) = (f32::INFINITY, f32::NEG_INFINITY);
-    if let Some(f) = &ts.fields {
-        for y in 0..view.w as isize {
-            for x in 0..view.w as isize {
-                let h = f.height.get(x, y) - SEA_LEVEL_M as f32;
-                lo = lo.min(h);
-                hi = hi.max(h);
+    for j in 0..w {
+        for i in 0..w {
+            let h = fields.height.get(i as isize, j as isize);
+            heights[j * w + i] = h;
+            wtr[j * w + i] = fields.water.get(i as isize, j as isize);
+            lo = lo.min(h - SEA_LEVEL_M as f32);
+            hi = hi.max(h - SEA_LEVEL_M as f32);
+        }
+    }
+    let water_mesh = build_water_mesh(&heights, &wtr, w, cell, anchor, (oi, oj), vert, &turbidity_of);
+    MeshDone::Full {
+        level,
+        origin: (oi, oj),
+        anchor,
+        fields,
+        heights: Arc::new(heights),
+        base_water: Arc::new(base_water),
+        ground,
+        water: water_mesh,
+        h_min: lo,
+        h_max: hi,
+        gen_ms: t0.elapsed().as_secs_f32() * 1000.0,
+    }
+}
+
+/// Decide what the mesher should work on next (one job of each kind at a time).
+fn mesh_dispatch(view: Res<View>, eroded: Res<Eroded>, water: Res<WaterRes>, mut ts: ResMut<TerrainState>, tx: Res<MesherTx>) {
+    let drifted = ts.fields.is_some() && {
+        let cx = ts.origin.0 as f64 + view.w as f64 * 0.5;
+        let cy = ts.origin.1 as f64 + view.w as f64 * 0.5;
+        (view.focus.x - cx).abs().max((view.focus.y - cy).abs()) > view.w as f64 / 6.0
+    };
+    let needs_full = ts.fields.is_none() || ts.built_level != view.level || ts.terrain_dirty || drifted;
+    if needs_full && !ts.full_inflight {
+        let n = 1u64 << view.level;
+        let half = view.w as u64 / 2;
+        let oi = ((view.focus.x.round().max(0.0) as u64).clamp(half, n - half) - half) as u32;
+        let oj = ((view.focus.y.round().max(0.0) as u64).clamp(half, n - half) - half) as u32;
+        if tx.0.send(MeshJob::Full { face: view.face, level: view.level, w: view.w, oi, oj, vert: view.vert, tier_debug: view.tier_debug, tiers: eroded.0.clone(), water: water.0.clone() }).is_ok() {
+            ts.full_inflight = true;
+            ts.terrain_dirty = false;
+        }
+    }
+    if ts.water_dirty && !ts.water_inflight && !ts.full_inflight && ts.built_level == view.level {
+        if let (Some(h), Some(b), Some(live)) = (&ts.heights, &ts.base_water, &water.0) {
+            if tx.0.send(MeshJob::WaterOnly { face: view.face, level: view.level, w: view.w, oi: ts.origin.0, oj: ts.origin.1, vert: view.vert, anchor: ts.anchor_m, heights: h.clone(), base_water: b.clone(), live: live.clone() }).is_ok() {
+                ts.water_inflight = true;
+                ts.water_dirty = false;
             }
         }
     }
-    ts.h_min = lo;
-    ts.h_max = hi;
-    ts.gen_ms = t0.elapsed().as_secs_f32() * 1000.0;
+}
+
+/// Swap in finished meshes (stale results from a level change are dropped).
+fn mesh_apply(mut commands: Commands, view: Res<View>, mut meshes: ResMut<Assets<Mesh>>, mut ts: ResMut<TerrainState>, rx: Res<MesherRx>) {
+    while let Ok(done) = rx.0.lock().unwrap().try_recv() {
+        match done {
+            MeshDone::Full { level, origin, anchor, fields, heights, base_water, ground, water, h_min, h_max, gen_ms } => {
+                ts.full_inflight = false;
+                if level != view.level {
+                    continue; // stale — dispatcher will send a fresh job
+                }
+                for e in [ts.ground.take(), ts.water.take()].into_iter().flatten() {
+                    commands.entity(e).despawn();
+                }
+                ts.ground = Some(commands.spawn((Mesh3d(meshes.add(ground)), MeshMaterial3d(ts.ground_mat.clone()), Transform::default())).id());
+                if let Some(wm) = water {
+                    ts.water = Some(commands.spawn((Mesh3d(meshes.add(wm)), MeshMaterial3d(ts.water_mat.clone()), Transform::default())).id());
+                }
+                ts.built_level = level;
+                ts.origin = origin;
+                ts.anchor_m = anchor;
+                ts.fields = Some(fields);
+                ts.heights = Some(heights);
+                ts.base_water = Some(base_water);
+                ts.h_min = h_min;
+                ts.h_max = h_max;
+                ts.gen_ms = gen_ms;
+            }
+            MeshDone::WaterOnly { level, origin, water } => {
+                ts.water_inflight = false;
+                if level != ts.built_level || origin != ts.origin {
+                    continue; // stale
+                }
+                if let Some(e) = ts.water.take() {
+                    commands.entity(e).despawn();
+                }
+                if let Some(wm) = water {
+                    ts.water = Some(commands.spawn((Mesh3d(meshes.add(wm)), MeshMaterial3d(ts.water_mat.clone()), Transform::default())).id());
+                }
+            }
+        }
+    }
 }
 
 /// Elevation-ramp colour for the crude rung (materials are uniform soil-on-igneous
@@ -1768,7 +1829,7 @@ fn build_ground_mesh(
 /// Translucent water point-mesh at the sea surface, depth-shaded (Beer–Lambert per
 /// metre). Quads only where all four corners are wet (slabs' known 1-cell shore
 /// inset — acceptable, noted).
-fn build_water_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin: (u32, u32), vert: f32, turbidity_of: &dyn Fn(usize, usize) -> f32) -> Option<Mesh> {
+fn build_water_mesh(heights: &[f32], water: &[f32], w: usize, cell: f64, anchor: DVec2, origin: (u32, u32), vert: f32, turbidity_of: &dyn Fn(usize, usize) -> f32) -> Option<Mesh> {
     let px = |i: usize| ((origin.0 as f64 + i as f64 + 0.5) * cell - anchor.x) as f32;
     let pz = |j: usize| ((origin.1 as f64 + j as f64 + 0.5) * cell - anchor.y) as f32;
 
@@ -1780,15 +1841,13 @@ fn build_water_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin
     // topology — a flat [0,1,0] normal lights a descending stream like a
     // horizontal mirror (Joseph: "it seems to not reflect light differently").
     let mut surf_v = vec![0.0f32; w * w];
-    for j in 0..w {
-        for i in 0..w {
-            surf_v[j * w + i] = (f.height.get(i as isize, j as isize) + f.water.get(i as isize, j as isize) - SEA_LEVEL_M as f32) * vert;
-        }
+    for k in 0..w * w {
+        surf_v[k] = (heights[k] + water[k] - SEA_LEVEL_M as f32) * vert;
     }
     let sv = |x: isize, y: isize| surf_v[(y.clamp(0, w as isize - 1) as usize) * w + x.clamp(0, w as isize - 1) as usize];
     for j in 0..w {
         for i in 0..w {
-            let depth = f.water.get(i as isize, j as isize);
+            let depth = water[j * w + i];
             // A rain film is invisible in reality too: only render standing water
             // (at high rain the whole window carries a cm-scale draining sheet,
             // which at any uniform alpha reads as FOG — cut it, and fade alpha in
