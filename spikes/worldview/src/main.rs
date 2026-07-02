@@ -893,11 +893,13 @@ place      face + level, cell size, window ground-width, focus cell
 L19/L21    erosion tiers: epochs run, aging speed (y/s), d = relief change/epoch
 ss  s/s    water sim-seconds total / sim-seconds per wall-second
 d mm       mean |depth change| per burst - the convergence gauge
-Fr a/b%    Froude v/sqrt(g*d): <1 tranquil, >1 rushing, ~2 = breaking cap
-           a = max on grid (thin cells overread), b% = share supercritical
+Fr a/b%    Froude v/sqrt(g*d): <1 tranquil, >1 rushing, 2.0 = pinned at the
+           breaking cap (>2 = a bug). a = grid max, b% = share supercritical
 settling   deluge to steady state: current d -> target (0.15 x peak), cap left
 pawn row   water at the pawn: depth, flow speed, local Fr, suspended load,
            alluvium (loose settled bed), seal (pores plugged by fines)
+arrow      flow at the pawn: length ~ log speed (0.5 m/s short .. 16 m/s long),
+           colour = regime (blue tranquil > white critical > red breaking)
 modes [T]  normal > tiers (fidelity tint) > water (+pawn hydrology, flow arrow)
            > float (pawn drifts with the current)";
 #[derive(Component)]
@@ -1298,12 +1300,25 @@ fn flow_arrow(view: Res<View>, _ts: Res<TerrainState>, water: Res<WaterRes>, paw
         return;
     }
     let dir = Vec3::new(vx as f32, 0.0, vy as f32).normalize();
-    let len = 1.0 + 5.0 * (speed / 2.5).clamp(0.0, 1.0);
+    // Log length: the measured node-speed distribution (velocity_histogram)
+    // spans ~0.1..16 m/s with its living-water body at 0.5-2.5 — a linear
+    // scale saturating at 2.5 made very different speeds look identical.
+    let len = 1.5 * (1.0 + speed / 0.25).ln();
+    // Colour = flow REGIME (more informative than raw speed): blue tranquil
+    // (Fr<1) -> white critical -> red at the breaking cap (Fr~2). The same
+    // speed reads differently in deep vs thin water because it IS different.
+    let fr = (speed / (9.8 * d as f32).sqrt().max(1e-3)).clamp(0.0, 2.0);
+    let t = fr / 2.0;
+    let color = Color::srgb(
+        (0.15 + 1.7 * t).min(1.0),
+        (0.6 + 0.8 * (1.0 - (2.0 * t - 1.0).abs())).min(1.0) * (1.0 - 0.55 * (t - 0.5).max(0.0) * 2.0),
+        (1.0 - 1.6 * t).max(0.1),
+    );
     // Above the head, or above the water surface if that's higher.
     let ground_y = pt.translation.y - 1.0; // pawn cuboid is 2 m, centered
     let y = (pt.translation.y + 1.6).max(ground_y + d as f32 * view.vert + 0.6);
     let start = Vec3::new(pt.translation.x, y, pt.translation.z);
-    gizmos.arrow(start, start + dir * len, Color::srgb(0.15, 0.95, 1.0));
+    gizmos.arrow(start, start + dir * len, color);
 }
 
 fn height_at_focus(view: &View, ts: &TerrainState) -> f32 {

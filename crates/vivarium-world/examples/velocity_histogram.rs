@@ -31,8 +31,7 @@ fn main() {
     let mut w = WaterSim::new(face, 21, (woi, woj), wnx, cell, bed, 2.0);
     let p_deluge = WaterParams { precip: WaterParams::default().precip * 60.0, sed_capacity: 0.0, ..Default::default() };
 
-    // Fill: deluge until the wet fraction and mean depth level off (streams
-    // established), capped at 600 sim-s.
+    // Phase 1 — deluge fill, capped at 600 sim-s.
     let mut t = 0.0f32;
     while t < 600.0 {
         let dt = w.stable_dt(9.8);
@@ -42,6 +41,24 @@ fn main() {
             t += dt;
         }
     }
+    histogram("DELUGE (60x rain, network filling)", &w, wnx, t);
+
+    // Phase 2 — living rain (10x): the sheet drains, streams remain.
+    let p_living = WaterParams { precip: WaterParams::default().precip * 10.0, sed_capacity: 0.0, ..Default::default() };
+    let t2_end = t + 200.0;
+    while t < t2_end {
+        let dt = w.stable_dt(9.8);
+        let p = WaterParams { dt, ..p_living };
+        for _ in 0..(8.0 / dt) as u32 {
+            w.step(&p);
+            t += dt;
+        }
+    }
+    histogram("LIVING (10x rain, streams established)", &w, wnx, t);
+}
+
+fn histogram(title: &str, w: &WaterSim, wnx: usize, t: f32) {
+    println!("\n=== {title} ===");
     let (fr_max, fr_sup) = w.froude();
     let wet = w.depth.iter().filter(|&&d| d > 0.01).count();
     println!("t={t:.0} sim-s  wet cells (>1cm): {wet}/{} ({:.1}%)  in-step Fr max {fr_max:.2} / sup {:.0}%", wnx * wnx, wet as f64 / (wnx * wnx) as f64 * 100.0, fr_sup * 100.0);
@@ -69,7 +86,7 @@ fn main() {
         }
     }
     let cmax = *counts.iter().max().unwrap();
-    println!("\n  node speed histogram ({} wet nodes):", speeds.len());
+    println!("  node speed histogram ({} wet nodes):", speeds.len());
     for (k, &c) in counts.iter().enumerate() {
         let bar = "#".repeat((c * 60 / cmax.max(1)).max(usize::from(c > 0)));
         println!("  {:>10} {:>8}  {bar}", label[k], c);

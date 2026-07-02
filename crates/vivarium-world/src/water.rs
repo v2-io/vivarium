@@ -546,15 +546,32 @@ impl WaterSim {
 
     /// Snapshot for sampling by views.
     pub fn to_region(&self) -> WaterRegion {
-        // Net velocity per cell, for local (pawn) instrumentation.
+        // Net velocity per cell, for local (pawn) instrumentation. Each pipe's
+        // speed is its flux over its own SILL depth (h_flow) — the conveyance
+        // the momentum cap operates on. Dividing by the cell's own depth
+        // inflated thin cells beside deep neighbours to 80 m/s (the same
+        // instrument lie the Froude gauge told, in a third place).
         let l = self.cell_m;
-        let n = self.nx * self.nx;
+        let nx = self.nx;
+        let n = nx * nx;
         let (mut vx, mut vy) = (vec![0.0f32; n], vec![0.0f32; n]);
-        for i in 0..n {
-            let d = self.depth[i];
-            if d > 1e-3 {
-                vx[i] = (self.fr[i] - self.fl[i]) / (d * l);
-                vy[i] = (self.fb[i] - self.ft[i]) / (d * l);
+        for y in 0..nx {
+            for x in 0..nx {
+                let i = y * nx + x;
+                if self.depth[i] <= 1e-3 {
+                    continue;
+                }
+                let eta_i = self.bed[i] + self.depth[i];
+                let vp = |f: f32, j: usize| -> f32 {
+                    let hflow = eta_i.max(self.bed[j] + self.depth[j]) - self.bed[i].max(self.bed[j]);
+                    if hflow > 1e-3 { f / (hflow * l) } else { 0.0 }
+                };
+                let r = if x < nx - 1 { vp(self.fr[i], i + 1) } else { 0.0 };
+                let lft = if x > 0 { vp(self.fl[i], i - 1) } else { 0.0 };
+                let b = if y < nx - 1 { vp(self.fb[i], i + nx) } else { 0.0 };
+                let t = if y > 0 { vp(self.ft[i], i - nx) } else { 0.0 };
+                vx[i] = r - lft;
+                vy[i] = b - t;
             }
         }
         WaterRegion {
