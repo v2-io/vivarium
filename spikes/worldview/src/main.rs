@@ -277,7 +277,7 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
         }
         let mut w = WaterSim::new(face, wl, (woi, woj), wnx, cell, wbed, atmos_m);
         let mut sim_total: f32 = 0.0;
-        let (mut prev_delta, mut plateau_bursts) = (0.0f32, 0u32);
+        let (mut prev_delta, mut plateau_bursts, mut delta_peak) = (0.0f32, 0u32, 0.0f32);
         // Phase 3a — THE OLD ENGINE'S RECIPE: deluge to steady state with
         // sediment OFF (core's deliberate kill-switch, used for its final look),
         // so the river network and lakes FILL and equilibrate first. Hands off to
@@ -307,19 +307,23 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
             }
             let delta: f64 = w.depth.iter().zip(before.iter()).map(|(a, b)| (a - b).abs() as f64).sum();
             let delta_mean = (delta / before.len() as f64) as f32;
-            // PLATEAU detection (Joseph): settled = the differential has stopped
-            // decreasing (< 3% improvement per burst, sustained), not an absolute
-            // magic threshold. Cap at 6000 sim-s regardless.
+            // PLATEAU detection (Joseph), corrected for the signal's shape:
+            // during constant-rain FILLING the differential is itself constant
+            // (≈ the input), so "not decreasing" alone fires mid-deluge. Settled
+            // = the differential has FALLEN well below its filling-phase peak
+            // (outflux ≈ influx) and then stopped improving. Cap at 6000 sim-s.
             if settling {
+                delta_peak = delta_peak.max(delta_mean);
                 if prev_delta > 0.0 && delta_mean > prev_delta * 0.97 {
                     plateau_bursts += 1;
                 } else {
                     plateau_bursts = 0;
                 }
                 prev_delta = delta_mean;
-                if sim_total > 400.0 && (plateau_bursts >= 5 || sim_total > 6000.0) {
+                let fallen = delta_mean < 0.15 * delta_peak;
+                if sim_total > 400.0 && ((fallen && plateau_bursts >= 3) || sim_total > 6000.0) {
                     settling = false;
-                    eprintln!("[worldview] water settled at {sim_total:.0} sim-s (d {:.1} mm, plateaued) — living phase (storms + sediment)", delta_mean * 1000.0);
+                    eprintln!("[worldview] water settled at {sim_total:.0} sim-s (d {:.1} mm vs peak {:.1} mm) — living phase (storms + sediment)", delta_mean * 1000.0, delta_peak * 1000.0);
                 }
             }
             if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * dt, delta_m: delta_mean, settling }).is_err() {
