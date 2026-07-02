@@ -41,6 +41,21 @@ pub struct WaterParams {
     /// Sea level (m, bed datum): cells with bed at/below it are held at the
     /// waterline, exchanging with the counted ocean store.
     pub sea_m: f32,
+    // --- Sediment (Mei et al. stage; core had this OFF — the multirate frame is
+    // where it can be ON). Capacity ∝ flow speed; erode toward capacity, settle
+    // above it, advect with the flow. bed + suspended is exactly conserved.
+    /// Carrying capacity per unit flow speed (m of sediment per m/s).
+    pub sed_capacity: f32,
+    /// Erosion rate toward capacity (fraction of deficit per second).
+    pub sed_erode: f32,
+    /// Settling rate above capacity (fraction of excess per second).
+    pub sed_deposit: f32,
+    /// Max bed change per step (m) — a hard sanity bound.
+    pub sed_max_step: f32,
+    /// Per-step flux damping (friction): undamped pipes ring — water overshoots
+    /// and sloshes in surge waves (Joseph saw pulses running down valleys instead
+    /// of streams). 0.99 ≈ a ~20-step (4 sim-s) momentum memory.
+    pub damping: f32,
 }
 
 impl Default for WaterParams {
@@ -52,6 +67,11 @@ impl Default for WaterParams {
             precip: 3.0e-5,
             evaporation: 1.0e-4,
             sea_m: crate::gen::SEA_LEVEL_M as f32,
+            sed_capacity: 0.05,
+            sed_erode: 0.1,
+            sed_deposit: 0.5,
+            sed_max_step: 0.005,
+            damping: 0.99,
         }
     }
 }
@@ -67,6 +87,8 @@ pub struct WaterSim {
     pub origin: (u32, u32),
     pub bed: Vec<f32>,
     pub depth: Vec<f32>,
+    /// Suspended sediment (m of solid per cell). Conserved with `bed`.
+    pub sediment: Vec<f32>,
     /// Counted reservoirs (m of water, cell-area units): conservation partners.
     pub atmosphere: f64,
     pub ocean: f64,
@@ -90,6 +112,7 @@ impl WaterSim {
             origin,
             bed,
             depth: z.clone(),
+            sediment: z.clone(),
             atmosphere: atmosphere_m * (nx * nx) as f64,
             ocean: 0.0,
             fl: z.clone(),
@@ -102,6 +125,11 @@ impl WaterSim {
     /// The conserved total: surface + atmosphere + ocean (m, cell-area units).
     pub fn total_water(&self) -> f64 {
         self.depth.iter().map(|&d| d as f64).sum::<f64>() + self.atmosphere + self.ocean
+    }
+
+    /// The conserved SOLID total: bed + suspended (m, cell-area units).
+    pub fn total_solid(&self) -> f64 {
+        self.bed.iter().map(|&b| b as f64).sum::<f64>() + self.sediment.iter().map(|&s| s as f64).sum::<f64>()
     }
 
     /// Refresh the bed from the (still-eroding) terrain tier — the quasi-static
@@ -148,17 +176,18 @@ impl WaterSim {
                 let i = y * nx + x;
                 let s = self.bed[i] + self.depth[i];
                 let head = |j: usize| s - (self.bed[j] + self.depth[j]);
+                let damp = p.damping;
                 if x > 0 {
-                    self.fl[i] = (self.fl[i] + k * head(i - 1)).max(0.0);
+                    self.fl[i] = (self.fl[i] * damp + k * head(i - 1)).max(0.0);
                 }
                 if x < nx - 1 {
-                    self.fr[i] = (self.fr[i] + k * head(i + 1)).max(0.0);
+                    self.fr[i] = (self.fr[i] * damp + k * head(i + 1)).max(0.0);
                 }
                 if y > 0 {
-                    self.ft[i] = (self.ft[i] + k * head(i - nx)).max(0.0);
+                    self.ft[i] = (self.ft[i] * damp + k * head(i - nx)).max(0.0);
                 }
                 if y < nx - 1 {
-                    self.fb[i] = (self.fb[i] + k * head(i + nx)).max(0.0);
+                    self.fb[i] = (self.fb[i] * damp + k * head(i + nx)).max(0.0);
                 }
                 // Clamp: a cell cannot ship more water than it holds. THIS is
                 // the conservation/stability guarantee of the pipe method.
@@ -183,6 +212,78 @@ impl WaterSim {
                     + (if y < nx - 1 { self.ft[i + nx] } else { 0.0 });
                 let outflow = self.fl[i] + self.fr[i] + self.ft[i] + self.fb[i];
                 self.depth[i] = (self.depth[i] + (inflow - outflow) * dt / area).max(0.0);
+            }
+        }
+
+        // 4b. SEDIMENT: capacity ∝ |v| (velocity from pipe throughput); erode
+        //     the bed toward capacity, settle above it, then advect the load
+        //     with the same fractional outflow as the water (mass-conserving).
+        if p.sed_capacity > 0.0 {
+            for y in 0..nx {
+                for x in 0..nx {
+                    let i = y * nx + x;
+                    let d = self.depth[i];
+                    if d < 1e-3 {
+                        // No meaningful flow: everything settles.
+                        let dp = self.sediment[i].min(p.sed_max_step);
+                        self.bed[i] += dp;
+                        self.sediment[i] -= dp;
+                        continue;
+                    }
+                    let vx = ((if x > 0 { self.fr[i - 1] } else { 0.0 }) + self.fr[i]
+                        - (if x < nx - 1 { self.fl[i + 1] } else { 0.0 })
+                        - self.fl[i])
+                        * 0.5
+                        / (l * d);
+                    let vy = ((if y > 0 { self.fb[i - nx] } else { 0.0 }) + self.fb[i]
+                        - (if y < nx - 1 { self.ft[i + nx] } else { 0.0 })
+                        - self.ft[i])
+                        * 0.5
+                        / (l * d);
+                    let speed = (vx * vx + vy * vy).sqrt();
+                    let capacity = (p.sed_capacity * speed).min(2.0);
+                    let s0 = self.sediment[i];
+                    if s0 < capacity {
+                        let e = ((capacity - s0) * p.sed_erode * dt).min(p.sed_max_step);
+                        self.bed[i] -= e;
+                        self.sediment[i] += e;
+                    } else {
+                        let dp = ((s0 - capacity) * p.sed_deposit * dt).min(p.sed_max_step).min(s0);
+                        self.bed[i] += dp;
+                        self.sediment[i] -= dp;
+                    }
+                }
+            }
+            // Advect: sediment leaves with the same volume fraction as the water.
+            let snap = self.sediment.clone();
+            for y in 0..nx {
+                for x in 0..nx {
+                    let i = y * nx + x;
+                    let d = self.depth[i];
+                    if d < 1e-4 || snap[i] <= 0.0 {
+                        continue;
+                    }
+                    let out = (self.fl[i] + self.fr[i] + self.ft[i] + self.fb[i]) * dt;
+                    let frac = (out / (d * area)).min(1.0);
+                    let moving = snap[i] * frac;
+                    if moving <= 0.0 {
+                        continue;
+                    }
+                    self.sediment[i] -= moving;
+                    let total = self.fl[i] + self.fr[i] + self.ft[i] + self.fb[i];
+                    if x > 0 {
+                        self.sediment[i - 1] += moving * self.fl[i] / total;
+                    }
+                    if x < nx - 1 {
+                        self.sediment[i + 1] += moving * self.fr[i] / total;
+                    }
+                    if y > 0 {
+                        self.sediment[i - nx] += moving * self.ft[i] / total;
+                    }
+                    if y < nx - 1 {
+                        self.sediment[i + nx] += moving * self.fb[i] / total;
+                    }
+                }
             }
         }
 
@@ -272,12 +373,20 @@ mod tests {
         let mut w = bowl(32);
         let p = WaterParams::default();
         let before = w.total_water();
+        let solid_before = w.total_solid();
         for _ in 0..400 {
             w.step(&p);
         }
         let after = w.total_water();
         assert!((before - after).abs() < 1e-3, "water not conserved: {before} -> {after}");
         assert!(w.depth.iter().all(|d| *d >= 0.0 && d.is_finite()));
+        // Solid (bed + suspended) is conserved by the sediment stage too.
+        let solid_after = w.total_solid();
+        assert!(
+            (solid_before - solid_after).abs() / solid_before.abs().max(1.0) < 1e-6,
+            "solid not conserved: {solid_before} -> {solid_after}"
+        );
+        assert!(w.sediment.iter().all(|s| *s >= 0.0 && s.is_finite()));
     }
 
     #[test]

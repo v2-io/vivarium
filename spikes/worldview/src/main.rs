@@ -295,6 +295,22 @@ fn spawn_fine_tiers(
                     if wtx.send(msg).is_err() {
                         return;
                     }
+                    // TWO-WAY: the water's sediment carving writes back into the
+                    // L21 tier (view + finer-tier seeding see the carved bed).
+                    if let Some(entry) = tiers.iter_mut().find(|r| r.level == 21) {
+                        entry.h.copy_from_slice(&w.bed);
+                        let mut epochs_tot = 0;
+                        if let Some(st) = states.iter_mut().find(|s| s.level == 21) {
+                            if let Some((f, _, _, total)) = st.sim.as_mut() {
+                                f.h.copy_from_slice(&w.bed);
+                                epochs_tot = *total;
+                            }
+                        }
+                        let carved = TierMsg { region: entry.clone(), epochs_total: epochs_tot, sim_years: 0.0, delta_m: 0.0 };
+                        if tx.send(carved).is_err() {
+                            return;
+                        }
+                    }
                 }
             }
             if !live {
@@ -995,12 +1011,13 @@ fn build_water_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin
         for i in 0..w {
             let depth = f.water.get(i as isize, j as isize);
             // A rain film is invisible in reality too: only render standing water
-            // (the diagnostic showed the whole window under a mm-scale sheet at
-            // high rain — painting that as "water" would flood the view).
-            wet[j * w + i] = depth > 0.02;
+            // (at high rain the whole window carries a cm-scale draining sheet,
+            // which at any uniform alpha reads as FOG — cut it, and fade alpha in
+            // from the cutoff so pools don't pop).
+            wet[j * w + i] = depth > 0.06;
             // Water surface = solid top + depth (baseline: the sea plane at y = 0).
             let surf = (f.height.get(i as isize, j as isize) + depth - SEA_LEVEL_M as f32) * vert;
-            let m = 1.0 - (-depth * WATER_ABSORB_PER_M).exp();
+            let m = (1.0 - (-depth * WATER_ABSORB_PER_M).exp()) * ((depth - 0.06) / 0.08).clamp(0.0, 1.0);
             positions.push([px(i), surf, pz(j)]);
             normals.push([0.0, 1.0, 0.0]);
             colors.push([
