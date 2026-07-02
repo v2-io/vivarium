@@ -41,11 +41,13 @@ use bevy::pbr::{DistanceFog, FogFalloff};
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 
-use vivarium_world::erosion::{self, ErodedRegion, FluvialParams};
+use std::sync::{Arc, Mutex};
+
+use vivarium_world::erosion::{self, ErodedRegion, Fluvial, FluvialParams};
 use vivarium_world::gen::SEA_LEVEL_M;
 use vivarium_world::planet::Planet;
 use vivarium_world::sample::{cell_size_m, sample_surface_with, SurfacePatch};
-use vivarium_world::sphere::Face;
+use vivarium_world::sphere::{CellId, Face};
 
 const SKY: Color = Color::srgb(0.80, 0.82, 0.84);
 /// Water colour by depth (Beer–Lambert), as proven in slabs — but per METRE here
@@ -80,8 +82,22 @@ const STANDOFF: f32 = 400_000.0;
 struct Eroded(Vec<ErodedRegion>);
 
 /// Channel delivering background-built tiers to the ECS.
+struct TierMsg {
+    region: ErodedRegion,
+    epochs_total: u32,
+}
 #[derive(Resource)]
-struct TierRx(std::sync::Mutex<std::sync::mpsc::Receiver<ErodedRegion>>);
+struct TierRx(Mutex<std::sync::mpsc::Receiver<TierMsg>>);
+
+/// Wall-clock + maturity metadata per tier level (a VIEW concern — the world
+/// crate stays wall-clock-free): (level, last-update Instant, total epochs run).
+#[derive(Resource, Default)]
+struct TierMeta(Vec<(u8, std::time::Instant, u32)>);
+
+/// The pawn's whereabouts, shared with the erosion worker (face cells at the
+/// view's level, plus the level) — how the telescope re-anchors as you move.
+#[derive(Resource, Clone)]
+struct SharedFocus(Arc<Mutex<(f64, f64, u8)>>);
 
 fn build_tier0(view: &View) -> Vec<ErodedRegion> {
     if std::env::var("VIVARIUM_ERODE").map(|v| v == "0").unwrap_or(false) {
@@ -98,52 +114,122 @@ fn build_tier0(view: &View) -> Vec<ErodedRegion> {
     vec![region]
 }
 
-/// Build the finer tiers in the background: L21 (~4.8 m cells, ~2.4 km — roughly
-/// the on-screen world) then L24 (~0.6 m cells, ~150 m around the pawn), each
-/// seeded from the telescope built so far, with fewer ("more recent") epochs —
-/// Joseph's proven practice from core. Sent over the channel as each finishes.
-fn spawn_fine_tiers(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sender<ErodedRegion>) {
+/// The LIVE erosion worker: a continuous loop that keeps the fine tiers anchored
+/// to the pawn and keeps running epochs on a ~0.5 s cadence, so erosion is
+/// watchable as it happens. Per cycle, per tier (L21 ≈ 4.8 m cells over the
+/// on-screen ~2.4 km; L24 ≈ 0.6 m cells ~150 m around the pawn):
+///   • pawn moved past ~¼ of the tier's span → RE-SEED at the new centre from the
+///     coarser tiers (fresh "recent epochs", Joseph's core practice);
+///   • otherwise → run a few MORE epochs on the same field (incremental maturing —
+///     the watchable part).
+/// Each update is snapshot to the ECS; VIVARIUM_LIVE=0 falls back to one-shot.
+fn spawn_fine_tiers(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sender<TierMsg>, focus: SharedFocus) {
     if base.is_empty() {
         return;
     }
+    let live = !std::env::var("VIVARIUM_LIVE").map(|v| v == "0").unwrap_or(false);
     let face = view.face;
-    let f21 = view.focus * 2f64.powi(21 - view.level as i32);
-    let f24 = view.focus * 2f64.powi(24 - view.level as i32);
+    const CADENCE: std::time::Duration = std::time::Duration::from_millis(500);
+
+    struct TierState {
+        level: u8,
+        nx: usize,
+        init_epochs: u32,
+        inc_epochs: u32,
+        /// Uplift per epoch (m), fBm-differential — the slow band's tectonic
+        /// forcing lives at the MACRO tier (§4); fine tiers inherit it on re-seed.
+        uplift_m: f32,
+        sim: Option<(Fluvial, u32, u32, u32)>, // (field, oi, oj, epochs_total)
+    }
+    let mut states = [
+        TierState { level: 19, nx: 512, init_epochs: 0, inc_epochs: 1, uplift_m: 0.05, sim: None },
+        TierState { level: 21, nx: 512, init_epochs: 30, inc_epochs: 2, uplift_m: 0.0, sim: None },
+        TierState { level: 24, nx: 256, init_epochs: 10, inc_epochs: 2, uplift_m: 0.0, sim: None },
+    ];
+
     std::thread::spawn(move || {
+        // tiers, coarse→fine, as the seeding context for (re)builds.
         let mut tiers = base;
-        for (level, ci, cj, nx, epochs) in [
-            (21u8, f21.x as u32, f21.y as u32, 512usize, 30u32),
-            (24u8, f24.x as u32, f24.y as u32, 256usize, 10u32),
-        ] {
-            let t = std::time::Instant::now();
-            let p = FluvialParams { epochs, ..Default::default() };
-            let r = {
-                let seed = &tiers;
-                ErodedRegion::build_from(face, level, ci, cj, nx, &p, |c| erosion::surface_at(c, seed))
-            };
-            eprintln!("[worldview] tier L{level} done in {:.1} s", t.elapsed().as_secs_f32());
-            tiers.push(r.clone());
-            if tx.send(r).is_err() {
-                return;
+        // Resume the macro tier's simulation from the startup field.
+        if let Some(t0) = tiers.iter().find(|r| r.level == 19) {
+            states[0].sim = Some((Fluvial::from_region(t0), t0.oi, t0.oj, FluvialParams::default().epochs));
+        }
+        loop {
+            let t0 = std::time::Instant::now();
+            let (fx, fy, flevel) = *focus.0.lock().unwrap();
+            for st in states.iter_mut() {
+                let scale = 2f64.powi(st.level as i32 - flevel as i32);
+                let (ci, cj) = ((fx * scale) as i64, (fy * scale) as i64);
+                let half = (st.nx / 2) as i64;
+                let (noi, noj) = ((ci - half).max(0) as u32, (cj - half).max(0) as u32);
+                let needs_seed = match &st.sim {
+                    None => true,
+                    Some((_, oi, oj, _)) => {
+                        // Re-anchor when the pawn has drifted past ~¼ span.
+                        (noi as i64 - *oi as i64).abs().max((noj as i64 - *oj as i64).abs()) > (st.nx as i64) / 4
+                    }
+                };
+                let epochs_run;
+                if needs_seed {
+                    // Seed from the tiers COARSER than this one only.
+                    let coarser: Vec<ErodedRegion> = tiers.iter().filter(|r| r.level < st.level).cloned().collect();
+                    let mut f = Fluvial::from_surface(face, st.level, noi, noj, st.nx, |c| erosion::surface_at(c, &coarser));
+                    f.erode(&FluvialParams { epochs: st.init_epochs.max(1), uplift_m: st.uplift_m, ..Default::default() });
+                    st.sim = Some((f, noi, noj, st.init_epochs));
+                    epochs_run = st.init_epochs;
+                } else {
+                    let (f, _, _, total) = st.sim.as_mut().unwrap();
+                    f.erode(&FluvialParams { epochs: st.inc_epochs, uplift_m: st.uplift_m, ..Default::default() });
+                    *total += st.inc_epochs;
+                    epochs_run = *total;
+                }
+                let region = st.sim.as_ref().unwrap().0.to_region();
+                // Keep the local telescope current (replace-by-level, keep order).
+                tiers.retain(|r| r.level != st.level);
+                tiers.push(region.clone());
+                tiers.sort_by_key(|r| r.level);
+                if tx.send(TierMsg { region, epochs_total: epochs_run }).is_err() {
+                    return; // view closed
+                }
             }
+            if !live {
+                return; // one-shot mode: first pass only
+            }
+            std::thread::sleep(CADENCE.saturating_sub(t0.elapsed()));
         }
     });
 }
 
-/// Fold arriving tiers into the telescope and force a rebuild through them.
-fn tier_update(rx: Res<TierRx>, mut eroded: ResMut<Eroded>, mut ts: ResMut<TerrainState>) {
-    if let Ok(r) = rx.0.lock().unwrap().try_recv() {
-        eprintln!("[worldview] tier L{} arrived — refining the view", r.level);
-        eroded.0.push(r);
+/// Fold arriving tier updates into the telescope (replace-by-level), stamp their
+/// wall-clock + maturity, and trigger one rebuild for the batch.
+fn tier_update(rx: Res<TierRx>, mut eroded: ResMut<Eroded>, mut meta: ResMut<TierMeta>, mut ts: ResMut<TerrainState>, mut last_rebuild: Local<Option<std::time::Instant>>) {
+    let mut any = false;
+    while let Ok(msg) = rx.0.lock().unwrap().try_recv() {
+        let level = msg.region.level;
+        eroded.0.retain(|r| r.level != level);
+        eroded.0.push(msg.region);
+        eroded.0.sort_by_key(|r| r.level);
+        meta.0.retain(|(l, _, _)| *l != level);
+        meta.0.push((level, std::time::Instant::now(), msg.epochs_total));
+        meta.0.sort_by_key(|(l, _, _)| *l);
+        any = true;
+    }
+    // Rebuilds are ~300 ms synchronous at walk-scale defaults, so refresh the
+    // mesh at most every ~1.5 s: the sim keeps maturing every cycle regardless;
+    // only the VIEW of it is throttled. (Async meshing is the real fix, queued.)
+    if any && last_rebuild.map(|t| t.elapsed().as_secs_f32() > 1.5).unwrap_or(true) {
         ts.built_level = u8::MAX; // trigger terrain_update
+        *last_rebuild = Some(std::time::Instant::now());
     }
 }
 
 fn main() {
     let view = View::default();
     let tier0 = build_tier0(&view);
-    let (tx, rx) = std::sync::mpsc::channel::<ErodedRegion>();
-    spawn_fine_tiers(&view, tier0.clone(), tx);
+    let focus = SharedFocus(Arc::new(Mutex::new((view.focus.x, view.focus.y, view.level))));
+    let (tx, rx) = std::sync::mpsc::channel::<TierMsg>();
+    spawn_fine_tiers(&view, tier0.clone(), tx, focus.clone());
+    let meta = TierMeta(tier0.iter().map(|r| (r.level, std::time::Instant::now(), FluvialParams::default().epochs)).collect());
     let eroded = Eroded(tier0);
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -158,7 +244,9 @@ fn main() {
         .insert_resource(ClearColor(SKY))
         .insert_resource(view)
         .insert_resource(eroded)
-        .insert_resource(TierRx(std::sync::Mutex::new(rx)))
+        .insert_resource(TierRx(Mutex::new(rx)))
+        .insert_resource(meta)
+        .insert_resource(focus)
         .add_systems(Startup, setup)
         .add_systems(Update, (view_update, tier_update, terrain_update, hud_update, scale_update, maybe_screenshot))
         .run();
@@ -189,6 +277,8 @@ struct View {
     zoom: f32,
     /// Vertical exaggeration (1 = honest).
     vert: f32,
+    /// Tint terrain by its erosion-tier fidelity (T toggles; the debug overlay).
+    tier_debug: bool,
 }
 
 impl Default for View {
@@ -225,6 +315,7 @@ impl Default for View {
             auto_pitch: manual_pitch.is_none(),
             zoom: std::env::var("VIVARIUM_ZOOM").ok().and_then(|s| s.parse().ok()).unwrap_or(130.0),
             vert: std::env::var("VIVARIUM_VERT").ok().and_then(|s| s.parse().ok()).unwrap_or(1.0),
+            tier_debug: std::env::var("VIVARIUM_TIERDEBUG").map(|v| v != "0").unwrap_or(false),
         }
     }
 }
@@ -405,13 +496,19 @@ fn view_update(
     keys: Res<ButtonInput<KeyCode>>,
     mut wheel: MessageReader<bevy::input::mouse::MouseWheel>,
     mut view: ResMut<View>,
-    ts: Res<TerrainState>,
+    mut ts: ResMut<TerrainState>,
     mut cam: Query<&mut Transform, (With<IsoCamera>, Without<Pawn>, Without<FocusRing>)>,
     mut cam_proj: Query<&mut Projection, With<IsoCamera>>,
     mut fog: Query<&mut DistanceFog, With<IsoCamera>>,
     mut pawn: Query<&mut Transform, (With<Pawn>, Without<IsoCamera>, Without<FocusRing>)>,
     mut ring: Query<&mut Transform, (With<FocusRing>, Without<IsoCamera>, Without<Pawn>)>,
+    shared: Res<SharedFocus>,
 ) {
+    if keys.just_pressed(KeyCode::KeyT) {
+        view.tier_debug = !view.tier_debug;
+        ts.built_level = u8::MAX; // tint is baked into vertex colours — rebuild
+    }
+    *shared.0.lock().unwrap() = (view.focus.x, view.focus.y, view.level);
     let dt = time.delta_secs();
 
     // Pan in the camera frame, in metres, converted to face cells.
@@ -612,7 +709,10 @@ fn terrain_update(mut commands: Commands, view: Res<View>, eroded: Res<Eroded>, 
     for e in [ts.ground.take(), ts.water.take()].into_iter().flatten() {
         commands.entity(e).despawn();
     }
-    let ground = build_ground_mesh(&fields, view.w, cell, anchor, (oi, oj), view.vert);
+    let tier_of = |x: usize, y: usize| {
+        erosion::tier_at(CellId::from_face_ij(view.face, oi + x as u32, oj + y as u32, view.level), &eroded.0)
+    };
+    let ground = build_ground_mesh(&fields, view.w, cell, anchor, (oi, oj), view.vert, &tier_of, view.tier_debug);
     ts.ground = Some(commands.spawn((Mesh3d(meshes.add(ground)), MeshMaterial3d(ts.ground_mat.clone()), Transform::default())).id());
     if let Some(water) = build_water_mesh(&fields, view.w, cell, anchor, (oi, oj), view.vert) {
         ts.water = Some(commands.spawn((Mesh3d(meshes.add(water)), MeshMaterial3d(ts.water_mat.clone()), Transform::default())).id());
@@ -665,8 +765,28 @@ fn ground_color(h_above_sea: f32) -> [f32; 4] {
 
 /// Continuous point-mesh over the solid surface (slabs' proven model): one vertex
 /// per cell centre, smooth normals from the height gradient (halo makes edges work).
-fn build_ground_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin: (u32, u32), vert: f32) -> Mesh {
+fn build_ground_mesh(
+    f: &SurfacePatch,
+    w: usize,
+    cell: f64,
+    anchor: DVec2,
+    origin: (u32, u32),
+    vert: f32,
+    tier_of: &dyn Fn(usize, usize) -> Option<u8>,
+    tier_debug: bool,
+) -> Mesh {
     use vivarium_world::noise::hash01;
+    // Fidelity tints (debug): violet = raw prior (unsimulated), blue = L19 macro,
+    // yellow = L21 fine, orange = L24 pawn-scale. Lerped over the terrain colour.
+    fn tier_tint(t: Option<u8>) -> [f32; 3] {
+        match t {
+            None => [0.62, 0.45, 0.78],
+            Some(19) => [0.25, 0.55, 0.95],
+            Some(21) => [0.95, 0.90, 0.25],
+            Some(24) => [1.00, 0.45, 0.20],
+            Some(_) => [0.6, 0.6, 0.6],
+        }
+    }
     let h = |x: isize, y: isize| -> f32 { f.height.get(x, y) };
     let px = |i: usize| ((origin.0 as f64 + i as f64 + 0.5) * cell - anchor.x) as f32;
     let pz = |j: usize| ((origin.1 as f64 + j as f64 + 0.5) * cell - anchor.y) as f32;
@@ -683,7 +803,14 @@ fn build_ground_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origi
             // Deterministic per-cell mottle (§8): real ground is not one green.
             let m = 0.88 + 0.24 * hash01(7, gi, gj) as f32;
             let c = ground_color(h(x, y) - SEA_LEVEL_M as f32);
-            colors.push([c[0] * m, c[1] * m, c[2] * m, 1.0]);
+            let mut col = [c[0] * m, c[1] * m, c[2] * m, 1.0];
+            if tier_debug {
+                let t = tier_tint(tier_of(i, j));
+                for k in 0..3 {
+                    col[k] = col[k] * 0.55 + t[k] * 0.45;
+                }
+            }
+            colors.push(col);
             let nrm = Vec3::new(py(x - 1, y) - py(x + 1, y), 2.0 * cell as f32, py(x, y - 1) - py(x, y + 1)).normalize();
             normals.push([nrm.x, nrm.y, nrm.z]);
         }
@@ -759,16 +886,41 @@ fn compass(yaw: f32) -> &'static str {
     L[(((deg + 22.5) / 45.0) as usize) % 8]
 }
 
-fn hud_update(view: Res<View>, ts: Res<TerrainState>, diag: Res<bevy::diagnostic::DiagnosticsStore>, mut q: Query<&mut Text, With<HudText>>) {
+fn hud_update(view: Res<View>, ts: Res<TerrainState>, meta: Res<TierMeta>, eroded: Res<Eroded>, diag: Res<bevy::diagnostic::DiagnosticsStore>, mut q: Query<&mut Text, With<HudText>>) {
     let fps = diag.get(&bevy::diagnostic::FrameTimeDiagnosticsPlugin::FPS).and_then(|d| d.smoothed()).unwrap_or(0.0);
     let cell = view.cell_m();
     let span_m = view.w as f64 * cell;
     let span_txt = if span_m >= 2000.0 { format!("{:.0} km", span_m / 1000.0) } else { format!("{span_m:.0} m") };
     let cell_txt = if cell >= 2.0 { format!("{cell:.0} m") } else { format!("{:.1} m", cell) };
     let elev = height_at_focus(&view, &ts);
+    // Sim-age of the visible window: probe corners + centre, map each to its
+    // covering tier's last-update age; anything uncovered = the raw prior.
+    let (mut newest, mut oldest, mut prior_seen) = (f32::INFINITY, 0.0f32, false);
+    let wm1 = (view.w - 1) as u32;
+    for (px, py) in [(0, 0), (wm1, 0), (0, wm1), (wm1, wm1), (wm1 / 2, wm1 / 2)] {
+        let cell = CellId::from_face_ij(view.face, ts.origin.0 + px, ts.origin.1 + py, ts.built_level.min(25));
+        match erosion::tier_at(cell, &eroded.0) {
+            Some(l) => {
+                if let Some((_, at, _)) = meta.0.iter().find(|(ml, _, _)| *ml == l) {
+                    let age = at.elapsed().as_secs_f32();
+                    newest = newest.min(age);
+                    oldest = oldest.max(age);
+                }
+            }
+            None => prior_seen = true,
+        }
+    }
+    let sim_line = if meta.0.is_empty() {
+        "sim OFF".to_string()
+    } else {
+        let tiers: Vec<String> = meta.0.iter().map(|(l, at, e)| format!("L{l} {:.0}s/{e}e", at.elapsed().as_secs_f32())).collect();
+        let newest_txt = if newest.is_finite() { format!("{newest:.1}s") } else { "-".into() };
+        let oldest_txt = if prior_seen { "prior(unsimulated)".to_string() } else { format!("{oldest:.0}s") };
+        format!("sim {}   screen newest {newest_txt} oldest {oldest_txt}{}", tiers.join("  "), if view.tier_debug { "   [T]int ON" } else { "" })
+    };
     if let Ok(mut text) = q.single_mut() {
         text.0 = format!(
-            "worldview    {fps:>4.0} fps    gen {:.0} ms\n{:?}  L{}  cell {cell_txt}  window {span_txt}  relief {:.0}..{:.0} m\nfocus ({:.0}, {:.0})    elev {elev:.0} m\nfacing {}    angle {:.0} deg    zoom {:.0} m    vert {:.1}",
+            "worldview    {fps:>4.0} fps    gen {:.0} ms\n{:?}  L{}  cell {cell_txt}  window {span_txt}  relief {:.0}..{:.0} m\nfocus ({:.0}, {:.0})    elev {elev:.0} m\nfacing {}    angle {:.0} deg    zoom {:.0} m    vert {:.1}\n{sim_line}",
             ts.gen_ms,
             view.face,
             view.level,

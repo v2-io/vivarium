@@ -151,6 +151,13 @@ pub struct Fluvial {
     pub h: Vec<f32>,
     /// MFD drainage area (m²) from the last epoch — the dendritic-ness instrument.
     pub drainage: Vec<f32>,
+    /// Where this field sits (face cells at `level` from `origin`) — identity for
+    /// the differential-uplift field and for wrapping back into an ErodedRegion.
+    pub face: Face,
+    pub level: u8,
+    pub origin: (u32, u32),
+    /// Cached per-cell uplift weights (built on first uplifting epoch).
+    uplift_w: Option<Vec<f32>>,
 }
 
 const NEIGHBORS: [(i32, i32); 8] =
@@ -175,7 +182,19 @@ impl Fluvial {
                 h[y * nx + x] = surf(cell) as f32;
             }
         }
-        Self { nx, cell_m, h, drainage: vec![0.0; nx * nx] }
+        Self { nx, cell_m, h, drainage: vec![0.0; nx * nx], face, level, origin: (oi, oj), uplift_w: None }
+    }
+
+    /// Resume a simulation over an existing eroded field (e.g. the startup tier),
+    /// so the live loop can keep running epochs without redoing the initial work.
+    pub fn from_region(r: &ErodedRegion) -> Self {
+        let cell_m = crate::sample::cell_size_m(r.level, crate::planet::Planet::EARTH.radius_m) as f32;
+        Self { nx: r.nx, cell_m, h: r.h.clone(), drainage: vec![0.0; r.nx * r.nx], face: r.face, level: r.level, origin: (r.oi, r.oj), uplift_w: None }
+    }
+
+    /// Snapshot into a sampleable region.
+    pub fn to_region(&self) -> ErodedRegion {
+        ErodedRegion { face: self.face, level: self.level, oi: self.origin.0, oj: self.origin.1, nx: self.nx, h: self.h.clone() }
     }
 
     #[inline]
@@ -418,9 +437,27 @@ impl Fluvial {
         for _ in 0..p.epochs {
             let outlets = self.outlets();
             if p.uplift_m > 0.0 {
+                // DIFFERENTIAL uplift (Joseph): weight the rate by low-frequency
+                // coordinate fBm (λ ≈ 5 km; its own domain), so blocks rise at
+                // different rates and features tilt as in real landscapes. Erosion
+                // vs. sustained uplift also gives base-level equilibrium: graded
+                // floodplains and flat coastal shelves (deposition near outlets).
+                if self.uplift_w.is_none() {
+                    let mut w = vec![0.0f32; self.nx * self.nx];
+                    for y in 0..self.nx {
+                        for x in 0..self.nx {
+                            let cell = CellId::from_face_ij(self.face, self.origin.0 + x as u32, self.origin.1 + y as u32, self.level);
+                            let c = cell.to_cube();
+                            let f = crate::noise::fbm(3, (c.u + 1.0) * 2000.0, (c.v + 1.0) * 2000.0, 3, 2.0, 0.5);
+                            w[y * self.nx + x] = (0.25 + 1.5 * f) as f32; // ~0.25×..1.75×
+                        }
+                    }
+                    self.uplift_w = Some(w);
+                }
+                let w = self.uplift_w.as_ref().unwrap();
                 for (i, &o) in outlets.iter().enumerate() {
                     if !o {
-                        self.h[i] += p.uplift_m;
+                        self.h[i] += p.uplift_m * w[i];
                     }
                 }
             }
@@ -503,20 +540,32 @@ impl ErodedRegion {
         Self { face, level, oi, oj, nx, h: f.h }
     }
 
-    /// Sampled surface (m above bedrock datum) for `cell`, if it lies within the
-    /// region (and on the same face, at a level ≥ the region's).
-    pub fn surface_m(&self, cell: CellId) -> Option<f64> {
+    /// Does this region cover `cell` (same face, level ≥ region's, inside bounds)?
+    /// The cheap bounds-only check — the fidelity-debug overlay's query.
+    pub fn covers(&self, cell: CellId) -> bool {
+        self.grid_pos(cell).is_some()
+    }
+
+    /// Cell centre in region-grid coords, if covered (the shared bounds logic).
+    fn grid_pos(&self, cell: CellId) -> Option<(f64, f64)> {
         let (face, i, j, level) = cell.to_face_ij();
         if face != self.face || level < self.level {
             return None;
         }
-        // Cell centre in region-grid coordinates (fractional).
         let scale = (1u64 << (level - self.level)) as f64;
         let gx = (i as f64 + 0.5) / scale - self.oi as f64 - 0.5;
         let gy = (j as f64 + 0.5) / scale - self.oj as f64 - 0.5;
         if gx < 0.0 || gy < 0.0 || gx > (self.nx - 2) as f64 || gy > (self.nx - 2) as f64 {
             return None;
         }
+        Some((gx, gy))
+    }
+
+    /// Sampled surface (m above bedrock datum) for `cell`, if it lies within the
+    /// region (and on the same face, at a level ≥ the region's).
+    pub fn surface_m(&self, cell: CellId) -> Option<f64> {
+        let (gx, gy) = self.grid_pos(cell)?;
+        let level = cell.to_face_ij().3;
         let (x0, y0) = (gx.floor() as usize, gy.floor() as usize);
         let (fx, fy) = (gx - x0 as f64, gy - y0 as f64);
         let at = |x: usize, y: usize| self.h[y * self.nx + x] as f64;
@@ -539,6 +588,12 @@ pub fn surface_at(cell: CellId, regions: &[ErodedRegion]) -> f64 {
         }
     }
     gen::surface_prior_m(cell, cell.level())
+}
+
+/// The finest tier level covering `cell`, if any — the fidelity-debug query
+/// (bounds checks only; no sampling).
+pub fn tier_at(cell: CellId, regions: &[ErodedRegion]) -> Option<u8> {
+    regions.iter().rev().find(|r| r.covers(cell)).map(|r| r.level)
 }
 
 /// A column through the fidelity ladder: the finest materialized tier that covers
