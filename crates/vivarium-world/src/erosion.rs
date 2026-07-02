@@ -134,12 +134,25 @@ pub struct FluvialParams {
     pub deposition: f32,
     /// Talus repose slope (rise/run). Slopes beyond this slump (half-excess/epoch).
     pub max_slope: f32,
+    /// Hillslope (soil-creep) diffusivity κ, m² per epoch. The missing physics
+    /// behind the grid-scale sawtooth anomaly (watched live by Joseph; latent in
+    /// old core, which also lacked it): detachment-limited incision leaves
+    /// un-drained single-cell peaks standing while cutting everything around
+    /// them — without diffusion, minimum valley spacing collapses to the grid
+    /// wavelength. A CONSTANT κ gives grid coefficient κ/cell² — negligible on
+    /// coarse tiers (19 m: ~1e-4), decisive at walk scale (0.6 m: ~0.14) —
+    /// exactly the scale dependence real soil creep has.
+    pub diffusivity_m2: f32,
     pub epochs: u32,
 }
 
 impl Default for FluvialParams {
     fn default() -> Self {
-        Self { k_dt: 0.02, m: 0.5, uplift_m: 0.0, deposition: 1.0, max_slope: 0.8, epochs: 80 }
+        // κ = 2 m²/epoch: an "epoch" here carves valleys in ~80 steps (≈ centuries),
+        // so per-epoch creep is large. Grid coefficient κ/cell²: L19 0.006 (gentle),
+        // L21 0.09 (kills the observed 4.8 m sawteeth), L24 clamped 0.24 (dominant —
+        // walk-scale interfluves are creep-smoothed, as in real landscapes).
+        Self { k_dt: 0.02, m: 0.5, uplift_m: 0.0, deposition: 1.0, max_slope: 0.8, diffusivity_m2: 2.0, epochs: 80 }
     }
 }
 
@@ -521,6 +534,27 @@ impl Fluvial {
                 self.deposit(p, &recv, &order, &b);
             }
             self.talus(p);
+            self.creep(p);
+        }
+    }
+
+    /// Hillslope diffusion (soil creep): one explicit 5-point Laplacian step per
+    /// epoch, `k = κ/cell²` clamped to the stability bound. Interior cells only
+    /// (outlets/edges are base level). This is what keeps interfluves smooth at
+    /// fine scales and stops incision sharpening single-cell teeth.
+    fn creep(&mut self, p: &FluvialParams) {
+        let k = (p.diffusivity_m2 / (self.cell_m * self.cell_m)).min(0.24);
+        if k < 1e-5 {
+            return;
+        }
+        let nx = self.nx;
+        let snapshot = self.h.clone();
+        for y in 1..nx - 1 {
+            for x in 1..nx - 1 {
+                let i = y * nx + x;
+                let lap = snapshot[i - 1] + snapshot[i + 1] + snapshot[i - nx] + snapshot[i + nx] - 4.0 * snapshot[i];
+                self.h[i] += k * lap;
+            }
         }
     }
 }
