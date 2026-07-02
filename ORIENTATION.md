@@ -53,10 +53,16 @@ and `DESIGN.md`.
 1. `chunk.rs` — the Cartesian patch (dense row-major interior + halo, keyed by
    `CellId`) that automata run on. **Drive the API from its first consumer**
    (erosion), not speculatively. (DESIGN-MATERIAL §8; `ref/research/spatial-key-bench.md`.)
-2. **Port erosion** from `vivarium-core` onto a materialized patch that feeds
-   `gen::column_from_surface` — the fidelity ladder made real. Needs the
-   **core↔world bridge decision** (how core's flat-patch FBM/erosion maps onto the
-   cube-sphere frame) — worth a design beat, ideally with Joseph, before coding.
+2. **Port erosion** as a *native frame tier*, feeding `gen::column_from_surface` —
+   the fidelity ladder made real. **Bridge recommendation (confirm with Joseph):
+   port the *algorithm*, not the *data*** — re-implement core's stream-power +
+   Davy-Lague stencil in `vivarium-world` on a Cartesian patch seeded by `noise`
+   (the FBM prior); `vivarium-core` (flat `i32` patch) stays as the algorithm
+   *reference* + the current slabs view's backing until the frame's erosion is
+   proven and the view migrates. Keeps the core/view wall clean and drives the
+   `chunk` API from a real consumer. *Trade-off:* re-implementation risks
+   re-introducing bugs core already solved — the alternative (depend on core, sample
+   its output) is safer short-term but bolts the sphere onto a bounded flat patch.
 
 Then, per DESIGN-SYSTEMS build-order: crude climate → biomes → pedogenesis →
 vegetation. And before the agent layer: the **RNG fix** (`architecture-audit.md` #1).
