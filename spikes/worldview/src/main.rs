@@ -1340,6 +1340,16 @@ fn build_water_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin
     let mut positions: Vec<[f32; 3]> = Vec::with_capacity(w * w);
     let mut normals: Vec<[f32; 3]> = Vec::with_capacity(w * w);
     let mut colors: Vec<[f32; 4]> = Vec::with_capacity(w * w);
+    // The surface field first, so normals can be taken from the ACTUAL water
+    // topology — a flat [0,1,0] normal lights a descending stream like a
+    // horizontal mirror (Joseph: "it seems to not reflect light differently").
+    let mut surf_v = vec![0.0f32; w * w];
+    for j in 0..w {
+        for i in 0..w {
+            surf_v[j * w + i] = (f.height.get(i as isize, j as isize) + f.water.get(i as isize, j as isize) - SEA_LEVEL_M as f32) * vert;
+        }
+    }
+    let sv = |x: isize, y: isize| surf_v[(y.clamp(0, w as isize - 1) as usize) * w + x.clamp(0, w as isize - 1) as usize];
     for j in 0..w {
         for i in 0..w {
             let depth = f.water.get(i as isize, j as isize);
@@ -1349,7 +1359,7 @@ fn build_water_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin
             // from the cutoff so pools don't pop).
             wet[j * w + i] = depth > 0.025;
             // Water surface = solid top + depth (baseline: the sea plane at y = 0).
-            let surf = (f.height.get(i as isize, j as isize) + depth - SEA_LEVEL_M as f32) * vert;
+            let surf = surf_v[j * w + i];
             // Depth-graded: riffles (5-10 cm) faint ribbons, streams strong,
             // mm films still invisible — a shallow reach between pools must READ
             // as the same stream (Joseph's "seeping" was riffles under the old
@@ -1357,7 +1367,9 @@ fn build_water_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin
             let fade = ((depth - 0.025) / 0.1).clamp(0.0, 1.0);
             let m = (1.0 - (-depth * WATER_ABSORB_PER_M).exp()).max(0.25) * fade;
             positions.push([px(i), surf, pz(j)]);
-            normals.push([0.0, 1.0, 0.0]);
+            let (x, y) = (i as isize, j as isize);
+            let nrm = Vec3::new(sv(x - 1, y) - sv(x + 1, y), 2.0 * cell as f32, sv(x, y - 1) - sv(x, y + 1)).normalize();
+            normals.push([nrm.x, nrm.y, nrm.z]);
             // Suspended load makes water TURBID: silty brown, green suppressed
             // (Joseph). t=0 clear mountain water, t→1 flood-brown.
             let t = turbidity_of(i, j);
