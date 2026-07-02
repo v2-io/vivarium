@@ -183,6 +183,20 @@ fn spawn_fine_tiers(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::S
                     *total += st.inc_epochs;
                     epochs_run = *total;
                 }
+                // Joseph's conservation constraint: fine tiers REDISTRIBUTE relief
+                // within the coarse surface (pin block means to the parent tier's
+                // current low band) — absolute elevation belongs to the macro tier.
+                // Kills interior drift, rides the macro's uplift, and shrinks the
+                // tile-edge seam to the high band.
+                if st.level > 19 {
+                    let parent_level = if st.level == 21 { 19u8 } else { 21u8 };
+                    if let Some(parent) = tiers.iter().find(|r| r.level == parent_level).cloned() {
+                        let sim = &mut st.sim.as_mut().unwrap().0;
+                        sim.pin_block_means(parent_level, |c| {
+                            parent.surface_bilinear_m(c).unwrap_or_else(|| vivarium_world::gen::surface_prior_m(c, parent_level))
+                        });
+                    }
+                }
                 let region = st.sim.as_ref().unwrap().0.to_region();
                 // Keep the local telescope current (replace-by-level, keep order).
                 tiers.retain(|r| r.level != st.level);

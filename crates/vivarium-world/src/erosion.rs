@@ -432,6 +432,56 @@ impl Fluvial {
         }
     }
 
+    /// Joseph's conservation constraint ("lift relative to neighbours"): a fine
+    /// tier maintains the coarse tier's average height as it erodes — fine epochs
+    /// REDISTRIBUTE relief (carve detail into the coarse surface) rather than
+    /// export elevation; absolute elevation evolution belongs to the macro tier
+    /// alone (§4 role separation; §5 mean-consistency made operational). Per
+    /// parent-cell block (B = 2^(level−parent_level) fine cells): delta = parent
+    /// surface at the block centre − block mean, bilinearly upsampled and added.
+    /// Boundary blocks re-pin to the same coarse surface the exterior samples, so
+    /// the tile-edge seam shrinks to the high band. Also how a fine tier rides
+    /// the macro's uplift between re-seeds.
+    pub fn pin_block_means(&mut self, parent_level: u8, parent: impl Fn(CellId) -> f64) {
+        debug_assert!(parent_level < self.level);
+        let b = 1usize << (self.level - parent_level);
+        let nb = self.nx / b;
+        if nb < 2 {
+            return;
+        }
+        let mut delta = vec![0.0f32; nb * nb];
+        for by in 0..nb {
+            for bx in 0..nb {
+                let mut sum = 0.0f64;
+                for y in 0..b {
+                    for x in 0..b {
+                        sum += self.h[(by * b + y) * self.nx + bx * b + x] as f64;
+                    }
+                }
+                let mean = sum / (b * b) as f64;
+                let cx = self.origin.0 + (bx * b + b / 2) as u32;
+                let cy = self.origin.1 + (by * b + b / 2) as u32;
+                let target = parent(CellId::from_face_ij(self.face, cx, cy, self.level));
+                delta[by * nb + bx] = (target - mean) as f32;
+            }
+        }
+        // Bilinearly upsample the block-delta field over the fine cells.
+        for y in 0..self.nx {
+            for x in 0..self.nx {
+                let gx = ((x as f64 + 0.5) / b as f64 - 0.5).clamp(0.0, (nb - 1) as f64);
+                let gy = ((y as f64 + 0.5) / b as f64 - 0.5).clamp(0.0, (nb - 1) as f64);
+                let (x0, y0) = (gx.floor() as usize, gy.floor() as usize);
+                let (x1, y1) = ((x0 + 1).min(nb - 1), (y0 + 1).min(nb - 1));
+                let (fx, fy) = ((gx - x0 as f64) as f32, (gy - y0 as f64) as f32);
+                let d = delta[y0 * nb + x0] * (1.0 - fx) * (1.0 - fy)
+                    + delta[y0 * nb + x1] * fx * (1.0 - fy)
+                    + delta[y1 * nb + x0] * (1.0 - fx) * fy
+                    + delta[y1 * nb + x1] * fx * fy;
+                self.h[y * self.nx + x] += d;
+            }
+        }
+    }
+
     /// Run the full pipeline for `p.epochs`.
     pub fn erode(&mut self, p: &FluvialParams) {
         for _ in 0..p.epochs {
@@ -492,6 +542,40 @@ mod fluvial_tests {
         b.erode(&p);
         assert_eq!(a.h, b.h, "two runs diverged");
         assert_eq!(a.drainage, b.drainage);
+    }
+
+    #[test]
+    fn pin_preserves_parent_means() {
+        let p = FluvialParams { epochs: 6, ..Default::default() };
+        let mut f = small();
+        let seed_h = f.h.clone();
+        f.erode(&p); // drifts the means (mass exported to outlets)
+        // Pin to the SEED surface as the "parent": block means must return to it.
+        let nx = f.nx;
+        let (oi, oj, level) = (f.origin.0, f.origin.1, f.level);
+        let seed_at = move |c: CellId| -> f64 {
+            let (_, i, j, _) = c.to_face_ij();
+            seed_h[((j - oj) as usize) * nx + (i - oi) as usize] as f64
+        };
+        f.pin_block_means(level - 2, &seed_at); // B = 4
+        let b = 4usize;
+        let nb = nx / b;
+        for by in (0..nb).step_by(7) {
+            for bx in (0..nb).step_by(7) {
+                let mut m = 0.0f64;
+                let cx = oi + (bx * b + b / 2) as u32;
+                let cy = oj + (by * b + b / 2) as u32;
+                for y in 0..b {
+                    for x in 0..b {
+                        m += f.h[(by * b + y) * nx + bx * b + x] as f64;
+                    }
+                }
+                m /= (b * b) as f64;
+                let t = seed_at(CellId::from_face_ij(Face::ZPos, cx, cy, level));
+                // Bilinear upsampling smooths deltas, so means match approximately.
+                assert!((m - t).abs() < 2.0, "block ({bx},{by}) mean {m:.1} vs target {t:.1}");
+            }
+        }
     }
 
     #[test]
@@ -559,6 +643,19 @@ impl ErodedRegion {
             return None;
         }
         Some((gx, gy))
+    }
+
+    /// Bilinear-only sample (no detail increment) — the LOW band, used as the
+    /// pin target for fine-tier mean conservation.
+    pub fn surface_bilinear_m(&self, cell: CellId) -> Option<f64> {
+        let (gx, gy) = self.grid_pos(cell)?;
+        let (x0, y0) = (gx.floor() as usize, gy.floor() as usize);
+        let (fx, fy) = (gx - x0 as f64, gy - y0 as f64);
+        let at = |x: usize, y: usize| self.h[y * self.nx + x] as f64;
+        Some(at(x0, y0) * (1.0 - fx) * (1.0 - fy)
+            + at(x0 + 1, y0) * fx * (1.0 - fy)
+            + at(x0, y0 + 1) * (1.0 - fx) * fy
+            + at(x0 + 1, y0 + 1) * fx * fy)
     }
 
     /// Sampled surface (m above bedrock datum) for `cell`, if it lies within the
