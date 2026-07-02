@@ -54,8 +54,13 @@ pub struct WaterParams {
     pub sed_erode: f32,
     /// Settling rate above capacity (fraction of excess per second).
     pub sed_deposit: f32,
-    /// Max bed change per step (m) — a hard sanity bound.
-    pub sed_max_step: f32,
+    /// Max bed change RATE (m per sim-second) — a hard sanity bound. (Was
+    /// per-step: at 100x rain that allowed ~90 m/sim-hour of planing — Joseph's
+    /// staircase world.)
+    pub sed_max_rate: f32,
+    /// Bed EROSION only happens in channelized flow (depth ≥ this, m); sheet
+    /// films don't strip the landscape. Deposition is allowed everywhere.
+    pub sed_min_depth: f32,
     /// Per-step flux damping (friction): undamped pipes ring — water overshoots
     /// and sloshes in surge waves (Joseph saw pulses running down valleys instead
     /// of streams). 0.99 ≈ a ~20-step (4 sim-s) momentum memory.
@@ -75,7 +80,8 @@ impl Default for WaterParams {
             sed_capacity: 0.05,
             sed_erode: 0.1,
             sed_deposit: 0.5,
-            sed_max_step: 0.005,
+            sed_max_rate: 0.002,
+            sed_min_depth: 0.05,
             damping: 0.99,
         }
     }
@@ -235,9 +241,10 @@ impl WaterSim {
                 for x in 0..nx {
                     let i = y * nx + x;
                     let d = self.depth[i];
+                    let max_step = p.sed_max_rate * dt;
                     if d < 1e-3 {
                         // No meaningful flow: everything settles.
-                        let dp = self.sediment[i].min(p.sed_max_step);
+                        let dp = self.sediment[i].min(max_step);
                         self.bed[i] += dp;
                         self.sediment[i] -= dp;
                         continue;
@@ -255,12 +262,12 @@ impl WaterSim {
                     let speed = (vx * vx + vy * vy).sqrt();
                     let capacity = (p.sed_capacity * speed).min(2.0);
                     let s0 = self.sediment[i];
-                    if s0 < capacity {
-                        let e = ((capacity - s0) * p.sed_erode * dt).min(p.sed_max_step);
+                    if s0 < capacity && d >= p.sed_min_depth {
+                        let e = ((capacity - s0) * p.sed_erode * dt).min(max_step);
                         self.bed[i] -= e;
                         self.sediment[i] += e;
-                    } else {
-                        let dp = ((s0 - capacity) * p.sed_deposit * dt).min(p.sed_max_step).min(s0);
+                    } else if s0 > capacity {
+                        let dp = ((s0 - capacity) * p.sed_deposit * dt).min(max_step).min(s0);
                         self.bed[i] += dp;
                         self.sediment[i] -= dp;
                     }
