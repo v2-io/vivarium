@@ -45,7 +45,13 @@ pub fn column_from_surface(cell: CellId, surface_m: f64, soil_m: f64) -> Column 
 /// (pure function of the cell). Per-face fBm, so cube-edge seams are a known
 /// bottom-rung deficiency — superseded when erosion is ported to feed
 /// [`column_from_surface`].
-pub fn baseline_column(cell: CellId) -> Column {
+/// The two-band prior surface height (m above bedrock datum) for `cell`, with the
+/// mountain band's octaves truncated at `nyquist_level`'s cell size. Exposed so
+/// the eroded-region sampler can form the *detail increment*
+/// `surface_prior_m(cell, cell.level()) - surface_prior_m(cell, region_level)` —
+/// exactly the octave band finer than what the erosion grid simulated (fBm
+/// truncation is a prefix, §8, so the difference IS the fine octaves).
+pub fn surface_prior_m(cell: CellId, nyquist_level: u8) -> f64 {
     let c = cell.to_cube();
     // Two-band prior (the 2009 neworld idea — "change parameters based on earlier
     // noise" — and core's proven scaling). Slope is what makes terrain read, and
@@ -68,11 +74,15 @@ pub fn baseline_column(cell: CellId) -> Column {
     // low-pass, so a coarse-level sample is the honest smoothed view of the fine
     // one (§5 consistency; abstraction-as-prefix, §8) rather than an alias.
     let face_edge_m = std::f64::consts::FRAC_PI_2 * crate::planet::Planet::EARTH.radius_m;
-    let cell_m = face_edge_m / (1u64 << cell.level()) as f64;
+    let cell_m = face_edge_m / (1u64 << nyquist_level) as f64;
     let base_lambda_m = face_edge_m / MTN_PER_FACE; // ~25 km
     let n_oct = ((base_lambda_m / (2.0 * cell_m)).log2().floor() as i64 + 1).clamp(1, 16) as u32;
     let mtn_m = (fbm(1, su * MTN_PER_FACE, sv * MTN_PER_FACE, n_oct, 2.0, 0.5) - 0.5) * 2.0 * mtn_amp;
-    column_from_surface(cell, SEA_LEVEL_M + cont_m + mtn_m, 2.0)
+    SEA_LEVEL_M + cont_m + mtn_m
+}
+
+pub fn baseline_column(cell: CellId) -> Column {
+    column_from_surface(cell, surface_prior_m(cell, cell.level()), 2.0)
 }
 
 #[cfg(test)]

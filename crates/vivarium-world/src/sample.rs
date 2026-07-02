@@ -25,6 +25,19 @@ pub fn cell_size_m(level: u8, planet_radius_m: f64) -> f64 {
 /// with a 1-cell halo (for edge normals), using the baseline generator. One column
 /// generated per cell — the swap point for erosion / caching later.
 pub fn sample_surface(face: Face, level: u8, origin_i: u32, origin_j: u32, w: usize) -> SurfacePatch {
+    sample_surface_with(face, level, origin_i, origin_j, w, gen::baseline_column)
+}
+
+/// [`sample_surface`] with a caller-supplied column generator — the swap point the
+/// fidelity ladder needs (e.g. `|c| erosion::column_at(c, Some(&region))`).
+pub fn sample_surface_with(
+    face: Face,
+    level: u8,
+    origin_i: u32,
+    origin_j: u32,
+    w: usize,
+    col_at: impl Fn(CellId) -> crate::column::Column,
+) -> SurfacePatch {
     let mut height = Patch::new(face, level, origin_i, origin_j, w, 1);
     let mut water = Patch::new(face, level, origin_i, origin_j, w, 1);
     let n = 1i64 << level;
@@ -33,7 +46,7 @@ pub fn sample_surface(face: Face, level: u8, origin_i: u32, origin_j: u32, w: us
             let gi = origin_i as i64 + xx as i64;
             let gj = origin_j as i64 + yy as i64;
             if (0..n).contains(&gi) && (0..n).contains(&gj) {
-                let col = gen::baseline_column(CellId::from_face_ij(face, gi as u32, gj as u32, level));
+                let col = col_at(CellId::from_face_ij(face, gi as u32, gj as u32, level));
                 height.set(xx, yy, col.solid_thickness_m() as f32);
                 water.set(xx, yy, col.water_depth.value as f32);
             }

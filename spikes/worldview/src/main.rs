@@ -41,9 +41,10 @@ use bevy::pbr::{DistanceFog, FogFalloff};
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 
+use vivarium_world::erosion::{self, ErodedRegion, FluvialParams};
 use vivarium_world::gen::SEA_LEVEL_M;
 use vivarium_world::planet::Planet;
-use vivarium_world::sample::{cell_size_m, sample_surface, SurfacePatch};
+use vivarium_world::sample::{cell_size_m, sample_surface_with, SurfacePatch};
 use vivarium_world::sphere::Face;
 
 const SKY: Color = Color::srgb(0.80, 0.82, 0.84);
@@ -70,7 +71,31 @@ const FOCUS_BELOW_CENTER: f32 = 0.22;
 /// Ortho standoff: must exceed any terrain span we render (affects clip, not size).
 const STANDOFF: f32 = 400_000.0;
 
+/// The materialized erosion tier, if enabled — worldview samples columns through
+/// it (erosion::column_at falls back to the baseline outside the region).
+#[derive(Resource)]
+struct Eroded(Option<ErodedRegion>);
+
+fn build_eroded(view: &View) -> Eroded {
+    if std::env::var("VIVARIUM_ERODE").map(|v| v == "0").unwrap_or(false) {
+        return Eroded(None);
+    }
+    // Erosion grid at L19 (~19 m cells — core ran 16 m); region centred on the
+    // startup focus. VIVARIUM_ERODE_NX cells across (default 512 ≈ 9.8 km).
+    const SIM_LEVEL: u8 = 19;
+    let nx: usize = std::env::var("VIVARIUM_ERODE_NX").ok().and_then(|s| s.parse().ok()).unwrap_or(512);
+    let scale = 2f64.powi(SIM_LEVEL as i32 - view.level as i32);
+    let (ci, cj) = ((view.focus.x * scale) as u32, (view.focus.y * scale) as u32);
+    let t = std::time::Instant::now();
+    eprintln!("[worldview] eroding L{SIM_LEVEL} {nx}x{nx} around ({ci},{cj})…");
+    let region = ErodedRegion::build(view.face, SIM_LEVEL, ci, cj, nx, &FluvialParams::default());
+    eprintln!("[worldview] erosion done in {:.1} s", t.elapsed().as_secs_f32());
+    Eroded(Some(region))
+}
+
 fn main() {
+    let view = View::default();
+    let eroded = build_eroded(&view);
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -82,7 +107,8 @@ fn main() {
         }))
         .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
         .insert_resource(ClearColor(SKY))
-        .init_resource::<View>()
+        .insert_resource(view)
+        .insert_resource(eroded)
         .add_systems(Startup, setup)
         .add_systems(Update, (view_update, terrain_update, hud_update, scale_update, maybe_screenshot))
         .run();
@@ -131,8 +157,9 @@ impl Default for View {
         let _ = span;
         // Start focus in face cells at `level` (env for scripted/reproducible views —
         // the scan_land example in vivarium-world prints good coastal candidates).
-        let fi = std::env::var("VIVARIUM_FOCUS_I").ok().and_then(|s| s.parse().ok()).unwrap_or(n * 0.5);
-        let fj = std::env::var("VIVARIUM_FOCUS_J").ok().and_then(|s| s.parse().ok()).unwrap_or(n * 0.5);
+        // Default focus: the known massif (a good mountainside), not mid-face ocean.
+        let fi = std::env::var("VIVARIUM_FOCUS_I").ok().and_then(|s| s.parse().ok()).unwrap_or(n * (5184.0 / 16384.0));
+        let fj = std::env::var("VIVARIUM_FOCUS_J").ok().and_then(|s| s.parse().ok()).unwrap_or(n * (12928.0 / 16384.0));
         // VIVARIUM_PITCH (radians) forces a fixed angle with auto off — for
         // scripted screenshots (negative = look up).
         let manual_pitch = std::env::var("VIVARIUM_PITCH").ok().and_then(|s| s.parse::<f32>().ok());
@@ -506,7 +533,7 @@ fn required_pitch(view: &View, ts: &TerrainState, focus_h_raw: f32) -> f32 {
 
 // --- Terrain sampling + meshing ------------------------------------------------------
 
-fn terrain_update(mut commands: Commands, view: Res<View>, mut meshes: ResMut<Assets<Mesh>>, mut ts: ResMut<TerrainState>) {
+fn terrain_update(mut commands: Commands, view: Res<View>, eroded: Res<Eroded>, mut meshes: ResMut<Assets<Mesh>>, mut ts: ResMut<TerrainState>) {
     // Rebuild when the level changed or the focus has drifted toward the window edge.
     let needs = match (&ts.fields, ts.built_level == view.level) {
         (None, _) => true,
@@ -528,7 +555,7 @@ fn terrain_update(mut commands: Commands, view: Res<View>, mut meshes: ResMut<As
     let oj = (view.focus.y.round().max(0.0) as u64).clamp(half, n - half) - half;
     let (oi, oj) = (oi as u32, oj as u32);
 
-    let fields = sample_surface(view.face, view.level, oi, oj, view.w);
+    let fields = sample_surface_with(view.face, view.level, oi, oj, view.w, |c| erosion::column_at(c, eroded.0.as_ref()));
     let cell = view.cell_m();
     let anchor = DVec2::new((oi as f64 + view.w as f64 * 0.5) * cell, (oj as f64 + view.w as f64 * 0.5) * cell);
 

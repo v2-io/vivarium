@@ -461,3 +461,65 @@ mod fluvial_tests {
         assert!(f.h.iter().all(|v| v.is_finite()), "heights blew up");
     }
 }
+
+/// A finished erosion run, sampleable at ANY finer level: within the region, a
+/// column's surface = **bilinear(eroded field) + the detail increment** — the
+/// prior's octaves finer than the erosion grid's Nyquist
+/// (`surface_prior_m(cell, cell.level()) − surface_prior_m(cell, region level)`).
+/// The carved structure replaces exactly the band the sim simulated; fine texture
+/// rides on top; outside the region the caller falls back to the baseline (an
+/// honest seam at the region edge — the §7.1 spatial seam, unblended for now).
+pub struct ErodedRegion {
+    pub face: Face,
+    pub level: u8,
+    pub oi: u32,
+    pub oj: u32,
+    pub nx: usize,
+    pub h: Vec<f32>,
+}
+
+impl ErodedRegion {
+    /// Seed from the prior around a centre (face cells at `level`), erode, keep.
+    pub fn build(face: Face, level: u8, center_i: u32, center_j: u32, nx: usize, p: &FluvialParams) -> Self {
+        let half = (nx / 2) as u32;
+        let oi = center_i.saturating_sub(half);
+        let oj = center_j.saturating_sub(half);
+        let mut f = Fluvial::from_prior(face, level, oi, oj, nx);
+        f.erode(p);
+        Self { face, level, oi, oj, nx, h: f.h }
+    }
+
+    /// Sampled surface (m above bedrock datum) for `cell`, if it lies within the
+    /// region (and on the same face, at a level ≥ the region's).
+    pub fn surface_m(&self, cell: CellId) -> Option<f64> {
+        let (face, i, j, level) = cell.to_face_ij();
+        if face != self.face || level < self.level {
+            return None;
+        }
+        // Cell centre in region-grid coordinates (fractional).
+        let scale = (1u64 << (level - self.level)) as f64;
+        let gx = (i as f64 + 0.5) / scale - self.oi as f64 - 0.5;
+        let gy = (j as f64 + 0.5) / scale - self.oj as f64 - 0.5;
+        if gx < 0.0 || gy < 0.0 || gx > (self.nx - 2) as f64 || gy > (self.nx - 2) as f64 {
+            return None;
+        }
+        let (x0, y0) = (gx.floor() as usize, gy.floor() as usize);
+        let (fx, fy) = (gx - x0 as f64, gy - y0 as f64);
+        let at = |x: usize, y: usize| self.h[y * self.nx + x] as f64;
+        let base = at(x0, y0) * (1.0 - fx) * (1.0 - fy)
+            + at(x0 + 1, y0) * fx * (1.0 - fy)
+            + at(x0, y0 + 1) * (1.0 - fx) * fy
+            + at(x0 + 1, y0 + 1) * fx * fy;
+        let detail = gen::surface_prior_m(cell, level) - gen::surface_prior_m(cell, self.level);
+        Some(base + detail)
+    }
+}
+
+/// A column through the fidelity ladder: the eroded tier where materialized,
+/// the baseline prior elsewhere.
+pub fn column_at(cell: CellId, region: Option<&ErodedRegion>) -> crate::column::Column {
+    match region.and_then(|r| r.surface_m(cell)) {
+        Some(s) => gen::column_from_surface(cell, s, 2.0),
+        None => gen::baseline_column(cell),
+    }
+}
