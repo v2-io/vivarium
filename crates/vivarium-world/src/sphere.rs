@@ -181,18 +181,33 @@ fn hilbert_d2xy(n: u32, mut d: u64) -> (u32, u32) {
 }
 
 impl CellId {
+    /// The cell at integer face-cell coords `(i, j)` (each in `0..2^level`) — the
+    /// form Cartesian patches address in (`DESIGN-MATERIAL.md` §8).
+    pub fn from_face_ij(face: Face, i: u32, j: u32, level: u8) -> CellId {
+        debug_assert!(level <= MAX_LEVEL);
+        let l = level as u32;
+        let dist = hilbert_xy2d(1u32 << level, i, j);
+        let pos = (dist << (61 - 2 * l)) | (1u64 << (60 - 2 * l));
+        CellId(((face.index() as u64) << FACE_SHIFT) | pos)
+    }
+
+    /// Integer face-cell coords: `(face, i, j, level)`.
+    pub fn to_face_ij(self) -> (Face, u32, u32, u8) {
+        let level = self.level();
+        let l = level as u32;
+        let dist = (self.0 >> (61 - 2 * l)) & ((1u64 << (2 * l)) - 1);
+        let (i, j) = hilbert_d2xy(1u32 << level, dist);
+        (self.face(), i, j, level)
+    }
+
     /// The cell containing direction `c` at `level` (0..=[`MAX_LEVEL`]).
     pub fn from_cube(c: CubeCoord, level: u8) -> CellId {
         debug_assert!(level <= MAX_LEVEL);
         let n = 1u32 << level;
         let quant = |t: f64| -> u32 {
-            let f = ((t + 1.0) * 0.5 * n as f64).floor();
-            (f.max(0.0) as u32).min(n - 1)
+            (((t + 1.0) * 0.5 * n as f64).floor().max(0.0) as u32).min(n - 1)
         };
-        let dist = hilbert_xy2d(n, quant(c.u), quant(c.v));
-        let l = level as u32;
-        let pos = (dist << (61 - 2 * l)) | (1u64 << (60 - 2 * l));
-        CellId(((c.face.index() as u64) << FACE_SHIFT) | pos)
+        CellId::from_face_ij(c.face, quant(c.u), quant(c.v), level)
     }
 
     #[inline]
@@ -204,13 +219,10 @@ impl CellId {
 
     /// Cell-center direction on the sphere.
     pub fn to_cube(self) -> CubeCoord {
-        let level = self.level();
+        let (face, i, j, level) = self.to_face_ij();
         let n = 1u32 << level;
-        let l = level as u32;
-        let dist = (self.0 >> (61 - 2 * l)) & ((1u64 << (2 * l)) - 1);
-        let (i, j) = hilbert_d2xy(n, dist);
         let center = |k: u32| ((k as f64 + 0.5) / n as f64) * 2.0 - 1.0;
-        CubeCoord { face: self.face(), u: center(i), v: center(j) }
+        CubeCoord { face, u: center(i), v: center(j) }
     }
 
     /// The parent cell one level coarser — `None` at level 0.
