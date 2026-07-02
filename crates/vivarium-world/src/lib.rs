@@ -21,3 +21,4 @@ pub mod sphere;
 pub mod planet;
 pub mod material;
 pub mod column;
+pub mod noise;
