@@ -13,7 +13,7 @@ resolver = "2"
 # (the clean-room frame it will migrate onto) + views. `spikes/slabs` is the
 # current state-of-the-art exploration view (2026-07-01) and the only live spike;
 # the rest were archived as superseded — see `spikes/FINDINGS.md` and `ORIENTATION.md`.
-members = ["crates/vivarium-core", "crates/vivarium-world", "crates/vivarium-app", "spikes/slabs"]
+members = ["crates/vivarium-core", "crates/vivarium-world", "crates/vivarium-app", "spikes/slabs", "spikes/worldview"]
 # Everything under archive/ is out of the build. (Excluded so cargo never tries to
 # resolve their `workspace = true` inheritances.)
 exclude = ["archive/godot-voxel", "archive/iso-tiles", "archive/vivarium-godot", "archive/bevy-voxel", "archive/bevy-iso", "archive/iso-voxels", "archive/topdown", "archive/tilemap"]
