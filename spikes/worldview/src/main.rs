@@ -1708,17 +1708,20 @@ fn mesh_dispatch(view: Res<View>, eroded: Res<Eroded>, water: Res<WaterRes>, mut
         }
     }
 
-    // RINGS: with the center current and the mesher otherwise idle, grow the
-    // horizon — nearest ring first, Hilbert order within a ring (the CellId's
-    // raw curve index IS the order; spatially coherent jobs, warm caches).
-    if ts.full_inflight || ts.water_inflight || rings.inflight.is_some() || ts.fields.is_none() || ts.built_level != view.level {
+    // RINGS: with the center built, grow the horizon — nearest ring first,
+    // Hilbert order within a ring (the CellId's raw curve index IS the order;
+    // spatially coherent jobs, warm caches). Ring jobs may QUEUE behind an
+    // in-flight water refresh: streaming marks water dirty nearly every frame,
+    // and gating on it starved the horizon the moment the living phase began
+    // (Joseph: "it gave up after a couple of rings" — it did, exactly then).
+    if ts.full_inflight || rings.inflight.is_some() || ts.fields.is_none() || ts.built_level != view.level {
         return;
     }
     if ts.terrain_dirty {
         rings.rev += 1; // tiers/tint changed; chunks go stale (rebuilt lazily)
     }
     let cw = (view.w / 4).max(64) as u32; // chunk span in cells (¼ window)
-    let max_rings: u32 = std::env::var("VIVARIUM_RINGS").ok().and_then(|s| s.parse().ok()).unwrap_or(2);
+    let max_rings: u32 = std::env::var("VIVARIUM_RINGS").ok().and_then(|s| s.parse().ok()).unwrap_or(4);
     let n = (1u64 << view.level) as i64;
     let (o_i, o_j, wv) = (ts.origin.0 as i64, ts.origin.1 as i64, view.w as i64);
     let mut best: Option<(u32, u64, (u32, u32))> = None; // (ring, hilbert, origin)
@@ -1790,7 +1793,7 @@ fn mesh_apply(mut commands: Commands, view: Res<View>, mut meshes: ResMut<Assets
                 // Re-bridge ring transforms to the (possibly moved) anchor, and
                 // evict chunks that fell behind the horizon (§6: regenerable).
                 let cw = (view.w / 4).max(64) as i64;
-                let max_r = std::env::var("VIVARIUM_RINGS").ok().and_then(|s| s.parse().ok()).unwrap_or(2i64) + 1;
+                let max_r = std::env::var("VIVARIUM_RINGS").ok().and_then(|s| s.parse().ok()).unwrap_or(4i64) + 1;
                 let keep_lo_i = origin.0 as i64 - max_r * cw;
                 let keep_hi_i = origin.0 as i64 + view.w as i64 + max_r * cw;
                 let keep_lo_j = origin.1 as i64 - max_r * cw;
