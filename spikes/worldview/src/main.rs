@@ -176,7 +176,11 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
     let rain_mult: f32 = std::env::var("VIVARIUM_RAIN").ok().and_then(|s| s.parse().ok()).unwrap_or(10.0);
     let atmos_m: f64 = std::env::var("VIVARIUM_ATMOS").ok().and_then(|s| s.parse().ok()).unwrap_or(2.0);
     let macro_extra: u32 = std::env::var("VIVARIUM_MACRO_EXTRA").ok().and_then(|s| s.parse().ok()).unwrap_or(40);
-    let fine_nx: usize = std::env::var("VIVARIUM_FINE_NX").ok().and_then(|s| s.parse().ok()).unwrap_or(1024);
+    // Fine + water cover the WHOLE macro region (Joseph: one consistent border,
+    // not nested ones you trip over while wandering). L21 = L19 × 4 exactly, so
+    // the fine grid is the macro footprint at 4.77 m cells (2048² ≈ 9.8 km for
+    // the default macro). VIVARIUM_FINE_NX overrides (focus-centred) if set.
+    let fine_nx_env: Option<usize> = std::env::var("VIVARIUM_FINE_NX").ok().and_then(|s| s.parse().ok());
     let fine_epochs: u32 = std::env::var("VIVARIUM_FINE_EPOCHS").ok().and_then(|s| s.parse().ok()).unwrap_or(6);
     // Joseph: "two or three fine passes, not just one" — total fine work is
     // passes × epochs, pinned to the macro after every chunk.
@@ -208,10 +212,17 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
             }
         }
 
-        // Phase 2 — one wide fine pass (~3 mi), pinned to the macro low band.
-        let half = (fine_nx / 2) as i64;
-        let oi = ((f21.x as i64) - half).max(0) as u32;
-        let oj = ((f21.y as i64) - half).max(0) as u32;
+        // Phase 2 — fine passes over the macro's full footprint (or a
+        // focus-centred override), pinned to the macro low band.
+        let macro_tier = tiers.iter().find(|r| r.level == 19).cloned();
+        let (oi, oj, fine_nx) = match (&macro_tier, fine_nx_env) {
+            (Some(t0), None) => (t0.oi * 4, t0.oj * 4, t0.nx * 4),
+            (_, Some(nx)) => {
+                let half = (nx / 2) as i64;
+                (((f21.x as i64) - half).max(0) as u32, ((f21.y as i64) - half).max(0) as u32, nx)
+            }
+            (None, None) => return,
+        };
         let coarser = tiers.clone();
         let mut fine = Fluvial::from_surface(face, 21, oi, oj, fine_nx, |c| erosion::surface_at(c, &coarser));
         let parent = tiers.iter().find(|r| r.level == 19).cloned();
