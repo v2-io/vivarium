@@ -161,6 +161,10 @@ pub struct WaterSim {
     /// Counted reservoirs (m of water, cell-area units): conservation partners.
     pub atmosphere: f64,
     pub ocean: f64,
+    /// Froude stats captured INSIDE the last step, at the instant and against
+    /// the same sill depths the breaking cap used (post-step recomputation
+    /// against drained depths read as Fr 10+ on capped flow — twice).
+    last_froude: (f32, f32),
     // Outgoing flux per axial pipe (m³/s), kept between steps: momentum.
     fl: Vec<f32>,
     fr: Vec<f32>,
@@ -193,6 +197,7 @@ impl WaterSim {
             armor: z.clone(),
             atmosphere: atmosphere_m * (nx * nx) as f64,
             ocean: 0.0,
+            last_froude: (0.0, 0.0),
             fl: z.clone(),
             fr: z.clone(),
             ft: z.clone(),
@@ -300,25 +305,45 @@ impl WaterSim {
             f.min(2.0 * (g * hflow).sqrt() * hflow * l)
         }
         let n2g = p.gravity * p.manning_n * p.manning_n;
+        let (mut fr_max, mut fr_wet, mut fr_sup) = (0.0f32, 0u32, 0u32);
         for y in 0..nx {
             for x in 0..nx {
                 let i = y * nx + x;
                 let (bi, eta_i) = (self.bed[i], self.bed[i] + self.depth[i]);
+                let mut cell_fr = 0.0f32;
+                let mut probe = |f: f32, eta_j: f32, b_j: f32| {
+                    let hflow = eta_i.max(eta_j) - bi.max(b_j);
+                    if hflow > 1e-3 && f > 0.0 {
+                        cell_fr = cell_fr.max(f / (hflow * l) / (p.gravity * hflow).sqrt());
+                    }
+                };
                 if x > 0 {
                     let j = i - 1;
                     self.fl[i] = pipe_step(self.fl[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n2g, l);
+                    probe(self.fl[i], self.bed[j] + self.depth[j], self.bed[j]);
                 }
                 if x < nx - 1 {
                     let j = i + 1;
                     self.fr[i] = pipe_step(self.fr[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n2g, l);
+                    probe(self.fr[i], self.bed[j] + self.depth[j], self.bed[j]);
                 }
                 if y > 0 {
                     let j = i - nx;
                     self.ft[i] = pipe_step(self.ft[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n2g, l);
+                    probe(self.ft[i], self.bed[j] + self.depth[j], self.bed[j]);
                 }
                 if y < nx - 1 {
                     let j = i + nx;
                     self.fb[i] = pipe_step(self.fb[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n2g, l);
+                    probe(self.fb[i], self.bed[j] + self.depth[j], self.bed[j]);
+                }
+                drop(probe);
+                if self.depth[i] >= 0.05 {
+                    fr_wet += 1;
+                    fr_max = fr_max.max(cell_fr);
+                    if cell_fr > 1.5 {
+                        fr_sup += 1;
+                    }
                 }
                 // Clamp: a cell cannot ship more water than it holds. THIS is
                 // the conservation/stability guarantee of the pipe method.
@@ -332,6 +357,7 @@ impl WaterSim {
                 }
             }
         }
+        self.last_froude = (fr_max, if fr_wet > 0 { fr_sup as f32 / fr_wet as f32 } else { 0.0 });
 
         // 4. Depth update from net flux.
         for y in 0..nx {
@@ -502,54 +528,15 @@ impl WaterSim {
     /// CFL-stable timestep for the CURRENT state: deep water carries fast waves
     /// (`√(g·d)`), so dt shrinks where the basin is deep. Callers should recompute
     /// per burst.
-    /// Froude diagnostics over wet cells (depth > 5 cm): (max Fr, fraction of
-    /// wet cells with Fr > 1.5). Above ~1.5 (Vedernikov, with Manning friction)
-    /// free-surface flow is roll-wave unstable — surges there are real physics.
-    /// MEASUREMENT HONESTY: each pipe's velocity is measured on the SILL depth
-    /// (h_flow) the momentum cap operates on — dividing by the cell's own thin
-    /// depth reported mass exodus as impossible speed (Fr 100+ on a capped
-    /// flow). By construction of the breaking cap, values should stay ≤ ~2:
-    /// a materially higher reading now means the cap itself is broken.
+    /// Froude stats from INSIDE the last step — measured at the instant, and
+    /// against the same sill depths, the breaking cap operates on. (max Fr,
+    /// fraction of wet cells with any pipe Fr > 1.5.) By construction the cap
+    /// bounds this at 2.0: a reading of 2.0 means flow pinned at breaking
+    /// (wants to exceed); a reading ABOVE 2.0 means the cap is genuinely
+    /// broken. Post-step recomputation against drained depths is how this
+    /// gauge lied twice (Fr 100+, then 18+) — do not move it back out.
     pub fn froude(&self) -> (f32, f32) {
-        let l = self.cell_m;
-        let nx = self.nx;
-        let (mut fmax, mut wet, mut sup) = (0.0f32, 0u32, 0u32);
-        for y in 0..nx {
-            for x in 0..nx {
-                let i = y * nx + x;
-                let d = self.depth[i];
-                if d < 0.05 {
-                    continue;
-                }
-                wet += 1;
-                let eta_i = self.bed[i] + d;
-                let mut cell_fr = 0.0f32;
-                let mut pipe = |f: f32, j: usize| {
-                    let hflow = eta_i.max(self.bed[j] + self.depth[j]) - self.bed[i].max(self.bed[j]);
-                    if hflow > 1e-3 && f > 0.0 {
-                        let v = f / (hflow * l);
-                        cell_fr = cell_fr.max(v / (9.8 * hflow).sqrt());
-                    }
-                };
-                if x > 0 {
-                    pipe(self.fl[i], i - 1);
-                }
-                if x < nx - 1 {
-                    pipe(self.fr[i], i + 1);
-                }
-                if y > 0 {
-                    pipe(self.ft[i], i - nx);
-                }
-                if y < nx - 1 {
-                    pipe(self.fb[i], i + nx);
-                }
-                fmax = fmax.max(cell_fr);
-                if cell_fr > 1.5 {
-                    sup += 1;
-                }
-            }
-        }
-        (fmax, if wet > 0 { sup as f32 / wet as f32 } else { 0.0 })
+        self.last_froude
     }
 
     pub fn stable_dt(&self, gravity: f32) -> f32 {
