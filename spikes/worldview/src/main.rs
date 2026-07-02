@@ -150,7 +150,111 @@ fn build_tier0(view: &View) -> Vec<ErodedRegion> {
 ///   • otherwise → run a few MORE epochs on the same field (incremental maturing —
 ///     the watchable part).
 /// Each update is snapshot to the ECS; VIVARIUM_LIVE=0 falls back to one-shot.
-fn spawn_fine_tiers(
+/// Mode dispatch (Joseph, stabilizing until seams/saving land): default =
+/// SETTLE — a few more macro epochs, one wide fine pass, then RAIN ONLY (no
+/// re-anchoring, no re-seeding: the water's work persists). The live telescope
+/// stays available via VIVARIUM_MODE=telescope.
+fn spawn_fine_tiers(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sender<TierMsg>, wtx: std::sync::mpsc::Sender<WaterMsg>, focus: SharedFocus) {
+    if std::env::var("VIVARIUM_MODE").map(|v| v == "telescope").unwrap_or(false) {
+        spawn_telescope(view, base, tx, wtx, focus);
+    } else {
+        spawn_settle(view, base, tx, wtx);
+    }
+}
+
+/// SETTLE: sequential phases, then water-only forever.
+///  1. +VIVARIUM_MACRO_EXTRA (40) L19 epochs with differential uplift, in
+///     visible chunks;
+///  2. one L21 fine pass over VIVARIUM_FINE_NX (1024 ≈ 4.9 km ≈ 3 mi) cells,
+///     VIVARIUM_FINE_EPOCHS (6) epochs, mean-pinned to L19;
+///  3. rain + sediment on that bed, indefinitely — the ONLY thing running.
+fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sender<TierMsg>, wtx: std::sync::mpsc::Sender<WaterMsg>) {
+    if base.is_empty() {
+        return;
+    }
+    let face = view.face;
+    let rain_mult: f32 = std::env::var("VIVARIUM_RAIN").ok().and_then(|s| s.parse().ok()).unwrap_or(10.0);
+    let atmos_m: f64 = std::env::var("VIVARIUM_ATMOS").ok().and_then(|s| s.parse().ok()).unwrap_or(2.0);
+    let macro_extra: u32 = std::env::var("VIVARIUM_MACRO_EXTRA").ok().and_then(|s| s.parse().ok()).unwrap_or(40);
+    let fine_nx: usize = std::env::var("VIVARIUM_FINE_NX").ok().and_then(|s| s.parse().ok()).unwrap_or(1024);
+    let fine_epochs: u32 = std::env::var("VIVARIUM_FINE_EPOCHS").ok().and_then(|s| s.parse().ok()).unwrap_or(6);
+    let f21 = view.focus * 2f64.powi(21 - view.level as i32);
+    const CADENCE: std::time::Duration = std::time::Duration::from_millis(500);
+    const SUBSTEPS: u32 = 40;
+
+    std::thread::spawn(move || {
+        let mut tiers = base;
+
+        // Phase 1 — more macro history, watchable in chunks.
+        if let Some(t0) = tiers.iter().find(|r| r.level == 19) {
+            let base_epochs = FluvialParams::default().epochs;
+            let mut f19 = Fluvial::from_region(t0);
+            let mut done = 0u32;
+            while done < macro_extra {
+                let chunk = 5.min(macro_extra - done);
+                f19.erode(&FluvialParams { epochs: chunk, uplift_m: 0.05, ..Default::default() });
+                done += chunk;
+                let region = f19.to_region();
+                tiers.retain(|r| r.level != 19);
+                tiers.push(region.clone());
+                tiers.sort_by_key(|r| r.level);
+                if tx.send(TierMsg { region, epochs_total: base_epochs + done, sim_years: chunk as f32 * EPOCH_YEARS, delta_m: f19.last_delta_m }).is_err() {
+                    return;
+                }
+            }
+        }
+
+        // Phase 2 — one wide fine pass (~3 mi), pinned to the macro low band.
+        let half = (fine_nx / 2) as i64;
+        let oi = ((f21.x as i64) - half).max(0) as u32;
+        let oj = ((f21.y as i64) - half).max(0) as u32;
+        let coarser = tiers.clone();
+        let mut fine = Fluvial::from_surface(face, 21, oi, oj, fine_nx, |c| erosion::surface_at(c, &coarser));
+        let parent = tiers.iter().find(|r| r.level == 19).cloned();
+        let mut done = 0u32;
+        while done < fine_epochs {
+            let chunk = 2.min(fine_epochs - done);
+            fine.erode(&FluvialParams { epochs: chunk, ..Default::default() });
+            if let Some(par) = &parent {
+                fine.pin_block_means(19, |c| par.surface_bilinear_m(c).unwrap_or_else(|| vivarium_world::gen::surface_prior_m(c, 19)));
+            }
+            done += chunk;
+            let region = fine.to_region();
+            tiers.retain(|r| r.level != 21);
+            tiers.push(region.clone());
+            tiers.sort_by_key(|r| r.level);
+            if tx.send(TierMsg { region, epochs_total: done, sim_years: chunk as f32 * EPOCH_YEARS, delta_m: fine.last_delta_m }).is_err() {
+                return;
+            }
+        }
+
+        // Phase 3 — RAIN ONLY, forever. Fixed anchor; the water's carving is the
+        // only process still moving the bed (written back so the view shows it).
+        let cell = vivarium_world::sample::cell_size_m(21, vivarium_world::planet::Planet::EARTH.radius_m) as f32;
+        let mut w = WaterSim::new(face, 21, (oi, oj), fine_nx, cell, fine.h.clone(), atmos_m);
+        let wp = WaterParams { precip: WaterParams::default().precip * rain_mult, ..Default::default() };
+        loop {
+            let t0 = std::time::Instant::now();
+            let before = w.depth.clone();
+            for _ in 0..SUBSTEPS {
+                w.step(&wp);
+            }
+            let delta: f64 = w.depth.iter().zip(before.iter()).map(|(a, b)| (a - b).abs() as f64).sum();
+            if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: SUBSTEPS as f32 * wp.dt, delta_m: (delta / before.len() as f64) as f32 }).is_err() {
+                return;
+            }
+            if let Some(entry) = tiers.iter_mut().find(|r| r.level == 21) {
+                entry.h.copy_from_slice(&w.bed);
+                if tx.send(TierMsg { region: entry.clone(), epochs_total: fine_epochs, sim_years: 0.0, delta_m: 0.0 }).is_err() {
+                    return;
+                }
+            }
+            std::thread::sleep(CADENCE.saturating_sub(t0.elapsed()));
+        }
+    });
+}
+
+fn spawn_telescope(
     view: &View,
     base: Vec<ErodedRegion>,
     tx: std::sync::mpsc::Sender<TierMsg>,
