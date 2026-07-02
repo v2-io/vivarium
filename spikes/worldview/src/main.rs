@@ -489,10 +489,31 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
             let substeps: u32 = if stream { 1 } else { ((8.0 / dt) as u32).clamp(1, 400) };
             // Filling: DELUGE (the rain fudge exists to reach steady state
             // fast; the sediment work it does is compressed on the same fudged
-            // clock). Living: the user's rain, in storms.
-            let phase = sim_total % (storm_on + storm_off);
-            let raining = filling || storm_off <= 0.0 || phase < storm_on;
-            let mult = if filling { rain_mult.max(60.0) } else { rain_mult };
+            // clock). Living: the user's rain, in storms whose durations and
+            // intensities are JITTERED deterministically by storm ordinal
+            // (noise domain 17, §8's first temporal field): a 400/400 square
+            // wave is artificial neatness; real storms are heavy-tailed —
+            // occasional long soakers and short cloudbursts fall out of the
+            // log-scale draws. Same seed ⇒ same weather history, forever.
+            let (raining, storm_intensity, weather_left) = if filling || storm_off <= 0.0 {
+                (true, 1.0f32, f32::INFINITY)
+            } else {
+                use vivarium_world::noise::hash01;
+                let (mut n, mut start) = (0i64, 0.0f32);
+                loop {
+                    let on = storm_on * (((hash01(17, n, 0) - 0.5) * 1.6).exp()) as f32;
+                    let gap = storm_off * (((hash01(17, n, 1) - 0.5) * 1.6).exp()) as f32;
+                    if sim_total < start + on {
+                        break (true, (((hash01(17, n, 2) - 0.5) * 1.4).exp()) as f32, start + on - sim_total);
+                    }
+                    if sim_total < start + on + gap {
+                        break (false, 1.0, start + on + gap - sim_total);
+                    }
+                    start += on + gap;
+                    n += 1;
+                }
+            };
+            let mult = if filling { rain_mult.max(60.0) } else { rain_mult * storm_intensity };
             let wp = WaterParams {
                 precip: if raining { WaterParams::default().precip * mult } else { 0.0 },
                 dt,
@@ -527,12 +548,7 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
                     }
                 }
             }
-            let weather = if filling || storm_off <= 0.0 {
-                (true, f32::INFINITY)
-            } else {
-                let ph = sim_total % (storm_on + storm_off);
-                if ph < storm_on { (true, storm_on - ph) } else { (false, storm_on + storm_off - ph) }
-            };
+            let weather = (raining, weather_left);
             let settle_info = if filling { Some((0.15 * delta_peak, (fill_cap - sim_total).max(0.0))) } else { None };
             if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * dt, delta_m: delta_mean, filling, froude: w.froude(), weather, settle: settle_info, drift: w.budget_drift() }).is_err() {
                 return;

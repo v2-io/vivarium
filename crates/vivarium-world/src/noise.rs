@@ -13,6 +13,11 @@
 //! across cells); modulate their amplitude by a macro field to get §10's
 //! "coherent detail under a macro constraint."
 
+// Known domain tags (keep unique; collisions silently correlate fields):
+//   0 continents fBm · 1 mountains fBm · 3 differential-uplift fBm ·
+//   7 view ground mottle · 13 float-mode wobble · 17 storm schedule (temporal:
+//   keys are (storm ordinal, draw index), the first time-keyed §8 field).
+
 /// SplitMix64 finalizer — strong avalanche, so a one-bit key change scrambles the
 /// whole output (no lattice artifacts).
 #[inline]
