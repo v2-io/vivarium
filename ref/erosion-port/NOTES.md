@@ -72,9 +72,18 @@ the no-diffusion spire instability, latent in core too); ErodedRegion telescope
 sampling; the water FAST band with real physics (Saint-Venant + Manning,
 critical-shear incision, slope-capacity sediment, groundwater + live colmation,
 closed cycle, ocean-as-ground); mean-conservation pin (fine tiers redistribute,
-macro owns elevation); SETTLE mode reproducing core's proven sequence, then a
-living storm phase with two-way bed write-back. Erosion stays ON during water —
-the multirate goal of this document is REALIZED (as a schedule, not a switch).
+macro owns elevation); FILL mode (deluge to steady state) then a living
+storm phase with two-way bed write-back.
+**Correction (2026-07-03):** the 07-02 claim that the kill-switch goal was
+"REALIZED" was premature — parity night had quietly re-imported core's
+sediment-off switch into the fill phase, and the living phase (sediment on)
+was in practice unreachable (fill takes tens of minutes and restarts every
+launch). Joseph's probing surfaced it. The momentum fixes (θ-smoothing, sill
+conveyance, breaking cap, rate caps) removed the instabilities that justified
+core's switch — probe-verified (channel_profile sediment regimes: zero bed
+kinks, work bounded by sed_max_rate) — so **sediment now runs through the
+fill as well**: the kill-switch is deleted for real, and the fill matures the
+beds (alluvium, colmation, armor) before the living phase begins.
 OPEN: discharge→A coupling into the erosion tiers (real flow driving stream
 power); watershed-boundary inflows (nested water grids); seams/persistence
 (§13 store) — the next session's agenda; per-material erodibility/permeability.

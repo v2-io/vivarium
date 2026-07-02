@@ -100,14 +100,14 @@ struct WaterMsg {
     sim_seconds: f32,
     /// Mean |Δdepth| over the burst (m) — steady-state indicator.
     delta_m: f32,
-    /// True while phase 3a (deluge-to-steady-state) is still running.
-    settling: bool,
+    /// True while phase 3a (FILLING: deluge to steady state) is still running.
+    filling: bool,
     /// (max Froude, fraction of wet cells supercritical Fr>1.5) — the roll-wave
     /// gauge: surges are honest physics only while this shows supercritical flow.
     froude: (f32, f32),
-    /// Weather right now: (raining, seconds until it changes — ∞ while settling).
+    /// Weather right now: (raining, seconds until it changes — ∞ while filling).
     weather: (bool, f32),
-    /// While settling: (the plateau target the per-burst delta must fall to
+    /// While filling: (the plateau target the per-burst delta must fall to
     /// = 0.15 × filling-phase peak, seconds left before the 6000 sim-s cap).
     /// Honest progress instead of a bare "SETTLING" (Joseph).
     settle: Option<(f32, f32)>,
@@ -130,7 +130,7 @@ struct WaterStat {
     rate: f32,
     delta_m: f32,
     total_ss: f32,
-    settling: bool,
+    filling: bool,
     froude: (f32, f32),
     weather: (bool, f32),
     settle: Option<(f32, f32)>,
@@ -300,12 +300,16 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
         let mut w = WaterSim::new(face, wl, (woi, woj), wnx, cell, wbed, atmos_m);
         let mut sim_total: f32 = 0.0;
         let (mut prev_delta, mut plateau_bursts, mut delta_peak) = (0.0f32, 0u32, 0.0f32);
-        // Phase 3a — THE OLD ENGINE'S RECIPE: deluge to steady state with
-        // sediment OFF (core's deliberate kill-switch, used for its final look),
-        // so the river network and lakes FILL and equilibrate first. Hands off to
-        // the living phase (storms + sediment) once the water levels out.
-        let mut settling = true;
-        // VIVARIUM_WATER_SHOW: all | burst | (default: burst while settling —
+        // Phase 3a — FILLING: continuous deluge until the water distribution
+        // reaches steady state (basins full, lakes at level, river in/outflow
+        // balanced). SEDIMENT STAYS ON — core's kill-switch existed for
+        // instabilities the momentum fixes removed (probe: channel_profile
+        // sediment regimes — zero bed kinks, work bounded by sed_max_rate).
+        // The fill therefore also MATURES the beds: alluvium in pools,
+        // colmation sealing channels, armor on scoured reaches. Hands off to
+        // the living phase (episodic storms) once the water levels out.
+        let mut filling = true;
+        // VIVARIUM_WATER_SHOW: all | burst | (default: burst while filling —
         // fast-forward through the fill — then stream EVERY step once living,
         // so the water visibly flows; sim-time slows to the view's pace).
         let show = std::env::var("VIVARIUM_WATER_SHOW").unwrap_or_default();
@@ -315,21 +319,21 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
             let stream = match show.as_str() {
                 "all" => true,
                 "burst" => false,
-                _ => !settling,
+                _ => !filling,
             };
             // CFL dt from the CURRENT deepest water (the ocean is real water now);
             // burst mode aims ~8 sim-s per burst, capped so deep basins can't
             // stall the loop; streaming shows every single step.
             let dt = w.stable_dt(9.8);
             let substeps: u32 = if stream { 1 } else { ((8.0 / dt) as u32).clamp(1, 400) };
-            // Settling: DELUGE (core's recipe — the rain fudge exists to reach
-            // steady state fast), no sediment. Living: the user's rain + storms.
+            // Filling: DELUGE (the rain fudge exists to reach steady state
+            // fast; the sediment work it does is compressed on the same fudged
+            // clock). Living: the user's rain, in storms.
             let phase = sim_total % (storm_on + storm_off);
-            let raining = settling || storm_off <= 0.0 || phase < storm_on;
-            let mult = if settling { rain_mult.max(60.0) } else { rain_mult };
+            let raining = filling || storm_off <= 0.0 || phase < storm_on;
+            let mult = if filling { rain_mult.max(60.0) } else { rain_mult };
             let wp = WaterParams {
                 precip: if raining { WaterParams::default().precip * mult } else { 0.0 },
-                sed_capacity: if settling { 0.0 } else { WaterParams::default().sed_capacity },
                 dt,
                 ..Default::default()
             };
@@ -345,7 +349,7 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
             // (≈ the input), so "not decreasing" alone fires mid-deluge. Settled
             // = the differential has FALLEN well below its filling-phase peak
             // (outflux ≈ influx) and then stopped improving. Cap at 6000 sim-s.
-            if settling {
+            if filling {
                 delta_peak = delta_peak.max(delta_mean);
                 if prev_delta > 0.0 && delta_mean > prev_delta * 0.97 {
                     plateau_bursts += 1;
@@ -355,25 +359,25 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
                 prev_delta = delta_mean;
                 let fallen = delta_mean < 0.15 * delta_peak;
                 if sim_total > 400.0 && ((fallen && plateau_bursts >= 3) || sim_total > 6000.0) {
-                    settling = false;
-                    eprintln!("[worldview] water settled at {sim_total:.0} sim-s (d {:.1} mm vs peak {:.1} mm) — living phase (storms + sediment)", delta_mean * 1000.0, delta_peak * 1000.0);
+                    filling = false;
+                    eprintln!("[worldview] water FILLED to steady state at {sim_total:.0} sim-s (d {:.1} mm vs peak {:.1} mm) — living phase (episodic storms)", delta_mean * 1000.0, delta_peak * 1000.0);
                 }
             }
-            let weather = if settling || storm_off <= 0.0 {
+            let weather = if filling || storm_off <= 0.0 {
                 (true, f32::INFINITY)
             } else {
                 let ph = sim_total % (storm_on + storm_off);
                 if ph < storm_on { (true, storm_on - ph) } else { (false, storm_on + storm_off - ph) }
             };
-            let settle_info = if settling { Some((0.15 * delta_peak, (6000.0 - sim_total).max(0.0))) } else { None };
-            if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * dt, delta_m: delta_mean, settling, froude: w.froude(), weather, settle: settle_info, drift: w.budget_drift() }).is_err() {
+            let settle_info = if filling { Some((0.15 * delta_peak, (6000.0 - sim_total).max(0.0))) } else { None };
+            if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * dt, delta_m: delta_mean, filling, froude: w.froude(), weather, settle: settle_info, drift: w.budget_drift() }).is_err() {
                 return;
             }
             // Write the carved bed back to the L21 tier (block-mean downsample
             // when the water runs finer — conservative, means preserved). Bed
             // only moves in the living phase (sediment), and the write-back
             // clones a full tier — throttle it by wall time, not by step.
-            if !settling && last_writeback.elapsed().as_secs_f32() > 5.0 {
+            if last_writeback.elapsed().as_secs_f32() > 5.0 {
                 last_writeback = std::time::Instant::now();
                 if let Some(entry) = tiers.iter_mut().find(|r| r.level == 21) {
                 let f = wscale as usize;
@@ -547,7 +551,7 @@ fn spawn_telescope(
                         region: w.to_region(),
                         sim_seconds: substeps as f32 * wdt,
                         delta_m: (delta / before.len() as f64) as f32,
-                        settling: false,
+                        filling: false,
                         froude: w.froude(),
                         weather: (true, f32::INFINITY),
                         settle: None,
@@ -629,7 +633,7 @@ fn water_update(rx: Res<WaterRx>, mut water: ResMut<WaterRes>, mut meta: ResMut<
             rate,
             delta_m: msg.delta_m,
             total_ss: total,
-            settling: msg.settling,
+            filling: msg.filling,
             froude: msg.froude,
             weather: msg.weather,
             settle: msg.settle,
@@ -900,7 +904,7 @@ ss  s/s    water sim-seconds total / sim-seconds per wall-second
 d mm       mean |depth change| per burst - the convergence gauge
 Fr a/b%    Froude v/sqrt(g*d): <1 tranquil, >1 rushing, 2.0 = pinned at the
            breaking cap (>2 = a bug). a = grid max, b% = share supercritical
-settling   deluge to steady state: current d -> target (0.15 x peak), cap left
+filling    deluge to steady state: current d -> target (0.15 x peak), cap left
 pawn row   water at the pawn: depth, flow speed, local Fr, suspended load,
            alluvium (loose settled bed), seal (pores plugged by fines)
 arrow      flow at the pawn: length ~ log speed (0.5 m/s short .. 16 m/s long),
@@ -1807,12 +1811,12 @@ fn hud_update(
         vals[19] = format!("{:<12}", format!("Fr {:.1}/{:.0}%", w.froude.0, w.froude.1 * 100.0));
         vals[20] = match w.settle {
             Some((target, cap_left)) => format!(
-                "SETTLING d{:.0}->{:.0}mm cap {:.0}ss",
+                "FILLING d{:.0}->{:.0}mm cap {:.0}ss",
                 w.delta_m * 1000.0,
                 target * 1000.0,
                 cap_left
             ),
-            None if w.settling => "SETTLING".into(),
+            None if w.filling => "FILLING".into(),
             None => "living".into(),
         };
         // Live conservation gauge (m·cells → per-cell µm is noise; show total
@@ -1848,19 +1852,12 @@ fn hud_update(
         vals[22] = format!("{:<10}", format!("d {d:.2} m"));
         vals[23] = format!("{:<11}", format!("v {v:.2} m/s"));
         vals[24] = format!("{:<10}", format!("Fr {fr:.2}"));
-        // Sediment runs OFF during the settle deluge (core's recipe) — say so
-        // instead of showing misleading zeros; and print sub-mm loads honestly
-        // ("0 mm" hid real 0.4 mm suspensions).
-        let settling_now = wmeta.0.as_ref().map(|w| w.settling).unwrap_or(false);
-        if settling_now {
-            vals[25] = format!("{:<12}", "susp (off)");
-            vals[26] = format!("{:<14}", "alluv (off)");
-            vals[27] = "seal (off during settle)".into();
-        } else {
-            vals[25] = format!("{:<12}", format!("susp {:.2}mm", susp * 1000.0));
-            vals[26] = format!("{:<14}", format!("alluv {:.0}cm", sand * 100.0));
-            vals[27] = format!("seal {:.0}%", seal * 100.0);
-        }
+        // Sub-mm loads printed honestly ("0 mm" hid real 0.4 mm suspensions).
+        // Sediment now runs THROUGH the fill (kill-switch removed 2026-07-03,
+        // probe-cleared), so these are live from the first raindrop.
+        vals[25] = format!("{:<12}", format!("susp {:.2}mm", susp * 1000.0));
+        vals[26] = format!("{:<14}", format!("alluv {:.0}cm", sand * 100.0));
+        vals[27] = format!("seal {:.0}%", seal * 100.0);
     }
 
     // ---- apply to spans, flashing values that changed after being stable ----

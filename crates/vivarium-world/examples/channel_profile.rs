@@ -9,11 +9,15 @@ fn main() {
     // Two regimes: steep+deluge is HONESTLY roll-wave unstable (Fr_eq ~2.7 —
     // surges there may be real); gentle+moderate is subcritical (Fr_eq ~0.65)
     // where nature guarantees smooth flow — lumps THERE are a scheme bug.
-    run("STEEP 10% + 60x deluge (roll waves plausible)", 0.10, 60.0, 150.0);
-    run("GENTLE 1% + 10x rain (must be smooth)", 0.01, 10.0, 400.0);
+    run("STEEP 10% + 60x deluge (roll waves plausible)", 0.10, 60.0, 150.0, false);
+    run("GENTLE 1% + 10x rain (must be smooth)", 0.01, 10.0, 400.0, false);
+    // The kill-switch question (Joseph): does SEDIMENT survive the deluge now
+    // that the momentum instabilities are fixed, or does it still staircase?
+    run("STEEP 10% + 60x deluge + SEDIMENT ON", 0.10, 60.0, 150.0, true);
+    run("GENTLE 1% + 10x rain + SEDIMENT ON", 0.01, 10.0, 400.0, true);
 }
 
-fn run(label: &str, grade: f32, rain: f32, t_end: f32) {
+fn run(label: &str, grade: f32, rain: f32, t_end: f32, sed: bool) {
     println!("--- {label} ---");
     let nx = 256usize;
     let cell = 4.8f32;
@@ -25,7 +29,12 @@ fn run(label: &str, grade: f32, rain: f32, t_end: f32) {
         }
     }
     let mut w = WaterSim::new(Face::ZPos, 21, (1000, 1000), nx, cell, bed, 5.0);
-    let p = WaterParams { precip: WaterParams::default().precip * rain, sed_capacity: 0.0, ..Default::default() };
+    let bed0 = w.bed.clone();
+    let p = WaterParams {
+        precip: WaterParams::default().precip * rain,
+        sed_capacity: if sed { WaterParams::default().sed_capacity } else { 0.0 },
+        ..Default::default()
+    };
     let mut t = 0.0f32;
     while t < t_end {
         w.step(&p);
@@ -47,6 +56,21 @@ fn run(label: &str, grade: f32, rain: f32, t_end: f32) {
         }
     }
     println!("channel depth: mean {mean:.3} m  rel-std {:.1}%  cell-to-cell >30% swings: {swings}/{}", (var.sqrt() / mean.max(1e-6)) * 100.0, profile.len() - 1);
+    if sed {
+        // How much geomorphic work did the run do, and does the BED staircase?
+        let dbed: Vec<f32> = w.bed.iter().zip(&bed0).map(|(a, b)| a - b).collect();
+        let mean_abs = dbed.iter().map(|d| d.abs() as f64).sum::<f64>() / dbed.len() as f64;
+        let dmax = dbed.iter().cloned().fold(0.0f32, |m, d| m.max(d.abs()));
+        let mut bed_swings = 0;
+        for y in 8..nx - 8 {
+            let i = y * nx + nx / 2;
+            let curv = (w.bed[i - nx] - 2.0 * w.bed[i] + w.bed[i + nx]).abs();
+            if curv > 0.5 {
+                bed_swings += 1; // >0.5 m kinks along the channel = staircase
+            }
+        }
+        println!("bed change: mean |db| {:.3} m  max {:.2} m  channel kinks >0.5m: {bed_swings}/{}", mean_abs, dmax, nx - 16);
+    }
     let bars: String = profile.iter().step_by(4).map(|d| {
         let x = (d / (2.0 * mean + 1e-6) * 8.0) as usize;
         [' ', '.', ':', '-', '=', '+', '*', '#', '@'][x.min(8)]

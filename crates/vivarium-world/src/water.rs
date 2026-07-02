@@ -210,6 +210,12 @@ impl WaterSim {
         this
     }
 
+    /// Re-anchor the budget baseline to the CURRENT total — for sims restored
+    /// from a snapshot, whose fields were overwritten after construction.
+    pub fn rebaseline_budget(&mut self) {
+        self.initial_total = self.total_water();
+    }
+
     /// Water budget drift since construction (m·cells): the LIVE conservation
     /// instrument. The physics conserves by construction and by test; what
     /// this catches is anything that breaks that later, plus honest f32
