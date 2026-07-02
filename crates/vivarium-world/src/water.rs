@@ -61,15 +61,13 @@ pub struct WaterParams {
     /// per-step: at 100x rain that allowed ~90 m/sim-hour of planing — Joseph's
     /// staircase world.)
     pub sed_max_rate: f32,
-    /// Bed EROSION only happens in channelized flow (depth ≥ this, m); sheet
-    /// films don't strip the landscape. Deposition is allowed everywhere.
-    pub sed_min_depth: f32,
-    /// …OR where specific discharge (depth·|v|, m²/s) exceeds this — a thin but
-    /// FAST reach is channel flow too. This is what lets river mouths incise:
-    /// the sea drains the last above-sea reach to a millimetres-thin rush
-    /// (Joseph's rivers "drying up" voxels from the ocean, also seen in core),
-    /// which a depth-only gate locks shallow forever.
-    pub sed_min_discharge: f32,
+    /// Critical shear stress τ_c (Pa): bed erosion happens where the flow's
+    /// shear τ = ρ·g·d·S exceeds this — THE physical incision threshold
+    /// (DESIGN-MATERIAL §15's per-material `incision_threshold`; uniform loose-
+    /// sediment value here until materials couple in). Replaces two earlier
+    /// ad-hoc gates (min-depth, min-discharge): films have τ≈0 and don't strip;
+    /// thin-but-steep mouth reaches have high τ and carve their estuaries.
+    pub tau_c: f32,
     // --- Groundwater (core's subsystem, ported): infiltration surface→soil,
     // capped by a per-cell capacity; baseflow returns it to the surface. The two
     // streambed phenomena (Joseph): COLMATION — flowing channels seal, so
@@ -104,8 +102,7 @@ impl Default for WaterParams {
             sed_erode: 0.1,
             sed_deposit: 0.5,
             sed_max_rate: 0.002,
-            sed_min_depth: 0.03,
-            sed_min_discharge: 0.005,
+            tau_c: 1.0,
             infiltration: 2.0e-5,
             gw_capacity: 0.3,
             baseflow: 2.0e-5,
@@ -302,7 +299,9 @@ impl WaterSim {
                     if y < nx - 1 { slope = slope.max((self.bed[i] - self.bed[i + nx]) / l); }
                     let capacity = (p.sed_capacity * speed * slope.clamp(0.0, 1.0)).min(2.0);
                     let s0 = self.sediment[i];
-                    if s0 < capacity && (d >= p.sed_min_depth || d * speed >= p.sed_min_discharge) {
+                    // Bed shear τ = ρ·g·d·S (water density 1000 kg/m³).
+                    let tau = 1000.0 * 9.8 * d * slope;
+                    if s0 < capacity && tau > p.tau_c {
                         let e = ((capacity - s0) * p.sed_erode * dt).min(max_step);
                         self.bed[i] -= e;
                         self.sediment[i] += e;
