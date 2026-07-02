@@ -1,7 +1,8 @@
 # vivarium — orientation (start here)
 
 *Current-state map for a fresh session. Supersedes the archived
-`.archive/HANDOFF.md`. Last updated 2026-07-01, at the design→code transition.*
+`.archive/HANDOFF.md`. Last updated 2026-07-02 (end of the live-simulation
+session: erosion telescope + live water + instruments).*
 
 ## What vivarium is
 A sim game (RimWorld/DF lineage) on a deterministic 3-D voxel world, whose real
@@ -76,13 +77,29 @@ and `DESIGN.md`.
 `column` · `noise` · `gen` · `chunk` (Patch + halo). **Erosion port begun**:
 hillslope diffusion (`erosion::diffuse`) runs on a Patch. Remaining, in order:
 
-0. **Erosion: LANDED** (fba5402) — worldview erodes a 9.8 km L19 region at
-   startup (~3 s) and shows dendritic valley networks at honest scale. Next
-   increments (`ref/erosion-port/NOTES.md`): per-material erodibility
-   (differential erosion → Bryce), the **hydrology settle** (streams/lakes as
-   water, not just carved beds) via the multirate coupling (§4, erosion stays ON),
-   **memoize the region to disk** (§13 store — kills both the 3 s startup and the
-   ~142 ms rebuilds; the gen-ms HUD is waiting), and region-edge blending (§7.1).
+0. **Erosion + LIVE WATER: LANDED** (…→ f514741). worldview now runs the full
+   multirate stack live: L19 macro tier (1 epoch/cycle + fBm-differential uplift,
+   λ≈5 km) → L21/L24 fine tiers (FINISHERS per Joseph's field observation — 1–2
+   animated passes ideal; init 4/cap 10 and init 2/cap 6, re-anchor to the pawn
+   past ¼-span drift, mean-PINNED to the parent low band = Joseph's conservation
+   constraint, §5) → the FAST band: virtual-pipes shallow water (water.rs, ported
+   from core hydro; conserved atmosphere/ocean stores) raining onto the live
+   L21 bed — **erosion stays ON while water flows** (the §4 schedule replacing
+   core's kill-switch). Hillslope creep (κ=2 m²/epoch) added after the sawtooth
+   anomaly was probe-isolated (spike_probe: detachment-limited spires at grid
+   wavelength without diffusion — also latent in old core).
+   **Instruments**: T = fidelity tint (violet=prior/blue=L19/yellow=L21/orange=
+   L24); HUD sim line = per-tier epochs + aging speed (~y/s, EPOCH_YEARS=100
+   nominal) + per-epoch mean |Δh| (convergence detector) + water rate/steady-
+   state; screen newest/oldest sim-age. Env: VIVARIUM_RAIN (default 10×),
+   VIVARIUM_LIVE, VIVARIUM_TIERDEBUG, VIVARIUM_ERODE(_NX).
+   **Queued for the NEXT session (Joseph, 2026-07-02):** seams/transitions +
+   memoization/world-saving (§13; the face-edge "floating mesa" specimen: tile
+   clamping + sim-edge outlets + pin's raw-prior fallback), **sediment coupling**
+   (time-averaged discharge → erosion's A; deposition into slack water → oxbows,
+   lake→meadow fill — the honest water-erosion core turned off), async meshing
+   (the 1.5 s rebuild throttle is the visible-water framerate), per-material
+   erodibility.
 1. `chunk.rs` — ✅ done (`Patch<T>` + halo, API driven by the erosion consumer).
 2. **Port erosion** as a *native frame tier*, feeding `gen::column_from_surface` —
    the fidelity ladder made real. **Bridge recommendation (confirm with Joseph):

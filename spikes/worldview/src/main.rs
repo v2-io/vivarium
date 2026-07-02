@@ -160,6 +160,10 @@ fn spawn_fine_tiers(
         return;
     }
     let live = !std::env::var("VIVARIUM_LIVE").map(|v| v == "0").unwrap_or(false);
+    // VIVARIUM_RAIN: precipitation multiplier over the kernel default (which is
+    // itself ~1000x real — the documented basin-filling fudge). Default 10x so a
+    // first-look session sees streams gather in minutes, not tens of minutes.
+    let rain_mult: f32 = std::env::var("VIVARIUM_RAIN").ok().and_then(|s| s.parse().ok()).unwrap_or(10.0);
     let face = view.face;
     const CADENCE: std::time::Duration = std::time::Duration::from_millis(500);
 
@@ -270,7 +274,7 @@ fn spawn_fine_tiers(
                     w.set_bed(l21.h.clone());
                 }
                 if let Some(w) = water.as_mut() {
-                    let wp = WaterParams::default();
+                    let wp = WaterParams { precip: WaterParams::default().precip * rain_mult, ..Default::default() };
                     let before = w.depth.clone();
                     const SUBSTEPS: u32 = 40;
                     for _ in 0..SUBSTEPS {
