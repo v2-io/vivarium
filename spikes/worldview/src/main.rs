@@ -1251,7 +1251,25 @@ fn view_update(
     // never scaled by zoom, so it is only visible when the view is actually at
     // human scale. Ring: screen-relative cursor, flat on the ground.
     if let Ok(mut p) = pawn.single_mut() {
-        *p = Transform::from_translation(aim_base + Vec3::Y * 1.0);
+        // In deep water the pawn FLOATS: body submerged to the shoulders (head
+        // ~0.4 m proud of the surface), bobbing on two incommensurate sines —
+        // gentle in tranquil water, choppy toward the breaking regime. Pure
+        // view cosmetics on the wall clock; world state is untouched.
+        let mut y = 1.0; // standing: cuboid centre 1 m above its base
+        if let Some(wr) = &water.0 {
+            let c = CellId::from_face_ij(view.face, view.focus.x as u32, view.focus.y as u32, view.level);
+            if let Some(d) = wr.depth_m(c) {
+                if d >= 1.2 {
+                    let v = wr.speed_m_s(c).unwrap_or(0.0) as f32;
+                    let fr = (v / (9.8 * d as f32).sqrt()).clamp(0.0, 2.0);
+                    let t = time.elapsed_secs();
+                    let chop = 0.05 + 0.12 * (fr / 2.0);
+                    let bob = chop * ((t * 3.5).sin() + 0.4 * (t * 8.2 + 1.7).sin());
+                    y = ((d as f32 - 1.6) * view.vert + 1.0 + bob).max(1.0);
+                }
+            }
+        }
+        *p = Transform::from_translation(aim_base + Vec3::Y * y);
     }
     if let Ok(mut r) = ring.single_mut() {
         let s = view.zoom * 0.016;
