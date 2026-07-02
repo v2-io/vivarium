@@ -729,6 +729,10 @@ impl ErodedRegion {
 /// contains the cell answers (its coarser parents already shaped its seed); the
 /// baseline prior answers everywhere else. `regions` is ordered coarse → fine.
 pub fn surface_at(cell: CellId, regions: &[ErodedRegion]) -> f64 {
+    // Ordering is a CONTRACT, and passing fine-first fails silently (the coarse
+    // tier answers everything, the fine tier is dead weight — a probe lost an
+    // hour to this). Cheap guard in debug builds.
+    debug_assert!(regions.windows(2).all(|w| w[0].level <= w[1].level), "surface_at: regions must be ordered coarse -> fine");
     for r in regions.iter().rev() {
         if let Some(s) = r.surface_m(cell) {
             return s;

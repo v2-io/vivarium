@@ -481,28 +481,50 @@ impl WaterSim {
     /// (`√(g·d)`), so dt shrinks where the basin is deep. Callers should recompute
     /// per burst.
     /// Froude diagnostics over wet cells (depth > 5 cm): (max Fr, fraction of
-    /// wet cells with Fr > 1.5). Fr = v/sqrt(g·d). Above ~1.5 (Vedernikov, with
-    /// Manning friction) free-surface flow is ROLL-WAVE unstable — surges are
-    /// then real physics, not a bug. Earthly rain keeps streams below it; the
-    /// settle deluge (metres/hour) does not. This gauge is how we tell an
-    /// honest surge under unearthly forcing from a numerical artifact.
+    /// wet cells with Fr > 1.5). Above ~1.5 (Vedernikov, with Manning friction)
+    /// free-surface flow is roll-wave unstable — surges there are real physics.
+    /// MEASUREMENT HONESTY: each pipe's velocity is measured on the SILL depth
+    /// (h_flow) the momentum cap operates on — dividing by the cell's own thin
+    /// depth reported mass exodus as impossible speed (Fr 100+ on a capped
+    /// flow). By construction of the breaking cap, values should stay ≤ ~2:
+    /// a materially higher reading now means the cap itself is broken.
     pub fn froude(&self) -> (f32, f32) {
         let l = self.cell_m;
+        let nx = self.nx;
         let (mut fmax, mut wet, mut sup) = (0.0f32, 0u32, 0u32);
-        for i in 0..self.nx * self.nx {
-            let d = self.depth[i];
-            if d < 0.05 {
-                continue;
-            }
-            wet += 1;
-            // NET velocity vector (gross 4-pipe sum counts slosh as speed).
-            let vx = (self.fr[i] - self.fl[i]) / (d * l);
-            let vy = (self.fb[i] - self.ft[i]) / (d * l);
-            let v = (vx * vx + vy * vy).sqrt();
-            let fr = v / (9.8 * d).sqrt();
-            fmax = fmax.max(fr);
-            if fr > 1.5 {
-                sup += 1;
+        for y in 0..nx {
+            for x in 0..nx {
+                let i = y * nx + x;
+                let d = self.depth[i];
+                if d < 0.05 {
+                    continue;
+                }
+                wet += 1;
+                let eta_i = self.bed[i] + d;
+                let mut cell_fr = 0.0f32;
+                let mut pipe = |f: f32, j: usize| {
+                    let hflow = eta_i.max(self.bed[j] + self.depth[j]) - self.bed[i].max(self.bed[j]);
+                    if hflow > 1e-3 && f > 0.0 {
+                        let v = f / (hflow * l);
+                        cell_fr = cell_fr.max(v / (9.8 * hflow).sqrt());
+                    }
+                };
+                if x > 0 {
+                    pipe(self.fl[i], i - 1);
+                }
+                if x < nx - 1 {
+                    pipe(self.fr[i], i + 1);
+                }
+                if y > 0 {
+                    pipe(self.ft[i], i - nx);
+                }
+                if y < nx - 1 {
+                    pipe(self.fb[i], i + nx);
+                }
+                fmax = fmax.max(cell_fr);
+                if cell_fr > 1.5 {
+                    sup += 1;
+                }
             }
         }
         (fmax, if wet > 0 { sup as f32 / wet as f32 } else { 0.0 })

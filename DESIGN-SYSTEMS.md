@@ -112,7 +112,10 @@ Every system rung ships with renderer-free probes asserting invariants nature
 guarantees in a known regime; known issues get their probe written FIRST
 (domain TDD). Current: `topo` (prior slope statistics), `spike_probe` (erosion
 spire instability), `channel_profile` (two-regime water: subcritical must be
-smooth). Wanted next: **the differential-aging ridge probe** — cross-seam
-slope/curvature continuity where adjacent regions have run different epoch
-counts (a physically-implausible ridge can develop along the boundary today);
-it would make seam quality measured, not anecdotal.
+smooth), and **`seam_ridge`** — the differential-aging ridge probe (built
+2026-07-03, first probe authored UNDER this methodology): cross-seam curvature
+where a fine tier's age exceeds its surroundings'. **Currently red, as
+expected**: seam/interior curvature ratio 4.3× at the standard 18-epoch fine
+pass, growing with the age gap (5.3× @ 60e, 7.1× @ 150e) — the mean-pin
+conserves block means but not boundary gradients. It now gates the future
+seam fix; Joseph's ridge sighting is measured, not anecdotal.
