@@ -607,6 +607,7 @@ impl WaterSim {
             sed_bed: self.sed_bed.clone(),
             colmation: self.colmation.clone(),
             armor: self.armor.clone(),
+            groundwater: self.groundwater.clone(),
         }
     }
 }
@@ -626,6 +627,7 @@ pub struct WaterRegion {
     pub sed_bed: Vec<f32>,
     pub colmation: Vec<f32>,
     pub armor: Vec<f32>,
+    pub groundwater: Vec<f32>,
     pub vx: Vec<f32>,
     pub vy: Vec<f32>,
 }
@@ -699,6 +701,12 @@ impl WaterRegion {
     /// Coarse-lag fraction 0..1 — armored (rocky) beds.
     pub fn armor_at(&self, cell: CellId) -> Option<f64> {
         self.bilinear(&self.armor, cell)
+    }
+
+    /// Groundwater store (m of water in the soil column) — near-surface
+    /// saturation for wet-ground rendering and (later) slope stability.
+    pub fn groundwater_m(&self, cell: CellId) -> Option<f64> {
+        self.bilinear(&self.groundwater, cell)
     }
 }
 

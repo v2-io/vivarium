@@ -1605,10 +1605,21 @@ fn build_full(face: Face, level: u8, w: usize, oi: u32, oj: u32, vert: f32, tier
     let cell = cell_size_m(level, Planet::EARTH.radius_m);
     let anchor = DVec2::new((oi as f64 + w as f64 * 0.5) * cell, (oj as f64 + w as f64 * 0.5) * cell);
     let tier_of = |x: usize, y: usize| erosion::tier_at(CellId::from_face_ij(face, oi + x as u32, oj + y as u32, level), tiers);
-    let soil_of = |x: usize, y: usize| -> (f32, f32, f32) {
-        live.map_or((0.0, 0.0, 0.0), |wr| {
+    let soil_of = |x: usize, y: usize| -> (f32, f32, f32, f32) {
+        live.map_or((0.0, 0.0, 0.0, 0.0), |wr| {
             let c = CellId::from_face_ij(face, oi + x as u32, oj + y as u32, level);
-            (wr.colmation_at(c).unwrap_or(0.0) as f32, wr.sed_bed_m(c).unwrap_or(0.0) as f32, wr.armor_at(c).unwrap_or(0.0) as f32)
+            // Top-layer WETNESS: a surface film (even the sub-render-cutoff
+            // 0–12 mm that used to be invisible) saturates the surface; the
+            // groundwater store keeps ground damp between storms (0.3 m = the
+            // sim's gw_capacity). Films dominate; damp soil shows at ~70%.
+            let film = (wr.depth_m(c).unwrap_or(0.0) / 0.012).clamp(0.0, 1.0) as f32;
+            let damp = (wr.groundwater_m(c).unwrap_or(0.0) / 0.3).clamp(0.0, 1.0) as f32 * 0.7;
+            (
+                wr.colmation_at(c).unwrap_or(0.0) as f32,
+                wr.sed_bed_m(c).unwrap_or(0.0) as f32,
+                wr.armor_at(c).unwrap_or(0.0) as f32,
+                film.max(damp),
+            )
         })
     };
     let turbidity_of = |x: usize, y: usize| -> f32 {
@@ -1754,7 +1765,7 @@ fn build_ground_mesh(
     vert: f32,
     tier_of: &dyn Fn(usize, usize) -> Option<u8>,
     tier_debug: bool,
-    soil_of: &dyn Fn(usize, usize) -> (f32, f32, f32),
+    soil_of: &dyn Fn(usize, usize) -> (f32, f32, f32, f32),
 ) -> Mesh {
     use vivarium_world::noise::hash01;
     // Fidelity tints (debug): violet = raw prior (unsimulated), blue = L19 macro,
@@ -1788,7 +1799,7 @@ fn build_ground_mesh(
             // Bed state from the live water sim (Joseph): settled alluvium reads
             // SANDY; a colmated (pore-sealed) bed reads MUDDY; an armored
             // (coarse-lag) bed reads ROCKY grey.
-            let (colm, alluvium, armor) = soil_of(i, j);
+            let (colm, alluvium, armor, wetness) = soil_of(i, j);
             const SAND: [f32; 3] = [0.78, 0.70, 0.52];
             const MUD: [f32; 3] = [0.42, 0.35, 0.25];
             const ROCK: [f32; 3] = [0.52, 0.50, 0.46];
@@ -1799,6 +1810,24 @@ fn build_ground_mesh(
                 col[k] += (ROCK[k] * m - col[k]) * tr;
                 col[k] += (SAND[k] * m - col[k]) * ts;
                 col[k] += (MUD[k] * m - col[k]) * tm;
+            }
+            // WET DARKENING (Lekner & Dorf 1988; soil-albedo literature): at
+            // surface saturation, porous soil reflects ~0.55× dry, rock ~0.72×,
+            // foliage ~0.88× (waxy — its wet look is mostly gloss, which a
+            // per-mesh material can't vary; we take the honest value shift
+            // only). Wet surfaces also gain ~15% chroma (the film suppresses
+            // white surface scatter — wet pebbles look richer, not just dark).
+            if wetness > 0.001 {
+                let h_rel = h(x, y) - SEA_LEVEL_M as f32;
+                let soil_like = (ts + tm + (1.0 - (h_rel / 80.0).clamp(0.0, 1.0))).clamp(0.0, 1.0);
+                let rock_like = (tr + ((h_rel - 1000.0) / 1000.0).clamp(0.0, 1.0)).clamp(0.0, 1.0) * (1.0 - soil_like);
+                let veg_like = (1.0 - soil_like - rock_like).max(0.0);
+                let darken = soil_like * 0.45 + rock_like * 0.28 + veg_like * 0.12;
+                let mean = (col[0] + col[1] + col[2]) / 3.0;
+                for k in 0..3 {
+                    let chroma = mean + (col[k] - mean) * (1.0 + 0.15 * wetness);
+                    col[k] = chroma * (1.0 - darken * wetness);
+                }
             }
             if tier_debug {
                 let t = tier_tint(tier_of(i, j));
