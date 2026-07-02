@@ -71,31 +71,80 @@ const FOCUS_BELOW_CENTER: f32 = 0.22;
 /// Ortho standoff: must exceed any terrain span we render (affects clip, not size).
 const STANDOFF: f32 = 400_000.0;
 
-/// The materialized erosion tier, if enabled — worldview samples columns through
-/// it (erosion::column_at falls back to the baseline outside the region).
+/// The erosion TELESCOPE — nested tiers, coarse → fine, each seeded from the ones
+/// below (erosion::surface_at samples finest-first; baseline outside all tiers).
+/// Tier 0 (L19, ~10 km) builds synchronously; finer tiers (L21 over the on-screen
+/// window, L24 around the pawn) arrive from a background thread and refine the
+/// live view as they land — the multi-LOD + memoization interaction test.
 #[derive(Resource)]
-struct Eroded(Option<ErodedRegion>);
+struct Eroded(Vec<ErodedRegion>);
 
-fn build_eroded(view: &View) -> Eroded {
+/// Channel delivering background-built tiers to the ECS.
+#[derive(Resource)]
+struct TierRx(std::sync::Mutex<std::sync::mpsc::Receiver<ErodedRegion>>);
+
+fn build_tier0(view: &View) -> Vec<ErodedRegion> {
     if std::env::var("VIVARIUM_ERODE").map(|v| v == "0").unwrap_or(false) {
-        return Eroded(None);
+        return Vec::new();
     }
-    // Erosion grid at L19 (~19 m cells — core ran 16 m); region centred on the
-    // startup focus. VIVARIUM_ERODE_NX cells across (default 512 ≈ 9.8 km).
-    const SIM_LEVEL: u8 = 19;
+    const SIM_LEVEL: u8 = 19; // ~19 m cells (core ran 16 m)
     let nx: usize = std::env::var("VIVARIUM_ERODE_NX").ok().and_then(|s| s.parse().ok()).unwrap_or(512);
     let scale = 2f64.powi(SIM_LEVEL as i32 - view.level as i32);
     let (ci, cj) = ((view.focus.x * scale) as u32, (view.focus.y * scale) as u32);
     let t = std::time::Instant::now();
     eprintln!("[worldview] eroding L{SIM_LEVEL} {nx}x{nx} around ({ci},{cj})…");
     let region = ErodedRegion::build(view.face, SIM_LEVEL, ci, cj, nx, &FluvialParams::default());
-    eprintln!("[worldview] erosion done in {:.1} s", t.elapsed().as_secs_f32());
-    Eroded(Some(region))
+    eprintln!("[worldview] tier L{SIM_LEVEL} done in {:.1} s", t.elapsed().as_secs_f32());
+    vec![region]
+}
+
+/// Build the finer tiers in the background: L21 (~4.8 m cells, ~2.4 km — roughly
+/// the on-screen world) then L24 (~0.6 m cells, ~150 m around the pawn), each
+/// seeded from the telescope built so far, with fewer ("more recent") epochs —
+/// Joseph's proven practice from core. Sent over the channel as each finishes.
+fn spawn_fine_tiers(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sender<ErodedRegion>) {
+    if base.is_empty() {
+        return;
+    }
+    let face = view.face;
+    let f21 = view.focus * 2f64.powi(21 - view.level as i32);
+    let f24 = view.focus * 2f64.powi(24 - view.level as i32);
+    std::thread::spawn(move || {
+        let mut tiers = base;
+        for (level, ci, cj, nx, epochs) in [
+            (21u8, f21.x as u32, f21.y as u32, 512usize, 30u32),
+            (24u8, f24.x as u32, f24.y as u32, 256usize, 10u32),
+        ] {
+            let t = std::time::Instant::now();
+            let p = FluvialParams { epochs, ..Default::default() };
+            let r = {
+                let seed = &tiers;
+                ErodedRegion::build_from(face, level, ci, cj, nx, &p, |c| erosion::surface_at(c, seed))
+            };
+            eprintln!("[worldview] tier L{level} done in {:.1} s", t.elapsed().as_secs_f32());
+            tiers.push(r.clone());
+            if tx.send(r).is_err() {
+                return;
+            }
+        }
+    });
+}
+
+/// Fold arriving tiers into the telescope and force a rebuild through them.
+fn tier_update(rx: Res<TierRx>, mut eroded: ResMut<Eroded>, mut ts: ResMut<TerrainState>) {
+    if let Ok(r) = rx.0.lock().unwrap().try_recv() {
+        eprintln!("[worldview] tier L{} arrived — refining the view", r.level);
+        eroded.0.push(r);
+        ts.built_level = u8::MAX; // trigger terrain_update
+    }
 }
 
 fn main() {
     let view = View::default();
-    let eroded = build_eroded(&view);
+    let tier0 = build_tier0(&view);
+    let (tx, rx) = std::sync::mpsc::channel::<ErodedRegion>();
+    spawn_fine_tiers(&view, tier0.clone(), tx);
+    let eroded = Eroded(tier0);
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -109,8 +158,9 @@ fn main() {
         .insert_resource(ClearColor(SKY))
         .insert_resource(view)
         .insert_resource(eroded)
+        .insert_resource(TierRx(std::sync::Mutex::new(rx)))
         .add_systems(Startup, setup)
-        .add_systems(Update, (view_update, terrain_update, hud_update, scale_update, maybe_screenshot))
+        .add_systems(Update, (view_update, tier_update, terrain_update, hud_update, scale_update, maybe_screenshot))
         .run();
 }
 
@@ -555,7 +605,7 @@ fn terrain_update(mut commands: Commands, view: Res<View>, eroded: Res<Eroded>, 
     let oj = (view.focus.y.round().max(0.0) as u64).clamp(half, n - half) - half;
     let (oi, oj) = (oi as u32, oj as u32);
 
-    let fields = sample_surface_with(view.face, view.level, oi, oj, view.w, |c| erosion::column_at(c, eroded.0.as_ref()));
+    let fields = sample_surface_with(view.face, view.level, oi, oj, view.w, |c| erosion::column_at(c, &eroded.0));
     let cell = view.cell_m();
     let anchor = DVec2::new((oi as f64 + view.w as f64 * 0.5) * cell, (oj as f64 + view.w as f64 * 0.5) * cell);
 
@@ -616,6 +666,7 @@ fn ground_color(h_above_sea: f32) -> [f32; 4] {
 /// Continuous point-mesh over the solid surface (slabs' proven model): one vertex
 /// per cell centre, smooth normals from the height gradient (halo makes edges work).
 fn build_ground_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin: (u32, u32), vert: f32) -> Mesh {
+    use vivarium_world::noise::hash01;
     let h = |x: isize, y: isize| -> f32 { f.height.get(x, y) };
     let px = |i: usize| ((origin.0 as f64 + i as f64 + 0.5) * cell - anchor.x) as f32;
     let pz = |j: usize| ((origin.1 as f64 + j as f64 + 0.5) * cell - anchor.y) as f32;
@@ -628,7 +679,11 @@ fn build_ground_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origi
         for i in 0..w {
             let (x, y) = (i as isize, j as isize);
             positions.push([px(i), py(x, y), pz(j)]);
-            colors.push(ground_color(h(x, y) - SEA_LEVEL_M as f32));
+            let (gi, gj) = (origin.0 as i64 + x as i64, origin.1 as i64 + y as i64);
+            // Deterministic per-cell mottle (§8): real ground is not one green.
+            let m = 0.88 + 0.24 * hash01(7, gi, gj) as f32;
+            let c = ground_color(h(x, y) - SEA_LEVEL_M as f32);
+            colors.push([c[0] * m, c[1] * m, c[2] * m, 1.0]);
             let nrm = Vec3::new(py(x - 1, y) - py(x + 1, y), 2.0 * cell as f32, py(x, y - 1) - py(x, y + 1)).normalize();
             normals.push([nrm.x, nrm.y, nrm.z]);
         }

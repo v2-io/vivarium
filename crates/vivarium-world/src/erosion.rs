@@ -160,12 +160,19 @@ impl Fluvial {
     /// Seed from the band-limited prior over `nx × nx` cells of `face` at `level`
     /// starting at `(oi, oj)` — the honest initial condition (no imposed shapes).
     pub fn from_prior(face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> Self {
+        Self::from_surface(face, level, oi, oj, nx, |c| gen::surface_prior_m(c, c.level()))
+    }
+
+    /// Seed from an arbitrary surface function — how a FINE tier is seeded from
+    /// the coarse tiers below it (the §7.2 downscaling seam: the fine sim's
+    /// initial condition is the downscaled coarse end-state + detail increment).
+    pub fn from_surface(face: Face, level: u8, oi: u32, oj: u32, nx: usize, surf: impl Fn(CellId) -> f64) -> Self {
         let cell_m = crate::sample::cell_size_m(level, crate::planet::Planet::EARTH.radius_m) as f32;
         let mut h = vec![0.0f32; nx * nx];
         for y in 0..nx {
             for x in 0..nx {
                 let cell = CellId::from_face_ij(face, oi + x as u32, oj + y as u32, level);
-                h[y * nx + x] = gen::baseline_column(cell).solid_thickness_m() as f32;
+                h[y * nx + x] = surf(cell) as f32;
             }
         }
         Self { nx, cell_m, h, drainage: vec![0.0; nx * nx] }
@@ -469,6 +476,7 @@ mod fluvial_tests {
 /// The carved structure replaces exactly the band the sim simulated; fine texture
 /// rides on top; outside the region the caller falls back to the baseline (an
 /// honest seam at the region edge — the §7.1 spatial seam, unblended for now).
+#[derive(Clone)]
 pub struct ErodedRegion {
     pub face: Face,
     pub level: u8,
@@ -481,10 +489,16 @@ pub struct ErodedRegion {
 impl ErodedRegion {
     /// Seed from the prior around a centre (face cells at `level`), erode, keep.
     pub fn build(face: Face, level: u8, center_i: u32, center_j: u32, nx: usize, p: &FluvialParams) -> Self {
+        Self::build_from(face, level, center_i, center_j, nx, p, |c| gen::surface_prior_m(c, c.level()))
+    }
+
+    /// Seed from an arbitrary surface (e.g. the coarser tiers of the telescope),
+    /// erode, keep. The nesting primitive for progressive fine-detail erosion.
+    pub fn build_from(face: Face, level: u8, center_i: u32, center_j: u32, nx: usize, p: &FluvialParams, surf: impl Fn(CellId) -> f64) -> Self {
         let half = (nx / 2) as u32;
         let oi = center_i.saturating_sub(half);
         let oj = center_j.saturating_sub(half);
-        let mut f = Fluvial::from_prior(face, level, oi, oj, nx);
+        let mut f = Fluvial::from_surface(face, level, oi, oj, nx, surf);
         f.erode(p);
         Self { face, level, oi, oj, nx, h: f.h }
     }
@@ -515,11 +529,20 @@ impl ErodedRegion {
     }
 }
 
-/// A column through the fidelity ladder: the eroded tier where materialized,
-/// the baseline prior elsewhere.
-pub fn column_at(cell: CellId, region: Option<&ErodedRegion>) -> crate::column::Column {
-    match region.and_then(|r| r.surface_m(cell)) {
-        Some(s) => gen::column_from_surface(cell, s, 2.0),
-        None => gen::baseline_column(cell),
+/// Surface through a TELESCOPE of tiers, finest-first: the first region that
+/// contains the cell answers (its coarser parents already shaped its seed); the
+/// baseline prior answers everywhere else. `regions` is ordered coarse → fine.
+pub fn surface_at(cell: CellId, regions: &[ErodedRegion]) -> f64 {
+    for r in regions.iter().rev() {
+        if let Some(s) = r.surface_m(cell) {
+            return s;
+        }
     }
+    gen::surface_prior_m(cell, cell.level())
+}
+
+/// A column through the fidelity ladder: the finest materialized tier that covers
+/// the cell, the baseline prior elsewhere.
+pub fn column_at(cell: CellId, regions: &[ErodedRegion]) -> crate::column::Column {
+    gen::column_from_surface(cell, surface_at(cell, regions), 2.0)
 }
