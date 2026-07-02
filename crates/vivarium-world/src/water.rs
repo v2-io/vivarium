@@ -32,11 +32,12 @@ pub struct WaterParams {
     /// Time step (s). CFL: `≲ cell/√(g·d_max)` — 0.2 s is safe to ~5 m depths
     /// on 4.8 m cells.
     pub dt: f32,
-    /// Manning roughness n (s/m^⅓): real channel friction (≈0.03 smooth earth,
-    /// 0.04–0.05 natural channels, 0.07 rocky). Sets the velocity equilibrium
-    /// v = R^⅔·√S/n — replaces the old unphysical per-step damping knob. The
-    /// pipe cross-section is likewise physical now: depth × cell width, so thin
-    /// films are naturally sluggish and deep channels responsive.
+    /// BASE Manning roughness n (s/m^⅓) for gentle channels (≈0.04). Steep
+    /// channels are boulder-strewn and step-pooled — roughness RISES with
+    /// slope (Jarrett 1984: n ≈ 0.39·S^0.38 for Rocky Mountain streams; our
+    /// linear proxy n = base + 1.6·S, capped 0.13, tracks it near R≈1 m).
+    /// With the lowland 0.04 applied everywhere, torrents ran 16 m/s — real
+    /// streams top out ~3–4 (Joseph's field check); this is why.
     pub manning_n: f32,
     /// Precipitation (m/s per cell) drawn from the atmosphere store. ~1000× real
     /// climate-average. NOTE the budget: at this default, precip < infiltration +
@@ -308,14 +309,19 @@ impl WaterSim {
         // on a depth the constriction doesn't have. Standard in the
         // local-inertial literature (h_flow).
         #[inline]
-        fn pipe_step(f: f32, eta_i: f32, eta_j: f32, b_i: f32, b_j: f32, dt: f32, g: f32, n2g: f32, l: f32) -> f32 {
+        fn pipe_step(f: f32, eta_i: f32, eta_j: f32, b_i: f32, b_j: f32, dt: f32, g: f32, n_base: f32, l: f32) -> f32 {
             let hflow = eta_i.max(eta_j) - b_i.max(b_j);
             if hflow < 1e-4 {
                 return 0.0; // no conveyance over the sill
             }
-            let accel = (f + dt * g * hflow * (eta_i - eta_j)).max(0.0);
+            let head = eta_i - eta_j;
+            // Slope-dependent roughness (Jarrett 1984, linearized): steep
+            // reaches are rough — this is what holds torrents to nature's
+            // 2–4 m/s instead of Manning-lowland's 10+.
+            let n = (n_base + 1.6 * (head.max(0.0) / l)).min(0.13);
+            let accel = (f + dt * g * hflow * head).max(0.0);
             let v = accel / (hflow * l);
-            let f = accel / (1.0 + dt * n2g * v / hflow.powf(4.0 / 3.0));
+            let f = accel / (1.0 + dt * g * n * n * v / hflow.powf(4.0 / 3.0));
             // Breaking limit: natural steep streams self-organise to Fr ≈ 1
             // (Grant 1997) — surge fronts that outrun ~2× critical BREAK and
             // shed momentum as turbulence. Without this loss the roll waves a
@@ -323,7 +329,7 @@ impl WaterSim {
             // blobs; probe: near-dry gaps between 3 m lumps).
             f.min(2.0 * (g * hflow).sqrt() * hflow * l)
         }
-        let n2g = p.gravity * p.manning_n * p.manning_n;
+        let n_base = p.manning_n;
         let (mut fr_max, mut fr_wet, mut fr_sup) = (0.0f32, 0u32, 0u32);
         for y in 0..nx {
             for x in 0..nx {
@@ -338,22 +344,22 @@ impl WaterSim {
                 };
                 if x > 0 {
                     let j = i - 1;
-                    self.fl[i] = pipe_step(self.fl[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n2g, l);
+                    self.fl[i] = pipe_step(self.fl[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l);
                     probe(self.fl[i], self.bed[j] + self.depth[j], self.bed[j]);
                 }
                 if x < nx - 1 {
                     let j = i + 1;
-                    self.fr[i] = pipe_step(self.fr[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n2g, l);
+                    self.fr[i] = pipe_step(self.fr[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l);
                     probe(self.fr[i], self.bed[j] + self.depth[j], self.bed[j]);
                 }
                 if y > 0 {
                     let j = i - nx;
-                    self.ft[i] = pipe_step(self.ft[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n2g, l);
+                    self.ft[i] = pipe_step(self.ft[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l);
                     probe(self.ft[i], self.bed[j] + self.depth[j], self.bed[j]);
                 }
                 if y < nx - 1 {
                     let j = i + nx;
-                    self.fb[i] = pipe_step(self.fb[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n2g, l);
+                    self.fb[i] = pipe_step(self.fb[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l);
                     probe(self.fb[i], self.bed[j] + self.depth[j], self.bed[j]);
                 }
                 drop(probe);
