@@ -175,6 +175,15 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
     let face = view.face;
     let rain_mult: f32 = std::env::var("VIVARIUM_RAIN").ok().and_then(|s| s.parse().ok()).unwrap_or(10.0);
     let atmos_m: f64 = std::env::var("VIVARIUM_ATMOS").ok().and_then(|s| s.parse().ok()).unwrap_or(2.0);
+    // Periodic STORMS (Joseph): episodic rain is the channel-forming regime —
+    // between storms, convergence dominates and threads carve. "on,off" sim-secs.
+    let (storm_on, storm_off): (f32, f32) = std::env::var("VIVARIUM_STORM")
+        .ok()
+        .and_then(|v| {
+            let mut it = v.split(',').filter_map(|t| t.trim().parse::<f32>().ok());
+            Some((it.next()?, it.next()?))
+        })
+        .unwrap_or((400.0, 800.0));
     let macro_extra: u32 = std::env::var("VIVARIUM_MACRO_EXTRA").ok().and_then(|s| s.parse().ok()).unwrap_or(40);
     // Fine + water cover the WHOLE macro region (Joseph: one consistent border,
     // not nested ones you trip over while wandering). L21 = L19 × 4 exactly, so
@@ -262,13 +271,22 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
             }
         }
         let mut w = WaterSim::new(face, wl, (woi, woj), wnx, cell, wbed, atmos_m);
+        let mut sim_total: f32 = 0.0;
         loop {
             let t0 = std::time::Instant::now();
             // CFL dt from the CURRENT deepest water (the ocean is real water now);
             // aim ~8 sim-s per burst, capped so deep basins can't stall the loop.
             let dt = w.stable_dt(9.8);
             let substeps: u32 = ((8.0 / dt) as u32).clamp(1, 400);
-            let wp = WaterParams { precip: WaterParams::default().precip * rain_mult, dt, ..Default::default() };
+            // Storm phase from accumulated sim time.
+            let phase = sim_total % (storm_on + storm_off);
+            let raining = storm_off <= 0.0 || phase < storm_on;
+            let wp = WaterParams {
+                precip: if raining { WaterParams::default().precip * rain_mult } else { 0.0 },
+                dt,
+                ..Default::default()
+            };
+            sim_total += substeps as f32 * dt;
             let before = w.depth.clone();
             for _ in 0..substeps {
                 w.step(&wp);
@@ -1169,17 +1187,22 @@ fn build_water_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin
             // (at high rain the whole window carries a cm-scale draining sheet,
             // which at any uniform alpha reads as FOG — cut it, and fade alpha in
             // from the cutoff so pools don't pop).
-            wet[j * w + i] = depth > 0.06;
+            wet[j * w + i] = depth > 0.025;
             // Water surface = solid top + depth (baseline: the sea plane at y = 0).
             let surf = (f.height.get(i as isize, j as isize) + depth - SEA_LEVEL_M as f32) * vert;
-            let m = (1.0 - (-depth * WATER_ABSORB_PER_M).exp()) * ((depth - 0.06) / 0.08).clamp(0.0, 1.0);
+            // Depth-graded: riffles (5-10 cm) faint ribbons, streams strong,
+            // mm films still invisible — a shallow reach between pools must READ
+            // as the same stream (Joseph's "seeping" was riffles under the old
+            // cutoff).
+            let fade = ((depth - 0.025) / 0.1).clamp(0.0, 1.0);
+            let m = (1.0 - (-depth * WATER_ABSORB_PER_M).exp()).max(0.25) * fade;
             positions.push([px(i), surf, pz(j)]);
             normals.push([0.0, 1.0, 0.0]);
             colors.push([
                 WATER_SHALLOW[0] + (WATER_DEEP[0] - WATER_SHALLOW[0]) * m,
                 WATER_SHALLOW[1] + (WATER_DEEP[1] - WATER_SHALLOW[1]) * m,
                 WATER_SHALLOW[2] + (WATER_DEEP[2] - WATER_SHALLOW[2]) * m,
-                m.clamp(0.35, 0.95),
+                m.clamp(0.0, 0.95),
             ]);
         }
     }
