@@ -43,7 +43,9 @@ and `DESIGN.md`.
   generates a world of columns on the sphere, runs a real erosion stencil on
   materialized patches, and renders through its own view (`spikes/worldview`).
 - `spikes/worldview` — **the view over the frame** (depends on `vivarium-world`
-  ONLY), engine at slabs parity: ortho point-mesh + depth-shaded water, auto-pitch
+  ONLY). **Run it:** `cargo run --release -p vivarium-worldview` — phases run
+  automatically (macro erosion ~5 s → fine passes ~15 s → deluge to steady state
+  ~2-3 min → living storms); the HUD sim line narrates. Engine at slabs parity: ortho point-mesh + depth-shaded water, auto-pitch
   fan probe + look-up near-clip, floating origin, honest 2 m pawn + reticle +
   pixel-exact scale bar, HUD with relief range + per-rebuild **gen ms** (the
   memoization instrument — ~142 ms/rebuild at defaults is the number §11 caching
