@@ -1403,10 +1403,14 @@ fn terrain_update(mut commands: Commands, view: Res<View>, eroded: Res<Eroded>, 
     let tier_of = |x: usize, y: usize| {
         erosion::tier_at(CellId::from_face_ij(view.face, oi + x as u32, oj + y as u32, view.level), &eroded.0)
     };
-    let soil_of = |x: usize, y: usize| -> (f32, f32) {
-        water.0.as_ref().map_or((0.0, 0.0), |wr| {
+    let soil_of = |x: usize, y: usize| -> (f32, f32, f32) {
+        water.0.as_ref().map_or((0.0, 0.0, 0.0), |wr| {
             let c = CellId::from_face_ij(view.face, oi + x as u32, oj + y as u32, view.level);
-            (wr.colmation_at(c).unwrap_or(0.0) as f32, wr.sed_bed_m(c).unwrap_or(0.0) as f32)
+            (
+                wr.colmation_at(c).unwrap_or(0.0) as f32,
+                wr.sed_bed_m(c).unwrap_or(0.0) as f32,
+                wr.armor_at(c).unwrap_or(0.0) as f32,
+            )
         })
     };
     let turbidity_of = |x: usize, y: usize| -> f32 {
@@ -1481,7 +1485,7 @@ fn build_ground_mesh(
     vert: f32,
     tier_of: &dyn Fn(usize, usize) -> Option<u8>,
     tier_debug: bool,
-    soil_of: &dyn Fn(usize, usize) -> (f32, f32),
+    soil_of: &dyn Fn(usize, usize) -> (f32, f32, f32),
 ) -> Mesh {
     use vivarium_world::noise::hash01;
     // Fidelity tints (debug): violet = raw prior (unsimulated), blue = L19 macro,
@@ -1513,13 +1517,17 @@ fn build_ground_mesh(
             let c = ground_color(h(x, y) - SEA_LEVEL_M as f32);
             let mut col = [c[0] * m, c[1] * m, c[2] * m, 1.0];
             // Bed state from the live water sim (Joseph): settled alluvium reads
-            // SANDY; a colmated (pore-sealed, non-porous) bed reads MUDDY.
-            let (colm, alluvium) = soil_of(i, j);
+            // SANDY; a colmated (pore-sealed) bed reads MUDDY; an armored
+            // (coarse-lag) bed reads ROCKY grey.
+            let (colm, alluvium, armor) = soil_of(i, j);
             const SAND: [f32; 3] = [0.78, 0.70, 0.52];
             const MUD: [f32; 3] = [0.42, 0.35, 0.25];
+            const ROCK: [f32; 3] = [0.52, 0.50, 0.46];
             let ts = (alluvium / 0.3).clamp(0.0, 1.0) * 0.7;
             let tm = colm.clamp(0.0, 1.0) * 0.8;
+            let tr = armor.clamp(0.0, 1.0) * 0.6;
             for k in 0..3 {
+                col[k] += (ROCK[k] * m - col[k]) * tr;
                 col[k] += (SAND[k] * m - col[k]) * ts;
                 col[k] += (MUD[k] * m - col[k]) * tm;
             }
@@ -1630,11 +1638,18 @@ fn build_water_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin
                     best = Some(nk);
                 }
             }
+            // BANKS only: extend where the water surface is below this dry
+            // vertex's terrain (the plane buries into the hill and the depth
+            // test cuts it). At a drop-off lip the donor surface is ABOVE the
+            // downhill ground — extending there floats a specular sliver of
+            // water over the edge (the bright streaks along banks).
             if let Some(nk) = best {
-                positions[k][1] = positions[nk][1];
-                colors[k] = colors[nk];
-                normals[k] = normals[nk];
-                ext[k] = true;
+                if best_y <= positions[k][1] + 0.05 {
+                    positions[k][1] = positions[nk][1];
+                    colors[k] = colors[nk];
+                    normals[k] = normals[nk];
+                    ext[k] = true;
+                }
             }
         }
     }
@@ -1835,7 +1850,7 @@ fn maybe_screenshot(time: Res<Time>, mut commands: Commands, mut shot: Local<boo
         };
     }
     if t > settle && !*shot {
-        let path = PathBuf::from("/tmp/vivarium_worldview_shot.png");
+        let path = PathBuf::from(std::env::var("VIVARIUM_SHOT").unwrap_or_else(|_| "/tmp/vivarium_worldview_shot.png".into()));
         eprintln!("[worldview] SHOT_PATH={}", path.display());
         commands.spawn(Screenshot::primary_window()).observe(save_to_disk(path));
         *shot = true;
