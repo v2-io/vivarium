@@ -19,3 +19,5 @@ pub mod quantity;
 pub mod time;
 pub mod sphere;
 pub mod planet;
+pub mod material;
+pub mod column;

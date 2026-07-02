@@ -40,6 +40,12 @@ impl Unit {
     pub const MOLE: Unit = Unit::new(0, 0, 0, 0, 1);
     /// W/m² = kg·s⁻³ — the astronomy tier's insolation flux.
     pub const WATT_PER_M2: Unit = Unit::new(0, 1, -3, 0, 0);
+    /// kg·m⁻³ — mass density.
+    pub const KG_PER_M3: Unit = Unit::new(-3, 1, 0, 0, 0);
+    /// Pa = kg·m⁻¹·s⁻² — pressure / stress (cohesion, overburden, incision threshold).
+    pub const PASCAL: Unit = Unit::new(-1, 1, -2, 0, 0);
+    /// m² — area (permeability).
+    pub const M2: Unit = Unit::new(2, 0, 0, 0, 0);
 
     /// Dimension of a product (add exponents).
     pub const fn mul(self, o: Unit) -> Unit {
