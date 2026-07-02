@@ -618,8 +618,9 @@ fn water_refresh(mut commands: Commands, view: Res<View>, water: Res<WaterRes>, 
         for i in 0..view.w {
             let mut wtr = base[j * view.w + i];
             let cell = CellId::from_face_ij(view.face, oi + i as u32, oj + j as u32, view.level);
-            if let Some(d) = live.depth_m(cell) {
-                wtr = wtr.max(d as f32);
+            if let Some(surf) = live.surface_m(cell) {
+                // Surface-based, same as the full rebuild (see terrain_update).
+                wtr = wtr.max(surf as f32 - fields.height.get(i as isize, j as isize));
             }
             fields.water.set(i as isize, j as isize, wtr);
         }
@@ -628,7 +629,13 @@ fn water_refresh(mut commands: Commands, view: Res<View>, water: Res<WaterRes>, 
         commands.entity(e).despawn();
     }
     let cell = view.cell_m();
-    if let Some(mesh) = build_water_mesh(fields, view.w, cell, ts.anchor_m, (oi, oj), view.vert) {
+    let turbidity_of = |x: usize, y: usize| -> f32 {
+        let c = CellId::from_face_ij(view.face, oi + x as u32, oj + y as u32, view.level);
+        let s = live.suspended_m(c).unwrap_or(0.0);
+        let d = live.depth_m(c).unwrap_or(0.0).max(0.02);
+        ((s / d) as f32 * 8.0).clamp(0.0, 0.75)
+    };
+    if let Some(mesh) = build_water_mesh(fields, view.w, cell, ts.anchor_m, (oi, oj), view.vert, &turbidity_of) {
         ts.water = Some(commands.spawn((Mesh3d(meshes.add(mesh)), MeshMaterial3d(ts.water_mat.clone()), Transform::default())).id());
     }
 }
@@ -1137,16 +1144,27 @@ fn terrain_update(mut commands: Commands, view: Res<View>, eroded: Res<Eroded>, 
             base_water[j * view.w + i] = fields.water.get(i as isize, j as isize);
         }
     }
-    // Overlay the LIVE water tier: within its region, the sim's depth replaces
-    // the static sea-fill (take the max so the sea itself is never lost).
+    // Overlay the LIVE water tier — by SURFACE elevation, not by depth. The
+    // surface (bed + depth) is the physically continuous field; interpolating
+    // depth over view terrain that carries finer detail than the sim's bed
+    // shredded level pools into beads marching down the valleys (Joseph's
+    // "bubbles"). Render depth = sim surface − view terrain: level water is
+    // level, and fine terrain pokes through only where it truly stands proud.
+    // Honesty rule (Joseph): painted sub-sim detail is only shown where no
+    // physics has contradicted it. Where the water sim has meaningfully wetted
+    // a cell, ITS bed (smooth L21, carving included) is the ground truth — the
+    // L24 noise increment there depicts terrain the water never flowed over.
     if let Some(w) = &water.0 {
         for j in 0..view.w {
             for i in 0..view.w {
                 let cell = CellId::from_face_ij(view.face, oi + i as u32, oj + j as u32, view.level);
-                if let Some(d) = w.depth_m(cell) {
-                    let cur = fields.water.get(i as isize, j as isize);
-                    if (d as f32) > cur {
-                        fields.water.set(i as isize, j as isize, d as f32);
+                if let (Some(surf), Some(bed), Some(dsim)) = (w.surface_m(cell), w.bed_m(cell), w.depth_m(cell)) {
+                    if dsim > 0.05 {
+                        fields.height.set(i as isize, j as isize, bed as f32);
+                    }
+                    let d = surf as f32 - fields.height.get(i as isize, j as isize);
+                    if d > fields.water.get(i as isize, j as isize) {
+                        fields.water.set(i as isize, j as isize, d);
                     }
                 }
             }
@@ -1161,9 +1179,23 @@ fn terrain_update(mut commands: Commands, view: Res<View>, eroded: Res<Eroded>, 
     let tier_of = |x: usize, y: usize| {
         erosion::tier_at(CellId::from_face_ij(view.face, oi + x as u32, oj + y as u32, view.level), &eroded.0)
     };
-    let ground = build_ground_mesh(&fields, view.w, cell, anchor, (oi, oj), view.vert, &tier_of, view.tier_debug);
+    let soil_of = |x: usize, y: usize| -> (f32, f32) {
+        water.0.as_ref().map_or((0.0, 0.0), |wr| {
+            let c = CellId::from_face_ij(view.face, oi + x as u32, oj + y as u32, view.level);
+            (wr.colmation_at(c).unwrap_or(0.0) as f32, wr.sed_bed_m(c).unwrap_or(0.0) as f32)
+        })
+    };
+    let turbidity_of = |x: usize, y: usize| -> f32 {
+        water.0.as_ref().map_or(0.0, |wr| {
+            let c = CellId::from_face_ij(view.face, oi + x as u32, oj + y as u32, view.level);
+            let s = wr.suspended_m(c).unwrap_or(0.0);
+            let d = wr.depth_m(c).unwrap_or(0.0).max(0.02);
+            ((s / d) as f32 * 8.0).clamp(0.0, 0.75)
+        })
+    };
+    let ground = build_ground_mesh(&fields, view.w, cell, anchor, (oi, oj), view.vert, &tier_of, view.tier_debug, &soil_of);
     ts.ground = Some(commands.spawn((Mesh3d(meshes.add(ground)), MeshMaterial3d(ts.ground_mat.clone()), Transform::default())).id());
-    if let Some(water) = build_water_mesh(&fields, view.w, cell, anchor, (oi, oj), view.vert) {
+    if let Some(water) = build_water_mesh(&fields, view.w, cell, anchor, (oi, oj), view.vert, &turbidity_of) {
         ts.water = Some(commands.spawn((Mesh3d(meshes.add(water)), MeshMaterial3d(ts.water_mat.clone()), Transform::default())).id());
     }
 
@@ -1225,6 +1257,7 @@ fn build_ground_mesh(
     vert: f32,
     tier_of: &dyn Fn(usize, usize) -> Option<u8>,
     tier_debug: bool,
+    soil_of: &dyn Fn(usize, usize) -> (f32, f32),
 ) -> Mesh {
     use vivarium_world::noise::hash01;
     // Fidelity tints (debug): violet = raw prior (unsimulated), blue = L19 macro,
@@ -1255,6 +1288,17 @@ fn build_ground_mesh(
             let m = 0.88 + 0.24 * hash01(7, gi, gj) as f32;
             let c = ground_color(h(x, y) - SEA_LEVEL_M as f32);
             let mut col = [c[0] * m, c[1] * m, c[2] * m, 1.0];
+            // Bed state from the live water sim (Joseph): settled alluvium reads
+            // SANDY; a colmated (pore-sealed, non-porous) bed reads MUDDY.
+            let (colm, alluvium) = soil_of(i, j);
+            const SAND: [f32; 3] = [0.78, 0.70, 0.52];
+            const MUD: [f32; 3] = [0.42, 0.35, 0.25];
+            let ts = (alluvium / 0.3).clamp(0.0, 1.0) * 0.7;
+            let tm = colm.clamp(0.0, 1.0) * 0.8;
+            for k in 0..3 {
+                col[k] += (SAND[k] * m - col[k]) * ts;
+                col[k] += (MUD[k] * m - col[k]) * tm;
+            }
             if tier_debug {
                 let t = tier_tint(tier_of(i, j));
                 for k in 0..3 {
@@ -1284,7 +1328,7 @@ fn build_ground_mesh(
 /// Translucent water point-mesh at the sea surface, depth-shaded (Beer–Lambert per
 /// metre). Quads only where all four corners are wet (slabs' known 1-cell shore
 /// inset — acceptable, noted).
-fn build_water_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin: (u32, u32), vert: f32) -> Option<Mesh> {
+fn build_water_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin: (u32, u32), vert: f32, turbidity_of: &dyn Fn(usize, usize) -> f32) -> Option<Mesh> {
     let px = |i: usize| ((origin.0 as f64 + i as f64 + 0.5) * cell - anchor.x) as f32;
     let pz = |j: usize| ((origin.1 as f64 + j as f64 + 0.5) * cell - anchor.y) as f32;
 
@@ -1310,12 +1354,19 @@ fn build_water_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin
             let m = (1.0 - (-depth * WATER_ABSORB_PER_M).exp()).max(0.25) * fade;
             positions.push([px(i), surf, pz(j)]);
             normals.push([0.0, 1.0, 0.0]);
-            colors.push([
+            // Suspended load makes water TURBID: silty brown, green suppressed
+            // (Joseph). t=0 clear mountain water, t→1 flood-brown.
+            let t = turbidity_of(i, j);
+            const SILT: [f32; 3] = [0.52, 0.42, 0.26];
+            let mut rgb = [
                 WATER_SHALLOW[0] + (WATER_DEEP[0] - WATER_SHALLOW[0]) * m,
                 WATER_SHALLOW[1] + (WATER_DEEP[1] - WATER_SHALLOW[1]) * m,
                 WATER_SHALLOW[2] + (WATER_DEEP[2] - WATER_SHALLOW[2]) * m,
-                m.clamp(0.0, 0.95),
-            ]);
+            ];
+            for k in 0..3 {
+                rgb[k] += (SILT[k] - rgb[k]) * t;
+            }
+            colors.push([rgb[0], rgb[1], rgb[2], m.clamp(0.0, 0.95)]);
         }
     }
     let mut indices: Vec<u32> = Vec::new();

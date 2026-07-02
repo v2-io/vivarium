@@ -91,6 +91,10 @@ pub struct WaterParams {
     pub baseflow: f32,
     /// Discharge (m²/s) at which channel sealing halves infiltration.
     pub seal_q: f32,
+    /// Fines needed to fully plug the bed's pores (m of deposited sediment).
+    /// A few mm of silt seals a streambed (real colmation depths are mm–cm);
+    /// scour re-opens it at the same exchange rate.
+    pub plug_depth: f32,
 }
 
 impl Default for WaterParams {
@@ -112,6 +116,7 @@ impl Default for WaterParams {
             gw_capacity: 0.3,
             baseflow: 2.0e-5,
             seal_q: 0.01,
+            plug_depth: 0.005,
         }
     }
 }
@@ -131,6 +136,15 @@ pub struct WaterSim {
     pub sediment: Vec<f32>,
     /// Groundwater store per cell (m of water, 0..gw_capacity). In the total.
     pub groundwater: Vec<f32>,
+    /// Loose settled sediment (alluvium) resting on the bed, m — bookkeeping
+    /// over `bed` (which already carries the mass): deposits add, scour removes
+    /// it first. It is what makes a bed read sandy.
+    pub sed_bed: Vec<f32>,
+    /// Colmation 0..1: fraction of bed pores plugged by fines. PERSISTENT —
+    /// a sealed bed stays sealed between storms (why dry riverbeds refill
+    /// fast) until a flood's scour re-opens it. Joseph's "fine particles
+    /// cutting off absorbancy", as state rather than an instantaneous proxy.
+    pub colmation: Vec<f32>,
     /// Counted reservoirs (m of water, cell-area units): conservation partners.
     pub atmosphere: f64,
     pub ocean: f64,
@@ -161,6 +175,8 @@ impl WaterSim {
             depth,
             sediment: z.clone(),
             groundwater: z.clone(),
+            sed_bed: z.clone(),
+            colmation: z.clone(),
             atmosphere: atmosphere_m * (nx * nx) as f64,
             ocean: 0.0,
             fl: z.clone(),
@@ -298,6 +314,8 @@ impl WaterSim {
                         let dp = self.sediment[i].min(max_step);
                         self.bed[i] += dp;
                         self.sediment[i] -= dp;
+                        self.sed_bed[i] += dp;
+                        self.colmation[i] = (self.colmation[i] + dp / p.plug_depth).min(1.0);
                         continue;
                     }
                     let vx = ((if x > 0 { self.fr[i - 1] } else { 0.0 }) + self.fr[i]
@@ -325,10 +343,15 @@ impl WaterSim {
                         let e = ((capacity - s0) * p.sed_erode * dt).min(max_step);
                         self.bed[i] -= e;
                         self.sediment[i] += e;
+                        // Scour strips the alluvium cover and re-opens the pores.
+                        self.sed_bed[i] = (self.sed_bed[i] - e).max(0.0);
+                        self.colmation[i] = (self.colmation[i] - e / p.plug_depth).max(0.0);
                     } else if s0 > capacity {
                         let dp = ((s0 - capacity) * p.sed_deposit * dt).min(max_step).min(s0);
                         self.bed[i] += dp;
                         self.sediment[i] -= dp;
+                        self.sed_bed[i] += dp;
+                        self.colmation[i] = (self.colmation[i] + dp / p.plug_depth).min(1.0);
                     }
                 }
             }
@@ -375,7 +398,10 @@ impl WaterSim {
                     if d > 0.0 && self.groundwater[i] < p.gw_capacity {
                         let out = self.fl[i] + self.fr[i] + self.ft[i] + self.fb[i];
                         let q = out / l; // specific discharge proxy, m²/s
-                        let seal = 1.0 / (1.0 + q / p.seal_q);
+                        // Two bed phenomena (Joseph): the flow itself (armour /
+                        // pressure, instantaneous) and colmation (plugged pores,
+                        // persistent). Never fully watertight — 2% leaks.
+                        let seal = (1.0 / (1.0 + q / p.seal_q)) * (1.0 - self.colmation[i]).max(0.02);
                         let take = (p.infiltration * seal * dt).min(d).min(p.gw_capacity - self.groundwater[i]);
                         self.depth[i] -= take;
                         self.groundwater[i] += take;
@@ -436,6 +462,10 @@ impl WaterSim {
             oj: self.origin.1,
             nx: self.nx,
             depth: self.depth.clone(),
+            bed: self.bed.clone(),
+            sediment: self.sediment.clone(),
+            sed_bed: self.sed_bed.clone(),
+            colmation: self.colmation.clone(),
         }
     }
 }
@@ -450,10 +480,14 @@ pub struct WaterRegion {
     pub oj: u32,
     pub nx: usize,
     pub depth: Vec<f32>,
+    pub bed: Vec<f32>,
+    pub sediment: Vec<f32>,
+    pub sed_bed: Vec<f32>,
+    pub colmation: Vec<f32>,
 }
 
 impl WaterRegion {
-    pub fn depth_m(&self, cell: CellId) -> Option<f64> {
+    fn bilinear(&self, field: &[f32], cell: CellId) -> Option<f64> {
         let (face, i, j, level) = cell.to_face_ij();
         if face != self.face || level < self.level {
             return None;
@@ -466,11 +500,46 @@ impl WaterRegion {
         }
         let (x0, y0) = (gx.floor() as usize, gy.floor() as usize);
         let (fx, fy) = (gx - x0 as f64, gy - y0 as f64);
-        let at = |x: usize, y: usize| self.depth[y * self.nx + x] as f64;
+        let at = |x: usize, y: usize| field[y * self.nx + x] as f64;
         Some(at(x0, y0) * (1.0 - fx) * (1.0 - fy)
             + at(x0 + 1, y0) * fx * (1.0 - fy)
             + at(x0, y0 + 1) * (1.0 - fx) * fy
             + at(x0 + 1, y0 + 1) * fx * fy)
+    }
+
+    pub fn depth_m(&self, cell: CellId) -> Option<f64> {
+        self.bilinear(&self.depth, cell)
+    }
+
+    /// Water SURFACE elevation (bed + depth, m). The surface is the physically
+    /// continuous field — sample THIS when rendering over terrain of a different
+    /// LOD; interpolating depth over a mismatched bed shreds a level pool into
+    /// beads (Joseph's "bubbles of water flowing in waves").
+    pub fn surface_m(&self, cell: CellId) -> Option<f64> {
+        Some(self.bilinear(&self.bed, cell)? + self.bilinear(&self.depth, cell)?)
+    }
+
+    /// The SIMULATED bed elevation (m) — authoritative where the water has
+    /// flowed: rendering painted sub-sim detail beneath simulated water shows
+    /// terrain the physics never saw (dishonest; Joseph). Sample this for
+    /// ground height in wet cells.
+    pub fn bed_m(&self, cell: CellId) -> Option<f64> {
+        self.bilinear(&self.bed, cell)
+    }
+
+    /// Suspended-sediment load (m of solid), for turbidity.
+    pub fn suspended_m(&self, cell: CellId) -> Option<f64> {
+        self.bilinear(&self.sediment, cell)
+    }
+
+    /// Settled alluvium thickness (m) — sandy beds.
+    pub fn sed_bed_m(&self, cell: CellId) -> Option<f64> {
+        self.bilinear(&self.sed_bed, cell)
+    }
+
+    /// Pore-plug fraction 0..1 — muddy sealed beds.
+    pub fn colmation_at(&self, cell: CellId) -> Option<f64> {
+        self.bilinear(&self.colmation, cell)
     }
 }
 
