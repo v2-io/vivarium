@@ -9,13 +9,14 @@
 # wrong.
 [workspace]
 resolver = "2"
-members = ["crates/vivarium-core", "crates/vivarium-world", "crates/vivarium-app", "spikes/bevy-voxel", "spikes/bevy-iso", "spikes/iso-voxels", "spikes/topdown", "spikes/tilemap", "spikes/slabs", "archive/vivarium-godot"]
-# The Godot voxel-view spike chose Bevy (see spikes/FINDINGS.md) and is archived.
-# Its gdext bridge is *temporarily revived* as a member so the current geology tier
-# can be viewed through Godot — the archived bridge predated the erosion stack and
-# only ever showed raw-FBM terrain. The Godot project dir (archive/godot-voxel) is
-# not a cargo crate; the rest of archive/ stays out of the build via this exclude.
-exclude = ["archive/godot-voxel", "archive/iso-tiles"]
+# One core, many views (DESIGN.md): `vivarium-core` (the sim) + `vivarium-world`
+# (the clean-room frame it will migrate onto) + views. `spikes/slabs` is the
+# current state-of-the-art exploration view (2026-07-01) and the only live spike;
+# the rest were archived as superseded — see `spikes/FINDINGS.md` and `ORIENTATION.md`.
+members = ["crates/vivarium-core", "crates/vivarium-world", "crates/vivarium-app", "spikes/slabs"]
+# Everything under archive/ is out of the build. (Excluded so cargo never tries to
+# resolve their `workspace = true` inheritances.)
+exclude = ["archive/godot-voxel", "archive/iso-tiles", "archive/vivarium-godot", "archive/bevy-voxel", "archive/bevy-iso", "archive/iso-voxels", "archive/topdown", "archive/tilemap"]
 
 [workspace.package]
 edition = "2021"
