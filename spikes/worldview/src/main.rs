@@ -1631,7 +1631,11 @@ fn build_water_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin
             // as the same stream (Joseph's "seeping" was riffles under the old
             // cutoff).
             let fade = ((depth - 0.025) / 0.1).clamp(0.0, 1.0);
-            let m = (1.0 - (-depth * WATER_ABSORB_PER_M).exp()).max(0.18) * fade;
+            // DECOUPLED (opacity kept creeping when hue and alpha shared one
+            // curve): alpha is transmission (Beer–Lambert, how much bed shows
+            // through), hue is depth (pale shallows -> deep blue), separately.
+            let alpha = ((1.0 - (-depth * WATER_ABSORB_PER_M).exp()) * fade).clamp(0.0, 0.80);
+            let m = (1.0 - (-depth * 0.5).exp()) * fade;
             positions.push([px(i), surf, pz(j)]);
             let (x, y) = (i as isize, j as isize);
             let nrm = Vec3::new(sv(x - 1, y) - sv(x + 1, y), 2.0 * cell as f32, sv(x, y - 1) - sv(x, y + 1)).normalize();
