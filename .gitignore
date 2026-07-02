@@ -3,6 +3,12 @@
 *.swp
 .idea/
 .vscode/
+.obsidian/
+
+# Large reference assets kept locally, not in git history.
+# The 2D-circle tileset (32 MB) is a copy of ~/src/neworld's; pull it from there
+# if a spike needs it, rather than bloating this repo's history.
+ref/2d-circle-graphic/
 
 # Rust / Bevy (active once an engine is chosen)
 /target/
