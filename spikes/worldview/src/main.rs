@@ -1413,7 +1413,7 @@ fn compass(yaw: f32) -> &'static str {
     L[(((deg + 22.5) / 45.0) as usize) % 8]
 }
 
-fn hud_update(view: Res<View>, ts: Res<TerrainState>, meta: Res<TierMeta>, wmeta: Res<WaterMeta>, eroded: Res<Eroded>, diag: Res<bevy::diagnostic::DiagnosticsStore>, mut q: Query<&mut Text, With<HudText>>) {
+fn hud_update(view: Res<View>, ts: Res<TerrainState>, meta: Res<TierMeta>, wmeta: Res<WaterMeta>, water: Res<WaterRes>, eroded: Res<Eroded>, diag: Res<bevy::diagnostic::DiagnosticsStore>, mut q: Query<&mut Text, With<HudText>>) {
     let fps = diag.get(&bevy::diagnostic::FrameTimeDiagnosticsPlugin::FPS).and_then(|d| d.smoothed()).unwrap_or(0.0);
     let cell = view.cell_m();
     let span_m = view.w as f64 * cell;
@@ -1454,7 +1454,22 @@ fn hud_update(view: Res<View>, ts: Res<TerrainState>, meta: Res<TierMeta>, wmeta
             .0
             .map(|(_, rate, delta, total, settling, (fr_max, fr_sup))| {
                 let phase = if settling { " SETTLING" } else { "" };
-                format!("   W {total:.0}ss ~{rate:.1}s/s d{:.1}mm Fr{fr_max:.1}/{:.0}%{phase}", delta * 1000.0, fr_sup * 100.0)
+                // Pawn-local hydrology (Joseph): everything about the water at
+                // the spot the pawn is standing, when it is standing in water.
+                let local = water.0.as_ref().and_then(|wr| {
+                    let c = CellId::from_face_ij(view.face, view.focus.x as u32, view.focus.y as u32, view.level);
+                    let d = wr.depth_m(c)?;
+                    if d < 0.005 {
+                        return None;
+                    }
+                    let v = wr.speed_m_s(c).unwrap_or(0.0);
+                    let fr = v / (9.8 * d).sqrt().max(1e-6);
+                    let susp = wr.suspended_m(c).unwrap_or(0.0);
+                    let sand = wr.sed_bed_m(c).unwrap_or(0.0);
+                    let seal = wr.colmation_at(c).unwrap_or(0.0);
+                    Some(format!("\nPAWN IN WATER  d {d:.2} m  v {v:.2} m/s  Fr {fr:.2}  susp {:.0} mm  alluvium {sand:.2} m  seal {:.0}%", susp * 1000.0, seal * 100.0))
+                }).unwrap_or_default();
+                format!("   W {total:.0}ss ~{rate:.1}s/s d{:.1}mm Fr{fr_max:.1}/{:.0}%{phase}{local}", delta * 1000.0, fr_sup * 100.0)
             })
             .unwrap_or_default();
         format!("sim {}{water_txt}   screen newest {newest_txt} oldest {oldest_txt}{}", tiers.join("  "), if view.tier_debug { "   [T]int ON" } else { "" })

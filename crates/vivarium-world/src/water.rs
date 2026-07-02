@@ -515,7 +515,20 @@ impl WaterSim {
 
     /// Snapshot for sampling by views.
     pub fn to_region(&self) -> WaterRegion {
+        // Net velocity per cell, for local (pawn) instrumentation.
+        let l = self.cell_m;
+        let n = self.nx * self.nx;
+        let (mut vx, mut vy) = (vec![0.0f32; n], vec![0.0f32; n]);
+        for i in 0..n {
+            let d = self.depth[i];
+            if d > 1e-3 {
+                vx[i] = (self.fr[i] - self.fl[i]) / (d * l);
+                vy[i] = (self.fb[i] - self.ft[i]) / (d * l);
+            }
+        }
         WaterRegion {
+            vx,
+            vy,
             face: self.face,
             level: self.level,
             oi: self.origin.0,
@@ -544,9 +557,16 @@ pub struct WaterRegion {
     pub sediment: Vec<f32>,
     pub sed_bed: Vec<f32>,
     pub colmation: Vec<f32>,
+    pub vx: Vec<f32>,
+    pub vy: Vec<f32>,
 }
 
 impl WaterRegion {
+    /// Net flow speed (m/s) — pawn-local instrumentation.
+    pub fn speed_m_s(&self, cell: CellId) -> Option<f64> {
+        let (x, y) = (self.bilinear(&self.vx, cell)?, self.bilinear(&self.vy, cell)?);
+        Some((x * x + y * y).sqrt())
+    }
     fn bilinear(&self, field: &[f32], cell: CellId) -> Option<f64> {
         let (face, i, j, level) = cell.to_face_ij();
         if face != self.face || level < self.level {
