@@ -118,6 +118,135 @@ struct WaterMsg {
 /// Nominal years per erosion epoch — a stated calibration constant (the epoch is
 /// unitless in the solver; this is the display anchor for aging speed).
 const EPOCH_YEARS: f32 = 100.0;
+
+/// Physics/recipe version for the fill cache — the crude rung of §12's
+/// recipe-hash: BUMP THIS whenever erosion or water physics changes, or stale
+/// caches will serve worlds the current algorithms would not produce.
+const FILL_ALGO_VERSION: &str = "2026-07-03a";
+
+/// The FILL CACHE (first rung of DESIGN-REDUX §12–13): the filled world —
+/// eroded tiers + steady-state water — is a pure function of its parameters,
+/// so it is computed once per parameter-set and reloaded on every relaunch
+/// (the fill costs tens of minutes; reloading costs seconds, and the LIVING
+/// phase — the fun one — becomes the default experience). VIVARIUM_NOCACHE=1
+/// bypasses. Format: local-machine binary, native endianness, versioned magic.
+mod fill_cache {
+    use std::io::{Read, Write};
+    use std::path::PathBuf;
+    use vivarium_world::erosion::ErodedRegion;
+    use vivarium_world::sphere::Face;
+    use vivarium_world::water::WaterSim;
+
+    const MAGIC: &[u8; 8] = b"VIVWF001";
+
+    pub fn path(key: &str) -> PathBuf {
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        use std::hash::{Hash, Hasher};
+        key.hash(&mut h);
+        let dir = dirs_cache().join("vivarium").join("worldview");
+        let _ = std::fs::create_dir_all(&dir);
+        dir.join(format!("fill-{:016x}.bin", h.finish()))
+    }
+
+    fn dirs_cache() -> PathBuf {
+        std::env::var("XDG_CACHE_HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".into())).join(".cache"))
+    }
+
+    fn put_f32s(out: &mut Vec<u8>, v: &[f32]) {
+        out.extend_from_slice(&(v.len() as u64).to_le_bytes());
+        for x in v {
+            out.extend_from_slice(&x.to_le_bytes());
+        }
+    }
+
+    fn get_f32s(inp: &mut &[u8]) -> Option<Vec<f32>> {
+        let n = u64::from_le_bytes(take(inp, 8)?.try_into().ok()?) as usize;
+        let mut v = Vec::with_capacity(n);
+        for _ in 0..n {
+            v.push(f32::from_le_bytes(take(inp, 4)?.try_into().ok()?));
+        }
+        Some(v)
+    }
+
+    fn take<'a>(inp: &mut &'a [u8], n: usize) -> Option<&'a [u8]> {
+        if inp.len() < n {
+            return None;
+        }
+        let (a, b) = inp.split_at(n);
+        *inp = b;
+        Some(a)
+    }
+
+    pub fn save(key: &str, tiers: &[ErodedRegion], w: &WaterSim) {
+        let mut out = Vec::new();
+        out.extend_from_slice(MAGIC);
+        out.extend_from_slice(&(tiers.len() as u32).to_le_bytes());
+        for t in tiers {
+            out.push(t.face as u8);
+            out.push(t.level);
+            out.extend_from_slice(&t.oi.to_le_bytes());
+            out.extend_from_slice(&t.oj.to_le_bytes());
+            put_f32s(&mut out, &t.h);
+        }
+        out.push(w.level);
+        out.extend_from_slice(&w.origin.0.to_le_bytes());
+        out.extend_from_slice(&w.origin.1.to_le_bytes());
+        out.extend_from_slice(&w.cell_m.to_le_bytes());
+        out.extend_from_slice(&w.atmosphere.to_le_bytes());
+        out.extend_from_slice(&w.ocean.to_le_bytes());
+        for f in [&w.bed, &w.depth, &w.sediment, &w.groundwater, &w.sed_bed, &w.colmation, &w.armor] {
+            put_f32s(&mut out, f);
+        }
+        let p = path(key);
+        let tmp = p.with_extension("tmp");
+        if std::fs::File::create(&tmp).and_then(|mut f| f.write_all(&out)).is_ok() {
+            let _ = std::fs::rename(&tmp, &p);
+            eprintln!("[worldview] fill state cached → {} ({:.1} MB)", p.display(), out.len() as f64 / 1e6);
+        }
+    }
+
+    pub fn load(key: &str, face: Face) -> Option<(Vec<ErodedRegion>, WaterSim)> {
+        let mut bytes = Vec::new();
+        std::fs::File::open(path(key)).ok()?.read_to_end(&mut bytes).ok()?;
+        let mut inp = bytes.as_slice();
+        if take(&mut inp, 8)? != MAGIC {
+            return None;
+        }
+        let ntiers = u32::from_le_bytes(take(&mut inp, 4)?.try_into().ok()?);
+        let mut tiers = Vec::new();
+        for _ in 0..ntiers {
+            let _face = take(&mut inp, 1)?[0];
+            let level = take(&mut inp, 1)?[0];
+            let oi = u32::from_le_bytes(take(&mut inp, 4)?.try_into().ok()?);
+            let oj = u32::from_le_bytes(take(&mut inp, 4)?.try_into().ok()?);
+            let h = get_f32s(&mut inp)?;
+            let nx = (h.len() as f64).sqrt() as usize;
+            tiers.push(ErodedRegion { face, level, oi, oj, nx, h });
+        }
+        let level = take(&mut inp, 1)?[0];
+        let oi = u32::from_le_bytes(take(&mut inp, 4)?.try_into().ok()?);
+        let oj = u32::from_le_bytes(take(&mut inp, 4)?.try_into().ok()?);
+        let cell = f32::from_le_bytes(take(&mut inp, 4)?.try_into().ok()?);
+        let atmosphere = f64::from_le_bytes(take(&mut inp, 8)?.try_into().ok()?);
+        let ocean = f64::from_le_bytes(take(&mut inp, 8)?.try_into().ok()?);
+        let bed = get_f32s(&mut inp)?;
+        let nx = (bed.len() as f64).sqrt() as usize;
+        let mut w = WaterSim::new(face, level, (oi, oj), nx, cell, bed, 0.0);
+        w.depth = get_f32s(&mut inp)?;
+        w.sediment = get_f32s(&mut inp)?;
+        w.groundwater = get_f32s(&mut inp)?;
+        w.sed_bed = get_f32s(&mut inp)?;
+        w.colmation = get_f32s(&mut inp)?;
+        w.armor = get_f32s(&mut inp)?;
+        w.atmosphere = atmosphere;
+        w.ocean = ocean;
+        // Momentum (pipe fluxes) is not persisted: it re-spins in a few sim-s.
+        w.rebaseline_budget();
+        Some((tiers, w))
+    }
+}
 #[derive(Resource)]
 struct TierRx(Mutex<std::sync::mpsc::Receiver<TierMsg>>);
 #[derive(Resource)]
@@ -229,8 +358,38 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
     std::thread::spawn(move || {
         let mut tiers = base;
 
+        // The fill is a pure function of these parameters (§12): key it,
+        // reload it, never pay for the same fill twice. VIVARIUM_NOCACHE=1
+        // forces a recompute (e.g. to watch the fill happen).
+        let wl: u8 = std::env::var("VIVARIUM_WATER_LEVEL").ok().and_then(|s| s.parse().ok()).unwrap_or(21).clamp(21, 22);
+        // VIVARIUM_FILL_CAP: hard ceiling on fill sim-seconds (default 6000).
+        // Part of the cache key — an early-capped fill is a DIFFERENT world
+        // state than a converged one (§12: under-keying is silent corruption).
+        let fill_cap: f32 = std::env::var("VIVARIUM_FILL_CAP").ok().and_then(|s| s.parse().ok()).unwrap_or(6000.0);
+        let key = {
+            let m = tiers.iter().find(|r| r.level == 19);
+            format!(
+                "{FILL_ALGO_VERSION}|{face:?}|macro {},{},{}x{}e|fine {fine_nx_env:?} {fine_total}e|wl{wl}|atm{atmos_m}|deluge{}|cap{fill_cap}",
+                m.map(|t| t.oi).unwrap_or(0),
+                m.map(|t| t.oj).unwrap_or(0),
+                m.map(|t| t.nx).unwrap_or(0),
+                FluvialParams::default().epochs + macro_extra,
+                rain_mult.max(60.0),
+            )
+        };
+        let nocache = std::env::var("VIVARIUM_NOCACHE").map(|v| v == "1").unwrap_or(false);
+        let cached = if nocache { None } else { fill_cache::load(&key, face) };
+        let cache_hit = cached.is_some();
+        if let Some((ctiers, _)) = &cached {
+            eprintln!("[worldview] fill cache HIT — skipping erosion + fill, living phase immediately");
+            for r in ctiers {
+                let _ = tx.send(TierMsg { region: r.clone(), epochs_total: FluvialParams::default().epochs + macro_extra, sim_years: 0.0, delta_m: 0.0 });
+            }
+            tiers = ctiers.clone();
+        }
+
         // Phase 1 — more macro history, watchable in chunks.
-        if let Some(t0) = tiers.iter().find(|r| r.level == 19) {
+        if let Some(t0) = tiers.iter().find(|r| r.level == 19).filter(|_| !cache_hit) {
             let base_epochs = FluvialParams::default().epochs;
             let mut f19 = Fluvial::from_region(t0);
             let mut done = 0u32;
@@ -248,56 +407,57 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
             }
         }
 
-        // Phase 2 — fine passes over the macro's full footprint (or a
-        // focus-centred override), pinned to the macro low band.
-        let macro_tier = tiers.iter().find(|r| r.level == 19).cloned();
-        let (oi, oj, fine_nx) = match (&macro_tier, fine_nx_env) {
-            (Some(t0), None) => (t0.oi * 4, t0.oj * 4, t0.nx * 4),
-            (_, Some(nx)) => {
-                let half = (nx / 2) as i64;
-                (((f21.x as i64) - half).max(0) as u32, ((f21.y as i64) - half).max(0) as u32, nx)
+        // Phase 2 (fine passes over the macro footprint, pinned) and phase-3
+        // construction both live in the cache-MISS branch: a hit already
+        // carries the fine tiers and the steady-state water. (The first cut
+        // ran phase 2's `(None,None) => return` on hits — the worker died and
+        // the world had no water at all. Caught by the two-leg cache test.)
+        let mut w = if let Some((_, cw)) = cached {
+            cw
+        } else {
+            let macro_tier = tiers.iter().find(|r| r.level == 19).cloned();
+            let (oi, oj, fine_nx) = match (&macro_tier, fine_nx_env) {
+                (Some(t0), None) => (t0.oi * 4, t0.oj * 4, t0.nx * 4),
+                (_, Some(nx)) => {
+                    let half = (nx / 2) as i64;
+                    (((f21.x as i64) - half).max(0) as u32, ((f21.y as i64) - half).max(0) as u32, nx)
+                }
+                (None, None) => return,
+            };
+            let coarser = tiers.clone();
+            let mut fine = Fluvial::from_surface(face, 21, oi, oj, fine_nx, |c| erosion::surface_at(c, &coarser));
+            let parent = tiers.iter().find(|r| r.level == 19).cloned();
+            let mut done = 0u32;
+            while done < fine_total {
+                let chunk = 2.min(fine_total - done);
+                fine.erode(&FluvialParams { epochs: chunk, ..Default::default() });
+                if let Some(par) = &parent {
+                    fine.pin_block_means(19, |c| par.surface_bilinear_m(c).unwrap_or_else(|| vivarium_world::gen::surface_prior_m(c, 19)));
+                }
+                done += chunk;
+                let region = fine.to_region();
+                tiers.retain(|r| r.level != 21);
+                tiers.push(region.clone());
+                tiers.sort_by_key(|r| r.level);
+                if tx.send(TierMsg { region, epochs_total: done, sim_years: chunk as f32 * EPOCH_YEARS, delta_m: fine.last_delta_m }).is_err() {
+                    return;
+                }
             }
-            (None, None) => return,
-        };
-        let coarser = tiers.clone();
-        let mut fine = Fluvial::from_surface(face, 21, oi, oj, fine_nx, |c| erosion::surface_at(c, &coarser));
-        let parent = tiers.iter().find(|r| r.level == 19).cloned();
-        let mut done = 0u32;
-        while done < fine_total {
-            let chunk = 2.min(fine_total - done);
-            fine.erode(&FluvialParams { epochs: chunk, ..Default::default() });
-            if let Some(par) = &parent {
-                fine.pin_block_means(19, |c| par.surface_bilinear_m(c).unwrap_or_else(|| vivarium_world::gen::surface_prior_m(c, 19)));
-            }
-            done += chunk;
-            let region = fine.to_region();
-            tiers.retain(|r| r.level != 21);
-            tiers.push(region.clone());
-            tiers.sort_by_key(|r| r.level);
-            if tx.send(TierMsg { region, epochs_total: done, sim_years: chunk as f32 * EPOCH_YEARS, delta_m: fine.last_delta_m }).is_err() {
-                return;
-            }
-        }
 
-        // Phase 3 — RAIN ONLY, forever. Fixed anchor; the water's carving is the
-        // only process still moving the bed (written back so the view shows it).
-        // VIVARIUM_WATER_LEVEL (21 or 22): finer water needs a CFL-smaller dt
-        // (cost ~8× per level) and 4× memory — 22 (2.4 m cells over the full
-        // region, ~470 MB) is the honest ceiling until the nested water
-        // telescope exists. Bed is sampled through the full telescope, so finer
-        // water flows over correspondingly finer bed detail.
-        let wl: u8 = std::env::var("VIVARIUM_WATER_LEVEL").ok().and_then(|s| s.parse().ok()).unwrap_or(21).clamp(21, 22);
-        let wscale = 1u32 << (wl - 21);
-        let (woi, woj, wnx) = (oi * wscale, oj * wscale, fine_nx * wscale as usize);
-        let cell = vivarium_world::sample::cell_size_m(wl, vivarium_world::planet::Planet::EARTH.radius_m) as f32;
-        let mut wbed = vec![0.0f32; wnx * wnx];
-        for y in 0..wnx {
-            for x in 0..wnx {
-                let c = CellId::from_face_ij(face, woi + x as u32, woj + y as u32, wl);
-                wbed[y * wnx + x] = erosion::surface_at(c, &tiers) as f32;
+            // Phase 3 bed: sampled through the full telescope at the water's
+            // level, so finer water flows over correspondingly finer bed detail.
+            let wscale = 1u32 << (wl - 21);
+            let (woi, woj, wnx) = (oi * wscale, oj * wscale, fine_nx * wscale as usize);
+            let cell = vivarium_world::sample::cell_size_m(wl, vivarium_world::planet::Planet::EARTH.radius_m) as f32;
+            let mut wbed = vec![0.0f32; wnx * wnx];
+            for y in 0..wnx {
+                for x in 0..wnx {
+                    let c = CellId::from_face_ij(face, woi + x as u32, woj + y as u32, wl);
+                    wbed[y * wnx + x] = erosion::surface_at(c, &tiers) as f32;
+                }
             }
-        }
-        let mut w = WaterSim::new(face, wl, (woi, woj), wnx, cell, wbed, atmos_m);
+            WaterSim::new(face, wl, (woi, woj), wnx, cell, wbed, atmos_m)
+        };
         let mut sim_total: f32 = 0.0;
         let (mut prev_delta, mut plateau_bursts, mut delta_peak) = (0.0f32, 0u32, 0.0f32);
         // Phase 3a — FILLING: continuous deluge until the water distribution
@@ -308,7 +468,7 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
         // The fill therefore also MATURES the beds: alluvium in pools,
         // colmation sealing channels, armor on scoured reaches. Hands off to
         // the living phase (episodic storms) once the water levels out.
-        let mut filling = true;
+        let mut filling = !cache_hit;
         // VIVARIUM_WATER_SHOW: all | burst | (default: burst while filling —
         // fast-forward through the fill — then stream EVERY step once living,
         // so the water visibly flows; sim-time slows to the view's pace).
@@ -358,9 +518,12 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
                 }
                 prev_delta = delta_mean;
                 let fallen = delta_mean < 0.15 * delta_peak;
-                if sim_total > 400.0 && ((fallen && plateau_bursts >= 3) || sim_total > 6000.0) {
+                if sim_total > 400.0_f32.min(fill_cap * 0.5) && ((fallen && plateau_bursts >= 3) || sim_total > fill_cap) {
                     filling = false;
                     eprintln!("[worldview] water FILLED to steady state at {sim_total:.0} sim-s (d {:.1} mm vs peak {:.1} mm) — living phase (episodic storms)", delta_mean * 1000.0, delta_peak * 1000.0);
+                    if !nocache {
+                        fill_cache::save(&key, &tiers, &w);
+                    }
                 }
             }
             let weather = if filling || storm_off <= 0.0 {
@@ -369,7 +532,7 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
                 let ph = sim_total % (storm_on + storm_off);
                 if ph < storm_on { (true, storm_on - ph) } else { (false, storm_on + storm_off - ph) }
             };
-            let settle_info = if filling { Some((0.15 * delta_peak, (6000.0 - sim_total).max(0.0))) } else { None };
+            let settle_info = if filling { Some((0.15 * delta_peak, (fill_cap - sim_total).max(0.0))) } else { None };
             if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * dt, delta_m: delta_mean, filling, froude: w.froude(), weather, settle: settle_info, drift: w.budget_drift() }).is_err() {
                 return;
             }
@@ -380,19 +543,22 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
             if last_writeback.elapsed().as_secs_f32() > 5.0 {
                 last_writeback = std::time::Instant::now();
                 if let Some(entry) = tiers.iter_mut().find(|r| r.level == 21) {
-                let f = wscale as usize;
-                if f == 1 {
+                // Derive geometry from the sim itself (valid for cache-restored
+                // sims too, where the build-time locals never existed).
+                let f = 1usize << (w.level - 21);
+                let (enx, wnx) = (entry.nx, w.nx);
+                if f == 1 && enx == wnx {
                     entry.h.copy_from_slice(&w.bed);
                 } else {
-                    for y in 0..fine_nx {
-                        for x in 0..fine_nx {
+                    for y in 0..enx {
+                        for x in 0..enx {
                             let mut sum = 0.0f64;
                             for by in 0..f {
                                 for bx in 0..f {
                                     sum += w.bed[(y * f + by) * wnx + x * f + bx] as f64;
                                 }
                             }
-                            entry.h[y * fine_nx + x] = (sum / (f * f) as f64) as f32;
+                            entry.h[y * enx + x] = (sum / (f * f) as f64) as f32;
                         }
                     }
                 }
