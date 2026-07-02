@@ -123,7 +123,7 @@ const EPOCH_YEARS: f32 = 100.0;
 /// Physics/recipe version for the fill cache — the crude rung of §12's
 /// recipe-hash: BUMP THIS whenever erosion or water physics changes, or stale
 /// caches will serve worlds the current algorithms would not produce.
-const FILL_ALGO_VERSION: &str = "2026-07-03b"; // b: Jarrett slope-dependent roughness
+const FILL_ALGO_VERSION: &str = "2026-07-03c"; // c: colmation counts fines only
 
 /// The FILL CACHE (first rung of DESIGN-REDUX §12–13): the filled world —
 /// eroded tiers + steady-state water — is a pure function of its parameters,
@@ -1600,7 +1600,7 @@ fn spawn_mesher() -> (MesherTx, MesherRx) {
                         let c = CellId::from_face_ij(face, oi + x as u32, oj + y as u32, level);
                         let sm = live.suspended_m(c).unwrap_or(0.0);
                         let d = live.depth_m(c).unwrap_or(0.0).max(0.02);
-                        ((sm / d) as f32 * 8.0).clamp(0.0, 0.75)
+                        (((sm / d) as f32 / 0.05).sqrt() * 0.6).clamp(0.0, 0.75)
                     };
                     MeshDone::WaterOnly { level, origin: (oi, oj), water: build_water_mesh(&heights, &wtr, w, cell, anchor, (oi, oj), vert, &turbidity_of) }
                 }
@@ -1666,7 +1666,7 @@ fn build_full(face: Face, level: u8, w: usize, oi: u32, oj: u32, vert: f32, tier
             let c = CellId::from_face_ij(face, oi + x as u32, oj + y as u32, level);
             let sm = wr.suspended_m(c).unwrap_or(0.0);
             let d = wr.depth_m(c).unwrap_or(0.0).max(0.02);
-            ((sm / d) as f32 * 8.0).clamp(0.0, 0.75)
+            (((sm / d) as f32 / 0.05).sqrt() * 0.6).clamp(0.0, 0.75)
         })
     };
     let ground = build_ground_mesh(&fields, w, cell, anchor, (oi, oj), vert, &tier_of, tier_debug, edge_lines, &soil_of);

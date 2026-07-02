@@ -92,10 +92,14 @@ pub struct WaterParams {
     pub baseflow: f32,
     /// Discharge (m²/s) at which channel sealing halves infiltration.
     pub seal_q: f32,
-    /// Fines needed to fully plug the bed's pores (m of deposited sediment).
+    /// Fines needed to fully plug the bed's pores (m of deposited FINES).
     /// A few mm of silt seals a streambed (real colmation depths are mm–cm);
     /// scour re-opens it at the same exchange rate.
     pub plug_depth: f32,
+    /// Fraction of deposited load that is pore-plugging FINES (silt/clay);
+    /// the coarser rest builds alluvium without sealing. Counting ALL deposit
+    /// as fines sealed the whole world within minutes of a deluge (Joseph).
+    pub fines_frac: f32,
     /// ARMORING (Joseph's fluvial list): scour into the PARENT bed (no loose
     /// alluvium left) winnows away fines and leaves a coarse surface lag that
     /// shields the bed. `armor_depth` is the scour needed to develop a full
@@ -126,6 +130,7 @@ impl Default for WaterParams {
             baseflow: 2.0e-5,
             seal_q: 0.01,
             plug_depth: 0.005,
+            fines_frac: 0.15,
             armor_depth: 0.1,
             armor_shield: 0.8,
         }
@@ -412,7 +417,7 @@ impl WaterSim {
                         self.bed[i] += dp;
                         self.sediment[i] -= dp;
                         self.sed_bed[i] += dp;
-                        self.colmation[i] = (self.colmation[i] + dp / p.plug_depth).min(1.0);
+                        self.colmation[i] = (self.colmation[i] + dp * p.fines_frac / p.plug_depth).min(1.0);
                         continue;
                     }
                     let vx = ((if x > 0 { self.fr[i - 1] } else { 0.0 }) + self.fr[i]
@@ -454,7 +459,7 @@ impl WaterSim {
                         self.bed[i] += dp;
                         self.sediment[i] -= dp;
                         self.sed_bed[i] += dp;
-                        self.colmation[i] = (self.colmation[i] + dp / p.plug_depth).min(1.0);
+                        self.colmation[i] = (self.colmation[i] + dp * p.fines_frac / p.plug_depth).min(1.0);
                         // Burial: fresh loose material covers the lag.
                         self.armor[i] = (self.armor[i] - dp / p.armor_depth).max(0.0);
                     }
