@@ -7,15 +7,23 @@
 //! (idioms carried from slabs, which stays the core-backed SOTA until this
 //! matures).
 //!
-//! It is a **survey instrument** for the fidelity ladder, not a pawn-walker yet:
-//! the crude baseline's finest feature is ~40 km (fBm, 6 octaves over a face), so
-//! the default sampling level is coarse (L14 ≈ 611 m cells ≈ a 156 km window) and
-//! the "pawn" is a focus marker. The interesting dials:
+//! The exploration ENGINE is at parity with slabs (auto-pitch fan probe, look-up
+//! near-clip, pan/turn re-framing, HUD, autoshot) so that all remaining work is
+//! WORLD fidelity, not view work. Scale is kept honest by construction:
+//!   • the pawn is a real 0.5 × 2 m figure, never scaled by zoom or vert — at
+//!     survey zoom it is sub-pixel *because that is true*; the focus cursor is a
+//!     flat reticle that cannot read as a figure;
+//!   • a map scale bar (round-number length, pixel-exact from the ortho zoom);
+//!   • the HUD states the sampled window's relief range (m above sea) — the
+//!     honest answer to "is there height here?";
+//!   • VIVARIUM_VERT exaggeration (default 1 = honest) for survey-scale form,
+//!     the standard cartographic practice — relief at a 94 km viewport is ~3% of
+//!     the screen at honest scale, exactly like the real Earth from altitude.
+//! The fidelity dials are the point:
 //!   • `[` / `]` — change the sampling LEVEL live (same geographic spot, finer or
 //!     coarser cells). Every rebuild reports its generation time on the HUD, so
 //!     when query-graph memoization lands (DESIGN-REDUX §11–12), a revisited
-//!     (level, region) will visibly drop to ~0 ms. That instrument is the point.
-//!   • VIVARIUM_VERT — vertical exaggeration (default 1 = honest scale).
+//!     (level, region) will visibly drop to ~0 ms.
 //!
 //! Floating origin, done right (the audit's far-lands item): global face-cell
 //! coordinates in metres reach ~10^7 m, where f32 resolves only ~1 m — so mesh
@@ -50,9 +58,11 @@ const ISO_PITCH: f32 = 0.615_479_7; // atan(1/√2)
 const YAW_START: f32 = std::f32::consts::FRAC_PI_4;
 const YAW_STEP: f32 = std::f32::consts::FRAC_PI_4;
 const ROT_LERP: f32 = 12.0;
-const PITCH_MIN: f32 = 0.10;
-const PITCH_MAX: f32 = 1.50;
+const PITCH_MIN: f32 = -0.5; // below level: look UP (foreground near-clipped away)
+const PITCH_MAX: f32 = 1.50; // ~86°, near top-down (auto-pitch's ceiling)
 const PITCH_RATE: f32 = 0.9;
+const PITCH_LERP_UP: f32 = 16.0; // catch up fast when terrain rises into the way
+const PITCH_LERP_DOWN: f32 = 4.0; // relax gently once clear
 const PAN_RATE: f32 = 0.5; // fraction of the zoom per second
 const ZOOM_STEP: f32 = 1.15;
 /// Focus sits this fraction of the viewport below centre (slabs' aim-ahead trick).
@@ -74,7 +84,7 @@ fn main() {
         .insert_resource(ClearColor(SKY))
         .init_resource::<View>()
         .add_systems(Startup, setup)
-        .add_systems(Update, (view_update, terrain_update, hud_update, maybe_screenshot))
+        .add_systems(Update, (view_update, terrain_update, hud_update, scale_update, maybe_screenshot))
         .run();
 }
 
@@ -94,6 +104,11 @@ struct View {
     yaw: f32,
     yaw_target: f32,
     pitch: f32,
+    /// The user's chosen angle; auto-pitch raises above it only as far as needed.
+    pitch_manual: f32,
+    /// Auto-raise the camera when foreground would occlude the focus (slabs'
+    /// proven behaviour). Pan/turn re-enable it; K/J grab manual control.
+    auto_pitch: bool,
     /// Viewport height in METRES (absolute, so changing level doesn't jump zoom).
     zoom: f32,
     /// Vertical exaggeration (1 = honest).
@@ -110,6 +125,9 @@ impl Default for View {
         // the scan_land example in vivarium-world prints good coastal candidates).
         let fi = std::env::var("VIVARIUM_FOCUS_I").ok().and_then(|s| s.parse().ok()).unwrap_or(n * 0.5);
         let fj = std::env::var("VIVARIUM_FOCUS_J").ok().and_then(|s| s.parse().ok()).unwrap_or(n * 0.5);
+        // VIVARIUM_PITCH (radians) forces a fixed angle with auto off — for
+        // scripted screenshots (negative = look up).
+        let manual_pitch = std::env::var("VIVARIUM_PITCH").ok().and_then(|s| s.parse::<f32>().ok());
         Self {
             face: Face::ZPos,
             level,
@@ -117,7 +135,9 @@ impl Default for View {
             focus: DVec2::new(fi, fj),
             yaw: YAW_START,
             yaw_target: YAW_START,
-            pitch: ISO_PITCH,
+            pitch: manual_pitch.unwrap_or(ISO_PITCH),
+            pitch_manual: manual_pitch.unwrap_or(ISO_PITCH),
+            auto_pitch: manual_pitch.is_none(),
             zoom: std::env::var("VIVARIUM_ZOOM").ok().and_then(|s| s.parse().ok()).unwrap_or((span * 0.6) as f32),
             vert: std::env::var("VIVARIUM_VERT").ok().and_then(|s| s.parse().ok()).unwrap_or(1.0),
         }
@@ -151,6 +171,10 @@ struct TerrainState {
     anchor_m: DVec2,
     /// The sampled fields (kept so the camera/HUD can read the height under the focus).
     fields: Option<SurfacePatch>,
+    /// Relief range of the sampled window (m above sea) — the HUD's honest answer
+    /// to "is there height here, and how much?"
+    h_min: f32,
+    h_max: f32,
     /// Generation + meshing time of the last rebuild — the memoization instrument.
     gen_ms: f32,
     ground_mat: Handle<StandardMaterial>,
@@ -159,10 +183,26 @@ struct TerrainState {
 
 #[derive(Component)]
 struct IsoCamera;
+/// The honest pawn: a real 0.5 × 2 m figure, never scaled by zoom or vert. At
+/// survey zoom it is sub-pixel — that is the point (a visible "little guy" at a
+/// 156 km window would be a false scale cue, which the first cursor was).
 #[derive(Component)]
-struct FocusMarker;
+struct Pawn;
+/// The focus cursor: a flat screen-relative reticle that reads as "selection",
+/// deliberately NOT figure-shaped so it can't be mistaken for a scale reference.
+#[derive(Component)]
+struct FocusRing;
 #[derive(Component)]
 struct HudText;
+#[derive(Component)]
+struct ScaleBar;
+#[derive(Component)]
+struct ScaleLabel;
+
+/// Logical window height (px) — must match the WindowPlugin resolution; the ortho
+/// projection maps `zoom` metres onto this, which is what makes the scale bar
+/// pixel-accurate.
+const WINDOW_H_PX: f32 = 720.0;
 
 fn setup(mut commands: Commands, view: Res<View>, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>) {
     commands.spawn((
@@ -194,16 +234,26 @@ fn setup(mut commands: Commands, view: Res<View>, mut meshes: ResMut<Assets<Mesh
         origin: (0, 0),
         anchor_m: DVec2::ZERO,
         fields: None,
+        h_min: 0.0,
+        h_max: 0.0,
         gen_ms: 0.0,
         ground_mat,
         water_mat,
     });
 
-    // Focus marker — a cursor, not a pawn (a 2 m pawn is sub-pixel at survey scale;
-    // the pawn returns when fine tiers exist). Rescaled with zoom each frame.
-    let marker_mesh = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
-    let marker_mat = materials.add(StandardMaterial { base_color: Color::srgb(0.85, 0.18, 0.18), perceptual_roughness: 0.9, ..default() });
-    commands.spawn((Mesh3d(marker_mesh), MeshMaterial3d(marker_mat), Transform::default(), FocusMarker));
+    // The honest pawn (0.5 × 2 m, world scale) + the flat reticle cursor.
+    let pawn_mesh = meshes.add(Cuboid::new(0.5, 2.0, 0.5));
+    let pawn_mat = materials.add(StandardMaterial { base_color: Color::srgb(0.85, 0.18, 0.18), perceptual_roughness: 0.9, ..default() });
+    commands.spawn((Mesh3d(pawn_mesh), MeshMaterial3d(pawn_mat), Transform::default(), Pawn));
+    let ring_mesh = meshes.add(Cylinder::new(0.5, 0.02));
+    let ring_mat = materials.add(StandardMaterial {
+        base_color: Color::srgba(0.90, 0.30, 0.15, 0.30),
+        alpha_mode: AlphaMode::Blend,
+        unlit: true,
+        cull_mode: None,
+        ..default()
+    });
+    commands.spawn((Mesh3d(ring_mesh), MeshMaterial3d(ring_mat), Transform::default(), FocusRing));
 
     // Slabs' proven form-lighting: warm grazing key + cool fill + low ambient.
     commands.spawn((
@@ -225,7 +275,42 @@ fn setup(mut commands: Commands, view: Res<View>, mut meshes: ResMut<Assets<Mesh
         HudText,
     ));
 
-    println!("[worldview] WASD pan · wheel zoom · Q/E rotate · K/J angle · [ ] sampling level");
+    // Map scale bar (bottom-left): a round-number length whose pixel width is exact
+    // (ortho: zoom metres map onto WINDOW_H_PX). The bar is the truth-teller the
+    // first cursor wasn't — scale_update keeps it current.
+    commands.spawn((
+        Node { position_type: PositionType::Absolute, bottom: Val::Px(14.0), left: Val::Px(12.0), height: Val::Px(5.0), width: Val::Px(100.0), ..default() },
+        BackgroundColor(Color::srgba(0.08, 0.09, 0.10, 0.85)),
+        ScaleBar,
+    ));
+    commands.spawn((
+        Text::new("…"),
+        TextFont { font_size: 13.0, ..default() },
+        TextColor(Color::srgb(0.08, 0.09, 0.10)),
+        Node { position_type: PositionType::Absolute, bottom: Val::Px(22.0), left: Val::Px(12.0), ..default() },
+        ScaleLabel,
+    ));
+
+    println!("[worldview] WASD pan · wheel zoom · Q/E rotate · K/J angle · Y auto-angle · [ ] sampling level");
+}
+
+/// Keep the scale bar honest: pick the 1/2/5×10ᵏ length nearest ~220 px at the
+/// current zoom, size the bar to its exact pixel width, and label it.
+fn scale_update(view: Res<View>, mut bar: Query<&mut Node, With<ScaleBar>>, mut label: Query<&mut Text, With<ScaleLabel>>) {
+    let px_per_m = WINDOW_H_PX / view.zoom;
+    let target_m = 220.0 / px_per_m;
+    let pow = 10f32.powf(target_m.log10().floor());
+    let nice = [1.0, 2.0, 5.0, 10.0]
+        .iter()
+        .map(|k| k * pow)
+        .min_by(|a, b| (a - target_m).abs().partial_cmp(&(b - target_m).abs()).unwrap())
+        .unwrap();
+    if let Ok(mut n) = bar.single_mut() {
+        n.width = Val::Px(nice * px_per_m);
+    }
+    if let Ok(mut t) = label.single_mut() {
+        t.0 = if nice >= 1000.0 { format!("{:.0} km", nice / 1000.0) } else { format!("{nice:.0} m") };
+    }
 }
 
 // --- Input + camera ----------------------------------------------------------------
@@ -236,10 +321,11 @@ fn view_update(
     mut wheel: MessageReader<bevy::input::mouse::MouseWheel>,
     mut view: ResMut<View>,
     ts: Res<TerrainState>,
-    mut cam: Query<&mut Transform, (With<IsoCamera>, Without<FocusMarker>)>,
+    mut cam: Query<&mut Transform, (With<IsoCamera>, Without<Pawn>, Without<FocusRing>)>,
     mut cam_proj: Query<&mut Projection, With<IsoCamera>>,
     mut fog: Query<&mut DistanceFog, With<IsoCamera>>,
-    mut marker: Query<&mut Transform, (With<FocusMarker>, Without<IsoCamera>)>,
+    mut pawn: Query<&mut Transform, (With<Pawn>, Without<IsoCamera>, Without<FocusRing>)>,
+    mut ring: Query<&mut Transform, (With<FocusRing>, Without<IsoCamera>, Without<Pawn>)>,
 ) {
     let dt = time.delta_secs();
 
@@ -266,13 +352,30 @@ fn view_update(
         let span = (view.w as f64 * view.cell_m()) as f32;
         view.zoom = view.zoom.clamp(span * 0.02, span * 1.5);
     }
+    let turning = keys.just_pressed(KeyCode::KeyQ) || keys.just_pressed(KeyCode::KeyE);
     if keys.just_pressed(KeyCode::KeyQ) { view.yaw_target += YAW_STEP; }
     if keys.just_pressed(KeyCode::KeyE) { view.yaw_target -= YAW_STEP; }
     if (view.yaw - view.yaw_target).abs() > 1e-4 {
         view.yaw = lerp_angle(view.yaw, view.yaw_target, (ROT_LERP * dt).clamp(0.0, 1.0));
     }
-    if keys.pressed(KeyCode::KeyK) { view.pitch = (view.pitch + PITCH_RATE * dt).min(PITCH_MAX); }
-    if keys.pressed(KeyCode::KeyJ) { view.pitch = (view.pitch - PITCH_RATE * dt).max(PITCH_MIN); }
+
+    // Angle: slabs' proven interaction. Moving/turning returns to the default
+    // framing with auto-pitch on; K/J grab manual control instantly (auto off);
+    // Y toggles auto explicitly. Auto raises the camera only as far as needed to
+    // keep the focus unoccluded by foreground terrain.
+    if dir != Vec2::ZERO || turning {
+        view.pitch_manual = ISO_PITCH;
+        view.auto_pitch = true;
+    }
+    if keys.pressed(KeyCode::KeyK) {
+        view.auto_pitch = false;
+        view.pitch_manual = (view.pitch_manual + PITCH_RATE * dt).min(PITCH_MAX);
+    }
+    if keys.pressed(KeyCode::KeyJ) {
+        view.auto_pitch = false;
+        view.pitch_manual = (view.pitch_manual - PITCH_RATE * dt).max(PITCH_MIN);
+    }
+    if keys.just_pressed(KeyCode::KeyY) { view.auto_pitch = !view.auto_pitch; }
 
     // Sampling level: same geographic point, finer/coarser cells. Focus is in cells
     // at the current level, so it rescales by 2 exactly.
@@ -287,22 +390,40 @@ fn view_update(
         view.clamp_focus();
     }
 
-    // Camera + marker, all relative to the terrain anchor (floating origin).
+    // Resolve the pitch: the manual angle, raised by auto only as far as the
+    // foreground demands; fast up, gentle down (slabs' proven feel).
+    let focus_h_raw = height_at_focus(&view, &ts);
+    let target = if view.auto_pitch {
+        view.pitch_manual.max(required_pitch(&view, &ts, focus_h_raw))
+    } else {
+        view.pitch_manual
+    }
+    .clamp(PITCH_MIN, PITCH_MAX);
+    let rate = if target > view.pitch { PITCH_LERP_UP } else { PITCH_LERP_DOWN };
+    view.pitch += (target - view.pitch) * (rate * dt).clamp(0.0, 1.0);
+
+    // Camera + pawn + ring, all relative to the terrain anchor (floating origin).
     let cell = view.cell_m();
     let focus_m = view.focus * cell;
     let rel = focus_m - ts.anchor_m;
-    let focus_h = height_at_focus(&view, &ts) * view.vert;
+    let focus_h = focus_h_raw * view.vert;
     let aim_base = Vec3::new(rel.x as f32, focus_h, rel.y as f32);
 
     let look = (Vec3::new(view.yaw.sin(), 0.0, view.yaw.cos()) * view.pitch.cos() + Vec3::NEG_Y * view.pitch.sin()).normalize();
     let forward_h = Vec3::new(view.yaw.sin(), 0.0, view.yaw.cos());
-    let aim = aim_base + forward_h * (view.zoom * FOCUS_BELOW_CENTER / view.pitch.sin().max(0.15));
+    // Sign-preserving clamp so the focus stays put when looking up (negative pitch).
+    let s = view.pitch.sin();
+    let denom = if s >= 0.0 { s.max(0.15) } else { s.min(-0.15) };
+    let aim = aim_base + forward_h * (view.zoom * FOCUS_BELOW_CENTER / denom);
     if let Ok(mut t) = cam.single_mut() {
         *t = Transform::from_translation(aim - look * STANDOFF).looking_at(aim, Vec3::Y);
     }
     if let Ok(mut proj) = cam_proj.single_mut() {
         if let Projection::Orthographic(o) = proj.as_mut() {
             o.scaling_mode = ScalingMode::FixedVertical { viewport_height: view.zoom };
+            // Looking up: clip away foreground nearer than ~the focus depth so it
+            // can't wall off the view (slabs' look-up behaviour).
+            o.near = if view.pitch < 0.0 { STANDOFF - view.zoom * 0.05 } else { -1.0 };
         }
     }
     // Mild haze for a survey instrument: begin a full viewport beyond the aim so
@@ -311,9 +432,15 @@ fn view_update(
     if let Ok(mut f) = fog.single_mut() {
         f.falloff = FogFalloff::Linear { start: STANDOFF + view.zoom * 1.2, end: STANDOFF + view.zoom * 8.0 };
     }
-    if let Ok(mut m) = marker.single_mut() {
-        let s = view.zoom * 0.01;
-        *m = Transform::from_translation(aim_base + Vec3::Y * s).with_scale(Vec3::new(s, s * 2.0, s));
+    // Pawn: a real 2 m figure standing on the (possibly exaggerated) ground —
+    // never scaled by zoom, so it is only visible when the view is actually at
+    // human scale. Ring: screen-relative cursor, flat on the ground.
+    if let Ok(mut p) = pawn.single_mut() {
+        *p = Transform::from_translation(aim_base + Vec3::Y * 1.0);
+    }
+    if let Ok(mut r) = ring.single_mut() {
+        let s = view.zoom * 0.016;
+        *r = Transform::from_translation(aim_base).with_scale(Vec3::new(s, 1.0, s));
     }
 }
 
@@ -322,17 +449,51 @@ fn lerp_angle(a: f32, b: f32, t: f32) -> f32 {
     a + d * t
 }
 
-/// Height (m above sea, un-exaggerated) under the focus, from the sampled fields.
-fn height_at_focus(view: &View, ts: &TerrainState) -> f32 {
-    let Some(fields) = &ts.fields else { return 0.0 };
-    let x = (view.focus.x - ts.origin.0 as f64).floor() as isize;
-    let y = (view.focus.y - ts.origin.1 as f64).floor() as isize;
-    let w = view.w as isize;
-    if ts.built_level == view.level && x >= 0 && x < w && y >= 0 && y < w {
-        fields.height.get(x, y) - SEA_LEVEL_M as f32
-    } else {
-        0.0
+/// Height (m above sea, un-exaggerated) at face-cell coords `(fi, fj)`, if that
+/// point is inside the currently sampled patch.
+fn sampled_height(view: &View, ts: &TerrainState, fi: f64, fj: f64) -> Option<f32> {
+    let fields = ts.fields.as_ref()?;
+    if ts.built_level != view.level {
+        return None;
     }
+    let x = (fi - ts.origin.0 as f64).floor() as isize;
+    let y = (fj - ts.origin.1 as f64).floor() as isize;
+    let w = view.w as isize;
+    if x >= 0 && x < w && y >= 0 && y < w {
+        Some(fields.height.get(x, y) - SEA_LEVEL_M as f32)
+    } else {
+        None
+    }
+}
+
+/// Height (m above sea, un-exaggerated) under the focus.
+fn height_at_focus(view: &View, ts: &TerrainState) -> f32 {
+    sampled_height(view, ts, view.focus.x, view.focus.y).unwrap_or(0.0)
+}
+
+/// The minimum camera pitch that clears the terrain between the camera and the
+/// focus (slabs' fan probe, over the sampled height field): march rays from the
+/// focus TOWARD the camera, track the steepest sight-line blocker, and return the
+/// angle that clears it plus a small margin. Exaggeration-aware.
+fn required_pitch(view: &View, ts: &TerrainState, focus_h_raw: f32) -> f32 {
+    let cell = view.cell_m();
+    let base = view.yaw + std::f32::consts::PI; // horizontal direction to the camera
+    let max_dist_m = (view.zoom * 2.0).max(cell as f32 * 8.0);
+    let step_m = (cell as f32).max(view.zoom / 256.0);
+    let mut max_tan = 0.0f32;
+    for da in [-0.28f32, -0.12, 0.0, 0.12, 0.28] {
+        let a = base + da;
+        let dir = DVec2::new(a.sin() as f64, a.cos() as f64);
+        let mut x = step_m;
+        while x <= max_dist_m {
+            let p = view.focus + dir * (x as f64 / cell);
+            if let Some(h) = sampled_height(view, ts, p.x, p.y) {
+                max_tan = max_tan.max((h - focus_h_raw) * view.vert / x);
+            }
+            x += step_m;
+        }
+    }
+    max_tan.atan() + 0.06 // clear the tallest occluder plus ~3.5°
 }
 
 // --- Terrain sampling + meshing ------------------------------------------------------
@@ -376,6 +537,18 @@ fn terrain_update(mut commands: Commands, view: Res<View>, mut meshes: ResMut<As
     ts.origin = (oi, oj);
     ts.anchor_m = anchor;
     ts.fields = Some(fields);
+    let (mut lo, mut hi) = (f32::INFINITY, f32::NEG_INFINITY);
+    if let Some(f) = &ts.fields {
+        for y in 0..view.w as isize {
+            for x in 0..view.w as isize {
+                let h = f.height.get(x, y) - SEA_LEVEL_M as f32;
+                lo = lo.min(h);
+                hi = hi.max(h);
+            }
+        }
+    }
+    ts.h_min = lo;
+    ts.h_max = hi;
     ts.gen_ms = t0.elapsed().as_secs_f32() * 1000.0;
 }
 
@@ -503,12 +676,14 @@ fn hud_update(view: Res<View>, ts: Res<TerrainState>, diag: Res<bevy::diagnostic
     let elev = height_at_focus(&view, &ts);
     if let Ok(mut text) = q.single_mut() {
         text.0 = format!(
-            "worldview    {fps:>4.0} fps    gen {:.0} ms\n{:?}  L{}  cell {:.0} m  window {:.0} km\nfocus ({:.0}, {:.0})    elev {elev:.0} m\nfacing {}    angle {:.0} deg    zoom {:.0} m    vert {:.1}",
+            "worldview    {fps:>4.0} fps    gen {:.0} ms\n{:?}  L{}  cell {:.0} m  window {:.0} km  relief {:.0}..{:.0} m\nfocus ({:.0}, {:.0})    elev {elev:.0} m\nfacing {}    angle {:.0} deg    zoom {:.0} m    vert {:.1}",
             ts.gen_ms,
             view.face,
             view.level,
             cell,
             span_km,
+            ts.h_min,
+            ts.h_max,
             view.focus.x,
             view.focus.y,
             compass(view.yaw_target),
