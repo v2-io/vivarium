@@ -129,6 +129,29 @@ coordinate/time/matter space.
 macro with correct up-invalidation (`DESIGN-REDUX` §6, `DESIGN-MATERIAL` §7).
 Everything else has prior art.
 
+## Session addendum (2026-07-03 — the instruments-and-honesty day)
+
+Landed, all probe- or screenshot-verified (details in the commit log):
+- **Physics**: sediment runs THROUGH the fill (kill-switch deleted, probe-
+  cleared); Jarrett slope-dependent roughness (torrents at nature's 0.4–1.7 m/s,
+  measured); armoring (coarse-lag interface state); in-step Froude gauge;
+  live water-budget drift gauge; travelling-blob instability killed (θ-smoothing,
+  sill conveyance, breaking cap — `channel_profile` regime probe).
+- **Planet basics (flux-only, Joseph's steer)**: exact insolation (instant /
+  daily / annual) + sun direction; NO temperature at this tier — it emerges
+  later from column energy balance. View: the key light IS the sun
+  (VIVARIUM_DAY / VIVARIUM_HOUR), compass = true bearing through the geographic
+  frame, HUD lat/lon + W/m2.
+- **View/infra**: ASYNC MESHING (6→121 fps streaming; sim unpegged, ~5× faster);
+  FILL CACHE (~/.cache/vivarium/worldview, FILL_ALGO_VERSION discipline — bump
+  on physics change); progressive Hilbert-ordered horizon rings (VIVARIUM_RINGS,
+  deliberate boundary lines); wet-ground darkening (Lekner & Dorf numbers);
+  hue/alpha-decoupled water; modes (T), legend (H), pawn float/bob, flow arrow
+  (log length, regime colour); "settling"→FILLING with honest progress.
+- **Probes**: `seam_ridge` (RED by design — differential-aging ridge, gates the
+  seam fix), `velocity_histogram` (two-regime fingerprint), `channel_profile`
+  (+sediment regimes). Hex grid: considered & declined (DESIGN-MATERIAL §8).
+
 ## Next directions (Joseph, 2026-07-02, end of the water night — verbatim intent)
 
 1. Suspension / sealing / deposition — deepen the sediment loop.
