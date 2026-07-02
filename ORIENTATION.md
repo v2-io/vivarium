@@ -58,8 +58,8 @@ and `DESIGN.md`.
   FIRST to split world-issues from explorer-issues): `topo` (ASCII elevation map +
   slope stats of any face window), `scan_land` (find peak/coast, prints
   VIVARIUM_FOCUS_I/J).
-- `spikes/slabs` — the core-backed 3-D view (ortho point-mesh); still the SOTA
-  for the *eroded* world until the frame's erosion tier matures.
+- `spikes/slabs` — the core-backed 3-D view; superseded as SOTA by worldview
+  (kept as reference until the old core's remaining physics is fully ported).
 - `archive/*` — superseded spikes.
 
 ## Decisions locked (rationale in the design docs)
@@ -77,7 +77,7 @@ and `DESIGN.md`.
 `column` · `noise` · `gen` · `chunk` (Patch + halo). **Erosion port begun**:
 hillslope diffusion (`erosion::diffuse`) runs on a Patch. Remaining, in order:
 
-0. **Erosion + LIVE WATER: LANDED** (…→ f514741). worldview now runs the full
+0. **Erosion + WATER SYSTEM: LANDED** (…→ d848979). worldview now runs the full
    multirate stack live: L19 macro tier (1 epoch/cycle + fBm-differential uplift,
    λ≈5 km) → L21/L24 fine tiers (FINISHERS per Joseph's field observation — 1–2
    animated passes ideal; init 4/cap 10 and init 2/cap 6, re-anchor to the pawn

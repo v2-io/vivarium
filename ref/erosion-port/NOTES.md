@@ -66,6 +66,15 @@ understand.
 - Patch/halo handling at the 8 cube-face **corners** (the mild cube-sphere
   distortion points).
 
-## Status
-Plan only. Bridge confirmed. First coding step: **`chunk.rs`** (the Cartesian
-patch), API driven by this erosion tier as its consumer.
+## Status (2026-07-02, end of the water night)
+DONE: the fluvial pipeline (ported + hillslope creep added — spike_probe caught
+the no-diffusion spire instability, latent in core too); ErodedRegion telescope
+sampling; the water FAST band with real physics (Saint-Venant + Manning,
+critical-shear incision, slope-capacity sediment, groundwater + live colmation,
+closed cycle, ocean-as-ground); mean-conservation pin (fine tiers redistribute,
+macro owns elevation); SETTLE mode reproducing core's proven sequence, then a
+living storm phase with two-way bed write-back. Erosion stays ON during water —
+the multirate goal of this document is REALIZED (as a schedule, not a switch).
+OPEN: discharge→A coupling into the erosion tiers (real flow driving stream
+power); watershed-boundary inflows (nested water grids); seams/persistence
+(§13 store) — the next session's agenda; per-material erodibility/permeability.
