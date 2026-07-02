@@ -1,10 +1,9 @@
-# vivarium-tilemap — square 2D top-down autotiling engine (see README.md).
+# vivarium-tilemap — top-down contour map of the core's geology (see src/main.rs).
 #
-# Proves the procedural→tilemap mapping: vivarium's continuous geology quantized
-# into discrete height levels + per-cell material, with the neighbour/edge logic
-# that selects an autotile, rendered top-down (LttP/RPG-Maker geometry) with cliff
-# faces at the steps. Placeholder tiles for now — real hand-painted art is a swap.
-# Depends on the core only.
+# Geometry first: vivarium's continuous, erosion-carved terrain quantized into
+# discrete height levels, with the cliffs drawn as marching-squares contour lines
+# (orthogonal + 45° chamfers) over flat material bands. The painted CLIFFVEG art is
+# a later swap onto these segments. Depends on the core only.
 [package]
 name = "vivarium-tilemap"
 version = "0.0.0"
@@ -13,5 +12,4 @@ license.workspace = true
 
 [dependencies]
 bevy = "0.18"
-image = "0.25" # decode the embedded tile PNGs to RGBA for CPU blitting
 vivarium-core = { path = "../../crates/vivarium-core" }

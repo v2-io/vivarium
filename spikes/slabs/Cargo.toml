@@ -1,0 +1,17 @@
+# vivarium-slabs — terrain as stacked level-slabs, built as REAL 3D meshes and
+# rendered with Bevy's orthographic camera + hardware depth buffer (see main.rs).
+#
+# The physically-defensible answer to the tilemap spike's gap/occlusion troubles:
+# instead of compositing 2D primitives that must be coaxed to line up, quantize the
+# height field into elevation levels and emit actual geometry (a top quad per cell +
+# vertical quads down every exposed drop). Solid meshes → no gaps; the GPU z-buffer →
+# correct occlusion; a directional light → face shading, all for free. Core only.
+[package]
+name = "vivarium-slabs"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+bevy = "0.18"
+vivarium-core = { path = "../../crates/vivarium-core" }
