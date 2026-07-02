@@ -47,10 +47,22 @@ pub fn column_from_surface(cell: CellId, surface_m: f64, soil_m: f64) -> Column 
 /// [`column_from_surface`].
 pub fn baseline_column(cell: CellId) -> Column {
     let c = cell.to_cube();
-    const FEATURES_PER_FACE: f64 = 8.0;
-    let h01 = fbm(0, (c.u + 1.0) * FEATURES_PER_FACE, (c.v + 1.0) * FEATURES_PER_FACE, 6, 2.0, 0.5);
-    let surface_m = SEA_LEVEL_M + (h01 - 0.5) * 3000.0; // ±1500 m of crude relief
-    column_from_surface(cell, surface_m, 2.0)
+    // Two-band prior (the 2009 neworld idea — "change parameters based on earlier
+    // noise" — and core's proven scaling). Slope is what makes terrain read, and
+    // slope ~ amplitude/wavelength: a single continental band (±1500 m over
+    // ~1250 km) is a billiard ball (~0.3% grades — measured, examples/topo.rs), so
+    // the relief that *reads* must live at short wavelengths:
+    //  • CONTINENTS: λ ~1250 km, ±1500 m — decides land vs ocean, shelf vs abyss.
+    //  • MOUNTAINS: λ ~25 km base, 7 octaves (down to ~200 m), amplitude GROWN on
+    //    high continent (zero in the deep ocean, full above ~+600 m) — like core's
+    //    22 km massifs. Finer structure than ~200 m is the erosion tier's job.
+    const CONT_PER_FACE: f64 = 8.0; // ~1250 km
+    const MTN_PER_FACE: f64 = 400.0; // ~25 km
+    let (su, sv) = (c.u + 1.0, c.v + 1.0);
+    let cont_m = (fbm(0, su * CONT_PER_FACE, sv * CONT_PER_FACE, 4, 2.0, 0.5) - 0.5) * 3000.0;
+    let mtn_amp = 1800.0 * ((cont_m + 200.0) / 800.0).clamp(0.0, 1.0);
+    let mtn_m = (fbm(1, su * MTN_PER_FACE, sv * MTN_PER_FACE, 7, 2.0, 0.5) - 0.5) * 2.0 * mtn_amp;
+    column_from_surface(cell, SEA_LEVEL_M + cont_m + mtn_m, 2.0)
 }
 
 #[cfg(test)]
