@@ -70,6 +70,20 @@ pub struct WaterParams {
     /// (Joseph's rivers "drying up" voxels from the ocean, also seen in core),
     /// which a depth-only gate locks shallow forever.
     pub sed_min_discharge: f32,
+    // --- Groundwater (core's subsystem, ported): infiltration surface→soil,
+    // capped by a per-cell capacity; baseflow returns it to the surface. The two
+    // streambed phenomena (Joseph): COLMATION — flowing channels seal, so
+    // infiltration falls where discharge is high (computed LIVE from the flow,
+    // improving on core's static drainage-baked field) — and ARMORING/bedrock,
+    // which per-material permeability (§15) will supply when materials couple in.
+    /// Base infiltration rate (m/s) — porous soil drinking surface water.
+    pub infiltration: f32,
+    /// Groundwater capacity per cell (m of water the soil can hold).
+    pub gw_capacity: f32,
+    /// Baseflow: fraction of groundwater returning to the surface per second.
+    pub baseflow: f32,
+    /// Discharge (m²/s) at which channel sealing halves infiltration.
+    pub seal_q: f32,
     /// Per-step flux damping (friction): undamped pipes ring — water overshoots
     /// and sloshes in surge waves (Joseph saw pulses running down valleys instead
     /// of streams). 0.99 ≈ a ~20-step (4 sim-s) momentum memory.
@@ -92,6 +106,10 @@ impl Default for WaterParams {
             sed_max_rate: 0.002,
             sed_min_depth: 0.03,
             sed_min_discharge: 0.005,
+            infiltration: 2.0e-5,
+            gw_capacity: 0.3,
+            baseflow: 2.0e-5,
+            seal_q: 0.01,
             damping: 0.99,
         }
     }
@@ -110,6 +128,8 @@ pub struct WaterSim {
     pub depth: Vec<f32>,
     /// Suspended sediment (m of solid per cell). Conserved with `bed`.
     pub sediment: Vec<f32>,
+    /// Groundwater store per cell (m of water, 0..gw_capacity). In the total.
+    pub groundwater: Vec<f32>,
     /// Counted reservoirs (m of water, cell-area units): conservation partners.
     pub atmosphere: f64,
     pub ocean: f64,
@@ -139,6 +159,7 @@ impl WaterSim {
             bed,
             depth,
             sediment: z.clone(),
+            groundwater: z.clone(),
             atmosphere: atmosphere_m * (nx * nx) as f64,
             ocean: 0.0,
             fl: z.clone(),
@@ -148,9 +169,12 @@ impl WaterSim {
         }
     }
 
-    /// The conserved total: surface + atmosphere + ocean (m, cell-area units).
+    /// The conserved total: surface + groundwater + atmosphere + ocean.
     pub fn total_water(&self) -> f64 {
-        self.depth.iter().map(|&d| d as f64).sum::<f64>() + self.atmosphere + self.ocean
+        self.depth.iter().map(|&d| d as f64).sum::<f64>()
+            + self.groundwater.iter().map(|&g| g as f64).sum::<f64>()
+            + self.atmosphere
+            + self.ocean
     }
 
     /// The conserved SOLID total: bed + suspended (m, cell-area units).
@@ -318,6 +342,28 @@ impl WaterSim {
                     if y < nx - 1 {
                         self.sediment[i + nx] += moving * self.fb[i] / total;
                     }
+                }
+            }
+        }
+
+        // 4c. Groundwater: infiltrate (sealed down where the channel flows hard —
+        //     live colmation), then baseflow back. Reservoir-to-reservoir only.
+        if p.infiltration > 0.0 {
+            for y in 0..nx {
+                for x in 0..nx {
+                    let i = y * nx + x;
+                    let d = self.depth[i];
+                    if d > 0.0 && self.groundwater[i] < p.gw_capacity {
+                        let out = self.fl[i] + self.fr[i] + self.ft[i] + self.fb[i];
+                        let q = out / l; // specific discharge proxy, m²/s
+                        let seal = 1.0 / (1.0 + q / p.seal_q);
+                        let take = (p.infiltration * seal * dt).min(d).min(p.gw_capacity - self.groundwater[i]);
+                        self.depth[i] -= take;
+                        self.groundwater[i] += take;
+                    }
+                    let back = (self.groundwater[i] * p.baseflow * dt).min(self.groundwater[i]);
+                    self.groundwater[i] -= back;
+                    self.depth[i] += back;
                 }
             }
         }
