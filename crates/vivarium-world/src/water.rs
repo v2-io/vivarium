@@ -95,6 +95,14 @@ pub struct WaterParams {
     /// A few mm of silt seals a streambed (real colmation depths are mm–cm);
     /// scour re-opens it at the same exchange rate.
     pub plug_depth: f32,
+    /// ARMORING (Joseph's fluvial list): scour into the PARENT bed (no loose
+    /// alluvium left) winnows away fines and leaves a coarse surface lag that
+    /// shields the bed. `armor_depth` is the scour needed to develop a full
+    /// lag (~a few grain layers, m); `armor_shield` is how much a full lag
+    /// suppresses further incision (0..1). Fresh deposition buries the lag
+    /// and resets it. The standard active-layer concept, crude rung.
+    pub armor_depth: f32,
+    pub armor_shield: f32,
 }
 
 impl Default for WaterParams {
@@ -117,6 +125,8 @@ impl Default for WaterParams {
             baseflow: 2.0e-5,
             seal_q: 0.01,
             plug_depth: 0.005,
+            armor_depth: 0.1,
+            armor_shield: 0.8,
         }
     }
 }
@@ -145,6 +155,9 @@ pub struct WaterSim {
     /// fast) until a flood's scour re-opens it. Joseph's "fine particles
     /// cutting off absorbancy", as state rather than an instantaneous proxy.
     pub colmation: Vec<f32>,
+    /// Armor 0..1: coarse surface lag from winnowing (see `armor_depth`).
+    /// Grows as scour eats PARENT bed, capped incision; buried by deposition.
+    pub armor: Vec<f32>,
     /// Counted reservoirs (m of water, cell-area units): conservation partners.
     pub atmosphere: f64,
     pub ocean: f64,
@@ -177,6 +190,7 @@ impl WaterSim {
             groundwater: z.clone(),
             sed_bed: z.clone(),
             colmation: z.clone(),
+            armor: z.clone(),
             atmosphere: atmosphere_m * (nx * nx) as f64,
             ocean: 0.0,
             fl: z.clone(),
@@ -372,18 +386,26 @@ impl WaterSim {
                     // Bed shear τ = ρ·g·d·S (water density 1000 kg/m³).
                     let tau = 1000.0 * 9.8 * d * slope;
                     if s0 < capacity && tau > p.tau_c {
-                        let e = ((capacity - s0) * p.sed_erode * dt).min(max_step);
+                        // Armor shields the PARENT bed only — loose alluvium
+                        // scours freely regardless of the lag beneath it.
+                        let shield = if self.sed_bed[i] > 1e-4 { 1.0 } else { 1.0 - p.armor_shield * self.armor[i] };
+                        let e = ((capacity - s0) * p.sed_erode * dt * shield).min(max_step);
                         self.bed[i] -= e;
                         self.sediment[i] += e;
-                        // Scour strips the alluvium cover and re-opens the pores.
+                        // Scour strips the alluvium cover and re-opens the pores;
+                        // cutting into parent bed winnows fines → the lag grows.
+                        let into_parent = (e - self.sed_bed[i]).max(0.0);
                         self.sed_bed[i] = (self.sed_bed[i] - e).max(0.0);
                         self.colmation[i] = (self.colmation[i] - e / p.plug_depth).max(0.0);
+                        self.armor[i] = (self.armor[i] + into_parent / p.armor_depth).min(1.0);
                     } else if s0 > capacity {
                         let dp = ((s0 - capacity) * p.sed_deposit * dt).min(max_step).min(s0);
                         self.bed[i] += dp;
                         self.sediment[i] -= dp;
                         self.sed_bed[i] += dp;
                         self.colmation[i] = (self.colmation[i] + dp / p.plug_depth).min(1.0);
+                        // Burial: fresh loose material covers the lag.
+                        self.armor[i] = (self.armor[i] - dp / p.armor_depth).max(0.0);
                     }
                 }
             }
@@ -561,6 +583,7 @@ impl WaterSim {
             sediment: self.sediment.clone(),
             sed_bed: self.sed_bed.clone(),
             colmation: self.colmation.clone(),
+            armor: self.armor.clone(),
         }
     }
 }
@@ -579,6 +602,7 @@ pub struct WaterRegion {
     pub sediment: Vec<f32>,
     pub sed_bed: Vec<f32>,
     pub colmation: Vec<f32>,
+    pub armor: Vec<f32>,
     pub vx: Vec<f32>,
     pub vy: Vec<f32>,
 }
@@ -647,6 +671,11 @@ impl WaterRegion {
     /// Pore-plug fraction 0..1 — muddy sealed beds.
     pub fn colmation_at(&self, cell: CellId) -> Option<f64> {
         self.bilinear(&self.colmation, cell)
+    }
+
+    /// Coarse-lag fraction 0..1 — armored (rocky) beds.
+    pub fn armor_at(&self, cell: CellId) -> Option<f64> {
+        self.bilinear(&self.armor, cell)
     }
 }
 
