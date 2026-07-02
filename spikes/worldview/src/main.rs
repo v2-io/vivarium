@@ -2243,7 +2243,7 @@ fn hud_update(
     vals[5] = {
         let (geo, _, _) = geo_frame(&view);
         let (lat, lon) = (geo.lat.to_degrees(), geo.lon.to_degrees());
-        format!("({:.0}, {:.0})  {:.2}°{} {:.2}°{}", view.focus.x, view.focus.y, lat.abs(), if lat >= 0.0 { "N" } else { "S" }, lon.abs(), if lon >= 0.0 { "E" } else { "W" })
+        format!("({:.0}, {:.0})  {:.2}{} {:.2}{}", view.focus.x, view.focus.y, lat.abs(), if lat >= 0.0 { "N" } else { "S" }, lon.abs(), if lon >= 0.0 { "E" } else { "W" })
     };
     vals[6] = format!("{:<2}", compass(&view));
     vals[7] = format!("{:<6}", format!("{:.0} deg", view.pitch.to_degrees()));
@@ -2253,7 +2253,7 @@ fn hud_update(
     vals[11] = {
         let (geo, _, _) = geo_frame(&view);
         let q = Planet::EARTH.insolation(geo, clock.0).value;
-        format!("{:<14}", format!("{:.0}..{:.0} m  ☼{q:.0}W/m²", ts.h_min, ts.h_max))
+        format!("{:<22}", format!("{:.0}..{:.0} m  sun {q:.0} W/m2", ts.h_min, ts.h_max))
     };
     // Sim-age of the visible window: probe corners + centre against tier ages.
     let (mut newest, mut oldest, mut prior_seen) = (f32::INFINITY, 0.0f32, false);
