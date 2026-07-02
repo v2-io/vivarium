@@ -24,3 +24,4 @@ pub mod column;
 pub mod noise;
 pub mod gen;
 pub mod chunk;
+pub mod erosion;
