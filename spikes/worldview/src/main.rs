@@ -51,11 +51,12 @@ use vivarium_world::water::{WaterParams, WaterRegion, WaterSim};
 use vivarium_world::sphere::{CellId, Face};
 
 const SKY: Color = Color::srgb(0.80, 0.82, 0.84);
-/// Water colour by depth (Beer–Lambert), as proven in slabs — but per METRE here
-/// (the frame speaks metres, not voxels): ~30 m reads mostly opaque deep blue.
+/// Water colour by depth (Beer–Lambert). Tuned for STREAMS AND POOLS, not open
+/// ocean (Joseph: sea-calibrated absorption made mountain water glint-only):
+/// ~0.25 m reads ~40% opaque, ~1 m ~85%, with a floor so even films register.
 const WATER_SHALLOW: [f32; 3] = [0.46, 0.63, 0.75];
 const WATER_DEEP: [f32; 3] = [0.05, 0.16, 0.38];
-const WATER_ABSORB_PER_M: f32 = 0.06;
+const WATER_ABSORB_PER_M: f32 = 2.0;
 
 // --- Framing (ortho, true-iso default — slabs' proven constants) -------------------
 const ISO_PITCH: f32 = 0.615_479_7; // atan(1/√2)
@@ -164,6 +165,11 @@ fn spawn_fine_tiers(
     // itself ~1000x real — the documented basin-filling fudge). Default 10x so a
     // first-look session sees streams gather in minutes, not tens of minutes.
     let rain_mult: f32 = std::env::var("VIVARIUM_RAIN").ok().and_then(|s| s.parse().ok()).unwrap_or(10.0);
+    // VIVARIUM_ATMOS: total rainable water (m per cell). The first ship charged a
+    // thimble (0.05 m — the sky ran dry in seconds and RAIN just emptied it
+    // faster; found by Joseph standing in a dry valley). 2 m/cell concentrates
+    // to metres-deep water in the valley network.
+    let atmos_m: f64 = std::env::var("VIVARIUM_ATMOS").ok().and_then(|s| s.parse().ok()).unwrap_or(2.0);
     let face = view.face;
     const CADENCE: std::time::Duration = std::time::Duration::from_millis(500);
 
@@ -269,7 +275,7 @@ fn spawn_fine_tiers(
                 let rebuild = water.as_ref().map(|w: &WaterSim| w.origin != (l21.oi, l21.oj)).unwrap_or(true) || l21_reseeded;
                 if rebuild {
                     let cell = vivarium_world::sample::cell_size_m(21, vivarium_world::planet::Planet::EARTH.radius_m) as f32;
-                    water = Some(WaterSim::new(face, 21, (l21.oi, l21.oj), l21.nx, cell, l21.h.clone(), 0.05));
+                    water = Some(WaterSim::new(face, 21, (l21.oi, l21.oj), l21.nx, cell, l21.h.clone(), atmos_m));
                 } else if let Some(w) = water.as_mut() {
                     w.set_bed(l21.h.clone());
                 }
@@ -998,7 +1004,7 @@ fn build_water_mesh(f: &SurfacePatch, w: usize, cell: f64, anchor: DVec2, origin
                 WATER_SHALLOW[0] + (WATER_DEEP[0] - WATER_SHALLOW[0]) * m,
                 WATER_SHALLOW[1] + (WATER_DEEP[1] - WATER_SHALLOW[1]) * m,
                 WATER_SHALLOW[2] + (WATER_DEEP[2] - WATER_SHALLOW[2]) * m,
-                m.clamp(0.15, 0.92),
+                m.clamp(0.35, 0.95),
             ]);
         }
     }
