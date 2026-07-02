@@ -128,3 +128,23 @@ coordinate/time/matter space.
 **detail→abstract**: upscaling an irreducible agent edit back into a memoized
 macro with correct up-invalidation (`DESIGN-REDUX` §6, `DESIGN-MATERIAL` §7).
 Everything else has prior art.
+
+## Next directions (Joseph, 2026-07-02, end of the water night — verbatim intent)
+
+1. Suspension / sealing / deposition — deepen the sediment loop.
+2. State of the column — what information do we now have column-wise?
+   (Water adds per-cell: alluvium thickness, colmation, groundwater store,
+   suspended load — vs DESIGN-MATERIAL's strata Column. Reconcile.)
+3. Finer-grained nearby water simulation correctly SEAMED to the current
+   granularity (the nested water telescope — his original fine-water ask).
+4. HUD redesign: clarity + elegance, with a toggleable key/legend.
+5. Water more transparent.
+6. Pawn location clearly visible even in deep water (he stood under 4 m).
+7. More precision on WASD steps / pawn speed.
+8. Water visualization vs velocity, pitch, suspension.
+9. Ground visualization vs column state (saturation? exfiltration point?)
+   — depends on #2.
+10. Wet-ground SLUMPING (ties to #1 — saturated banks fail).
+11. Intuition + control over "pre-history sim" vs "current sim": in-world
+    clock vs wall clock, sim rate vs framerate — make the time regimes
+    legible and steerable.
