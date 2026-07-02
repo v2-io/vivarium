@@ -30,13 +30,25 @@ and `DESIGN.md`.
   (CubeCoord/Geo + **`CellId`** S2 Hilbert key, `from_face_ij`) · `planet`
   (insolation) · `material` (Material/MaterialId + refinement ladder) · `column`
   (Stratum/Column + derived queries) · `noise` (coordinate-hashed, §8) · `gen`
-  (CellId→Column baseline) · `chunk` (Cartesian `Patch<T>` + halo — the stencil
-  substrate) · `erosion` (hillslope diffusion — **the port has begun**). The
-  foundation generates a world of columns on the sphere and runs a real erosion
-  stencil on materialized patches.
-- `spikes/slabs` — the current 3-D view (ortho point-mesh); a **disposable
-  instrument**, not the real renderer.
-- `spikes/tilemap`, `archive/*` — older / superseded.
+  (CellId→Column baseline; **two-band prior**: continents λ~1250 km ±1500 m +
+  mountains λ~25 km modulated by continental height — slope is what makes terrain
+  read, measured 9%/36% mean/max) · `chunk` (Cartesian `Patch<T>` + halo — the
+  stencil substrate) · `erosion` (hillslope diffusion — **the port has begun**) ·
+  `sample` (face region → height/water field patches for views). The foundation
+  generates a world of columns on the sphere, runs a real erosion stencil on
+  materialized patches, and renders through its own view (`spikes/worldview`).
+- `spikes/worldview` — **the first view over the frame** (depends on
+  `vivarium-world` ONLY): survey instrument on the cube-sphere — ortho point-mesh
+  + depth-shaded water, floating-origin (f64 anchor), `[`/`]` change sampling
+  level live, HUD reports per-rebuild gen time (the memoization instrument).
+  `VIVARIUM_LEVEL/W/FOCUS_I/FOCUS_J/VERT/AUTOSHOT/SETTLE`.
+- `crates/vivarium-world/examples/` — **GPU-free world diagnostics** (use these
+  FIRST to split world-issues from explorer-issues): `topo` (ASCII elevation map +
+  slope stats of any face window), `scan_land` (find peak/coast, prints
+  VIVARIUM_FOCUS_I/J).
+- `spikes/slabs` — the core-backed 3-D view (ortho point-mesh); still the SOTA
+  for the *eroded* world until the frame's erosion tier matures.
+- `archive/*` — superseded spikes.
 
 ## Decisions locked (rationale in the design docs)
 - **Engine** Bevy · **coordinate** cube-sphere, S2-style Hilbert `CellId(u64)` as
