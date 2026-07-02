@@ -448,6 +448,31 @@ impl WaterSim {
     /// CFL-stable timestep for the CURRENT state: deep water carries fast waves
     /// (`√(g·d)`), so dt shrinks where the basin is deep. Callers should recompute
     /// per burst.
+    /// Froude diagnostics over wet cells (depth > 5 cm): (max Fr, fraction of
+    /// wet cells with Fr > 1.5). Fr = v/sqrt(g·d). Above ~1.5 (Vedernikov, with
+    /// Manning friction) free-surface flow is ROLL-WAVE unstable — surges are
+    /// then real physics, not a bug. Earthly rain keeps streams below it; the
+    /// settle deluge (metres/hour) does not. This gauge is how we tell an
+    /// honest surge under unearthly forcing from a numerical artifact.
+    pub fn froude(&self) -> (f32, f32) {
+        let l = self.cell_m;
+        let (mut fmax, mut wet, mut sup) = (0.0f32, 0u32, 0u32);
+        for i in 0..self.nx * self.nx {
+            let d = self.depth[i];
+            if d < 0.05 {
+                continue;
+            }
+            wet += 1;
+            let v = (self.fl[i] + self.fr[i] + self.ft[i] + self.fb[i]) / (d * l);
+            let fr = v / (9.8 * d).sqrt();
+            fmax = fmax.max(fr);
+            if fr > 1.5 {
+                sup += 1;
+            }
+        }
+        (fmax, if wet > 0 { sup as f32 / wet as f32 } else { 0.0 })
+    }
+
     pub fn stable_dt(&self, gravity: f32) -> f32 {
         let dmax = self.depth.iter().cloned().fold(0.1f32, f32::max);
         (0.3 * self.cell_m / (gravity * dmax).sqrt()).clamp(0.005, 0.2)

@@ -102,6 +102,9 @@ struct WaterMsg {
     delta_m: f32,
     /// True while phase 3a (deluge-to-steady-state) is still running.
     settling: bool,
+    /// (max Froude, fraction of wet cells supercritical Fr>1.5) — the roll-wave
+    /// gauge: surges are honest physics only while this shows supercritical flow.
+    froude: (f32, f32),
 }
 
 /// Nominal years per erosion epoch — a stated calibration constant (the epoch is
@@ -115,7 +118,7 @@ struct WaterRx(Mutex<std::sync::mpsc::Receiver<WaterMsg>>);
 struct WaterRes(Option<WaterRegion>);
 /// (last update, sim-s/wall-s, mean |Δdepth| m, total sim-s, settling?)
 #[derive(Resource, Default)]
-struct WaterMeta(Option<(std::time::Instant, f32, f32, f32, bool)>);
+struct WaterMeta(Option<(std::time::Instant, f32, f32, f32, bool, (f32, f32))>);
 
 /// Wall-clock + maturity metadata per tier level (a VIEW concern — the world
 /// crate stays wall-clock-free): (level, last update, total epochs, aging speed
@@ -337,7 +340,7 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
                     eprintln!("[worldview] water settled at {sim_total:.0} sim-s (d {:.1} mm vs peak {:.1} mm) — living phase (storms + sediment)", delta_mean * 1000.0, delta_peak * 1000.0);
                 }
             }
-            if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * dt, delta_m: delta_mean, settling }).is_err() {
+            if wtx.send(WaterMsg { region: w.to_region(), sim_seconds: substeps as f32 * dt, delta_m: delta_mean, settling, froude: w.froude() }).is_err() {
                 return;
             }
             // Write the carved bed back to the L21 tier (block-mean downsample
@@ -519,6 +522,7 @@ fn spawn_telescope(
                         sim_seconds: substeps as f32 * wdt,
                         delta_m: (delta / before.len() as f64) as f32,
                         settling: false,
+                        froude: w.froude(),
                     };
                     if wtx.send(msg).is_err() {
                         return;
@@ -590,8 +594,8 @@ fn water_update(rx: Res<WaterRx>, mut water: ResMut<WaterRes>, mut meta: ResMut<
     }
     if let Some(msg) = newest {
         let rate = meta.0.map(|(at, ..)| sim_s / at.elapsed().as_secs_f32().max(1e-3)).unwrap_or(0.0);
-        let total = meta.0.map(|(_, _, _, t, _)| t).unwrap_or(0.0) + sim_s;
-        meta.0 = Some((std::time::Instant::now(), rate, msg.delta_m, total, msg.settling));
+        let total = meta.0.map(|(_, _, _, t, _, _)| t).unwrap_or(0.0) + sim_s;
+        meta.0 = Some((std::time::Instant::now(), rate, msg.delta_m, total, msg.settling, msg.froude));
         water.0 = Some(msg.region);
         ts.water_dirty = true; // water-only refresh; no throttle — every state shows
     }
@@ -1436,9 +1440,9 @@ fn hud_update(view: Res<View>, ts: Res<TerrainState>, meta: Res<TierMeta>, wmeta
         let oldest_txt = if prior_seen { "prior(unsimulated)".to_string() } else { format!("{oldest:.0}s") };
         let water_txt = wmeta
             .0
-            .map(|(_, rate, delta, total, settling)| {
+            .map(|(_, rate, delta, total, settling, (fr_max, fr_sup))| {
                 let phase = if settling { " SETTLING" } else { "" };
-                format!("   W {total:.0}ss ~{rate:.1}s/s d{:.1}mm{phase}", delta * 1000.0)
+                format!("   W {total:.0}ss ~{rate:.1}s/s d{:.1}mm Fr{fr_max:.1}/{:.0}%{phase}", delta * 1000.0, fr_sup * 100.0)
             })
             .unwrap_or_default();
         format!("sim {}{water_txt}   screen newest {newest_txt} oldest {oldest_txt}{}", tiers.join("  "), if view.tier_debug { "   [T]int ON" } else { "" })
