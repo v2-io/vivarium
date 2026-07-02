@@ -45,6 +45,7 @@ use std::sync::{Arc, Mutex};
 
 use vivarium_world::erosion::{self, ErodedRegion, Fluvial, FluvialParams};
 use vivarium_world::gen::SEA_LEVEL_M;
+use vivarium_world::sphere::Geo;
 use vivarium_world::planet::Planet;
 use vivarium_world::sample::{cell_size_m, sample_surface_with, SurfacePatch};
 use vivarium_world::water::{WaterParams, WaterRegion, WaterSim};
@@ -811,6 +812,16 @@ fn water_update(rx: Res<WaterRx>, mut water: ResMut<WaterRes>, mut meta: ResMut<
 
 fn main() {
     let view = View::default();
+    // The session's fixed instant (until #11 wires real time controls):
+    // VIVARIUM_DAY = day of year (0 = vernal equinox; default late spring),
+    // VIVARIUM_HOUR = LOCAL solar hour at the start focus (default mid-morning).
+    let clock = {
+        let day: f64 = std::env::var("VIVARIUM_DAY").ok().and_then(|s| s.parse().ok()).unwrap_or(60.0);
+        let hour: f64 = std::env::var("VIVARIUM_HOUR").ok().and_then(|s| s.parse().ok()).unwrap_or(10.5);
+        let (geo, _, _) = geo_frame(&view);
+        let df = (hour / 24.0 - geo.lon / std::f64::consts::TAU).rem_euclid(1.0);
+        WorldClock(vivarium_world::time::Time::from_deciseconds((((day + df) * 86_400.0) * 10.0) as i64))
+    };
     let (mesher_tx, mesher_rx) = spawn_mesher();
     let tier0 = build_tier0(&view);
     let focus = SharedFocus(Arc::new(Mutex::new((view.focus.x, view.focus.y, view.level))));
@@ -844,12 +855,13 @@ fn main() {
         .insert_resource(mesher_tx)
         .insert_resource(mesher_rx)
         .insert_resource(RingChunks::default())
+        .insert_resource(clock)
         .insert_resource(WaterRes::default())
         .insert_resource(WaterMeta::default())
         .insert_resource(meta)
         .insert_resource(focus)
         .add_systems(Startup, setup)
-        .add_systems(Update, (view_update, tier_update, water_update, mesh_dispatch, mesh_apply, flow_arrow, hud_update, scale_update, maybe_screenshot))
+        .add_systems(Update, (view_update, tier_update, water_update, mesh_dispatch, mesh_apply, flow_arrow, sun_update, hud_update, scale_update, maybe_screenshot))
         .run();
 }
 
@@ -1003,6 +1015,9 @@ struct IsoCamera;
 /// 156 km window would be a false scale cue, which the first cursor was).
 #[derive(Component)]
 struct Pawn;
+/// The key light — driven by the planet's actual sun (see `sun_update`).
+#[derive(Component)]
+struct SunLight;
 /// The focus cursor: a flat screen-relative reticle that reads as "selection",
 /// deliberately NOT figure-shaped so it can't be mistaken for a scale reference.
 #[derive(Component)]
@@ -1113,6 +1128,7 @@ fn setup(mut commands: Commands, view: Res<View>, mut meshes: ResMut<Assets<Mesh
     commands.spawn((
         DirectionalLight { color: Color::srgb(1.0, 0.98, 0.92), shadows_enabled: false, illuminance: 6500.0, ..default() },
         Transform::from_xyz(0.0, 0.0, 0.0).looking_at(Vec3::new(0.6, -0.55, 0.45), Vec3::Y),
+        SunLight,
     ));
     commands.spawn((
         DirectionalLight { color: Color::srgb(0.58, 0.70, 0.92), shadows_enabled: false, illuminance: 1900.0, ..default() },
@@ -2116,13 +2132,70 @@ fn build_water_mesh(heights: &[f32], water: &[f32], w: usize, cell: f64, anchor:
 
 // --- HUD -----------------------------------------------------------------------------
 
-fn compass(yaw: f32) -> &'static str {
+/// The world's clock for this session: a fixed instant (day-of-year +
+/// local-solar-hour at the start focus) until #11 gives time real controls.
+#[derive(Resource)]
+struct WorldClock(vivarium_world::time::Time);
+
+/// Local geographic frame at the focus: the focus Geo plus the East/North
+/// components of one +i and one +j cell-step (finite difference through the
+/// cube-sphere). This is what anchors compass and sun to TRUE north — the
+/// face axes are not north; near face edges they can point anywhere.
+fn geo_frame(view: &View) -> (Geo, [f64; 2], [f64; 2]) {
+    let (fi, fj) = (view.focus.x as u32, view.focus.y as u32);
+    let g0 = CellId::from_face_ij(view.face, fi, fj, view.level).to_cube().to_geo();
+    let gi = CellId::from_face_ij(view.face, fi + 1, fj, view.level).to_cube().to_geo();
+    let gj = CellId::from_face_ij(view.face, fi, fj + 1, view.level).to_cube().to_geo();
+    let en = |g: Geo| {
+        let dlon = (g.lon - g0.lon + std::f64::consts::PI).rem_euclid(std::f64::consts::TAU) - std::f64::consts::PI;
+        let (e, n) = (dlon * g0.lat.cos(), g.lat - g0.lat);
+        let l = (e * e + n * n).sqrt().max(1e-15);
+        [e / l, n / l]
+    };
+    (g0, en(gi), en(gj))
+}
+
+/// Compass letter from a true bearing (radians clockwise from north).
+fn compass_letter(bearing: f64) -> &'static str {
     const L: [&str; 8] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
-    // Our yaw increases COUNTERCLOCKWISE (turning left, +z toward +x), but a
-    // compass ring runs clockwise — negate, or every turn reads mirrored
-    // (Joseph: "turn left from North and the HUD says NorthEast").
-    let deg = (-yaw).to_degrees().rem_euclid(360.0);
+    let deg = bearing.to_degrees().rem_euclid(360.0);
     L[(((deg + 22.5) / 45.0) as usize) % 8]
+}
+
+/// TRUE camera heading: the look direction's cell-step components mapped
+/// through the geographic frame. Replaces the axis-assumes-north compass
+/// (which was also mirrored — Joseph caught it turning left from North).
+fn compass(view: &View) -> &'static str {
+    let (_, ti, tj) = geo_frame(view);
+    let (si, cj) = (view.yaw_target.sin() as f64, view.yaw_target.cos() as f64);
+    let (e, n) = (si * ti[0] + cj * tj[0], si * ti[1] + cj * tj[1]);
+    compass_letter((e).atan2(n))
+}
+
+/// Point the key light along the actual sun (planet astronomy at the focus geo
+/// and the world clock), dimming toward the horizon and out at night.
+fn sun_update(view: Res<View>, clock: Res<WorldClock>, mut sun: Query<(&mut Transform, &mut DirectionalLight), With<SunLight>>) {
+    let Ok((mut tf, mut dl)) = sun.single_mut() else { return };
+    let (geo, ti, tj) = geo_frame(&view);
+    let enu = Planet::EARTH.sun_direction_enu(geo, clock.0);
+    // Invert the (i,j)->(E,N) basis to express East/North in mesh xz.
+    let det = ti[0] * tj[1] - tj[0] * ti[1];
+    if det.abs() < 1e-12 {
+        return;
+    }
+    let east_w = [tj[1] / det, -ti[1] / det]; // (x, z) of the unit-East step
+    let north_w = [-tj[0] / det, ti[0] / det];
+    let sun_w = Vec3::new(
+        (enu[0] * east_w[0] + enu[1] * north_w[0]) as f32,
+        enu[2] as f32,
+        (enu[0] * east_w[1] + enu[1] * north_w[1]) as f32,
+    )
+    .normalize();
+    *tf = Transform::from_translation(Vec3::ZERO).looking_at(-sun_w, Vec3::Y);
+    dl.illuminance = 6500.0 * (enu[2] as f32).clamp(0.02, 1.0);
+    // Low sun warms (crude scattering cue; view-side, honest about being one).
+    let low = (1.0 - (enu[2] as f32).clamp(0.0, 0.35) / 0.35) * 0.5;
+    dl.color = Color::srgb(1.0, 0.98 - 0.25 * low, 0.92 - 0.45 * low);
 }
 
 fn hud_update(
@@ -2134,6 +2207,7 @@ fn hud_update(
     wmeta: Res<WaterMeta>,
     water: Res<WaterRes>,
     eroded: Res<Eroded>,
+    clock: Res<WorldClock>,
     diag: Res<bevy::diagnostic::DiagnosticsStore>,
     mut spans: Query<(&HudSlot, &mut TextSpan, &mut TextColor)>,
     mut mq: Query<&mut Text, With<ModeText>>,
@@ -2166,13 +2240,21 @@ fn hud_update(
     vals[2] = format!("{:?} L{}", view.face, view.level);
     vals[3] = format!("{:<7}", if cell >= 2.0 { format!("{cell:.0} m") } else { format!("{cell:.1} m") });
     vals[4] = format!("{:<8}", if span_m >= 2000.0 { format!("{:.1} km", span_m / 1000.0) } else { format!("{span_m:.0} m") });
-    vals[5] = format!("({:.0}, {:.0})", view.focus.x, view.focus.y);
-    vals[6] = format!("{:<2}", compass(view.yaw_target));
+    vals[5] = {
+        let (geo, _, _) = geo_frame(&view);
+        let (lat, lon) = (geo.lat.to_degrees(), geo.lon.to_degrees());
+        format!("({:.0}, {:.0})  {:.2}°{} {:.2}°{}", view.focus.x, view.focus.y, lat.abs(), if lat >= 0.0 { "N" } else { "S" }, lon.abs(), if lon >= 0.0 { "E" } else { "W" })
+    };
+    vals[6] = format!("{:<2}", compass(&view));
     vals[7] = format!("{:<6}", format!("{:.0} deg", view.pitch.to_degrees()));
     vals[8] = format!("{:<7}", format!("{:.0} m", view.zoom));
     vals[9] = format!("{:.1}", view.vert);
     vals[10] = format!("{:<7}", format!("{:.0} m", height_at_focus(&view, &ts)));
-    vals[11] = format!("{:<14}", format!("{:.0}..{:.0} m", ts.h_min, ts.h_max));
+    vals[11] = {
+        let (geo, _, _) = geo_frame(&view);
+        let q = Planet::EARTH.insolation(geo, clock.0).value;
+        format!("{:<14}", format!("{:.0}..{:.0} m  ☼{q:.0}W/m²", ts.h_min, ts.h_max))
+    };
     // Sim-age of the visible window: probe corners + centre against tier ages.
     let (mut newest, mut oldest, mut prior_seen) = (f32::INFINITY, 0.0f32, false);
     let wm1 = (view.w - 1) as u32;
