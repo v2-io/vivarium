@@ -61,6 +61,12 @@ pub struct WaterParams {
     /// Bed EROSION only happens in channelized flow (depth ≥ this, m); sheet
     /// films don't strip the landscape. Deposition is allowed everywhere.
     pub sed_min_depth: f32,
+    /// …OR where specific discharge (depth·|v|, m²/s) exceeds this — a thin but
+    /// FAST reach is channel flow too. This is what lets river mouths incise:
+    /// the sea drains the last above-sea reach to a millimetres-thin rush
+    /// (Joseph's rivers "drying up" voxels from the ocean, also seen in core),
+    /// which a depth-only gate locks shallow forever.
+    pub sed_min_discharge: f32,
     /// Per-step flux damping (friction): undamped pipes ring — water overshoots
     /// and sloshes in surge waves (Joseph saw pulses running down valleys instead
     /// of streams). 0.99 ≈ a ~20-step (4 sim-s) momentum memory.
@@ -82,6 +88,7 @@ impl Default for WaterParams {
             sed_deposit: 0.5,
             sed_max_rate: 0.002,
             sed_min_depth: 0.05,
+            sed_min_discharge: 0.02,
             damping: 0.99,
         }
     }
@@ -262,7 +269,7 @@ impl WaterSim {
                     let speed = (vx * vx + vy * vy).sqrt();
                     let capacity = (p.sed_capacity * speed).min(2.0);
                     let s0 = self.sediment[i];
-                    if s0 < capacity && d >= p.sed_min_depth {
+                    if s0 < capacity && (d >= p.sed_min_depth || d * speed >= p.sed_min_discharge) {
                         let e = ((capacity - s0) * p.sed_erode * dt).min(max_step);
                         self.bed[i] -= e;
                         self.sediment[i] += e;
