@@ -1,9 +1,15 @@
 # vivarium — design notes
 
-> Status: living design notes, updated 2026-06-20. This is the *thinking*,
-> recorded so it survives between sessions. It is provisional. Where a claim is
-> a guess or a hunch, it is marked — do not promote it to a decision without
-> testing. Ethics of in-world agents live in their own file: [`ETHICS.md`](ETHICS.md).
+> Status: living design notes; pruned 2026-07-03. This file carries the
+> project's *purpose, disposition, and founding commitments* — the parts that
+> change slowest. The elaborated technical thinking has grown into its own
+> documents and is summarized here with pointers: fidelity/LOD/runtime →
+> [`DESIGN-REDUX.md`](DESIGN-REDUX.md), the matter model →
+> [`DESIGN-MATERIAL.md`](DESIGN-MATERIAL.md), the phenomena/coupling map →
+> [`DESIGN-SYSTEMS.md`](DESIGN-SYSTEMS.md). Current implementation state →
+> [`ORIENTATION.md`](ORIENTATION.md). Where a claim is a guess it is marked —
+> do not promote it to a decision without testing. Ethics of in-world agents:
+> [`ETHICS.md`](ETHICS.md).
 
 ## Purpose and disposition (read this first — it sets the priorities)
 
@@ -114,41 +120,26 @@ keeps that door open honestly.
 
 ## Multi-fidelity world, and the invariant shared with cognitive LOD
 
-The third early decision is to commit to a single invariant governing *all*
-level-of-detail, because retrofitting consistency across fidelity tiers later is
-brutal. The world necessarily has several fidelity levels: emergent,
-low-granularity dynamics modeled cheaply at a distance, with higher fidelity the
-closer to an observing/playing agent.
+The third early decision: one invariant governs *all* level-of-detail —
+**fidelity is lazily materialized, and any materialization must be
+statistically consistent with the abstraction it replaces, with known, bounded
+deficiencies.** It is the same shape as the cognitive-LOD problem (cheap mind
+at a distance, full ASF mind materialized on approach): one invariant, two
+substrates. The hard, research-flavored direction is **detail→abstract** —
+absorbing a fine-grained change (a dammed stream) back into the abstraction —
+and it remains the project's sharpest open problem.
 
-**The invariant: fidelity is lazily materialized, and any materialization must be
-statistically consistent with the abstraction it replaces.** A detailed, plausible
-model for an abstracted region can be constructed *post-facto* and must reproduce
-the abstraction's broader pattern (with known, bounded deficiencies). Example:
-broad weather (rain-shadow mountain ranges, Minecraft-like macro-climate) at a
-distance; real micro-weather and fluid dynamics in high-fidelity regions that
-*statistically integrate back* to the same broad pattern.
-
-This is the *same shape* as the cognitive LOD problem — cheap mind near the
-abstraction, full ASF mind materialized on approach. One invariant, two
-substrates (world and cognition). Naming it once is the point.
-
-**The hard direction (flagged as unsolved, not hand-waved).** Abstract→detail is
-easy: seeded worldgen, well-trodden. The hard, genuinely research-flavored
-direction is **detail→abstract**: when an agent reshapes a high-fidelity locus
-(digs a tunnel, dams a stream), the *abstract* model must absorb that change so it
-persists after the locus collapses back down. Bidirectional consistency is not
-known to be tractable here; do not assert that it is. It is also the *fun* kind of
-hard — to be played with, not ground through.
-
-### Volumetric data, selective volumetric simulation
-
-Sufficient fidelity probably requires a **volumetric** world model (even if the
-human view renders isometric or top-down, and even if early play is 2D). This
-reconciles with the recreational/casual goal via the invariant above: a volumetric
-*data model* (sparse / chunked voxels) does **not** require volumetric
-*simulation everywhere* — only in the high-fidelity loci near agents.
-Minecraft-like interaction is then an *upgrade path*, not a day-one cost. Engine
-choice (below) should not foreclose it.
+*(2026-07-03)* This section grew into its own document:
+[`DESIGN-REDUX.md`](DESIGN-REDUX.md) carries the developed form — the widened
+invariant and its **co-fidelity corollary** (detail must be *earned*: the
+finest simulated tier is authoritative over painted detail), the two LOD axes
+and the four temporal regimes, multirate coupling, sufficient-statistic seams,
+regime probes as domain TDD, honest stochasticity, the lazy query graph, the
+fidelity ladder, and the save-store. The volumetric data model (columns,
+strata, voxels-as-views, bodies) likewise lives in
+[`DESIGN-MATERIAL.md`](DESIGN-MATERIAL.md). Both were validated in first
+live-fire use by the 2026-07-02 water system (see `ref/hydrology/` and the
+inline 2026-07-03 amendments there).
 
 ## The two-layer mind (proposed agent architecture)
 
@@ -204,64 +195,17 @@ Bevy (Rust), for reasons specific to *this* project's axes, not graphics:
   on existing sprite sheets and keeping the art *pipeline* simple even while the
   art *result* is indulged.
 
-## Where things actually stand (2026-06-22)
+## Resolved decisions and current state (pointers, not status)
 
-> **(2026-07-03) This and the following two sections are frozen history** — they
-> describe the pre-frame `vivarium-core`/slabs generation. Current ground truth
-> lives in [`ORIENTATION.md`](ORIENTATION.md); the elaborated design thinking in
-> `DESIGN-REDUX.md` / `DESIGN-MATERIAL.md` / `DESIGN-SYSTEMS.md`.
-
-- `vivarium-core`: a **deterministic 3D voxel world** — `seed + sparse edits` (no
-  materialized array), Perlin/FBM terrain with emergent micro-relief, voxel
-  resolution as a runtime `detail` knob, and **view-resolution decoupled from
-  intrinsic resolution** (LOD by stride-sampling). Still dependency-free;
-  bit-identical replay + edit-replay tested.
-- **Engine resolved → Bevy** (`bevy_voxel_world`), via a head-to-head spike
-  against `godot_voxel` built to feature parity over the same core (terrain, LOD,
-  fog, fly + dig/place). Reasoning + confounds in
-  [`spikes/FINDINGS.md`](spikes/FINDINGS.md). Godot spike archived under
-  `archive/`. Live view: `spikes/bevy-voxel/`.
-- The three early decisions (view-as-peer wall, determinism-as-ontology, shared
-  fidelity invariant) held up under real use and are reflected in the structure.
-- Still ahead: the **ASF agent layer** (the two-layer mind + cognitive-LOD seam —
-  the real bet), the **logozoetic interface** (UDON-based; decided, not yet
-  built), the detail→abstract edit-propagation problem, and art. The Bevy view
-  is not yet at visual parity with the dialed-in Godot look (palette + overcast
-  fog were Godot-side polish not yet ported).
-
-## Geology & real-scale anchor (2026-06-23)
-
-The world is now anchored to **real dimensions** — finest voxel = **0.5 m** — and
-shaped by a **geological abstraction tier**: tectonics/erosion/climate simulated
-slowly at world-creation, emitting fields the local Cartesian voxel world is
-materialized from. The fluvial-erosion tier runs at ~16 m cells (the one
-research-earned resolution); render voxels add sub-grid detail noise. Full survey,
-the scale ladder, and the open multi-domain-granularity question:
-[`ref/geology/NOTES.md`](ref/geology/NOTES.md).
-
-**Implemented & walkable (2026-06-23):** FBM scale-free prior → MFD stream-power
-incision → Davy-Lague deposition (`D = G·Qs/A`) → slope-aware detail noise, in
-`vivarium-core` (`geo.rs` + `voxel.rs`). Emergent dendritic valleys with graded,
-non-pooled outlets; deterministic; ~6 s world-gen. The tectonic-uplift tier (the
-principled source the FBM prior stands in for) is still deferred.
-
-## Rendering to the horizon — the LOD architecture (decided 2026-06-23)
-
-At 0.5 m voxels, `bevy_voxel_world` (fixed 32-voxel chunks, mesh-decimation-only
-LOD) **cannot reach a kilometre horizon** — verified in its source; this is the
-wall the spike hit. Decision: keep Bevy, but render the distance with **our own
-view over our own field** (the core/view wall, used in earnest). Staged —
-**v1**: a self-built coarse far-terrain *mesh* sampled from `surface_height`
-(in-world 3D backdrop, not a map), behind the near diggable voxels; **v2**:
-geometry clipmaps for unbounded/planet reach; **v3**: volumetric far (octree LOD
-or SVDAG raymarch) only if distant overhangs/caves prove to matter. The far field
-is a **heightfield** (accepted trade — near stays fully volumetric/diggable);
-because the core is a pure function we *regenerate* the far field deterministically
-rather than caching it. Full decision record, options, and verification:
-[`ref/rendering/NOTES.md`](ref/rendering/NOTES.md).
-
-**v1 implemented (2026-06-23):** `spikes/bevy-voxel` renders near full-detail
-diggable voxels + a self-built far-terrain mesh sampled from `surface_height` —
-walkable, you stand in an eroded valley and see the massif and coast to the
-horizon. Open: the near/far seam, a blocky far-shader + unified palette, and v2
-clipmap rings for unbounded reach.
+Status snapshots rot; this file no longer carries one. The durable decision
+records: engine → Bevy (above; spike comparison in
+[`spikes/FINDINGS.md`](spikes/FINDINGS.md)); real-scale anchor (0.5 m finest
+voxel, ~20 km shell) and the geology tier →
+[`ref/geology/NOTES.md`](ref/geology/NOTES.md); the far-field/LOD rendering
+architecture → [`ref/rendering/NOTES.md`](ref/rendering/NOTES.md); worldgen
+water + erosion physics → [`ref/hydrology/NOTES.md`](ref/hydrology/NOTES.md)
+and [`ref/erosion-port/NOTES.md`](ref/erosion-port/NOTES.md). The clean-room
+world frame (`crates/vivarium-world`: cube-sphere CellId, tiered erosion
+telescope, conserved water) and its explorer (`spikes/worldview`) are the
+active stack — **start at [`ORIENTATION.md`](ORIENTATION.md)**, which is
+maintained as the single current-state document.
