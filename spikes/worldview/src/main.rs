@@ -1395,7 +1395,22 @@ fn view_update(
     let cell = view.cell_m();
     let focus_m = view.focus * cell;
     let rel = focus_m - ts.anchor_m;
-    let focus_h = focus_h_raw * view.vert;
+    // Water over the focus ground, by the SAME rule the renderer draws water:
+    // live surface elevation minus the local terrain. The pawn float gate and
+    // the camera both use THIS — pawn, camera, and rendered water can no
+    // longer disagree (Joseph watched the render rise over the pawn's head
+    // while the sim-cell depth gate kept him standing: bank/hollow cells
+    // diverge from bilinear cell depth by metres).
+    let mut water_over = 0.0f32;
+    if let Some(wr) = &water.0 {
+        let c = CellId::from_face_ij(view.face, view.focus.x as u32, view.focus.y as u32, view.level);
+        if let Some(surf) = wr.surface_m(c) {
+            water_over = (surf as f32 - focus_h_raw).max(0.0);
+        }
+    }
+    // Camera aims at the water surface where there is one (a submerged aim
+    // point put the whole VIEW underwater over deep lakes).
+    let focus_h = (focus_h_raw + water_over) * view.vert;
     let aim_base = Vec3::new(rel.x as f32, focus_h, rel.y as f32);
 
     let look = (Vec3::new(view.yaw.sin(), 0.0, view.yaw.cos()) * view.pitch.cos() + Vec3::NEG_Y * view.pitch.sin()).normalize();
@@ -1429,34 +1444,28 @@ fn view_update(
         // ~0.4 m proud of the surface), bobbing on two incommensurate sines —
         // gentle in tranquil water, choppy toward the breaking regime. Pure
         // view cosmetics on the wall clock; world state is untouched.
+        // Float on WATER_OVER — the render's own quantity (surface minus the
+        // ground underfoot) — not the sim-cell bilinear depth. That mismatch
+        // was the bottom-walking bug: on bank/hollow cells the rendered water
+        // is metres deep while the 4.8 m cell reads shallow, and Joseph
+        // watched rain raise the render over the pawn's head while the depth
+        // gate held him down. A person floats from ~chest depth; draft
+        // ~1.35 m keeps head and shoulders proud.
         let mut y = 1.0; // standing: cuboid centre 1 m above its base
-        if let Some(wr) = &water.0 {
-            let c = CellId::from_face_ij(view.face, view.focus.x as u32, view.focus.y as u32, view.level);
-            if let Some(d) = wr.depth_m(c) {
-                // A person floats from roughly chest depth; draft ~1.35 m keeps
-                // head + shoulders proud.
-                // KNOWN OPEN BUG (2026-07-03, Joseph troubleshooting): pawn
-                // observed bottom-walking in deep water (e.g. ~(5306625,
-                // 13236460), d 12.2 m on the pawn HUD row — which reads the
-                // SAME depth_m path as this gate). float_probe acquitted the
-                // sampling chain against the real cache (50.8 m lake reads
-                // correctly, y math rides the surface). Onset reported "after
-                // exploring a while", area-correlated. Unverified suspects:
-                // camera/focus is bed-anchored in deep water (view submerges
-                // regardless of pawn), system-order staleness between
-                // view_update and water_update, some area-conditional none/
-                // shallow read this comment's author failed to reproduce.
-                if d >= 1.05 {
-                    let v = wr.speed_m_s(c).unwrap_or(0.0) as f32;
-                    let fr = (v / (9.8 * d as f32).sqrt()).clamp(0.0, 2.0);
-                    let t = time.elapsed_secs();
-                    let chop = 0.05 + 0.12 * (fr / 2.0);
-                    let bob = chop * ((t * 3.5).sin() + 0.4 * (t * 8.2 + 1.7).sin());
-                    y = ((d as f32 - 1.35) * view.vert + 1.0 + bob).max(1.0);
-                }
+        if water_over >= 1.05 {
+            if let Some(wr) = &water.0 {
+                let c = CellId::from_face_ij(view.face, view.focus.x as u32, view.focus.y as u32, view.level);
+                let v = wr.speed_m_s(c).unwrap_or(0.0) as f32;
+                let fr = (v / (9.8 * water_over).sqrt()).clamp(0.0, 2.0);
+                let t = time.elapsed_secs();
+                let chop = 0.05 + 0.12 * (fr / 2.0);
+                let bob = chop * ((t * 3.5).sin() + 0.4 * (t * 8.2 + 1.7).sin());
+                y = ((water_over - 1.35) * view.vert + 1.0 + bob).max(1.0);
             }
         }
-        *p = Transform::from_translation(aim_base + Vec3::Y * y);
+        // aim_base is at the SURFACE now; the pawn hangs below it when afloat.
+        let base_y = if water_over >= 1.05 { focus_h_raw * view.vert } else { focus_h };
+        *p = Transform::from_translation(Vec3::new(aim_base.x, base_y, aim_base.z) + Vec3::Y * y);
     }
     if let Ok(mut r) = ring.single_mut() {
         let s = view.zoom * 0.016;
