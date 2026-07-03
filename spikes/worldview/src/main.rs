@@ -1977,6 +1977,28 @@ fn build_ground_mesh(
                 col[k] += (SAND[k] * m - col[k]) * ts;
                 col[k] += (MUD[k] * m - col[k]) * tm;
             }
+            // ARMORED beds read as actual STONES (Joseph): the physical state
+            // (coarse-lag fraction) drives a coordinate-keyed pattern — value
+            // noise in METRIC coordinates (scale-invariant across view levels):
+            // ~0.9 m cobbles + ~3.5 m boulders, brightness varied by the same
+            // noise so each stone shades as one object. Albedo only (no
+            // displacement) — a texture of the truth, not new truth.
+            if armor > 0.03 {
+                use vivarium_world::noise::value_noise;
+                let (xm, ym) = ((origin.0 as f64 + i as f64) * cell, (origin.1 as f64 + j as f64) * cell);
+                let cob = value_noise(18, xm * 1.1, ym * 1.1) as f32;
+                let bld = value_noise(19, xm * 0.28, ym * 0.28) as f32;
+                let sc = ((cob - 0.58) / 0.14).clamp(0.0, 1.0);
+                let sb = ((bld - 0.62) / 0.12).clamp(0.0, 1.0);
+                let stone = sc.max(sb) * armor.clamp(0.0, 1.0);
+                if stone > 0.0 {
+                    let shade = 0.72 + 0.45 * sc.max(sb) * cob;
+                    const STONE: [f32; 3] = [0.76, 0.75, 0.72];
+                    for k in 0..3 {
+                        col[k] += (STONE[k] * shade - col[k]) * (stone * 0.9);
+                    }
+                }
+            }
             // WET DARKENING (Lekner & Dorf 1988; soil-albedo literature): at
             // surface saturation, porous soil reflects ~0.55× dry, rock ~0.72×,
             // foliage ~0.88× (waxy — its wet look is mostly gloss, which a
