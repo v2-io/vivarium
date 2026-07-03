@@ -211,7 +211,18 @@ stored** — and you cannot preserve all of them cheaply:
 
 So the real design decision is **which invariants must survive downscaling**, and
 it is **consumer-dependent**: hydrology needs *conserved totals*, line-of-sight
-needs *max*, display needs *mean*, geomorphology needs *variance*. Therefore a
+needs *max*, display needs *mean*, geomorphology needs *variance*.
+
+*Worked example (2026-07-03, found the hard way twice):* **water surface
+interpolates; water depth does not.** The surface (bed + depth) is a
+continuous field — bilinear reading is honest at any scale. Depth is a
+DIFFERENCE of two fields with different smoothness (continuous surface minus
+rough fine terrain), and differences do not survive interpolation: on a bank
+inside a pool, neighbourhood-average depth reads 0.4 m while the surface
+stands 3 m over the ground. Fine-scale consumers (the renderer; a 2 m pawn's
+buoyancy) must reconstruct depth LOCALLY as surface-minus-local-ground.
+Using interpolated depth produced the "bubbles" render artifact first and the
+bottom-walking pawn second — same mistake, two costumes. Therefore a
 macro cell honestly wants to be not a scalar but **`{mean, min, max, conserved
 totals, …}` — an interval-plus-moments, with a flag marking which invariants are
 *guaranteed* vs. *approximate*.** That flag is the ubit (§9) applied to terrain.
