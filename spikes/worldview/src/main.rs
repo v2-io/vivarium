@@ -55,9 +55,7 @@ const SKY: Color = Color::srgb(0.80, 0.82, 0.84);
 /// Water colour by depth (Beer–Lambert). Tuned for STREAMS AND POOLS, not open
 /// ocean (Joseph: sea-calibrated absorption made mountain water glint-only):
 /// ~0.25 m reads ~40% opaque, ~1 m ~85%, with a floor so even films register.
-const WATER_SHALLOW: [f32; 3] = [0.46, 0.63, 0.75];
-const WATER_DEEP: [f32; 3] = [0.05, 0.16, 0.38];
-const WATER_ABSORB_PER_M: f32 = 1.2; // gentler Beer–Lambert: see the bed longer
+
 
 // --- Framing (ortho, true-iso default — slabs' proven constants) -------------------
 const ISO_PITCH: f32 = 0.615_479_7; // atan(1/√2)
@@ -1620,7 +1618,7 @@ fn spawn_mesher() -> (MesherTx, MesherRx) {
                         let c = CellId::from_face_ij(face, oi + x as u32, oj + y as u32, level);
                         let sm = live.suspended_m(c).unwrap_or(0.0);
                         let d = live.depth_m(c).unwrap_or(0.0).max(0.02);
-                        (0.14 * (1.0 + (sm / d) as f32 / 0.005).ln()).clamp(0.0, 0.75)
+                        (sm / d) as f32 // raw concentration; optics happen in the mesh
                     };
                     MeshDone::WaterOnly { level, origin: (oi, oj), water: build_water_mesh(&heights, &wtr, w, cell, anchor, (oi, oj), vert, &turbidity_of) }
                 }
@@ -1686,7 +1684,7 @@ fn build_full(face: Face, level: u8, w: usize, oi: u32, oj: u32, vert: f32, tier
             let c = CellId::from_face_ij(face, oi + x as u32, oj + y as u32, level);
             let sm = wr.suspended_m(c).unwrap_or(0.0);
             let d = wr.depth_m(c).unwrap_or(0.0).max(0.02);
-            (0.14 * (1.0 + (sm / d) as f32 / 0.005).ln()).clamp(0.0, 0.75)
+            (sm / d) as f32 // raw concentration; optics happen in the mesh
         })
     };
     let ground = build_ground_mesh(&fields, w, cell, anchor, (oi, oj), vert, &tier_of, tier_debug, edge_lines, &soil_of);
@@ -2065,29 +2063,48 @@ fn build_water_mesh(heights: &[f32], water: &[f32], w: usize, cell: f64, anchor:
             // as the same stream (Joseph's "seeping" was riffles under the old
             // cutoff).
             let fade = ((depth - 0.025) / 0.1).clamp(0.0, 1.0);
-            // DECOUPLED: alpha is transmission (Beer–Lambert + a 0.35 floor so
-            // standing water reads as a SURFACE without needing glint — films
-            // still fade out), hue ramps to blue fast (a 30 cm stream is
-            // water-coloured, not ground-coloured) — Joseph's readability pass.
-            let alpha = ((1.0 - (-depth * WATER_ABSORB_PER_M).exp()).max(0.35) * fade).clamp(0.0, 0.80);
-            let m = (1.0 - (-depth * 2.0).exp()) * fade;
+            // REAL WATER OPTICS (Joseph: "look up the physics rather than
+            // twiddling"). Light reaching your eye from the bottom traverses
+            // ~2.5×depth (down + slanted return); it attenuates per Beer–Lambert
+            // with extinction k = k_water + k_sediment:
+            //   · pure water (green channel, the visibility-defining one):
+            //     k ≈ 0.07 /m — red dies first (0.45 /m), blue last (0.03 /m),
+            //     which is WHY depth reads as tan → teal → blue in real lakes;
+            //   · suspended sediment via the Secchi anchor k ≈ 0.034 per mg/L
+            //     (muddy flood 500 mg/L ⇒ ~0.1 m visibility; clear lake
+            //     2 mg/L ⇒ ~4 m) — turbidity is EXTINCTION, not paint. Only
+            //     the wash-load fraction (~2% of the sim's mobile total) is
+            //     optically active.
+            // Alpha = 1 − transmission(green). No floors, no caps but the
+            // blend limit: shallow clear water is honestly transparent, flood
+            // mud is honestly opaque, and everything between grades itself.
+            let conc = turbidity_of(i, j);
+            let mgl = conc * 0.02 * 2.65e6;
+            let k_sed = 0.034 * mgl;
+            let path = 2.0 * depth;
+            // 0.045/m: pristine-lake clear-water extinction (style choice at
+            // the physical model's clean end — organics/DOM deliberately not
+            // simulated, so bottoms stay readable to ~10 m in clear water,
+            // "slightly more realistic than Minecraft"; floods still go
+            // opaque through the sediment term, which is the honest signal).
+            let alpha = ((1.0 - (-(0.045 + k_sed) * path).exp()) * fade).clamp(0.0, 0.95);
+            // The water column's own colour: blue-teal upwelling (what pure
+            // water scatters back) sliding to silt tan as sediment extinction
+            // takes over, and darkening as depth starves the return light.
+            let silt = k_sed / (k_sed + 0.4);
+            let deepen = 0.35 + 0.65 * (-0.08 * depth).exp();
             positions.push([px(i), surf, pz(j)]);
             let (x, y) = (i as isize, j as isize);
             let nrm = Vec3::new(sv(x - 1, y) - sv(x + 1, y), 2.0 * cell as f32, sv(x, y - 1) - sv(x, y + 1)).normalize();
             normals.push([nrm.x, nrm.y, nrm.z]);
-            // Suspended load makes water TURBID: silty brown, green suppressed
-            // (Joseph). t=0 clear mountain water, t→1 flood-brown.
-            let t = turbidity_of(i, j);
-            const SILT: [f32; 3] = [0.52, 0.42, 0.26];
-            let mut rgb = [
-                WATER_SHALLOW[0] + (WATER_DEEP[0] - WATER_SHALLOW[0]) * m,
-                WATER_SHALLOW[1] + (WATER_DEEP[1] - WATER_SHALLOW[1]) * m,
-                WATER_SHALLOW[2] + (WATER_DEEP[2] - WATER_SHALLOW[2]) * m,
+            const CLEAR_BODY: [f32; 3] = [0.06, 0.20, 0.35]; // upwelling blue-teal
+            const SILT_BODY: [f32; 3] = [0.45, 0.38, 0.25]; // suspended-silt tan
+            let rgb = [
+                (CLEAR_BODY[0] + (SILT_BODY[0] - CLEAR_BODY[0]) * silt) * deepen,
+                (CLEAR_BODY[1] + (SILT_BODY[1] - CLEAR_BODY[1]) * silt) * deepen,
+                (CLEAR_BODY[2] + (SILT_BODY[2] - CLEAR_BODY[2]) * silt) * deepen,
             ];
-            for k in 0..3 {
-                rgb[k] += (SILT[k] - rgb[k]) * t;
-            }
-            colors.push([rgb[0], rgb[1], rgb[2], m.clamp(0.0, 0.95)]);
+            colors.push([rgb[0], rgb[1], rgb[2], alpha]);
         }
     }
     // Shoreline (Joseph): do NOT feather the surface down at the water's edge —
