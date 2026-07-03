@@ -121,7 +121,7 @@ const EPOCH_YEARS: f32 = 100.0;
 /// Physics/recipe version for the fill cache — the crude rung of §12's
 /// recipe-hash: BUMP THIS whenever erosion or water physics changes, or stale
 /// caches will serve worlds the current algorithms would not produce.
-const FILL_ALGO_VERSION: &str = "2026-07-03c"; // c: colmation counts fines only
+const FILL_ALGO_VERSION: &str = "2026-07-03d"; // d: shear-gated fines + winnowing
 
 /// The FILL CACHE (first rung of DESIGN-REDUX §12–13): the filled world —
 /// eroded tiers + steady-state water — is a pure function of its parameters,
@@ -1434,9 +1434,18 @@ fn view_update(
             let c = CellId::from_face_ij(view.face, view.focus.x as u32, view.focus.y as u32, view.level);
             if let Some(d) = wr.depth_m(c) {
                 // A person floats from roughly chest depth; draft ~1.35 m keeps
-                // head + shoulders proud. (The first constants — float at 1.2,
-                // draft 1.6 — were tuned on deluge-era torrents; the converged
-                // world's honest 0.8–1.8 m rivers read as bottom-walking.)
+                // head + shoulders proud.
+                // KNOWN OPEN BUG (2026-07-03, Joseph troubleshooting): pawn
+                // observed bottom-walking in deep water (e.g. ~(5306625,
+                // 13236460), d 12.2 m on the pawn HUD row — which reads the
+                // SAME depth_m path as this gate). float_probe acquitted the
+                // sampling chain against the real cache (50.8 m lake reads
+                // correctly, y math rides the surface). Onset reported "after
+                // exploring a while", area-correlated. Unverified suspects:
+                // camera/focus is bed-anchored in deep water (view submerges
+                // regardless of pawn), system-order staleness between
+                // view_update and water_update, some area-conditional none/
+                // shallow read this comment's author failed to reproduce.
                 if d >= 1.05 {
                     let v = wr.speed_m_s(c).unwrap_or(0.0) as f32;
                     let fr = (v / (9.8 * d as f32).sqrt()).clamp(0.0, 2.0);

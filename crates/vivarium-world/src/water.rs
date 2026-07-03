@@ -100,6 +100,16 @@ pub struct WaterParams {
     /// the coarser rest builds alluvium without sealing. Counting ALL deposit
     /// as fines sealed the whole world within minutes of a deluge (Joseph).
     pub fines_frac: f32,
+    /// Suspension threshold for FINES (Pa): below silt's ~0.06 Pa a bed can
+    /// accept fines; above it the flow keeps them entrained — fines ride
+    /// through steep channels and settle in slack water. Without this gate,
+    /// transport-limited channels sealed into "mud sealant" (Joseph) because
+    /// they never net-erode and every storm deposited fines.
+    pub tau_fines: f32,
+    /// Winnowing rate (per sim-s at 2×τ_c): armoring by surface grain
+    /// exchange in transport-limited reaches — real beds coarsen under flood
+    /// shear even with zero net erosion (~10-minute flume timescale).
+    pub winnow_rate: f32,
     /// ARMORING (Joseph's fluvial list): scour into the PARENT bed (no loose
     /// alluvium left) winnows away fines and leaves a coarse surface lag that
     /// shields the bed. `armor_depth` is the scour needed to develop a full
@@ -131,6 +141,8 @@ impl Default for WaterParams {
             seal_q: 0.01,
             plug_depth: 0.005,
             fines_frac: 0.15,
+            tau_fines: 0.06,
+            winnow_rate: 1.0 / 600.0,
             armor_depth: 0.1,
             armor_shield: 0.8,
         }
@@ -455,13 +467,32 @@ impl WaterSim {
                         self.colmation[i] = (self.colmation[i] - e / p.plug_depth).max(0.0);
                         self.armor[i] = (self.armor[i] + into_parent / p.armor_depth).min(1.0);
                     } else if s0 > capacity {
-                        let dp = ((s0 - capacity) * p.sed_deposit * dt).min(max_step).min(s0);
+                        // Fines stay ENTRAINED above their suspension threshold
+                        // (silt ~0.06 Pa): steep channels deposit only the
+                        // coarse fraction and never colmate — the fines ride
+                        // through and settle in slack water, which is where
+                        // mud belongs. (Rouse-number logic, crude rung.)
+                        let fines_settle = tau < p.tau_fines;
+                        let frac = if fines_settle { 1.0 } else { 1.0 - p.fines_frac };
+                        let dp = ((s0 - capacity) * p.sed_deposit * dt * frac).min(max_step).min(s0);
                         self.bed[i] += dp;
                         self.sediment[i] -= dp;
                         self.sed_bed[i] += dp;
-                        self.colmation[i] = (self.colmation[i] + dp * p.fines_frac / p.plug_depth).min(1.0);
+                        if fines_settle {
+                            self.colmation[i] = (self.colmation[i] + dp * p.fines_frac / p.plug_depth).min(1.0);
+                        }
                         // Burial: fresh loose material covers the lag.
                         self.armor[i] = (self.armor[i] - dp / p.armor_depth).max(0.0);
+                    }
+                    // WINNOWING (transport-limited armoring): under sustained
+                    // shear the bed surface exchanges grains — fines wash out
+                    // (de-colmation) and coarse concentrates (armor) even with
+                    // ZERO net erosion. This is why real steep channels are
+                    // stony, not sealed, despite running at capacity.
+                    if tau > p.tau_c {
+                        let x = ((tau / p.tau_c - 1.0).min(3.0)) * p.winnow_rate * dt;
+                        self.armor[i] = (self.armor[i] + x * (1.0 - self.sed_bed[i].min(1.0))).min(1.0);
+                        self.colmation[i] = (self.colmation[i] - x * 2.0).max(0.0);
                     }
                 }
             }
