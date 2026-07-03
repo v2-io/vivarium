@@ -16,8 +16,8 @@ with `archive/godot-voxel/sync-lib.sh release`). UDON (`~/src/libudon`) is
 *decided but not yet implemented* as the core-side notation.
 
 **Worldgen geology + hydrology (the bulk of recent work).** A principled,
-mass-conserving water+erosion pipeline on branch `spike/hydrology` (not yet
-merged): macro erosion (16 m) → fine erosion (4 m, carves channels) → a conserved
+mass-conserving water+erosion pipeline (merged to main 2026-07-03):
+macro erosion (16 m) → fine erosion (4 m, carves channels) → a conserved
 shallow-water + groundwater sim run to steady state → frozen snapshot (terrain,
 water depth/volume, velocity). Streams, flat lakes, springs, and a flat sea all
 *emerge* from the physics — no fractal noise, nothing imposed. The load-bearing
