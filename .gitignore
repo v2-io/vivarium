@@ -4,6 +4,7 @@
 .idea/
 .vscode/
 .obsidian/
+.obsidian.vimrc
 
 # Large reference assets kept locally, not in git history.
 # The 2D-circle tileset (32 MB) is a copy of ~/src/neworld's; pull it from there
