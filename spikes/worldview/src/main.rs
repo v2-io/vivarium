@@ -1616,7 +1616,7 @@ fn spawn_mesher() -> (MesherTx, MesherRx) {
                         let c = CellId::from_face_ij(face, oi + x as u32, oj + y as u32, level);
                         let sm = live.suspended_m(c).unwrap_or(0.0);
                         let d = live.depth_m(c).unwrap_or(0.0).max(0.02);
-                        (((sm / d) as f32 / 0.05).sqrt() * 0.6).clamp(0.0, 0.75)
+                        (0.14 * (1.0 + (sm / d) as f32 / 0.005).ln()).clamp(0.0, 0.75)
                     };
                     MeshDone::WaterOnly { level, origin: (oi, oj), water: build_water_mesh(&heights, &wtr, w, cell, anchor, (oi, oj), vert, &turbidity_of) }
                 }
@@ -1682,7 +1682,7 @@ fn build_full(face: Face, level: u8, w: usize, oi: u32, oj: u32, vert: f32, tier
             let c = CellId::from_face_ij(face, oi + x as u32, oj + y as u32, level);
             let sm = wr.suspended_m(c).unwrap_or(0.0);
             let d = wr.depth_m(c).unwrap_or(0.0).max(0.02);
-            (((sm / d) as f32 / 0.05).sqrt() * 0.6).clamp(0.0, 0.75)
+            (0.14 * (1.0 + (sm / d) as f32 / 0.005).ln()).clamp(0.0, 0.75)
         })
     };
     let ground = build_ground_mesh(&fields, w, cell, anchor, (oi, oj), vert, &tier_of, tier_debug, edge_lines, &soil_of);
@@ -2061,11 +2061,12 @@ fn build_water_mesh(heights: &[f32], water: &[f32], w: usize, cell: f64, anchor:
             // as the same stream (Joseph's "seeping" was riffles under the old
             // cutoff).
             let fade = ((depth - 0.025) / 0.1).clamp(0.0, 1.0);
-            // DECOUPLED (opacity kept creeping when hue and alpha shared one
-            // curve): alpha is transmission (Beer–Lambert, how much bed shows
-            // through), hue is depth (pale shallows -> deep blue), separately.
-            let alpha = ((1.0 - (-depth * WATER_ABSORB_PER_M).exp()) * fade).clamp(0.0, 0.80);
-            let m = (1.0 - (-depth * 0.5).exp()) * fade;
+            // DECOUPLED: alpha is transmission (Beer–Lambert + a 0.35 floor so
+            // standing water reads as a SURFACE without needing glint — films
+            // still fade out), hue ramps to blue fast (a 30 cm stream is
+            // water-coloured, not ground-coloured) — Joseph's readability pass.
+            let alpha = ((1.0 - (-depth * WATER_ABSORB_PER_M).exp()).max(0.35) * fade).clamp(0.0, 0.80);
+            let m = (1.0 - (-depth * 2.0).exp()) * fade;
             positions.push([px(i), surf, pz(j)]);
             let (x, y) = (i as isize, j as isize);
             let nrm = Vec3::new(sv(x - 1, y) - sv(x + 1, y), 2.0 * cell as f32, sv(x, y - 1) - sv(x, y + 1)).normalize();
