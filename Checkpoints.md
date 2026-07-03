@@ -40,7 +40,8 @@ Cosmic scale; everything prior to the world.
   *(the moon cannot be added non-destructively later, at least in real life, so it is declared here — see design notes)*
 
 **Bequest:** the constants themselves — orbit, mass, chemistry, seed: the box
-every later computation happens inside. *Record: none in-world.*
+every later computation happens inside.
+*Geological Record: proportions and totals of elements & base columns & most conserved values*
 
 ## Phase 1 — **Protogenic** · *the world is now **Formed***
 
