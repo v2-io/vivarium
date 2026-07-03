@@ -180,6 +180,26 @@ these; worth unbundling when grain sizes exist):
 **Interfaces to other systems** (rows above): aeolian pickup of dry fines,
 coastal/wave transport, karst dissolution, ice/freeze — their own systems.
 
+**Fundamental-vs-emergent discipline** (from Joseph's survey pass, 2026-07-03):
+the fundamentals are few — fluid-particle mechanics (Shields/settling/drag),
+boundary shear vs cohesion, tools-abrasion, geotechnical failure, chemistry —
+and everything else on this page should EMERGE. Corollary worth stating as a
+rule: **some explicit state is scaffolding with a demolition date.** Our armor
+field parameterizes what selective transport of real grain sizes would emerge
+(D10 mobile, D84 not); when the grain-size split lands, armor should re-emerge
+and the explicit field retire. Same eventual fate for colmation (fines
+percolation) and possibly alluvium (it IS the coarse transport pool at rest).
+
+**Hyperconcentrated / debris regime — actively missing physics** (survey 2):
+our momentum treats a 95% mud column like clear water. Real mixtures have
+(a) concentration-dependent density & viscosity — "flow bulking", the
+feedback that turns flash floods into debris waves — and (b) a BINGHAM YIELD
+STRESS: past ~50% solids the mixture is solid until stress exceeds yield,
+then a scouring slurry. Two small terms (ρ(conc), τ_yield(conc)) bridge the
+water sim to §15's μ(I) rung; debris JAMS additionally need woody-debris /
+boulder BODIES (the §14 overlay), and jam-forced scour + self-clogging
+avulsion then emerge. Named candidates, not yet built.
+
 **Highest-leverage next three, by visible-truth-per-effort:** (1) grain-size
 split (fines/sand/gravel) with Stokes settling — unlocks saltation/traction
 as behaviours instead of modes, real sorting, honest deltas; (2) bank
