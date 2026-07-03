@@ -185,6 +185,21 @@ purpose.*
   the sleeper: AXIAL-TILT STABILIZATION — without it obliquity wanders
   chaotically over Myr and climate stability goes with it. Note: our Phase 1
   already silently assumes this service by asserting a fixed 23.44° tilt.
+- **Canceling pairs — paired non-simulation** *(Joseph, the magnetic field)*.
+  Some [mech?] conditions are a shield and its threat whose only world-visible
+  product is their BALANCE: magnetic field × solar wind ("its job of keeping
+  deadly solar winds from stripping your atmosphere is simulated by us also
+  not simulating those winds"), Jupiter/moon shepherding × impactor flux. A
+  pair stays jointly unbuilt at zero fidelity cost until a consumer queries
+  the DIFFERENCE or either member alone — polarity stripes in ridge basalt
+  (the unseen field still leaves readable rock — the checkpoint-artifact
+  principle), auroras, flare blackouts, an agent's compass. Counter-example
+  proving the rule cuts both ways: ozone × UV was deliberately UN-canceled
+  because a gate (land life) reads their difference. And when a pair is
+  opened, it opens as PHYSICS, not events: auroras come from a keyed solar
+  activity cycle (§8 temporal stochasticity, storm-schedule machinery at an
+  ~11-year-analog scale, heavy-tailed flares) consumed as f(activity,
+  magnetic latitude, night) — never "Event 7, probability 1/40/day".
 - **Phases own their intrusion budget.** Each declares which effects reach
   forward past its checkpoint and which seal at it — and, dually, which of its
   parts decompose independently / in parallel / lazily-backwards-from-now (§3,
