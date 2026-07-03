@@ -2361,7 +2361,14 @@ fn hud_update(
         // Live conservation gauge (m·cells → per-cell µm is noise; show total
         // as an honest volume number). Near-zero = the physics is keeping its
         // books; growth = something broke conservation at runtime.
-        vals[20] = format!("{}   budget {:+.2} m³/m²·cells", vals[20], w.drift);
+        vals[20] = format!("{}   budget {:+.2} m3·cells", vals[20], w.drift);
+        // Worker liveness: bursts should arrive every few seconds; a stale
+        // clock here means the water thread died or stalled — say so instead
+        // of letting the world quietly freeze (Joseph's float mystery).
+        let age = w.at.elapsed().as_secs_f32();
+        if age > 12.0 {
+            vals[20] = format!("{}   WORKER SILENT {age:.0}s", vals[20]);
+        }
     } else {
         vals[16] = "off".into();
     }
@@ -2372,7 +2379,18 @@ fn hud_update(
         .filter(|_| matches!(view.mode, ViewMode::Water | ViewMode::Float))
         .and_then(|wr| {
             let c = CellId::from_face_ij(view.face, view.focus.x as u32, view.focus.y as u32, view.level);
-            let d = wr.depth_m(c)?;
+            let d = match wr.depth_m(c) {
+                Some(d) => d,
+                None => {
+                    // Any water you SEE out here is a ring chunk's build-time
+                    // snapshot — a photograph, not the live sim. Floating,
+                    // bobbing, arrows and readouts all honestly end at this
+                    // boundary (until the water telescope extends it).
+                    vals[21] = "pawn    ".into();
+                    vals[22] = "BEYOND LIVE WATER (edge of simulated region)".into();
+                    return None;
+                }
+            };
             if d < 0.005 {
                 return None;
             }
