@@ -12,6 +12,16 @@
 - #mech — causality likely or known, but **no simulable mechanism yet** (the honored hand-waves; often *declare-causally, materialize-lazily* — see design notes)
 - #emergent — expected to arise from the phase's own dynamics; **verify, don't build**
 
+**Bequest vs Charge vs Record:** a phase's **Bequest** is everything it hands
+forward that persists and shapes later dynamics — features, regimes,
+capabilities (and *incapabilities*: coal exists only because Carboniferous
+ecosystems could not yet digest lignin — a phase-window material born of a
+temporary inability). The **Charge** is only the *gating subset* of the
+bequest. The **Record** is the bequest's *readable-in-rock slice* — the
+chronostratigraphic signature, doubling as a verification target: drill a
+core through a finished world and the phases must appear in order, or the
+machinery is lying.
+
 **Where vivarium stands (2026-07-03):** an Abyssal world wearing a Primeval sky — geology mid-Phase-3 (erosion/hydrology running), astronomy borrowed from Phase 4 (crisp sun), biosphere: none yet.
 
 ---
@@ -29,7 +39,8 @@ Cosmic scale; everything prior to the world.
 - Protective architecture (some implicit) — moon, outer giants, solar-wind shelter #mech
   *(the moon cannot be added non-destructively later, at least in real life, so it is declared here — see design notes)*
 
-**Record:** none in-world — only the parameter block itself.
+**Bequest:** the constants themselves — orbit, mass, chemistry, seed: the box
+every later computation happens inside. *Record: none in-world.*
 
 ## Phase 1 — **Protogenic** · *the world is now **Formed***
 
@@ -43,7 +54,10 @@ A sphere orbiting its star, featureless, hot, brooded upon.
 - Smooth, water-covered surface #earth
 - The rhythm of angle-specific solar insolation #emergent *(falls out of tilt + spin + orbit)*
 
-**Record:** no preserved strata (molten resurfacing); bulk composition only.
+**Bequest:** the sphere and its rhythms — tilt (every season, forever), spin
+(day length; Coriolis, hence every future wind belt and ocean gyre), the
+insolation gradient (the skeleton of all climate zones). *Record: none
+preserved (molten resurfacing); bulk composition only.*
 
 ## Phase 2 — **Primordial** · *the world is now **Divided***
 
@@ -61,7 +75,10 @@ Gas, liquid, and solid separate: a dense, hot, pre-oxygenation atmosphere; a sea
 - **Abiogenesis, through photosynthetic sea life** — microbial at least #earth
   *(Joseph: Abyssal opens after this exists)*
 
-**Record:** primordial basement — the first crust.
+**Bequest:** the three reservoirs and their interfaces; the sea-level datum;
+a closed water cycle with its energy-gradient channels; the seeded
+asymmetries every later phase amplifies. *Record: primordial basement — the
+first crust.*
 
 ## Phase 3 — ☆ **Abyssal** (Deep Time) · *the world is now **Alive***
 
@@ -78,7 +95,11 @@ The world itself becomes a highly dynamic system across great orders of temporal
 - Oxygen accumulating toward the Great Oxygenation #emergent *(from the photosynthesizers)*
 - Alien proto-biomes, hostile to complex life #emergent
 
-**Record:** the deep sedimentary stack; banded-iron formations (oxygen meeting dissolved iron); the FIRST LIMESTONES — life writing itself into rock.
+**Bequest:** THE LAND ITSELF — continents, relief, and drainage networks
+(every future rain-shadow, watershed, and harbor is drawn here); mineral and
+ore bodies; soil parent material; an ocean-atmosphere partway to breathable.
+*Record: the deep sedimentary stack; banded-iron formations (oxygen meeting
+dissolved iron); the FIRST LIMESTONES — life writing itself into rock.*
 
 ## Phase 4 — **Primeval** · *the world is now **Awake***
 
@@ -95,7 +116,13 @@ The clouds part; the world beholds the cosmos for the first time — dawn, the m
 - **Stationary land life** — plants colonize the continents #earth
   *(moved here from the draft's Phase 3: land is lethal without the ozone this phase's sky provides)*
 
-**Record:** REDBEDS — the oxidation event rusts the rock record; late, the first soil horizons under land plants.
+**Bequest:** a breathable sky and its ozone roof; climate zones and modern
+circulation — including the coupled ocean-atmosphere oscillations (the
+ENSO-analogs, droughts, monsoons later phases will live by); vegetated
+continents that change albedo and slow erosion (roots are a geological
+force); the visible cosmos — the clock later navigators and calendars read.
+*Record: REDBEDS — the oxidation event rusts the rock record; late, the
+first soil horizons under land plants.*
 
 ## Phase 5 — **Archaic** · *the world is now **Abundant***
 
@@ -108,7 +135,12 @@ Life as we know it, fully adapted to the world it helped create: agents in the s
 - Mobile land life, through FLIGHT — birds, fowl, reptiles of every variety #earth
 - Resilient, calibrated evolutionary pressures; energy-gradient-driven diversity mechanisms #mech
 
-**Record:** the fossil-bearing strata begin.
+**Bequest:** the food web and its capability set — where what life CANNOT yet
+do matters as much as what it can (until lignin-digesters arrive, wood
+buries instead of rotting: the coal-seam window). Ecological capabilities
+set the material-flux rules — decay vs burial — for everything after.
+*Record: the fossil-bearing strata begin; coal seams, the signature of an
+inability.*
 
 ## Phase 6 — **Aboriginal** · *the world is now **Recognizable*** — TARGET 1
 
