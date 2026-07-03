@@ -1435,13 +1435,17 @@ fn view_update(
         if let Some(wr) = &water.0 {
             let c = CellId::from_face_ij(view.face, view.focus.x as u32, view.focus.y as u32, view.level);
             if let Some(d) = wr.depth_m(c) {
-                if d >= 1.2 {
+                // A person floats from roughly chest depth; draft ~1.35 m keeps
+                // head + shoulders proud. (The first constants — float at 1.2,
+                // draft 1.6 — were tuned on deluge-era torrents; the converged
+                // world's honest 0.8–1.8 m rivers read as bottom-walking.)
+                if d >= 1.05 {
                     let v = wr.speed_m_s(c).unwrap_or(0.0) as f32;
                     let fr = (v / (9.8 * d as f32).sqrt()).clamp(0.0, 2.0);
                     let t = time.elapsed_secs();
                     let chop = 0.05 + 0.12 * (fr / 2.0);
                     let bob = chop * ((t * 3.5).sin() + 0.4 * (t * 8.2 + 1.7).sin());
-                    y = ((d as f32 - 1.6) * view.vert + 1.0 + bob).max(1.0);
+                    y = ((d as f32 - 1.35) * view.vert + 1.0 + bob).max(1.0);
                 }
             }
         }
