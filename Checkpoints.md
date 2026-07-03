@@ -171,6 +171,20 @@ purpose.*
   say what *kind* of arrow a condition is, never whether it is built.
   Implementation state lives elsewhere (the §12 recipe keys, or a tracking
   layer) so this document never quietly claims the world exists.
+- **Declare causally, materialize lazily** *(Joseph, resolving the moon
+  fuzziness)*. Physical universes must BUILD prerequisites at their causal
+  moment (the moon-forming impact resets everything, so it must come first);
+  we need only DECLARE them there — parameters committed at their causal
+  position in Phase 0/1 — and materialize on first downstream pull (§11
+  applied to gate conditions). The moon is the archetype: its charge is one
+  parameter block + a closed-form cached ephemeris (small, well-established
+  math, same analytic regime as insolation), sitting there henceforth with
+  its gravity, light, and cheese for whatever pulls on it. Its REAL services
+  (corrected list — tidal tectonics/mantle-heat is folklore): ocean tides
+  (→ intertidal ecology, Phase 5), moonlight & phases (Phase 4's sky), and
+  the sleeper: AXIAL-TILT STABILIZATION — without it obliquity wanders
+  chaotically over Myr and climate stability goes with it. Note: our Phase 1
+  already silently assumes this service by asserting a fixed 23.44° tilt.
 - **Phases own their intrusion budget.** Each declares which effects reach
   forward past its checkpoint and which seal at it — and, dually, which of its
   parts decompose independently / in parallel / lazily-backwards-from-now (§3,
