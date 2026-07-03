@@ -152,6 +152,16 @@ Landed, all probe- or screenshot-verified (details in the commit log):
   seam fix), `velocity_histogram` (two-regime fingerprint), `channel_profile`
   (+sediment regimes). Hex grid: considered & declined (DESIGN-MATERIAL §8).
 
+**Open investigations (2026-07-03 late, sharply posed — start here):**
+1. `armor_regimes` probe: eddy-diffusion↔winnowing interaction (regime 1
+   regressed when lateral mixing landed — physics decision needed) and the
+   source-cell EXACT-zero-incision anomaly (regime 3; single-column probe).
+   Status in the probe's header comment.
+2. Water-budget gauge: drift went ~0 → −0.37 m³·cells/sim-s in the living
+   phase — linear, too straight for rounding. A real leak candidate.
+3. Pawn bottom-walking: fixed via water_over consistency rule (pawn+camera
+   use the render's surface−ground). Verify in play; float_probe exists.
+
 **Two plans written 2026-07-03, waiting for their builders:** the analytic
 hydrological initialization that deletes the deluge fill entirely
 (`ref/erosion-port/NOTES.md` §Next — solve the equilibrium, seed the sim,
