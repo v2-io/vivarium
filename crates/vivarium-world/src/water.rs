@@ -108,7 +108,11 @@ pub struct WaterParams {
     pub tau_fines: f32,
     /// Winnowing rate (per sim-s at 2×τ_c): armoring by surface grain
     /// exchange in transport-limited reaches — real beds coarsen under flood
-    /// shear even with zero net erosion (~10-minute flume timescale).
+    /// shear even with zero net erosion. Calibrated to PAVEMENT-over-several-
+    /// storm-cycles (~10³ sim-s), NOT single-event flume rearrangement: the
+    /// armor_regimes probe caught the 1/600 first guess saturating armor in
+    /// ~300 sim-s, before channels did any measurable work — a world-wide
+    /// incision freeze, silently.
     pub winnow_rate: f32,
     /// ARMORING (Joseph's fluvial list): scour into the PARENT bed (no loose
     /// alluvium left) winnows away fines and leaves a coarse surface lag that
@@ -142,7 +146,7 @@ impl Default for WaterParams {
             plug_depth: 0.005,
             fines_frac: 0.15,
             tau_fines: 0.06,
-            winnow_rate: 1.0 / 600.0,
+            winnow_rate: 1.0 / 6000.0,
             armor_depth: 0.1,
             armor_shield: 0.8,
         }

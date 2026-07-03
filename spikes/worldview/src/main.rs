@@ -2122,12 +2122,14 @@ fn build_water_mesh(heights: &[f32], water: &[f32], w: usize, cell: f64, anchor:
             let mgl = conc * 0.02 * 2.65e6;
             let k_sed = 0.034 * mgl;
             let path = 2.0 * depth;
-            // 0.045/m: pristine-lake clear-water extinction (style choice at
-            // the physical model's clean end — organics/DOM deliberately not
-            // simulated, so bottoms stay readable to ~10 m in clear water,
-            // "slightly more realistic than Minecraft"; floods still go
-            // opaque through the sediment term, which is the honest signal).
-            let alpha = ((1.0 - (-(0.045 + k_sed) * path).exp()) * fade).clamp(0.0, 0.95);
+            // Alpha anchored to the ORANGE-band extinction (~0.20/m): red dies
+            // by ~3 m and orange by ~8, so the bottom stops looking
+            // bottom-coloured long before light stops returning — deep clear
+            // lakes are blue regardless of their floor. (The 0.045 green-band
+            // choice left 8 m of clear water half-transparent, and Joseph's
+            // mud-floored lakes read as damp tan flats.) Streams stay
+            // translucent: ~0.33 at 1 m, ~0.70 at 3 m, ~0.96 at 8 m.
+            let alpha = ((1.0 - (-(0.20 + k_sed) * path).exp()) * fade).clamp(0.0, 0.95);
             // The water column's own colour: blue-teal upwelling (what pure
             // water scatters back) sliding to silt tan as sediment extinction
             // takes over, and darkening as depth starves the return light.
@@ -2181,6 +2183,10 @@ fn build_water_mesh(heights: &[f32], water: &[f32], w: usize, cell: f64, anchor:
                 if best_y <= positions[k][1] + 0.05 {
                     positions[k][1] = positions[nk][1];
                     colors[k] = colors[nk];
+                    // The extended ring exists to be CLIPPED by the bank; the
+                    // sliver that shows is the waterline. At full donor alpha
+                    // it banded every shore in saturated deep-water blue.
+                    colors[k][3] *= 0.55;
                     normals[k] = normals[nk];
                     ext[k] = true;
                 }
