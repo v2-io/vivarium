@@ -106,6 +106,14 @@ pub struct WaterParams {
     /// transport-limited channels sealed into "mud sealant" (Joseph) because
     /// they never net-erode and every storm deposited fines.
     pub tau_fines: f32,
+    /// Turbulent (eddy) diffusivity for suspended load and future water-borne
+    /// scalars: K = base convective stirring + shear-scaled dispersion
+    /// (rivers mix transversely at ~0.1–1 m²/s; lakes stir weakly but never
+    /// zero). Pure advection left razor-sharp brown/blue fronts standing in
+    /// still water indefinitely (Joseph: "are we missing a diffusion
+    /// process?" — yes, this one).
+    pub eddy_base: f32,
+    pub eddy_shear: f32,
     /// Winnowing rate (per sim-s at 2×τ_c): armoring by surface grain
     /// exchange in transport-limited reaches — real beds coarsen under flood
     /// shear even with zero net erosion. Calibrated to PAVEMENT-over-several-
@@ -147,6 +155,8 @@ impl Default for WaterParams {
             fines_frac: 0.15,
             tau_fines: 0.06,
             winnow_rate: 1.0 / 6000.0,
+            eddy_base: 0.02,
+            eddy_shear: 0.3,
             armor_depth: 0.1,
             armor_shield: 0.8,
         }
@@ -528,6 +538,44 @@ impl WaterSim {
                     }
                     if y < nx - 1 {
                         self.sediment[i + nx] += moving * self.fb[i] / total;
+                    }
+                }
+            }
+        }
+
+        // 4b². Turbulent mixing of suspended load: conservative pairwise
+        // exchange driven by the CONCENTRATION difference (eddy diffusivity =
+        // convective base + shear-scaled dispersion). Right-neighbour and
+        // down-neighbour sweeps cover every pair once.
+        if p.sed_capacity > 0.0 {
+            let snap = self.sediment.clone();
+            for y in 0..nx {
+                for x in 0..nx {
+                    let i = y * nx + x;
+                    let di = self.depth[i];
+                    if di < 1e-3 {
+                        continue;
+                    }
+                    let mut pair = |i: usize, j: usize, s_this: &mut Self| {
+                        let dj = s_this.depth[j];
+                        if dj < 1e-3 {
+                            return;
+                        }
+                        let (ci, cj) = (snap[i] / di, snap[j] / dj);
+                        let vi = ((s_this.fl[i] + s_this.fr[i] + s_this.ft[i] + s_this.fb[i]) / (di * l)).min(5.0);
+                        let k_eddy = p.eddy_base + p.eddy_shear * vi * l * 0.1;
+                        // Mass moved: K·Δc·(interface depth)·dt / l — bounded
+                        // for stability at 25% of the donor's excess.
+                        let dmin = di.min(dj);
+                        let m = (k_eddy * (ci - cj) * dmin * dt / l).clamp(-0.25 * snap[j], 0.25 * snap[i]);
+                        s_this.sediment[i] -= m;
+                        s_this.sediment[j] += m;
+                    };
+                    if x < nx - 1 {
+                        pair(i, i + 1, self);
+                    }
+                    if y < nx - 1 {
+                        pair(i, i + nx, self);
                     }
                 }
             }
