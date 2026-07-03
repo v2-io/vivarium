@@ -122,13 +122,31 @@ resolve into "grain sizes exist" (§15 materials) plus one transport mode.
 - — hyperconcentrated / debris flow (μ(I) regime, §15 rung 3)
 - — Stokes settling per grain size (we cap rates instead — fines vs sand
   settle identically today, which is wrong by ~100×)
+- — SOLUTION (dissolved load — moves invisibly, precipitates elsewhere; the
+  transport-mode face of karst/corrosion; also evaporites)
+- — FLOCCULATION (clay clumps in brackish water → settles fast: why deltas
+  drop their finest load AT the salt boundary — matters at river mouths)
 
 **Bed / interface:**
 - ✓ armoring + winnowing (probe-gated) · ✓ colmation (fines-only)
 - — bedforms (ripples/dunes/antidunes) and their ROUGHNESS feedback
 - — imbrication/packing (φ_pack exists in the schema, unused)
+- — bed-load PIPING (subsurface flow drags fines through gravel pores —
+  internal restructuring; also the levee/dam internal-failure mechanism)
 - ~ pool-riffle / step-pool (emergent at 4.8 m; watch, don't code)
 - ~ knickpoint migration (emergent in the erosion tier; unverified)
+
+**Erosional mechanism detail** (our shear-threshold bulk erosion bundles
+these; worth unbundling when grain sizes exist):
+- ~ hydraulic action (= our τ > τ_c detachment)
+- — abrasion TOOLS-AND-COVER effect: erosion needs grinding tools (no load ⇒
+  little wear even at high shear) but too much load shields the bed — a
+  non-monotonic dependence our K-only stream power misses (armor/alluvium
+  shield is the cover half; the tools half is absent)
+- — attrition → DOWNSTREAM FINING (grains round and shrink in transit: why
+  real rivers grade gravel→sand→silt downstream; needs grain sizes)
+- — cavitation (waterfall plunge-pools, extreme-velocity shock — far rung)
+- ✓ corrosion/solution as karst (system row); dissolved-load mode above
 
 **Banks / planform:**
 - ~ lateral shear erosion (emergent side-carving observed 2026-07-03)
@@ -136,6 +154,13 @@ resolve into "grain sizes exist" (§15 materials) plus one transport mode.
 - — meandering (helical secondary flow → point bars → cutoffs → oxbows)
 - ~ avulsion (channel-jumping on aggrading fans — the braided delta Joseph
   photographed suggests it may partially emerge; verify before claiming)
+- ~ BRAIDING (named: high load + shallow shifting channels — observed in
+  Joseph's delta shot; same verify-before-claiming caveat)
+- ~ headward erosion (channels lengthening upstream — should emerge from the
+  erosion tier's drainage capture; unverified)
+- — levees + SPLAY formation (overbank deposition builds levees; breaches
+  drop coarse fans on the floodplain — becomes possible once overbank
+  deposition differentiates by distance-from-channel)
 
 **Hillslope ↔ water:**
 - ✓ soil creep (erosion tier) · ~ sheet/rill erosion (storm shear)
