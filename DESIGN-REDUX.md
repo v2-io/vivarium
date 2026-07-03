@@ -502,6 +502,19 @@ and you may occupy any rung. The fidelity invariant (§1) is what makes a low ru
 *honest* rather than a lie: it must reproduce the macro statistics (§5) its
 consumers read, with known bounded error (§9's ubit).
 
+### The ladder runs both ways *(Joseph, 2026-07-03)*
+Rungs are usually climbed toward more physics — but the economically crucial
+move is the DESCENT: climb stepwise-emergent to *discover* a system's
+behaviour; once its patterns are characterized and probe-validated, descend to
+a tight procedural surrogate that reproduces the discovered statistics (§5
+agreement is the honesty gate), keeping the expensive rung as calibrator —
+re-run on recipe change, feeding the surrogate's calibration. Insolation
+already lives at the bottom (closed-form); weather should end there; Abyssal
+geology never needs to descend because checkpoints amortize it to zero. Every
+system-in-a-phase declares its execution class (batch-deep / relaxation /
+procedural-tight) in its recipe — see
+`ref/research/architecture-migration-2026-07-03.md`.
+
 ### The payoff: swap a model, rerun only what changed
 The requirement that makes the ladder practical: **memoize each aspect's progress
 to disk, keyed so that the model's own identity and version are part of the key —
