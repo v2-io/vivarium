@@ -127,6 +127,15 @@ per-burst delta from step one). If the seed drifts hard, the solver and the
 sim disagree about equilibrium, and that disagreement is a finding, not a
 nuisance.
 
+**Probe-learned requirement (armor_regimes, 2026-07-03):** the analytic
+armor/interface state CANNOT be assigned from shear exceedance alone — the
+probe demonstrated (textbook-correctly) that armored uplands starve
+downstream reaches and over-supplied reaches bury their pavement. Equilibrium
+armor is a function of sustained τ/τ_c exceedance AND the supply-to-capacity
+ratio accumulated along the drainage network; the analytic pass must route
+supply down the same MFD tree it takes discharge from. Acceptance test: seed
+the analytic state, run live storms, verify near-stationarity (the probe).
+
 **Known unknowns:** closed-basin lake levels want an evaporation balance, not
 just spill; braided/multi-thread reaches violate the single-normal-depth
 assumption (probably fine at 4.8 m cells; check); how much interface-state
