@@ -1,4 +1,20 @@
 //! Armor/scour regime probe (§2b): three invariants nature guarantees.
+//!
+//! STATUS 2026-07-03 (four rounds in — see git history for the arc):
+//!   regime 2 (slack basin takes mud, stays soft): PASS, robust.
+//!   regime 1 (transport-limited armoring): PASSED pre-eddy-diffusion
+//!     (natural-supply armor 0.41→0.84 on storm-cycle timescale); FAILS
+//!     after it — eddy mixing feeds hillslope wash laterally into the
+//!     thalweg and burial beats winnowing. REAL interaction, not test
+//!     scaffolding: eddy transport changes the channel supply balance.
+//!     Open: is the eddy shear coefficient too strong, or is winnowing
+//!     too weak against honest lateral supply? Decide by physics, not
+//!     by making the test pass.
+//!   regime 3 (supply-limited source incision): bed change EXACTLY 0.000
+//!     at source cells in every version, though hand-arithmetic expects
+//!     ~0.5 m export in 600 ss. Unexplained — suspect the erosion branch
+//!     under thin sheet-source conditions (τ, capacity, or advection
+//!     coupling at flow-path heads). Isolate with a single-column probe.
 //!   1. A steep TRANSPORT-LIMITED channel (at capacity, no net erosion) must
 //!      still armor within a few storm-cycles' worth of shear (winnowing), and
 //!      must shed its colmation — real mountain channels are stony, not sealed.
@@ -43,11 +59,18 @@ fn main() {
             w.step(&pp);
             t += dt;
         }
-        // Decoupled upstream supply (watershed proxy): keep regime 2's mud
-        // budget independent of regime 1's armor throttle — armored uplands
-        // export clean water, which is honest but starves the basin test.
-        for x in 0..nx {
-            w.sediment[2 * nx + x] += 2.0e-4 * 8.0;
+        // Decoupled upstream supply (watershed proxy) — MODEST: v2 injected
+        // a whole row-width of load, the model answered with textbook
+        // over-supply behaviour (aggradation wave burying the pavement,
+        // transport saturation killing all incision) and correctly failed
+        // every verdict. Supply must stay a fraction of local capacity.
+        // v4: feed the BASIN MARGIN only — v3 injected at the channel head,
+        // directly upstream of both ramp test reaches (a supply-limited reach
+        // with a sediment hose above it isn't one; the mid-ramp aggraded by
+        // design). The ramp regimes use NATURAL supply.
+        let y_feed = (nx as f64 * 0.66) as usize + 4;
+        for x in nx / 2 - 4..nx / 2 + 4 {
+            w.sediment[y_feed * nx + x] += 1.0e-5 * 8.0;
         }
         if bed_top_early == 0.0 && t >= 600.0 {
             bed_top_early = w.bed[y_top * nx + cx];
