@@ -26,8 +26,8 @@ Cosmic scale; everything prior to the world.
 - Stable orbit in the habitable zone of a viable, protected system #gate
 - Proper mass #gate
 - Earth-like elemental abundances #gate
-- Protective architecture — moon, outer giants, solar-wind shelter #mech
-  *(the moon cannot be added non-destructively later, so it is declared here — see design notes)*
+- Protective architecture (some implicit) — moon, outer giants, solar-wind shelter #mech
+  *(the moon cannot be added non-destructively later, at least in real life, so it is declared here — see design notes)*
 
 **Record:** none in-world — only the parameter block itself.
 
@@ -114,7 +114,7 @@ Life as we know it, fully adapted to the world it helped create: agents in the s
 
 Earth since shortly after the Cenozoic dawn: the Age of Mammals.
 
-**Regime:** the substrate stabilizes beneath the agent seam — **this is the phase where the primary simulations with real agent interactions begin: the ASF bet's home.**
+**Regime:** the substrate stabilizes beneath the agent seam — **this is the phase where the primary simulations with real agent interactions begin: the ASF's domain.**
 
 **Charge:**
 - Mammals; recognizable kingdom/taxonomy diversity across land, air, and sea #earth
@@ -122,7 +122,10 @@ Earth since shortly after the Cenozoic dawn: the Age of Mammals.
 - Modern insect world and microbiome #earth
 - Complex intelligence, communication, and agency — Pleistocene-grade life #gate
 
-**Record:** recognizable modern strata; the first anthropic traces only in Phase 7.
+**Bequest:** the agent-legible resource world — food and forage, timber and
+fiber, prey and pasture, workable stone and ore: the inventory the ASF
+agents will perceive, value, and act through. *Record: recognizable modern
+strata; anthropic traces only from Phase 7.*
 
 ## Phase 7 — **Prehistoric** · *the world now has **People*** — TARGET 2
 
@@ -143,7 +146,10 @@ Not mankind per se, but speech, symbolic thought, emotion, self-determination, h
 > (DESIGN.md §two-layer mind). This line is load-bearing and must survive every
 > future revision of this file.
 
-**Record:** the first symbolic artifacts, hearths, worked tools — culture entering the strata, but not yet writing.
+**Bequest:** culture itself — language, names on places, domesticated
+lineages, managed landscapes, paths that become roads: inheritance that now
+travels OUTSIDE the genome. *Record: symbolic artifacts, hearths, worked
+tools — culture entering the strata, but not yet writing.*
 
 ## Phase 8 — **Historical** · *the world now has **Writing** and history* — TARGET 3
 
@@ -155,7 +161,9 @@ From here the space forks wide — real history, fantasy settings, game and stor
 - Written language — with whatever agent/intelligence substrate it requires, and most of what every prior phase built #gate
   *(Thought moves back out of the timestream; history becomes possible, and the world's record is no longer only geological but documentary.)*
 
-**Record:** the written layer — the first record the world keeps of itself, on purpose.
+**Bequest:** history — a documentary record, institutions, accumulated and
+correctable knowledge; the world can now inherit INTENTIONS. *Record: the
+written layer — the first record the world keeps of itself, on purpose.*
 
 ---
 
