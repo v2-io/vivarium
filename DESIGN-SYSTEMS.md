@@ -106,6 +106,62 @@ tracking, listed so the ladder is honest:
   terrain; emerges from bank erosion + point-bar deposition, not from a
   meander model.
 
+## Sediment & fluvial phenomena — the full inventory (2026-07-03)
+
+Joseph asked for the complete map ("do we have a feel for ALL the phenomena?").
+Status: **✓** crude rung in; **~** partial/emergent; **—** absent. The single
+suspended pool + alluvium is today's whole grain model — most gaps below
+resolve into "grain sizes exist" (§15 materials) plus one transport mode.
+
+**Transport modes** (by grain behaviour):
+- ✓ wash load / suspension (shear-gated settling, eddy diffusion)
+- — saltation (sand, hopping — between suspension and traction)
+- — bed-load TRACTION (rolling/sliding: slower than the flow, thalweg-bound;
+  builds bars; Joseph's list) — the biggest structural gap: one suspended
+  pool currently stands in for all three modes
+- — hyperconcentrated / debris flow (μ(I) regime, §15 rung 3)
+- — Stokes settling per grain size (we cap rates instead — fines vs sand
+  settle identically today, which is wrong by ~100×)
+
+**Bed / interface:**
+- ✓ armoring + winnowing (probe-gated) · ✓ colmation (fines-only)
+- — bedforms (ripples/dunes/antidunes) and their ROUGHNESS feedback
+- — imbrication/packing (φ_pack exists in the schema, unused)
+- ~ pool-riffle / step-pool (emergent at 4.8 m; watch, don't code)
+- ~ knickpoint migration (emergent in the erosion tier; unverified)
+
+**Banks / planform:**
+- ~ lateral shear erosion (emergent side-carving observed 2026-07-03)
+- — bank failure by undercut + cohesive collapse (§15 Mohr–Coulomb rung)
+- — meandering (helical secondary flow → point bars → cutoffs → oxbows)
+- ~ avulsion (channel-jumping on aggrading fans — the braided delta Joseph
+  photographed suggests it may partially emerge; verify before claiming)
+
+**Hillslope ↔ water:**
+- ✓ soil creep (erosion tier) · ~ sheet/rill erosion (storm shear)
+- — rain-splash detachment
+- — saturation slumping / landslides (Joseph's #10; §15 rung 2, planned)
+- — hillslope-initiated debris flows
+
+**Column / still water:**
+- ✓ infiltration + colmation seal + baseflow · ✓ eddy mixing
+- — Darcy LATERAL groundwater flow (springs at low points need it)
+- — turbidity currents (underwater density flows — an 11 m suspended-mud
+  column over a slope SHOULD slide downslope as a bottom current; relevant
+  to the deluge-legacy mud lakes, and how real lakes build turbidites)
+- — deposit consolidation / mud cohesion aging
+- — closed-basin evaporation → salt flats (ties to the analytic-fill lakes)
+
+**Interfaces to other systems** (rows above): aeolian pickup of dry fines,
+coastal/wave transport, karst dissolution, ice/freeze — their own systems.
+
+**Highest-leverage next three, by visible-truth-per-effort:** (1) grain-size
+split (fines/sand/gravel) with Stokes settling — unlocks saltation/traction
+as behaviours instead of modes, real sorting, honest deltas; (2) bank
+mechanics (undercut + Mohr–Coulomb) — unlocks meandering/oxbows, Joseph's
+long-standing wish; (3) Darcy groundwater — springs, honest baseflow
+geography.
+
 ## Instruments (regime probes — see DESIGN-REDUX §2b)
 
 Every system rung ships with renderer-free probes asserting invariants nature
