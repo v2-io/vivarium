@@ -98,8 +98,8 @@ Ordered roughly by how much micro physics each keeps alive:
   own grid and step, exchanging conservative fluxes through a coupler on a
   schedule. The coupler — regridding, averaging, lag conventions — is a
   first-class artifact, often the hardest one. *Vivarium:* the phase
-  structure is this at world scale; **a checkpoint is a coupler interface**
-  (Checkpoints.md design notes say so); DESIGN-SYSTEMS' coupling bands are
+  structure is this at world scale; **a phase-transition is a coupler
+  interface** (`PHASES.md` design notes say so); DESIGN-SYSTEMS' coupling bands are
   the schedule.
 - **Multigrid** (Brandt 1977). Not model reduction — solver acceleration:
   the same equation on a grid hierarchy, using coarse grids to kill
@@ -124,7 +124,7 @@ Consequences, in order of importance:
 
 1. **Memoization becomes sound.** If L sampled, two evaluations would
    disagree and caching would change the world. Fated lifting is what lets
-   the checkpoint/memo architecture exist at all. (The seeding discipline and
+   the memoization architecture exist at all. (The seeding discipline and
    the caching architecture are one decision, not two — lexicon §3 should
    say so.)
 2. **Reproducibility across the run-modes** (causal runs, replays, iteration
@@ -159,7 +159,7 @@ on-demand micro, relax-to-attractor.
 evaluation of the coupler pulls (§11); observer-driven rather than
 error-driven refinement; consumer-dependent sufficient statistics (§5 — the
 literature usually fixes one R per method; we want R per consumer);
-fated-lookup closure (§3 above); checkpoints-as-content-addressed-memos.
+fated-lookup closure (§3 above); phase-memos as content-addressed storage.
 
 **Genuinely open (the one hard research problem, ORIENTATION):**
 **detail→abstract** — an irreducible *micro edit* (an agent digs a canal)

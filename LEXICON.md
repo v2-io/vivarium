@@ -29,16 +29,22 @@ Names are how we stop re-arguing.
 
 - 🔨 **Phase** — a span in which a set of macro systems runs until converged.
   *Carved against "epoch"* (three collisions: geology's, the erosion solver's
-  step unit, ordinary usage). `Checkpoints.md`.
+  step unit, ordinary usage). `PHASES.md`.
 - ✅ **Epoch** — reserved exclusively for the erosion solver's step unit.
-- ✅ **Checkpoint** — the gate between phases; the conditions a phase must
-  deliver before the next can honestly boot; computationally, a world-scale
-  memo entry. ⚠️ `Checkpoints.md`'s intro still says a checkpoint's "in-world
-  form is the STRATA it leaves" — Joseph (2026-07-03) demoted this: strata
-  are one small, lossy evidence among *many* things a phase passes forward;
-  pending rewrite with the seams discussion.
+- ✅ **Phase-transition** / **phase-gate** *(settled 2026-07-04, replacing
+  "checkpoint")* — the **phase-gate** is the boundary between phases (where a
+  Charge is met); the **phase-transition** is the regime-change *event* there.
+  A transition is **incremental, not a wholesale swap**: most systems
+  perpetuate, a few sunset, a few mid-phase systems carry on, and a larger
+  group of new/finer-scale systems spins up at the gate (`PHASES.md` Design
+  notes). *Why "checkpoint" retired:* it bundled three distinct things — the
+  gate, the **memo** (cached converged state, §2), and the **Record**
+  (readable-in-rock verification slice) — and collided with ASF's agent-state
+  checkpoint; naming them apart fixes both. (`PHASES.md`'s Record demotion —
+  strata are one small lossy evidence, not the phase's "in-world form" — is
+  now landed in that file's intro.)
 - ✅ **Charge** — what a phase must establish; the *gating subset* of its
-  bequest; IS the next checkpoint's opening condition.
+  bequest; IS the next phase-gate's opening condition.
 - ✅ **Bequest** — everything a phase hands forward that persists and shapes
   later dynamics — features, regimes, capabilities *and incapabilities*
   (the coal window). The load-bearing forward concept.
@@ -51,7 +57,7 @@ Names are how we stop re-arguing.
   yet) / #emergent (verify, don't build). Epistemic honesty about *arrows*,
   never about implementation status.
 - ✅ **Target** — Phases 6/7/8 as TARGET 1/2/3: the playable entry points;
-  ETHICS.md binds from Phase 7's checkpoint.
+  ETHICS.md binds from Phase 7's transition.
 - ✅ **Canceling pair** — a shield and its threat jointly unbuilt at zero
   fidelity cost until a consumer reads their *difference* (magnetic field ×
   solar wind).
@@ -72,7 +78,7 @@ Names are how we stop re-arguing.
   stay gloss / non-MECE working labels; *phase* is the crisp one.)
 - Ⓝ **Regime-change** — activation, deactivation, or replacement of the
   dominant systems (or a newly-activated system coming to dominate). A **phase
-  boundary is a regime-change we *certify*** — checkpointed, charged, gated;
+  boundary is a regime-change we *certify*** — memoized, charged, gated;
   most regime-changes we never certify. (Still slightly vague — Joseph flagged
   it; the certify/don't-certify split is the sharpening.)
 - Ⓝ **Subphase** *(reserved)* — an intermediate regime *within* a phase; what a
@@ -99,7 +105,7 @@ Names are how we stop re-arguing.
 - ✅ **Finisher** — a fine tier run for 1–2 animated passes over its parent's
   band, mean-pinned to conserve (Joseph's field observation, 2026-07-02).
 - ✅ **Memo** — a cached converged state in the lazy query-graph runtime
-  (`DESIGN-REDUX` §11–13); a checkpoint is the largest memo.
+  (`DESIGN-REDUX` §11–13); the memo left at a phase-transition is the largest.
 - ✅ **Patch / halo** — the Cartesian stencil substrate. **Column / Stratum**,
   **CellId** — the matter and spatial keys (`DESIGN-MATERIAL`).
 - ✅ **Detail must be earned** — never paint sub-sim detail the physics
@@ -217,7 +223,7 @@ connectivity, feedback wiring), **substrate innovation** (a genuinely new
 state/information-carrying medium — the capability-bequest, cf. the coal
 window), **homeostatic inertia** (the old regime's buffering vs the new
 attractor's pull), **exogenous triggers** (shocks crossing a tipping point).
-Several already appear in `Checkpoints.md` charges (Phase 2's energy-gradient
+Several already appear in `PHASES.md` charges (Phase 2's energy-gradient
 channels; "inheritance outside the genome" *is* substrate innovation; the §8
 storm/flare schedules *are* the exogenous profile) — mild convergence-evidence
 the decomposition is real.
@@ -226,11 +232,13 @@ the decomposition is real.
   the persistent structure that governs dynamics. In AAT: the θ the agent
   must infer (transition + observation structure). In vivarium: what we
   *author* — the physics and constants, and at the largest scale the
-  **phase-swapped active-system-set**: a phase's Bequest is a delivery of
-  law; **a checkpoint promotes converged state into law** for everything
+  **active-system-set a phase runs**: a phase's Bequest is a delivery of law;
+  **a phase-transition promotes converged state into law** for everything
   faster above it. Same word at three rates, deliberately (the timescale
   tower with the invariance cut at every rung): fast state · slowly-drifting
-  law · law swapped wholesale at a phase gate. *Carves/collisions (from the
+  law · law **revised at a phase-transition** — *incrementally*, never a
+  wholesale swap (a few systems sunset, several new/finer-scale ones spin up,
+  most carry forward; `PHASES.md` Design notes). *Carves/collisions (from the
   ASF name-check, recorded so we never drift into them):* probability
   theory's "law of X" = distribution — disambiguate on first use near
   stochastic machinery; deontic law arrives with ASF Part IV — intended
@@ -245,10 +253,18 @@ the decomposition is real.
     R3 mean-field) = interaction-dynamics class of composite agents.
     Related spirit, different object — near ASF material say "world regime"
     vs "dynamic regime R𝑛".
-  - **checkpoint**: ours = phase gate / world-scale memo; ASF vol-03 uses it
-    for *agent-state snapshots* (`#hyp-checkpoint-forking-failure-modes`).
-    The two MEET in fork/save design — exactly where confusion is costliest;
-    write "phase checkpoint" vs "agent checkpoint" whenever both are in play.
+  - **checkpoint**: *resolved 2026-07-04* — vivarium **retired** "checkpoint"
+    for phase boundaries (→ **phase-transition** / **phase-gate**; the cache
+    sense → **memo**), so the term is ceded to ASF's *agent-state snapshot*
+    sense (`#hyp-checkpoint-forking-failure-modes`). If "checkpoint" appears
+    in vivarium work it means an agent snapshot, not a phase boundary — which
+    matters exactly in fork/save design, where our world-forks (phase-
+    transitions + memos) meet ASF's agent-checkpoints. **Pending (Joseph's
+    call):** `DESIGN-REDUX` still uses "checkpoint" in a runtime *durability*
+    sense ("epoch checkpoints," "the checkpoint chain") — decide whether that
+    is just **memo** or a distinct persist-to-disk boundary that needs its own
+    name (candidates: *save*, *snapshot* — but NOT "checkpoint," which would
+    re-open the ASF collision). Four sites, left untouched until decided.
   - **persistence**: reserved for the AAT property (bounded mismatch under
     drift; three-plus senses in ASF's LEXICON). For disk/storage say
     *storage*, *memoization*, or *save* — never "persistence."
@@ -257,15 +273,16 @@ the decomposition is real.
     *rates*, not tempo, until they measure information.
   - **epoch**: no conflict (ours is the erosion solver's tick; ASF doesn't
     claim it) — recorded as checked.
-- Ⓝ→🔨? **Vivium (pl. vivia)** — candidate settled name for the sketch's
-  "a vivarium instance": one specific world-artifact (frozen backstory +
-  engine + interventional history). Source: Joseph's usage 2026-07-04
-  ("simulations/empirical studies on the ASF side coupled to explicit
-  **vivia**") — *tentative: adopted from live usage, needs his explicit
-  confirmation it wasn't a slip.* If confirmed it earns its keep twice over:
-  standalone-citable, and the *in vitro / in vivo* resonance gives ASF a
-  third empirical register — results obtained **in vivia**: richer than
-  toy models, more legible than field data.
+- ✅ **Vivium** (pl. **vivia**) *(settled 2026-07-04)* — one specific
+  world-artifact: a frozen backstory + engine + interventional history (the
+  sketch's "a vivarium instance?", answered). Coined by Joseph in use
+  ("studies on the ASF side coupled to explicit **vivia**") and confirmed. It
+  earns its keep twice: standalone-citable, and the *in vitro / in vivo*
+  resonance gives ASF a third empirical register — results obtained **in
+  vivia** sit between toy models (ground truth, trivial dynamics) and field
+  data (rich dynamics, no ground truth): richer than the first, more legible
+  than the second. **vivarium** = the class / the engine / the project;
+  **a vivium** = one instantiated world you can name, fork, and cite.
 - ✅ **AAT handshake (the four axes ↔ typed ignorance).** ASF/AAT's live
   root ontology (`~/src/agentic-systems/spikes/epistemic-target-ontology/`)
   types the agent's epistemic target as **state Ω / law θ / chance ε /
@@ -273,7 +290,7 @@ the decomposition is real.
   side: **B (physics fidelity) = θ-fidelity** · **A (Earth-history) =
   Ω-trajectory fidelity** · **§8 fated noise = authored ε** (frame-relative:
   chance inside, lookup outside) · **fidelity ladder = compute-shortfall
-  management**. A checkpoint promotes converged state into *law* for
+  management**. A phase-transition promotes converged state into *law* for
   everything above it (the invariance cut). Full mapping + implications:
   `ASF.md` §2–3.
 

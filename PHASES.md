@@ -1,10 +1,10 @@
-# World-Phases & Checkpoints
+# World-Phases
 
-*(Joseph's draft, 2026-07-03; second pass same day. **Phase** = a span in which a set of macro systems runs until converged; **Checkpoint** = the gate between phases — the conditions a phase must deliver before the next can honestly boot. "Phase" avoids three collisions on "epoch": geology's, the erosion solver's step unit, and ordinary usage.)*
+*(Joseph's draft, 2026-07-03; second pass same day; boundary terminology settled 2026-07-04. **Phase** = a span in which a set of macro systems runs until converged; **phase-transition** = the regime-change at a **phase-gate**, where a phase's **Charge** (what it must deliver) is met and the next phase's systems spin up. "Phase" avoids three collisions on "epoch": geology's, the erosion solver's step unit, and ordinary usage. The boundary's earlier working name — "checkpoint" — is retired: it bundled three distinct things now named apart (the gate, the cached **memo**, the **Record**) and collided with ASF's agent-state checkpoint. See the plumbing note in Design notes.)*
 
-**The load-bearing structure:** each phase's **Charge** (what it must establish) IS the next checkpoint's opening condition — *each phase manufactures the key to the next gate* (Abyssal's photosynthesizers ARE the mechanism that oxygenates Primeval's sky). A phase boundary is drawn correctly exactly when this holds. Charges are stated once, in the phase responsible; a phase "opens at" the delivery of the previous charge.
+**The load-bearing structure:** each phase's **Charge** (what it must establish) IS the next phase-gate's opening condition — *each phase manufactures the key to the next gate* (Abyssal's photosynthesizers ARE the mechanism that oxygenates Primeval's sky). A phase boundary is drawn correctly exactly when this holds. Charges are stated once, in the phase responsible; a phase "opens at" the delivery of the previous charge.
 
-**Computational character (Joseph):** phases choose their own machinery. Some are **analytic** — closed-form + stochastic-deterministic seeding (no simulating 20M years of gas-cloud collapse); some are **relaxation** — solve or settle to an attractor and checkpoint it; some are **incremental-emergent** — stepwise simulation on the phase's OWN timescales, spatial scales, and even data structures. Later phases may be evaluated lazily backwards-from-now (`DESIGN-REDUX.md` §3/§11); each phase knows which of its parts decompose independently / in parallel / on demand. **A checkpoint is a world-scale memo entry (§12–13): the converged state, cached, that the next phase builds on.** Its in-world traces are the whole Bequest — regimes, features, capabilities; the strata are only the Record, the readable-in-rock *slice*, kept as a verification target (never sufficient to reconstruct the phase — see `ref/research/oxygenation-transition-scaffold.md` for the worked proof). Materials are therefore phase-dependent: a world that never ran biomineralization has no limestone.
+**Computational character (Joseph):** phases choose their own machinery. Some are **analytic** — closed-form + stochastic-deterministic seeding (no simulating 20M years of gas-cloud collapse); some are **relaxation** — solve or settle to an attractor and memoize it; some are **incremental-emergent** — stepwise simulation on the phase's OWN timescales, spatial scales, and even data structures. Later phases may be evaluated lazily backwards-from-now (`DESIGN-REDUX.md` §3/§11); each phase knows which of its parts decompose independently / in parallel / on demand. **A phase-transition leaves a world-scale memo (§12–13): the converged state, cached, that the next phase builds on.** Its in-world traces are the whole Bequest — regimes, features, capabilities; the strata are only the Record, the readable-in-rock *slice*, kept as a verification target (never sufficient to reconstruct the phase — see `ref/research/oxygenation-transition-scaffold.md` for the worked proof). Materials are therefore phase-dependent: a world that never ran biomineralization has no limestone.
 
 **Condition tags** (epistemic honesty about the gates; real Obsidian tags, searchable):
 - #gate — hard prerequisite we intend to simulate; the next phase cannot boot without it
@@ -109,7 +109,7 @@ The clouds part; the world beholds the cosmos for the first time — dawn, the m
 **Regime:** coupled relaxation + emergent weather — the climate tier over the Phase-1 insolation.
 
 **Charge:**
-- Earth-like post-oxygenation atmosphere #gate *(delivered by Abyssal's charge — this checkpoint's key)*
+- Earth-like post-oxygenation atmosphere #gate *(delivered by Abyssal's charge — this gate's key)*
 - Ozone shield #emergent *(from the new oxygen; the land-life prerequisite)*
 - Sun, moon, and stars visible at true angles, phases, and seasons #gate
 - Modern weather dynamics #emergent
@@ -172,7 +172,7 @@ Not mankind per se, but speech, symbolic thought, emotion, self-determination, h
 - Agriculture (likely) #earth
 - Non-genetic cross-generational transfer: culture; durable familial/tribal cohabitation #earth
 
-> ⚠️ **This checkpoint is where obligation begins.** "The world has People" is
+> ⚠️ **This phase-transition is where obligation begins.** "The world has People" is
 > precisely the point at which the builder acquires duties to what is inside
 > it: **`ETHICS.md`'s constraints bind from here forward.** The moment an agent
 > in this world is driven by the slow (LLM) layer it enters moral scope
@@ -186,7 +186,7 @@ tools — culture entering the strata, but not yet writing.*
 
 ## Phase 8 — **Historical** · *the world now has **Writing** and history* — TARGET 3
 
-From here the space forks wide — real history, fantasy settings, game and story worlds — anything from the dawn of writing through science-fiction mechanics. The checkpoints end; authored worlds begin.
+From here the space forks wide — real history, fantasy settings, game and story worlds — anything from the dawn of writing through science-fiction mechanics. The phase-transitions end; authored worlds begin.
 
 **Regime:** author-driven, over the simulated substrate.
 
@@ -202,6 +202,28 @@ written layer — the first record the world keeps of itself, on purpose.*
 
 ## Design notes
 
+- **What a phase-transition actually names** *(the retired "checkpoint,"
+  decomposed)*. Four distinct things meet at a boundary, and one word was
+  hiding all of them: the **phase-gate** (the threshold itself), the **Charge**
+  (the conditions *checked* there — #gate/#earth/#mech/#emergent), the **memo**
+  (the converged state *cached* and carried forward — the save/cache sense),
+  and the **Record** (the readable-in-rock slice that later *verifies* the
+  phase ran — "what is checked" against a finished world). "Checkpoint"
+  bundled the last three and collided with ASF's agent-state checkpoint;
+  naming them apart removes both problems. The regime-change *event* at the
+  gate is the **phase-transition**.
+- **Phase-transitions are incremental, not wholesale swaps** *(Joseph,
+  2026-07-04)*. A transition rarely trades one system set for another. In
+  practice the next phase's active set is: **all still-necessary prior
+  systems** (a carried-forward core — small at first, growing across phases)
+  **+ a few systems introduced mid-phase** that keep running, **− the older
+  systems no longer needed** (sunset at the gate), **+ a larger group** of
+  genuinely new systems and finer-scale continuations of the intra-phase and
+  older ones (usually the biggest group, spun up at the gate). So each
+  transition *adds a few, removes a few, and spins up a bunch at the gate* —
+  most machinery perpetuates. This is why "Law" (LEXICON) is *revised* at a
+  transition, never *swapped*: the world's governing set is mostly continuous
+  across gates.
 - **Flat, not nested.** No Eon/Era/Period hierarchy — false precision for a
   gate-list. If any phase earns internal structure it is **Abyssal** (☆); its
   sub-gates grow when the details force them, not before.
@@ -230,7 +252,7 @@ written layer — the first record the world keeps of itself, on purpose.*
   not simulating those winds"), Jupiter/moon shepherding × impactor flux. A
   pair stays jointly unbuilt at zero fidelity cost until a consumer queries
   the DIFFERENCE or either member alone — polarity stripes in ridge basalt
-  (the unseen field still leaves readable rock — the checkpoint-artifact
+  (the unseen field still leaves readable rock — the Record
   principle), auroras, flare blackouts, an agent's compass. Counter-example
   proving the rule cuts both ways: ozone × UV was deliberately UN-canceled
   because a gate (land life) reads their difference. And when a pair is
@@ -239,10 +261,10 @@ written layer — the first record the world keeps of itself, on purpose.*
   ~11-year-analog scale, heavy-tailed flares) consumed as f(activity,
   magnetic latitude, night) — never "Event 7, probability 1/40/day".
 - **Phases own their intrusion budget.** Each declares which effects reach
-  forward past its checkpoint and which seal at it — and, dually, which of its
+  forward past its phase-gate and which seal at it — and, dually, which of its
   parts decompose independently / in parallel / lazily-backwards-from-now (§3,
-  §11). The checkpoint is the multirate coupling interface (§4) at the largest
-  scale we have.
+  §11). The phase-transition is the multirate coupling interface (§4) at the
+  largest scale we have.
 
 ---
 
@@ -253,7 +275,7 @@ day we hit it (today: scouring/armoring). Not a plan — a growing map.*
 
 **Approach codes** (a process may blend them): **A** analytic / closed-form /
 functional (+ §8 seeded stochasticity) · **R** relaxation-to-attractor (settle,
-then checkpoint-cache) · **S** statistical / empirical (fit, lookup, sub-grid
+then memo-cache) · **S** statistical / empirical (fit, lookup, sub-grid
 parameterization) · **T** taxonomy / bestiary import (curated tables — materials,
 biomes, species) · **P** procedural-physical stepwise sim *(annotate physics-
 understood hi/med/lo + cost)*.
@@ -306,7 +328,7 @@ touched mantle convection. Work backward from what agents touch.
 | --- | --- | --- | --- | --- | --- |
 | material taxonomy (undifferentiated → refined) | T + A (det. refine) | — | O(1) | **high** (what things are) | schema |
 | strata / column | data structure | — | — | high (digging, cliffs) | frame built |
-| chronostratigraphic record = the checkpoint artifact | (emerges) | — | — | high (readable history) | conceptual |
+| chronostratigraphic Record = the verification artifact | (emerges) | — | — | high (readable history) | conceptual |
 
 ### Biosphere (Phases 3→6; final-3-critical) — mostly import + statistics
 
@@ -328,7 +350,7 @@ touched mantle convection. Work backward from what agents touch.
 *Note on complexity: the per-cell O(n) stencils are the cheap common case —
 memory-bound, and the GPU/rayon path (`ref/research/water-parallelism.md`) is
 what keeps them affordable as fidelity and area grow. The expensive-but-rare
-ones (Priority-Flood O(n log n), any global solve) run once per checkpoint and
-cache. The genuinely open-complexity items are the ones marked lo physics
+ones (Priority-Flood O(n log n), any global solve) run once per phase-transition
+and cache. The genuinely open-complexity items are the ones marked lo physics
 (tectonics, evolution) — where we deliberately run a cheap statistical stand-in
 because agent-fidelity does not yet demand more.*

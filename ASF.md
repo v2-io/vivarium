@@ -29,7 +29,7 @@ trivial dynamics; the real world has rich dynamics but no ground truth;
 vivarium is built to have both — which is what "simulation results
 epistemically nearer to real-world empirical results than toy simulations"
 (Joseph, 2026-07-04) cashes out as. That claim is conditional on the fidelity
-program actually succeeding; the phases/checkpoints machinery is how we get
+program actually succeeding; the phases/transitions machinery is how we get
 there honestly.
 
 ## 2. The conceptual bridge — one object, two sides of the knowing-relation
@@ -45,7 +45,7 @@ side:
 
 | AAT (agent infers, from inside) | vivarium (we author, from outside) |
 |---|---|
-| law $\theta$ — transition/observation structure | the physics + constants; each phase's **Bequest** ("the constants themselves — the box every later computation happens inside," Checkpoints.md P0, is verbatim a $\theta$-slot declaration) |
+| law $\theta$ — transition/observation structure | the physics + constants; each phase's **Bequest** ("the constants themselves — the box every later computation happens inside," PHASES.md P0, is verbatim a $\theta$-slot declaration) |
 | state $\Omega_t$ | the live world state (terrain, water, weather, populations) |
 | chance $\varepsilon$ | §8 **fated noise** — pure function of (seed, key) |
 | compute-shortfall | the **fidelity ladder** / lazy memoized evaluation — our entire runtime is a compute-shortfall manager |
@@ -53,14 +53,16 @@ side:
 
 Consequences worth holding (status: synthesis, verified against segments):
 
-- **A checkpoint is the promotion of converged state into law.** Each phase
-  runs until its outputs are invariant under everything faster — at which
+- **A phase-transition is the promotion of converged state into law.** Each
+  phase runs until its outputs are invariant under everything faster — at which
   point they *are* $\theta$ for all later dynamics. The AAT spike's rule for
   what belongs in $\theta$ ("the cut is invariance, not slowness; the tower
-  derives by self-similar application") is precisely our phase/checkpoint
-  semantics. The phase ladder implements AAT's timescale tower by
-  construction.
-- **The phase ladder is a $\rho$-schedule.** Checkpoints.md Phase 6 ("the
+  derives by self-similar application") is precisely our phase-transition
+  semantics — and the transition is *incremental* (a few systems sunset,
+  several spin up, most carry forward; PHASES.md Design notes), so it revises
+  the law-set rather than swapping it. The phase ladder implements AAT's
+  timescale tower by construction.
+- **The phase ladder is a $\rho$-schedule.** PHASES.md Phase 6 ("the
   substrate stabilizes beneath the agent seam") in AAT terms: successive
   phases deliver worlds of decreasing disturbance rate until
   Pleistocene-grade agents with achievable tempo satisfy the persistence
@@ -213,7 +215,7 @@ choices you make in agent perception are made knowingly. Cost: a day of real
 reading. **This level is a hard gate: the agent seam is the project's reason
 to exist, and it must not be built from an unread theory.**
 
-**Recurring dives (the per-cycle gate).** At natural checkpoints — opening a
+**Recurring dives (the per-cycle gate).** At natural junctures — opening a
 new world system, closing a spike, promoting a design doc — ask: *which ASF
 segment is this an instance of?* If the answer is "none," that is either a
 gap worth reporting upstream (vivarium is allowed to *find* holes in AAT —
@@ -244,7 +246,10 @@ LEXICON's cross-project collision ledger.)*
 1. **One terminology, two teaching voices.** Where the two projects touch the
    same object, vivarium's LEXICON *defers to ASF's term* and records the
    carve (done 2026-07-04 for **law**/θ, persistence, tempo, chronica/causal
-   time; collision ledger covers regime and checkpoint). New vivarium
+   time; and vivarium *ceded* "checkpoint" outright — its phase boundary is
+   now **phase-transition**/**phase-gate**, its cache sense **memo** — so the
+   term is ASF's agent-snapshot alone; collision ledger covers the rest,
+   e.g. world-regime vs dynamic-regime). New vivarium
    coinages get an ASF collision-check before settling. Vivarium's glosses
    and pedagogy are kept — the referent unifies, the voice doesn't have to.
 2. **Adopt AAT's epistemic machinery natively.** Vivarium research docs
@@ -256,7 +261,7 @@ LEXICON's cross-project collision ledger.)*
    is our *claims-verified*.
 3. **Findings flow upstream as canon, at honest tier.** Vivarium results
    that instantiate or stress AAT (the ρ-schedule reading,
-   checkpoint-as-law-promotion, frame-relative ε, and every future measured
+   transition-as-law-promotion, frame-relative ε, and every future measured
    result) are offered to ASF as segment content — Discussion paragraphs,
    domain-table rows, worked examples, or new segments at
    `discussion-grade`/`conditional` per ASF's working-theory-belongs-in-canon
@@ -273,7 +278,7 @@ LEXICON's cross-project collision ledger.)*
    persistence honesty is the same move on the agent layer.
 5. **Cross-bundling: studies couple to explicit vivia.** An ASF empirical or
    simulation claim can cite a *specific* world-artifact — seed + generator
-   versions + phase checkpoint + intervention script — as its reproducible
+   versions + phase memo + intervention script — as its reproducible
    substrate (content-addressed storage makes the citation exact). That is
    the operational meaning of results **in vivia** (LEXICON §3, pending
    Joseph's confirmation of the noun): a third empirical register between
