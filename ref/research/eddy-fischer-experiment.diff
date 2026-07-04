@@ -1,0 +1,21 @@
++                    // EXPERIMENT (armor_regimes regime 1): Fischer-form transverse
++                    // dispersion K = α·d·u*, u* = √(g·d·S) — depth as the mixing
++                    // length, not the grid cell.
++                    let mut slope_i = 0.0f32;
++                    if x > 0 { slope_i = slope_i.max((self.bed[i] - self.bed[i - 1]) / l); }
++                    if x < nx - 1 { slope_i = slope_i.max((self.bed[i] - self.bed[i + 1]) / l); }
++                    if y > 0 { slope_i = slope_i.max((self.bed[i] - self.bed[i - nx]) / l); }
++                    if y < nx - 1 { slope_i = slope_i.max((self.bed[i] - self.bed[i + nx]) / l); }
++                    let ustar = (9.8 * di * slope_i.max(0.0)).sqrt();
+                     let mut pair = |i: usize, j: usize, s_this: &mut Self| {
+                         let dj = s_this.depth[j];
+                         if dj < 1e-3 {
+                             return;
+                         }
+                         let (ci, cj) = (snap[i] / di, snap[j] / dj);
+-                        let vi = ((s_this.fl[i] + s_this.fr[i] + s_this.ft[i] + s_this.fb[i]) / (di * l)).min(5.0);
+-                        let k_eddy = p.eddy_base + p.eddy_shear * vi * l * 0.1;
++                        let k_eddy = p.eddy_base + 0.6 * di * ustar;
+                         // Mass moved: K·Δc·(interface depth)·dt / l — bounded
+                         // for stability at 25% of the donor's excess.
+                         let dmin = di.min(dj);

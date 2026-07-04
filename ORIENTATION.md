@@ -169,6 +169,39 @@ brief relaxation, cache "an ordinary morning of year zero"), and the water
 parallelism path (`ref/research/water-parallelism.md` — gather rewrite →
 rayon 5–8× → wgpu compute 20–40×, with the CPU-reference determinism policy).
 
+## Session addendum (2026-07-03 evening → 07-04 — conservation, lexicon, ASF reframe)
+
+Landed on main (all probe-verified, independently re-falsified in both
+directions before merge):
+- **Twin f32 conservation fixes** — the same failure family, dual treatments:
+  bed writes were losing sub-ULP erosion increments at the ~6000 m datum
+  (world-wide slow-evolution deadband; fixed with Kahan compensation, `68cd222`)
+  and rain/evap reservoir exchanges were counting *intended* rather than
+  *realized* f32 deltas (the frozen linear −0.37 m³·cells/s "leak"; fixed with
+  realized-delta accounting, `591350d`). Discipline extracted: every
+  small-flux-into-large-f32-field site must explicitly choose **land**
+  (compensated summation) or **count** (realized-delta). Conservation test
+  tolerances are now absolute, not relative (relative 1e-6 is where both bugs hid).
+- **Consequence, open:** ORIENTATION's "deluge ~2-3 min" is no longer true — a
+  cold fill now wants ~2 h (hypothesis: convergence was partly leak-powered;
+  untested). This *promotes the analytic hydrological init* (`ref/erosion-port/
+  NOTES.md` §Next) from elegant to necessary. Mid-fill also renders as a
+  featureless gray sheet — "young world" is indistinguishable from "broken world."
+- **Parked physics decision (Joseph):** Fischer-form eddy diffusivity
+  (`ref/research/eddy-fischer-experiment.diff`) + whether armor should form
+  under supply-rich transients at all (Dietrich 1989: armor expresses supply
+  *deficit* — the probe's expectation may be the wrong part).
+- **Docs:** `LEXICON.md` started (regimes, time: causal/metric/physical, the
+  four-axis epistemic tagging, use-case-as-fidelity-contract);
+  `ref/research/multiscale-methods.md` (the generalized R/L/closure frame);
+  `ref/research/oxygenation-transition-scaffold.md` (worked example: two lawful
+  variants, one target); `ref/research/BIBLIOGRAPHY.md` (30 sources verified in
+  relata, 16-item manual-chase list).
+- **Reframe (Joseph, 2026-07-04):** vivarium is now principled enough to take
+  its position as a **supporting project for ASF** (`~/src/agentic-systems`) —
+  the simulation proving-ground / grounding lab for AAT. Bridge docs forthcoming
+  this session.
+
 ## Next directions (Joseph, 2026-07-02, end of the water night — verbatim intent)
 
 1. Suspension / sealing / deposition — deepen the sediment loop.
