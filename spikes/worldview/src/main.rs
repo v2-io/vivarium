@@ -121,7 +121,7 @@ const EPOCH_YEARS: f32 = 100.0;
 /// Physics/recipe version for the fill cache — the crude rung of §12's
 /// recipe-hash: BUMP THIS whenever erosion or water physics changes, or stale
 /// caches will serve worlds the current algorithms would not produce.
-const FILL_ALGO_VERSION: &str = "2026-07-03e"; // e: winnow recal + eddy diffusion
+const FILL_ALGO_VERSION: &str = "2026-07-03f"; // f: realized-delta reservoir accounting (budget-leak fix)
 
 /// The FILL CACHE (first rung of DESIGN-REDUX §12–13): the filled world —
 /// eroded tiers + steady-state water — is a pure function of its parameters,
