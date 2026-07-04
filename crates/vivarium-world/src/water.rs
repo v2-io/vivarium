@@ -312,15 +312,24 @@ impl WaterSim {
         let area = l * l;
 
         // 1. Rain: atmosphere → surface, scaled so it never rains water that
-        //    does not exist.
+        //    does not exist. REALIZED-DELTA accounting: debit the atmosphere by
+        //    what the f32 depth actually absorbed, not by the intended amount.
+        //    A ~1e-6 m transfer is below the ulp of a 100 m-deep f32 cell, and
+        //    at steady state the depth field is stationary — so the per-cell
+        //    rounding error is FROZEN and repeats identically every step: the
+        //    budget gauge's "too linear for rounding" drift was exactly this,
+        //    intended-vs-realized bias summed over the deep cells (budget_probe).
         if p.precip > 0.0 && self.atmosphere > 0.0 {
             let want = p.precip as f64 * dt as f64 * n as f64;
             let scale = (self.atmosphere / want).min(1.0) as f32;
             let per_cell = p.precip * dt * scale;
+            let mut landed = 0.0f64;
             for d in self.depth.iter_mut() {
+                let before = *d;
                 *d += per_cell;
+                landed += (*d - before) as f64;
             }
-            self.atmosphere -= per_cell as f64 * n as f64;
+            self.atmosphere -= landed;
         }
 
         // 1b. Ocean → atmosphere: the evaporation that keeps rain supplied.
@@ -623,23 +632,41 @@ impl WaterSim {
                         // persistent). Never fully watertight — 2% leaks.
                         let seal = (1.0 / (1.0 + q / p.seal_q)) * (1.0 - self.colmation[i]).max(0.02);
                         let take = (p.infiltration * seal * dt).min(d).min(p.gw_capacity - self.groundwater[i]);
+                        // Realized-delta: mirror the depth's ACTUAL f32 change
+                        // into groundwater (stage 1's frozen-rounding note; the
+                        // gw side's ulp is ~1000× finer, so the residual is a
+                        // negligible random walk, not a frozen bias). May
+                        // overshoot gw_capacity by ≤ one deep-cell ulp — the
+                        // `< gw_capacity` guard stops further intake.
+                        let before = self.depth[i];
                         self.depth[i] -= take;
-                        self.groundwater[i] += take;
+                        self.groundwater[i] += before - self.depth[i];
                     }
                     let back = (self.groundwater[i] * p.baseflow * dt).min(self.groundwater[i]);
-                    self.groundwater[i] -= back;
+                    let before = self.depth[i];
                     self.depth[i] += back;
+                    let realized = self.depth[i] - before;
+                    if realized <= self.groundwater[i] {
+                        self.groundwater[i] -= realized;
+                    } else {
+                        // The return is below this depth's f32 resolution and
+                        // rounding overshot the store: skip — the water stays
+                        // in the soil rather than being minted.
+                        self.depth[i] = before;
+                    }
                 }
             }
         }
 
         // 5. Evaporation (surface → atmosphere) and re-hold the edge boundary.
+        //    Realized-delta, as with rain: credit the atmosphere with what the
+        //    f32 depth actually lost (see stage 1's frozen-rounding note).
         if p.evaporation > 0.0 {
             let e = p.evaporation * dt;
             for d in self.depth.iter_mut() {
-                let evap = e.min(*d);
-                *d -= evap;
-                self.atmosphere += evap as f64;
+                let before = *d;
+                *d = (*d - e.min(*d)).max(0.0);
+                self.atmosphere += (before - *d) as f64;
             }
         }
         self.hold_edge_sea(p.sea_m);
@@ -872,6 +899,53 @@ mod tests {
             "solid not conserved: {solid_before} -> {solid_after}"
         );
         assert!(w.sediment.iter().all(|s| *s >= 0.0 && s.is_finite()));
+    }
+
+    /// The bowl test above never exercises DEEP water — and deep f32 depths are
+    /// where reservoir exchanges go subtly wrong: a ~1e-6 m rain/evap transfer
+    /// is below the ulp of a 100–400 m depth, and at steady state the depth
+    /// field is stationary, so intended-vs-realized rounding bias is FROZEN and
+    /// integrates linearly (the worldview budget gauge's −0.37 m·cells/sim-s;
+    /// probe: examples/budget_probe.rs). Realized-delta accounting makes every
+    /// field↔reservoir exchange exact by construction; this guards it, with an
+    /// ABSOLUTE bound — a relative tolerance is how the sibling bed-absorption
+    /// bug stayed hidden inside a 1e-6 slack on a huge total.
+    #[test]
+    fn conserves_in_deep_water() {
+        let nx = 48;
+        let sea = crate::gen::SEA_LEVEL_M as f32;
+        // Left half: 400 m-deep ocean floor; right half rises inland.
+        let mut bed = vec![0.0f32; nx * nx];
+        for y in 0..nx {
+            for x in 0..nx {
+                let t = x as f32 / nx as f32;
+                bed[y * nx + x] = if t < 0.5 { sea - 400.0 } else { sea - 2.0 + (t - 0.5) * 120.0 };
+            }
+        }
+        let mut w = WaterSim::new(Face::ZPos, 21, (1000, 1000), nx, 4.8, bed, 1.0);
+        // Step at the CFL-stable dt, as every real caller does. (At a
+        // CFL-VIOLATING dt on deep water this test fails for a different,
+        // out-of-contract reason: the oscillating flux clamp's stage-4
+        // `max(0.0)` mints small amounts. The kernel's conservation guarantee
+        // is stated under the documented dt contract.)
+        let deluge = WaterParams { precip: WaterParams::default().precip * 60.0, ..Default::default() };
+        for _ in 0..600 {
+            let dt = w.stable_dt(9.8);
+            w.step(&WaterParams { dt, ..deluge });
+        }
+        w.rebaseline_budget();
+        let storm = WaterParams { precip: WaterParams::default().precip * 10.0, ..Default::default() };
+        let mut sim_s = 0.0f64;
+        for _ in 0..2000 {
+            let dt = w.stable_dt(9.8);
+            w.step(&WaterParams { dt, ..storm });
+            sim_s += dt as f64;
+        }
+        // Pre-fix the frozen bias integrated to ~1e2 m·cells here (−9 m·cells
+        // per sim-s at this depth, linear). Post-fix the residue is unfrozen
+        // f32 rounding — a random walk orders of magnitude below this bound.
+        let drift = w.budget_drift().abs();
+        assert!(drift < 0.5, "deep-water budget drifted: {drift} m·cells over {sim_s:.1} sim-s");
     }
 
     #[test]
