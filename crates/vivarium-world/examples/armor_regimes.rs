@@ -1,20 +1,32 @@
 //! Armor/scour regime probe (§2b): three invariants nature guarantees.
 //!
-//! STATUS 2026-07-03 (four rounds in — see git history for the arc):
-//!   regime 2 (slack basin takes mud, stays soft): PASS, robust.
-//!   regime 1 (transport-limited armoring): PASSED pre-eddy-diffusion
-//!     (natural-supply armor 0.41→0.84 on storm-cycle timescale); FAILS
-//!     after it — eddy mixing feeds hillslope wash laterally into the
-//!     thalweg and burial beats winnowing. REAL interaction, not test
-//!     scaffolding: eddy transport changes the channel supply balance.
-//!     Open: is the eddy shear coefficient too strong, or is winnowing
-//!     too weak against honest lateral supply? Decide by physics, not
-//!     by making the test pass.
-//!   regime 3 (supply-limited source incision): bed change EXACTLY 0.000
-//!     at source cells in every version, though hand-arithmetic expects
-//!     ~0.5 m export in 600 ss. Unexplained — suspect the erosion branch
-//!     under thin sheet-source conditions (τ, capacity, or advection
-//!     coupling at flow-path heads). Isolate with a single-column probe.
+//! STATUS 2026-07-03b (five rounds — see git history for the arc):
+//!   regime 3's EXACT-zero ROOT-CAUSED AND FIXED (examples/source_incision.rs
+//!     is the proof): f32 ABSORPTION — at a ~6000 m bed datum one ULP is
+//!     ~0.5 mm, so every sub-quarter-mm per-step bed change rounded away;
+//!     `sediment += e` still received mass (solid created from nothing,
+//!     hidden inside the conservation test's relative tolerance) and armor
+//!     still grew. Fixed by compensated (Kahan) bed writes in water.rs.
+//!   THE FIX CHANGES THE WORLD, not just regime 3: the absorption was a
+//!     world-wide DEADBAND freezing all slow bed evolution. Every earlier
+//!     verdict here was read against that frozen world:
+//!     regime 1: mid-ramp now buried under an honest upstream aggradation
+//!       wave (whole loose ramp erodes at once — spin-up transient with no
+//!       inherited coarse bed). Pavement does develop, slowly: armor 0→0.21
+//!       by 9600 ss. The old "eddy vs winnow" question is now third in line
+//!       behind (i) the eddy K's grid-length scale (dimensional issue:
+//!       Fischer K = α·d·u*; the l-based form over-mixes shallow flow ~l/d
+//!       and makes mixing resolution-dependent) and (ii) whether armor
+//!       SHOULD form under supply-rich transients at all (Dietrich 1989:
+//!       armor expresses supply deficit). Physics decision pending (Joseph).
+//!     regime 2: the basin now grows a real delta; the probe point sits on
+//!       its front (slope → τ ≫ τ_fines): armor 0.73, no colmation THERE —
+//!       mud settles farther out. The invariant stands; the probe point and
+//!       preconditions need re-grounding.
+//!     regime 3: y_top has 20 eroding rows above it — the freeze had been
+//!       MANUFACTURING its supply-limitation; it now honestly aggrades.
+//!       A true divide cell (or guard) is needed to test self-limiting
+//!       incision.
 //!   1. A steep TRANSPORT-LIMITED channel (at capacity, no net erosion) must
 //!      still armor within a few storm-cycles' worth of shear (winnowing), and
 //!      must shed its colmation — real mountain channels are stony, not sealed.

@@ -182,6 +182,15 @@ pub struct WaterSim {
     /// over `bed` (which already carries the mass): deposits add, scour removes
     /// it first. It is what makes a bed read sandy.
     pub sed_bed: Vec<f32>,
+    /// Kahan residual for `bed` writes. The bed sits at a ~6000 m datum where
+    /// one f32 ULP is ~0.5 mm; a per-step erosion increment below the half-ULP
+    /// (~0.24 mm) rounds away ENTIRELY — the source-cell exact-zero-incision
+    /// anomaly (armor_regimes regime 3): τ ≫ τ_c, `sediment += e` receives
+    /// mass, armor grows, and the bed never moves — solid mass created from
+    /// nothing, incision frozen. Compensated summation keeps the lost low
+    /// bits here until they amount to a representable change. Stays < 1 ULP
+    /// (≲0.5 mm) by construction; counted in [`Self::total_solid`].
+    bed_res: Vec<f32>,
     /// Colmation 0..1: fraction of bed pores plugged by fines. PERSISTENT —
     /// a sealed bed stays sealed between storms (why dry riverbeds refill
     /// fast) until a flood's scour re-opens it. Joseph's "fine particles
@@ -227,6 +236,7 @@ impl WaterSim {
             sediment: z.clone(),
             groundwater: z.clone(),
             sed_bed: z.clone(),
+            bed_res: z.clone(),
             colmation: z.clone(),
             armor: z.clone(),
             atmosphere: atmosphere_m * (nx * nx) as f64,
@@ -264,9 +274,12 @@ impl WaterSim {
             + self.ocean
     }
 
-    /// The conserved SOLID total: bed + suspended (m, cell-area units).
+    /// The conserved SOLID total: bed (+ its compensation residual) + suspended
+    /// (m, cell-area units).
     pub fn total_solid(&self) -> f64 {
-        self.bed.iter().map(|&b| b as f64).sum::<f64>() + self.sediment.iter().map(|&s| s as f64).sum::<f64>()
+        self.bed.iter().map(|&b| b as f64).sum::<f64>()
+            + self.bed_res.iter().map(|&r| r as f64).sum::<f64>()
+            + self.sediment.iter().map(|&s| s as f64).sum::<f64>()
     }
 
     /// Refresh the bed from the (still-eroding) terrain tier — the quasi-static
@@ -275,6 +288,20 @@ impl WaterSim {
     pub fn set_bed(&mut self, bed: Vec<f32>) {
         assert_eq!(bed.len(), self.nx * self.nx);
         self.bed = bed;
+        // The residual compensates the OLD bed's accumulation; a fresh bed
+        // starts a fresh sum.
+        self.bed_res.fill(0.0);
+    }
+
+    /// Compensated (Kahan) increment of `bed[i]` — see `bed_res`. Every bed
+    /// write in the sediment stage goes through here; a bare `bed[i] += dz`
+    /// silently drops sub-ULP increments at mountain datums.
+    #[inline]
+    fn bed_add(bed: &mut f32, res: &mut f32, dz: f32) {
+        let y = dz + *res;
+        let t = *bed + y;
+        *res = y - (t - *bed);
+        *bed = t;
     }
 
     /// One shallow-water step — the five classic stages, every transfer counted.
@@ -440,7 +467,7 @@ impl WaterSim {
                     if d < 1e-3 {
                         // No meaningful flow: everything settles.
                         let dp = self.sediment[i].min(max_step);
-                        self.bed[i] += dp;
+                        Self::bed_add(&mut self.bed[i], &mut self.bed_res[i], dp);
                         self.sediment[i] -= dp;
                         self.sed_bed[i] += dp;
                         self.colmation[i] = (self.colmation[i] + dp * p.fines_frac / p.plug_depth).min(1.0);
@@ -472,7 +499,7 @@ impl WaterSim {
                         // scours freely regardless of the lag beneath it.
                         let shield = if self.sed_bed[i] > 1e-4 { 1.0 } else { 1.0 - p.armor_shield * self.armor[i] };
                         let e = ((capacity - s0) * p.sed_erode * dt * shield).min(max_step);
-                        self.bed[i] -= e;
+                        Self::bed_add(&mut self.bed[i], &mut self.bed_res[i], -e);
                         self.sediment[i] += e;
                         // Scour strips the alluvium cover and re-opens the pores;
                         // cutting into parent bed winnows fines → the lag grows.
@@ -489,7 +516,7 @@ impl WaterSim {
                         let fines_settle = tau < p.tau_fines;
                         let frac = if fines_settle { 1.0 } else { 1.0 - p.fines_frac };
                         let dp = ((s0 - capacity) * p.sed_deposit * dt * frac).min(max_step).min(s0);
-                        self.bed[i] += dp;
+                        Self::bed_add(&mut self.bed[i], &mut self.bed_res[i], dp);
                         self.sediment[i] -= dp;
                         self.sed_bed[i] += dp;
                         if fines_settle {
@@ -556,7 +583,7 @@ impl WaterSim {
                     if di < 1e-3 {
                         continue;
                     }
-                    let mut pair = |i: usize, j: usize, s_this: &mut Self| {
+                    let pair = |i: usize, j: usize, s_this: &mut Self| {
                         let dj = s_this.depth[j];
                         if dj < 1e-3 {
                             return;
@@ -834,10 +861,14 @@ mod tests {
         let after = w.total_water();
         assert!((before - after).abs() < 1e-3, "water not conserved: {before} -> {after}");
         assert!(w.depth.iter().all(|d| *d >= 0.0 && d.is_finite()));
-        // Solid (bed + suspended) is conserved by the sediment stage too.
+        // Solid (bed + residual + suspended) is conserved by the sediment
+        // stage too. ABSOLUTE tolerance: the earlier relative 1e-6 (of a
+        // ~5e6 m·cells bed integral) hid ~5 m·cells of created mass — which
+        // is exactly what the f32-absorption bug produced (bed subtraction
+        // rounded away while `sediment += e` landed). See `bed_res`.
         let solid_after = w.total_solid();
         assert!(
-            (solid_before - solid_after).abs() / solid_before.abs().max(1.0) < 1e-6,
+            (solid_before - solid_after).abs() < 1e-3,
             "solid not conserved: {solid_before} -> {solid_after}"
         );
         assert!(w.sediment.iter().all(|s| *s >= 0.0 && s.is_finite()));
