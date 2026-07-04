@@ -38,6 +38,7 @@ fn main() {
     let (cx, y_top) = (nx / 2, 20usize);
     let i = y_top * nx + cx;
     let bed_start = w.bed[i];
+    let solid_start = w.total_solid();
     let mut t = 0.0f32;
     let mut printed = 0;
     while t < 600.0 {
@@ -71,7 +72,8 @@ fn main() {
     }
     println!("\nafter 600 ss: bed Δ = {:+.6} m (exact zero? {})", w.bed[i] - bed_start, w.bed[i] == bed_start);
     println!("armor at source: {:.2}  suspended: {:.2e}  sed_bed: {:.4}", w.armor[i], w.sediment[i], w.sed_bed[i]);
-    // Solid-mass audit: if bed absorbed the subtraction but sediment received
-    // it, total solid GREW.
-    println!("total_solid drift possible — check conserves test tolerance (rel 1e-6 of ~2e8 hides ~200 m·cells).");
+    // Solid-mass audit: pre-fix, the bed absorbed the subtraction while
+    // sediment received it, so total solid GREW (and a relative-1e-6 test
+    // tolerance hid it — since replaced by an absolute bound in water.rs).
+    println!("total_solid drift: {:+.6} m·cells (absolute; conserves test bounds this at 1e-3).", w.total_solid() - solid_start);
 }
