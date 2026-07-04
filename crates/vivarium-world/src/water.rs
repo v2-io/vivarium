@@ -347,7 +347,8 @@ impl WaterSim {
         //    flow cross-section is depth × width, so df = dt·g·d̄·Δh), then apply
         //    Manning friction implicitly: f ← f / (1 + dt·g·n²·|v| / d̄^{4/3}).
         //    Border neighbours are treated as equal-surface (the edge hold drains).
-        // θ flux smoothing (de Almeida & Bates 2013): each pipe blends with its
+        // θ flux smoothing (de Almeida, Bates, Freer & Souvignet 2012, WRR 48
+        // W05528; the 2013 paper is the applicability study): each pipe blends with its
         // along-axis neighbours — the stand-in for the neglected momentum-
         // advection term. Without it, a local-inertial scheme on steep slopes
         // organises the flux field into travelling solitons decoupled from the
