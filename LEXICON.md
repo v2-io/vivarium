@@ -222,6 +222,17 @@ channels; "inheritance outside the genome" *is* substrate innovation; the §8
 storm/flare schedules *are* the exogenous profile) — mild convergence-evidence
 the decomposition is real.
 
+- ✅ **AAT handshake (the four axes ↔ typed ignorance).** ASF/AAT's live
+  root ontology (`~/src/agentic-systems/spikes/epistemic-target-ontology/`)
+  types the agent's epistemic target as **state Ω / law θ / chance ε /
+  compute-shortfall** — and vivarium authors the same object from the other
+  side: **B (physics fidelity) = θ-fidelity** · **A (Earth-history) =
+  Ω-trajectory fidelity** · **§8 fated noise = authored ε** (frame-relative:
+  chance inside, lookup outside) · **fidelity ladder = compute-shortfall
+  management**. A checkpoint promotes converged state into *law* for
+  everything above it (the invariance cut). Full mapping + implications:
+  `ASF.md` §2–3.
+
 ## 6. Time
 
 *(The temporal half of the lexicon. Joseph, scratch: inside phases there is no
@@ -235,7 +246,10 @@ invariant is something weaker and truer.)*
   survive inside a phase** — what is preserved is the ordering, not any clock —
   and even it is sometimes waived (Phase 0 Ante-mundane, which we don't simulate
   at all). The general principle: *the causal partial order is load-bearing; the
-  clock is derived, and often optional.*
+  clock is derived, and often optional.* Independent convergence: AAT's
+  **chronica** (`#def-chronica`, ~/src/agentic-systems) is explicitly "an
+  ordinal sequence, not a metric timeline" — agent time measured in event
+  ticks; a world's interventional history is a chronica in exactly this sense.
 - ✅ **Metric time** — quantized, measurable duration in a *world's own*
   seconds/years. A **late-phase luxury**: real only once the world contains
   consumers of it (seasons, calendars, agents that plan against a clock). The

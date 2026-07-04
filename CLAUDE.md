@@ -6,6 +6,13 @@ agents and community dynamics* built on the Agentic Systems Framework (ASF /
 AAT). Read [`DESIGN.md`](DESIGN.md) before proposing anything — it carries the
 live thinking and the open questions.
 
+**Vivarium is a supporting project for ASF** (`~/src/agentic-systems/`) — the
+simulation proving-ground and grounding lab for AAT (Joseph, 2026-07-04). Read
+[`ASF.md`](ASF.md) **every session** (Level A); it carries the conceptual
+bridge, the ASF disciplines that bind development here, and the tiered
+ASF-reading prerequisites — including the hard Level-C gate: **no one builds
+on the agent seam without the named ASF reading.**
+
 **Stage (2026-06-29).** Past the first vertical slice. `vivarium-core` is a
 deterministic 3D voxel world (seed + sparse edits, voxel LOD). The **engine
 question is resolved → Bevy** (`bevy_voxel_world`), confirmed by a head-to-head
