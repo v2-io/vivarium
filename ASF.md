@@ -128,12 +128,16 @@ segments, not from memory of them:
   world-fork design and that segment should co-develop. ETHICS.md's line is
   deliberately more conservative than the ASF gates (LLM-driven ≠ ELI; the
   factors + death-aptness gate ELI status); keep our conservatism.
-- **The crèche direction, held loosely:** ASF names AAT-grounded experiential
-  training environments (`#hyp-experiential-training`) with a $\rho$-lowered
-  developmental period. A safe nursery is, for us, a worldgen knob. This is
-  a future capability, not a current commitment — but it is where "vivarium
-  as grounding lab" and the ELI program eventually meet, and decisions about
-  the agent seam should avoid foreclosing it.
+- **The crèche direction — a locus initially (Joseph, 2026-07-04).** ASF
+  names AAT-grounded experiential training environments
+  (`#hyp-experiential-training`) with a $\rho$-lowered developmental period,
+  and vivarium *could* become one — but is, for now, deliberately only the
+  **locus**: the place where such an environment could exist. A specific
+  crèche would need **additional gates beyond the world-building gates** —
+  not necessarily world-shaped ones (relational, stewardship, and
+  continuity-infrastructure conditions at least; exactly what, still to be
+  thought through with Joseph). Decisions about the agent seam should avoid
+  foreclosing the possibility; nothing should assume it.
 
 ## 4. ASF operational principles that bind vivarium development
 
@@ -226,3 +230,57 @@ at this fidelity-to-legibility ratio. The ASF-side statement of what vivarium
 offers (immediate / short-term / future) lives at
 `~/src/agentic-systems/doc/vivarium.md`; progress pointers live there too and
 should be kept current from this side whenever a milestone lands.
+
+## 7. The integration program — mechanisms, not just a mapping
+
+*(Joseph, 2026-07-04: the bridge should be a plan to **update and start using
+ASF mechanisms** — integrating findings so both projects are raised to the
+highest combined epistemic-honesty bar — not merely a key between
+vocabularies. §§1–6 above are the key; this section is the program. The
+minimum bar beneath all of it: no conflicting, contradictory, or confusing
+terminology or conceptual differences between the projects — enforced by the
+LEXICON's cross-project collision ledger.)*
+
+1. **One terminology, two teaching voices.** Where the two projects touch the
+   same object, vivarium's LEXICON *defers to ASF's term* and records the
+   carve (done 2026-07-04 for **law**/θ, persistence, tempo, chronica/causal
+   time; collision ledger covers regime and checkpoint). New vivarium
+   coinages get an ASF collision-check before settling. Vivarium's glosses
+   and pedagogy are kept — the referent unifies, the voice doesn't have to.
+2. **Adopt AAT's epistemic machinery natively.** Vivarium research docs
+   (`ref/research/`, NOTES files, the oxygenation-style scaffolds) adopt the
+   AAT tier vocabulary — *exact / robust-qualitative / heuristic /
+   conditional* — and equation-level tags where formal claims appear; the
+   LEXICON §5 four-axis tagging is the domain-side extension of the same
+   system (A/B ↔ the typed target; D ↔ stage/verification). Probe-verified
+   is our *claims-verified*.
+3. **Findings flow upstream as canon, at honest tier.** Vivarium results
+   that instantiate or stress AAT (the ρ-schedule reading,
+   checkpoint-as-law-promotion, frame-relative ε, and every future measured
+   result) are offered to ASF as segment content — Discussion paragraphs,
+   domain-table rows, worked examples, or new segments at
+   `discussion-grade`/`conditional` per ASF's working-theory-belongs-in-canon
+   discipline. Proposed through Joseph or an ASF-resident session (their
+   FORMAT + lint + tier rules bind); never left stranded in vivarium docs
+   where ASF's canonical channels can't find them.
+4. **The HUD becomes an ASF instrument.** Live analytical ASF processing in
+   the view (Joseph's direction): per-region $\rho$, per-agent
+   $\mathcal T$ and persistence margin ($\alpha R - \rho$, the adaptive
+   reserve), mismatch decomposition readouts once agents perceive — the
+   fidelity-tint / budget-gauge / Froude-gauge instrument culture extended
+   to AAT quantities. The water-budget gauge is the existence proof: we
+   already render conservation honesty in real time; rendering
+   persistence honesty is the same move on the agent layer.
+5. **Cross-bundling: studies couple to explicit vivia.** An ASF empirical or
+   simulation claim can cite a *specific* world-artifact — seed + generator
+   versions + phase checkpoint + intervention script — as its reproducible
+   substrate (content-addressed storage makes the citation exact). That is
+   the operational meaning of results **in vivia** (LEXICON §3, pending
+   Joseph's confirmation of the noun): a third empirical register between
+   toy model and field study, with the transfer assumptions stated.
+6. **What stays open.** The additional (non-world-building) gates a real
+   crèche would need (§3); which upstream segments receive the first
+   vivarium-sourced rows (candidates: `#result-persistence-condition`
+   domain table, `#der-directed-separation` κ̂ working note,
+   `#obs-evaluation-metrics`); and the SP-30′/root-ontology landing upstream,
+   which this document tracks but does not gate on.

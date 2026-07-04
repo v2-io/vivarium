@@ -222,6 +222,50 @@ channels; "inheritance outside the genome" *is* substrate innovation; the §8
 storm/flare schedules *are* the exogenous profile) — mild convergence-evidence
 the decomposition is real.
 
+- 🔨 **Law** *(adopted 2026-07-04 — Joseph's vote, unified with AAT's θ)* —
+  the persistent structure that governs dynamics. In AAT: the θ the agent
+  must infer (transition + observation structure). In vivarium: what we
+  *author* — the physics and constants, and at the largest scale the
+  **phase-swapped active-system-set**: a phase's Bequest is a delivery of
+  law; **a checkpoint promotes converged state into law** for everything
+  faster above it. Same word at three rates, deliberately (the timescale
+  tower with the invariance cut at every rung): fast state · slowly-drifting
+  law · law swapped wholesale at a phase gate. *Carves/collisions (from the
+  ASF name-check, recorded so we never drift into them):* probability
+  theory's "law of X" = distribution — disambiguate on first use near
+  stochastic machinery; deontic law arrives with ASF Part IV — intended
+  polysemy, marked there as a decision. Existing vivarium glosses
+  (physics-not-knobs, "detail must be earned") stay as pedagogy — the
+  adoption unifies the referent, not the teaching voice.
+- ✅ **Cross-project collision ledger** *(the no-conflicting-terminology
+  bar, Joseph 2026-07-04)* — terms where vivarium and ASF usage could
+  confuse, with the rule for each:
+  - **regime**: ours (§1) = dominance structure of world systems; ASF's
+    *dynamic-regime axis* (R0 contraction / R1 equilibrium / R2 cyclic /
+    R3 mean-field) = interaction-dynamics class of composite agents.
+    Related spirit, different object — near ASF material say "world regime"
+    vs "dynamic regime R𝑛".
+  - **checkpoint**: ours = phase gate / world-scale memo; ASF vol-03 uses it
+    for *agent-state snapshots* (`#hyp-checkpoint-forking-failure-modes`).
+    The two MEET in fork/save design — exactly where confusion is costliest;
+    write "phase checkpoint" vs "agent checkpoint" whenever both are in play.
+  - **persistence**: reserved for the AAT property (bounded mismatch under
+    drift; three-plus senses in ASF's LEXICON). For disk/storage say
+    *storage*, *memoization*, or *save* — never "persistence."
+  - **tempo**: reserved for AAT's 𝒯 = Σν·η* (rate of useful information
+    gain). Not a synonym for speed/framerate — the HUD's sim-rate lines are
+    *rates*, not tempo, until they measure information.
+  - **epoch**: no conflict (ours is the erosion solver's tick; ASF doesn't
+    claim it) — recorded as checked.
+- Ⓝ→🔨? **Vivium (pl. vivia)** — candidate settled name for the sketch's
+  "a vivarium instance": one specific world-artifact (frozen backstory +
+  engine + interventional history). Source: Joseph's usage 2026-07-04
+  ("simulations/empirical studies on the ASF side coupled to explicit
+  **vivia**") — *tentative: adopted from live usage, needs his explicit
+  confirmation it wasn't a slip.* If confirmed it earns its keep twice over:
+  standalone-citable, and the *in vitro / in vivo* resonance gives ASF a
+  third empirical register — results obtained **in vivia**: richer than
+  toy models, more legible than field data.
 - ✅ **AAT handshake (the four axes ↔ typed ignorance).** ASF/AAT's live
   root ontology (`~/src/agentic-systems/spikes/epistemic-target-ontology/`)
   types the agent's epistemic target as **state Ω / law θ / chance ε /
