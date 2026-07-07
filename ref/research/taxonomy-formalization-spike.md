@@ -224,3 +224,33 @@ separation *fails* — attention processes goals and observations jointly.
 
 **Next:** read the four `der-*` separation/identifiability segments to settle Finding 5.2 (the actual bet), and land F5.1 + F6.x
 in the ASF collision ledger.
+
+---
+
+## §9 (added 2026-07-06, Joseph elaboration) — degrees are multi-factor; and a third, *lawful* mutation mechanism
+
+**9.1 A "degree" is multi-factor, relational, and dynamic — not a scalar.** A cell names a mechanism (§3); its *degree* in an agent
+decomposes further. Revelation, e.g., varies by **throughput** (bandwidth), **latency** (gradual "line upon line" vs on-demand oracle),
+**receptivity** (the receiver can ignore / reject / stop believing → it *decays*, and the revealer may stop trying — so it is
+*relational*, not a property of the receiver alone), and the receiver's **comprehension-capacity** (a capable adult vs a young child
+with identical exposure). And a single knowledge-*target* ("how well does this agent know the law") is a **composite across mechanisms**,
+each graded: out-of-band info (wiki/spoilers ≈ a form of revelation), avatar-only phenomenal comprehension, analysis-tool access+skill
+(bespoke). Worked population (Joseph's multiplayer table): spoiler-reader · blind-avatar player · young child (capped comprehension) ·
+saved-game analyst · remote phenomenal-only players · watching beta-testers — six heterogeneous N-VIS profiles at the *same* cell.
+
+**9.2 A third mutation mechanism — lawful aleatoric steering (candidate name: "Providence").** Distinct from (a) lawful endo action
+(a_t→T) and (b) law-*violating* exo `do()` intervention. The exo agent **chooses the realization of a random / fated-noise process**
+instead of the seed-keyed or true-random draw — **obeying all conservation laws and staying in-distribution.** Because any specific
+outcome is as improbable as any other, a *decided* outcome is not detectably illegal (Joseph: a baseball+anti-baseball pair, the
+anti-baseball dropped into the sun; "random things line up *just so*" — synchronous/miraculous, yet within statistical bounds; "an
+output there must be"). **Signature that distinguishes all three:** `do()` leaves a detectable anomaly; the illusion-miracle (P-MUT law)
+*fakes* a violation; **Providence changes the true Ω-trajectory yet leaves NO phenomenal trace** — the stealthy, authored-feeling one.
+Formally: override the fated-noise output (ASF §8, noise = fn(seed,key)) for chosen keys with decided-but-lawful values; the result is a
+valid trajectory under T. **Replay:** a decided input → world becomes Open-with-recorded-forcing → must be logged, tagged *lawful-steering*
+(not law-violating). [candidate name — Joseph's call; slots into the Revelation/Intercession/Granted-Agency/Inhabitation series.]
+
+**9.3 Harm-side implication (sharpens ASF.md §0).** Providence is on the **permissible** side of the moratorium: **directed-lawful ≠
+unLawful-bug.** A creator can author a meaningful — even sorrowful — endo world *through* providence without committing the harm, because
+the harm was never "the creator arranged the loss" (providence can, lawfully) but specifically *"our incoherence caused it, irreversibly,
+to a being that can mourn."* Authorship within law is not the sin; the broken (unLawful) world is. This makes the §0 harm-triple crisper:
+it targets **incoherence**, never **authorship**.
