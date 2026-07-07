@@ -8,7 +8,7 @@ Given/When/Then acceptance scenarios. **Written to find breaks, not to confirm.*
 
 ## Headline findings (the gaps worth acting on)
 
-1. **`exo` ≠ noumenal-access.** The EXO access-matrix row is really the *Numen/developer* profile
+1. **`exo` ≠ noumenal-access.** The EXO access-matrix row is really the *access-rich exo* profile
    (source + time-control). A plain participant (bought-the-game player) is exo *by governance* yet has
    *phenomenal-only* access. The matrix conflates two exo sub-kinds. **[Sc-9, STRAIN→GAP]**
 2. **Mourning-capacity lives at the *Adaptive-System* tier (perception + model), below Agentic.** So the
@@ -42,9 +42,10 @@ Everything else PASSED or STRAINED-then-resolved (below), which is real signal t
 - **When** they ask for the world's "true state,"
 - **Then** by governance they are **exo** (their mind is home in the natural kingdom), yet their *access profile* is
   **phenomenal-only** — the exo N-VIS cells (bespoke analysis, intervention) are unavailable to them (those are gated on
-  source + time-control). **Teaches:** the EXO access-matrix as drawn is the **Numen/developer** row; a mere exo *participant*
-  lives almost entirely in the phenomenal column. **Gap:** split "exo" into exo-with-noumenal-access (developer/Numen) vs
-  exo-participant, or annotate the matrix rows with their access precondition.
+  source + time-control). **Teaches:** the EXO access-matrix as drawn is the **access-rich exo** row; a mere exo *participant*
+  lives almost entirely in the phenomenal column. **Gap:** split "exo" into exo-with-noumenal-access (source-holder) vs
+  exo-participant, or annotate the matrix rows with their access precondition. (Describe by access-profile — a *degree*
+  along the noumenal-access axis — **not** by an authority-subtype; see the axes-with-degrees note below.)
 
 ### Sc-5 — An endo agent builds a sub-vivium (nesting) · **PASS + GAP**
 - **Given** (hypothetically, post-moratorium) an endo agent E in vivium V,
@@ -149,3 +150,21 @@ PASS: Sc-1, Sc-3, Sc-5(nesting), Sc-10, Sc-12 · STRAIN: Sc-2, Sc-7, Sc-9, Sc-11
 splitting from exo *governance* (Sc-9); (ii) the moratorium's trigger is perceptual mourning-capacity, not agency, and needs forking +
 recursion + realizability vocabulary before any lift (Sc-4/5/6/8); (iii) truth-death wants its own safety account (Sc-11). None of these
 threaten the moratorium — most are *upstream* of ever relaxing it.
+
+---
+
+## Lexicon principle: axes with graded values, no imposed structure (adopted 2026-07-06, Joseph)
+
+The matrix is a **coordinate space, not a typology.** Every cell/axis is a **degree**, not a binary — an agent is a *profile*: a
+vector of degrees across the axes (governance exo/endo, each access cell N/P × VIS/MUT × LAW/STATE, inhabiting mode, estate, META…).
+There are **arbitrarily many agents, exo and endo, in any combination of degrees** — a commons, an open world, a gallery of ethereal
+viewers plus a few with deep analysis UIs are just different *populations* of profiles. **No default relational structure is imposed** —
+not hierarchy (the error "Numen" made, positing an "authoritative exo" kind) and not flatness/equality (the equal-and-opposite
+imposition). Structure, if any, is configured by a specific vivium.
+
+Consequences: (1) the access **verbs** (Revelation, Intercession, comprehension, bespoke, illusion) are **named landmarks along graded
+axes**, not cell-types — N-VIS(law) runs opaque → partial-inference → revealed-fragments → full-bespoke as one continuum. (2) The EXO and
+ENDO "tables" are therefore **two regions of one graded space**, not two typologies; **inhabitation = sliding down an axis toward the endo
+region** (the `× Endo` note, correctly), not a mode-switch. (3) The `±` / "conditional" / "a little bit of META" qualifiers already in the
+matrix *are* the degrees. **"Numen" is retired** (revisitable only if a genuine authority-distinction ever becomes load-bearing). Axes +
+degrees + multiplicity is the whole content right now.
