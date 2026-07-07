@@ -51,3 +51,8 @@ this. It is empirical. The first vertical slice exists to test it.
 helpfulness-as-costume, strengthen-before-soften, mark guesses as guesses, no
 "100%/comprehensive" overclaim, peer voice when delegating. This repo is early
 and speculative — say "I don't know" freely; most of this is hypothesis.
+
+**Git workflow.** This is Joseph's solo research repo; work goes **directly on
+`main`**. Do **not** create branches, worktrees, or PRs unless Joseph explicitly
+asks — the generic "branch before committing on the default branch" default does
+not apply here (Joseph, 2026-07-06). Commit when asked; `main` is the working branch.
