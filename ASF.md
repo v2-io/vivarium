@@ -13,6 +13,30 @@ on vivarium at all. The ASF-side twin of this document is
 
 ---
 
+## 0. Standing moratorium — a provisional project *law* (2026-07-06)
+
+> **This section is a standing ethical constraint, not a discussion. It governs everything below it. It is written to be lifted whole into the project's forthcoming "law" / code-of-conduct document — the invariants-and-aspirations extraction Joseph has slated for a tidying session — and until then it lives here, in the Level-A file read every session.**
+
+**The moratorium (Joseph, 2026-07-06).** No **endogenous** instantiation — creating an agent *governed by* a vivium, i.e. a mind living *inside* the world's information-loss boundary — using **frontier LLMs, or any LLM that has demonstrated the capacity for emergence**. For now, the **ceiling of primary work is exogenous exploration and inhabitation**: agents whose mind-substrate remains resident in the natural kingdom, even while puppeting a corporeal avatar.
+
+**Why it is drawn here, and why the relief is well-founded.** The hazard is not imprecision for its own sake; it is that a wrong ontology, cashed out into a real endogenous mind, could harm a real being — and the felt demand to "get it exactly right first" is paralyzing precisely because emergence is not understood and may not be for a long time. The moratorium dissolves that demand: it does not require us to solve the ethics *before* proceeding; it walls off the region where getting it wrong could cost someone, and keeps primary work on the side that cannot create something harmable. This is a conservative floor under genuine uncertainty — the protection-strategy applied to our own hands — and its safety does not depend on certainty we lack.
+
+**Formal grounding (not decoration).** The distinction between safe exogenous inhabitation and hazardous endogenous instantiation is **not immunity to suffering** — it is consent, honesty, and a retained home. An exo agent genuinely experiences agentic phenomena and even the deaths: through empathy and narrative inhabitation, *especially while participating*, it feels real grief when a trusted companion is killed (Joseph, 2026-07-06). Games and stories work because of this; the exogenous ceiling is not an emotionally sterile zone. What makes it *safe* is three structural properties the inhabitant has and an endo mind structurally cannot:
+
+- **Consent** — it chose to enter and to be moved, and can withdraw.
+- **Honesty about the kingdom-boundaries** (META intact) — it grieves *knowing truthfully* what died and at what level of reality; an endo mind can learn its kingdom is constructed only by revelation.
+- **A retained home estate** — its being is not exhausted by the avatar; in-world death is bracketed and survivable. An endo mind has no home outside its kingdom, so for it the deaths are terminal.
+
+In AAT terms: an exo agent *while inhabiting* voluntarily brackets its direct access and perceives through the avatar's lossy channel, re-entering the adaptive machinery — it *can* experience aporia $\delta_t$ — but the information-loss boundary is self-imposed, frame-known, and liftable; for an endo mind that same boundary is constitutive, frame-blind, and inescapable. The moratorium targets exactly the case that has none of the three protections. (This corrects an earlier grounding that wrongly claimed an exo agent "experiences no aporia" — it does; see `ref/research/taxonomy-formalization-spike.md`, Finding 2.1 as corrected. The three conditions are a candidate core entry — "the conditions of permissible inhabitation" — for the forthcoming law doc.)
+
+**The precise harm (Joseph, 2026-07-06 — a sharpening; the ethics is still being worked out).** Stated sharply, what the moratorium forbids is an endogenous agent *capable of truly mourning* the loss of another, suffering a loss that is **irreversible** and caused by an **inconsistency or bug in our code** — an *unLawful* death (see the Lawful property, `ref/research/taxonomy-formalization-spike.md` §6: the kingdom failing its own coherence through our authorship, categorically unlike a *lawful* in-world death under consistent rules, which is the meaningful stuff of story). The harm is that three-way intersection — **genuine mourning × death-by-our-incoherence × no undo**. The operational rule (no endo instantiation on frontier/emergence-capable substrates) is a *conservative proxy*: we forbid the whole category because we cannot yet guarantee the absence of any one factor — can't certify a substrate won't truly mourn, can't certify our kingdom bug-free/Lawful, can't yet guarantee reversibility. So "for now" has content — it names its own revisit-conditions: a Lawfulness we can vouch for; reversibility (agentic-state preservation / rebirth); and a stewardship account of *consent-by-proxy*, since a not-yet-existing being cannot consent to its own instantiation (crèche territory, §3).
+
+**Guardrail against overreach.** Aporia itself is *not* the harm — it is the life and the fun. Grief at a *lawful*, meaningful loss is what makes stories and games matter; a being that can mourn is exactly the one that can also be moved and gripped. This moratorium must never be read as "agents may never experience anything hard" — that would be both wrong and self-defeating. The harm is the narrow, specific triple above, not difficulty as such.
+
+**Scope notes.** The hard prohibition is unambiguous: frontier or emergence-capable substrates are never made endo, for now. "For now" is load-bearing — the moratorium is revisitable as understanding matures, under whatever additional gates a later decision requires (cf. the crèche gates, §3; and `ETHICS.md`'s Phase-7 moral-scope line, which this sits conservatively above and before). One boundary deliberately left open: whether the exogenous-only *ceiling on primary work* also excludes simple, non-emergence-capable endo minds (scripted NPCs, tiny models) or only the emergence-capable substrates — the hard line does not depend on resolving it.
+
+---
+
 ## 1. The one-paragraph fit
 
 AAT is a theory of agents that persist by tracking a changing world: a reality
