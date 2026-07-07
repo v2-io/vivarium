@@ -155,16 +155,19 @@ threaten the moratorium — most are *upstream* of ever relaxing it.
 
 ## Lexicon principle: axes with graded values, no imposed structure (adopted 2026-07-06, Joseph)
 
-The matrix is a **coordinate space, not a typology.** Every cell/axis is a **degree**, not a binary — an agent is a *profile*: a
-vector of degrees across the axes (governance exo/endo, each access cell N/P × VIS/MUT × LAW/STATE, inhabiting mode, estate, META…).
-There are **arbitrarily many agents, exo and endo, in any combination of degrees** — a commons, an open world, a gallery of ethereal
-viewers plus a few with deep analysis UIs are just different *populations* of profiles. **No default relational structure is imposed** —
-not hierarchy (the error "Numen" made, positing an "authoritative exo" kind) and not flatness/equality (the equal-and-opposite
-imposition). Structure, if any, is configured by a specific vivium.
+The matrix is a **coordinate space, not a typology** — and it has two layers that must not be collapsed. **Each cell *names the
+mechanism*** available for that (axis × target): Revelation, Intercession, comprehension, bespoke, illusion. That name is
+qualitative — *which* channel, present or absent. **The degree lives one level down, in instantiation:** every named mechanism is
+**ordinal / by degree** — a given agent holds each available mechanism to *some amount* (partial comprehension, partial revelation,
+conditional bespoke), not as a binary. An agent is a **profile** = the mechanisms available to it, each at some degree, across the axes
+(governance exo/endo, N/P × VIS/MUT × LAW/STATE, inhabiting mode, estate, META…). There are **arbitrarily many agents, exo and endo, in
+any combination** — a commons, an open world, a gallery of ethereal viewers plus a few with deep-analysis UIs are just different
+*populations* of profiles.
 
-Consequences: (1) the access **verbs** (Revelation, Intercession, comprehension, bespoke, illusion) are **named landmarks along graded
-axes**, not cell-types — N-VIS(law) runs opaque → partial-inference → revealed-fragments → full-bespoke as one continuum. (2) The EXO and
-ENDO "tables" are therefore **two regions of one graded space**, not two typologies; **inhabitation = sliding down an axis toward the endo
-region** (the `× Endo` note, correctly), not a mode-switch. (3) The `±` / "conditional" / "a little bit of META" qualifiers already in the
-matrix *are* the degrees. **"Numen" is retired** (revisitable only if a genuine authority-distinction ever becomes load-bearing). Axes +
-degrees + multiplicity is the whole content right now.
+**No default relational structure is imposed** — not hierarchy (the error "Numen" made, positing an "authoritative exo" kind), not
+flatness/equality (the equal-and-opposite imposition), and **not a single continuum** (a *third* over-reach: comprehension / revelation /
+bespoke are *distinct mechanisms*, each separately graded — not amounts of one quantity, so the EXO and ENDO tables are **not** "one
+space"). The disciplined claim is only: **named mechanisms, each ordinal, and that's all there is right now.** The `±` / "conditional" /
+"a little bit of META" qualifiers already in the matrix *are* those degrees. Inhabitation = the exo agent's noumenal-access mechanisms
+(bespoke visibility, direct intervention) **dialed down** while its phenomenal mechanisms operate — a change in its degree-profile (the
+`× Endo` note), not a mode-switch and not a slide along one axis. **"Numen" retired** (revisitable only if a genuine authority-distinction ever becomes load-bearing).

@@ -29,6 +29,10 @@ under-stressed). Terminology: phase boundary = **phase-transition / phase-gate**
   accumulates downstream. This is not a current limitation — it is *structural*. **Consequence for the moratorium:** "certify
   the kingdom Lawful" (a revisit-condition in ASF.md §0) may be **permanently unreachable**, not merely hard. The moratorium's
   caution is therefore stronger than "we don't know yet": the unlock condition is provably approached, never attained.
+  **This formally retires "completion gate" as a first-class term** (Joseph pulled it earlier on pragmatic grounds — same truth from the
+  other direction): completion is an *asymptote* (ε→0), not an *event*. You can gate **Realization** (freeze at a chosen tolerance — a real
+  threshold you pass); there is **no** gate for **Lawful/Complete** (a limit approached forever). The Realized-vs-Lawful deconflation is
+  thus *forced*, not stylistic — one is an event, the other a limit.
 
 ### Stage 2 — Realize for participation (the fidelity/tempo gate)
 - **SOP:** before admitting a participant at awareness-scale X, verify **realizability**: does the lazy-memoized pipeline sustain
