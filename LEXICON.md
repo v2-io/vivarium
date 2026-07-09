@@ -284,7 +284,7 @@ the decomposition is real.
   than the second. **vivarium** = the class / the engine / the project;
   **a vivium** = one instantiated world you can name, fork, and cite.
 - ✅ **AAT handshake (the four axes ↔ typed ignorance).** ASF/AAT's live
-  root ontology (`~/src/agentic-systems/spikes/epistemic-target-ontology/`)
+  root ontology (`~/src/archema-io/asf/spikes/epistemic-target-ontology/`)
   types the agent's epistemic target as **state Ω / law θ / chance ε /
   compute-shortfall** — and vivarium authors the same object from the other
   side: **B (physics fidelity) = θ-fidelity** · **A (Earth-history) =
@@ -308,7 +308,7 @@ invariant is something weaker and truer.)*
   and even it is sometimes waived (Phase 0 Ante-mundane, which we don't simulate
   at all). The general principle: *the causal partial order is load-bearing; the
   clock is derived, and often optional.* Independent convergence: AAT's
-  **chronica** (`#def-chronica`, ~/src/agentic-systems) is explicitly "an
+  **chronica** (`#def-chronica`, ~/src/archema-io/asf) is explicitly "an
   ordinal sequence, not a metric timeline" — agent time measured in event
   ticks; a world's interventional history is a chronica in exactly this sense.
 - ✅ **Metric time** — quantized, measurable duration in a *world's own*

@@ -198,7 +198,7 @@ directions before merge):
   variants, one target); `ref/research/BIBLIOGRAPHY.md` (30 sources verified in
   relata, 16-item manual-chase list).
 - **Reframe (Joseph, 2026-07-04):** vivarium is now principled enough to take
-  its position as a **supporting project for ASF** (`~/src/agentic-systems`) —
+  its position as a **supporting project for ASF** (`~/src/archema-io/asf`) —
   the simulation proving-ground / grounding lab for AAT. Bridge docs forthcoming
   this session.
 

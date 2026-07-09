@@ -1,7 +1,7 @@
 # vivarium ⇄ ASF — how this project fits the bigger picture
 
 *(Written 2026-07-04, the day Joseph reframed vivarium as a **supporting project
-for the Agentic Systems Framework** (`~/src/agentic-systems/` — ASF, with
+for the Agentic Systems Framework** (`~/src/archema-io/asf/` — ASF, with
 Adaptation and Actuation Theory, AAT, at its mathematical core). Author: a
 session that spent the morning reading ASF in depth; the mappings below are
 that session's synthesis, verified against the cited segments where noted and
@@ -9,7 +9,7 @@ marked as hypothesis where not. This document has three jobs: (1) say what
 vivarium is *for* in ASF terms, (2) name the ASF operational principles that
 bind development here, (3) set the ASF-familiarity prerequisites for working
 on vivarium at all. The ASF-side twin of this document is
-`~/src/agentic-systems/doc/vivarium.md`.)*
+`~/src/archema-io/asf/doc/vivarium.md`.)*
 
 ---
 
@@ -66,7 +66,7 @@ there honestly.
 ## 2. The conceptual bridge — one object, two sides of the knowing-relation
 
 The deepest connection is not an analogy. AAT's live root-ontology work
-(`~/src/agentic-systems/spikes/epistemic-target-ontology/`) types the agent's
+(`~/src/archema-io/asf/spikes/epistemic-target-ontology/`) types the agent's
 epistemic target as $S_t = (\Omega_t, \theta)$ — fast **state** plus persistent
 **law** — with **chance** $\varepsilon$ defined as what remains fresh once
 everything persistent is named into $\theta$, and **compute-shortfall** as a
@@ -176,7 +176,7 @@ segments, not from memory of them:
 
 Vivarium already inherits Joseph's global disposition. The following
 ASF-specific disciplines transfer with full force (sources:
-`~/src/agentic-systems/CLAUDE.md` Working Conventions + project memory):
+`~/src/archema-io/asf/CLAUDE.md` Working Conventions + project memory):
 
 1. **Strengthen before softening; effort is a false constraint.** Before any
    "honest fudge" is accepted (rain rate, eddy constants), attempt the
@@ -226,7 +226,7 @@ vivarium's CLAUDE.md/ORIENTATION.md as always. Cost: minutes. You now know
 vivarium is an ASF instrument and where the theory lives.
 
 **Level B — before designing any world *system* (a phase's physics, climate,
-ecology, the run-modes/provenance machinery).** Read in `~/src/agentic-systems/`:
+ecology, the run-modes/provenance machinery).** Read in `~/src/archema-io/asf/`:
 the root CLAUDE.md (disposition + conventions); `01-aat-core/OUTLINE.md`
 Part I (the adaptive-systems spine); the three Part-I anchor segments
 `#result-mismatch-decomposition`, `#result-persistence-condition`,
@@ -261,7 +261,7 @@ the $\hat\kappa$ estimates, the GA-1 housing experiment, tempo-race data under
 authored irreducibility — empirical grist no other environment can produce
 at this fidelity-to-legibility ratio. The ASF-side statement of what vivarium
 offers (immediate / short-term / future) lives at
-`~/src/agentic-systems/doc/vivarium.md`; progress pointers live there too and
+`~/src/archema-io/asf/doc/vivarium.md`; progress pointers live there too and
 should be kept current from this side whenever a milestone lands.
 
 ## 7. The integration program — mechanisms, not just a mapping

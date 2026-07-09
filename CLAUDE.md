@@ -6,7 +6,7 @@ agents and community dynamics* built on the Agentic Systems Framework (ASF /
 AAT). Read [`DESIGN.md`](DESIGN.md) before proposing anything — it carries the
 live thinking and the open questions.
 
-**Vivarium is a supporting project for ASF** (`~/src/agentic-systems/`) — the
+**Vivarium is a supporting project for ASF** (`~/src/archema-io/asf/`) — the
 simulation proving-ground and grounding lab for AAT (Joseph, 2026-07-04). Read
 [`ASF.md`](ASF.md) **every session** (Level A); it carries the conceptual
 bridge, the ASF disciplines that bind development here, and the tiered
