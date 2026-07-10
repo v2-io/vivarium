@@ -27,3 +27,4 @@ pub mod chunk;
 pub mod erosion;
 pub mod water;
 pub mod sample;
+pub mod store;
