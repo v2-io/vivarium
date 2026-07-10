@@ -202,6 +202,57 @@ directions before merge):
   the simulation proving-ground / grounding lab for AAT. Bridge docs forthcoming
   this session.
 
+## Standing directive (Joseph, 2026-07-09) — pervasive disk memoization
+
+Memoize to disk wherever it can reasonably be done — every expensive pure
+computation, at every tier, **not only phase-transition memos** — under the
+hard constraint that caching never interferes with algorithm iteration. The
+mechanism for that constraint is the complete content-addressed key (algorithm
+version auto-derived from kernel source where possible), never caution, never
+manual cache-clearing. Full statement + named failure modes: `DESIGN-REDUX.md`
+§12 "Pervasive disk memoization." First customers when the memo layer lands:
+the cold fill (~2 h), erosion-tier convergences, the analytic hydro init's
+"year-zero morning."
+
+## Lexicon consolidation (2026-07-09) — the participation ontology now lives in LEXICON
+
+The 2026-07-06 vivium-dialog's decisions (world-artifact **lifecycle**;
+**Backstory**/Incubation; **Kingdom / Vivaria / Vivaworld**; **Realized ⟂
+Lawful**, Closed/Open; **exo/endo** by governance; **estate**; **exploration
+(ethereal) vs participation (corporeal)**; the **access matrix** and its
+mechanisms incl. **Providence**; the spatial+temporal **fidelity invariant**,
+**sphere of perception / perceptual horizon**, **realizability**) had been
+scattered across the taxonomy spikes, `ASF.md` §0, and project memory, but
+never in the lexicon (LEXICON.md predated them). They are now consolidated in
+**`LEXICON.md` §4 (world-artifact lifecycle), §7 (Kingdom & participation
+ontology), §8 (perception, participants, realizability)** — read those before
+any agent-seam, participation, or world-lifecycle work. Retired/replaced terms
+and superseded doc-sections are tracked in the new **`SUPERSEDED.md`** ledger
+(append to it as you go).
+
+## Architecture + Abyssal plan (2026-07-10) — read these for the frame and the build path
+
+The architecture was reworked and taken through to a concrete build plan, all
+grounded in the four multiscale primaries read directly (AMR, multirate, HMM,
+equation-free — `ref/research/pdfs/` + relata):
+
+- **`ARCHITECTURE.md`** (v0.3) — the consolidating overview: **one principle
+  (represent by consequence) on three axes** — the multiscale substrate machinery,
+  the phase-freeze developmental ladder, and use-case-as-fidelity-contract (with
+  AAT-calibration as *one privileged use-case*, not the telos). Start here for the
+  frame.
+- **`ref/research/multiscale-seams.md`** — the technical core: **position AND time
+  as one seam discipline**, culminating in the deep unification (a *resolution
+  light-cone* whose scaling is a *dynamic exponent $z$* — $z=1$ advective/CFL,
+  $z=2$ diffusive; special relativity is the $z=1$ special case; the causal partial
+  order is the invariant that survives every sector).
+- **`ref/research/abyssal-parity-plan.md`** — the six-phase build to the first
+  playable milestone: an **ethereal (observe-only, moratorium-clear) explorer in a
+  Realized-not-Lawful early-Abyssal world**. Store → coarse spine (with
+  conservation-honest fBm landmasses as the first visible win) → flux-BC tiles (the
+  seam fix + the $z$ reconciliation) → query front-end (navigation/persistence fall
+  out) → ethereal explorer.
+
 ## Next directions (Joseph, 2026-07-02, end of the water night — verbatim intent)
 
 1. Suspension / sealing / deposition — deepen the sediment loop.

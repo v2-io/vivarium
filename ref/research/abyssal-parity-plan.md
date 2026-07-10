@@ -1,0 +1,96 @@
+# Abyssal parity plan — an ethereal explorer in an early-Abyssal world
+
+*2026-07-10. The phased path from today's fixed-patch physics testbench to the first playable milestone: **an ethereal explorer roaming some of a Realized early-Abyssal world**, produced principled-and-global rather than as one baked patch, conforming to the consolidated architecture. Rests on `ARCHITECTURE.md` (the three axes), `multiscale-seams.md` (position AND time at the seams — the technical core), `framework-to-status-quo.md` (the verified status quo + the store/spine/tile/query build shape), and `LEXICON.md` (canonical vocabulary). Status inline: **decision** (Joseph's call, gating) / **build** / **gap** / **open**. This is the primary plan; alternative sequencings are flagged where they exist.*
+
+---
+
+## The milestone, stated in the lexicon
+
+**"Ethereal-explorer-exploring-some-of-Abyssal"** decomposes cleanly against the settled ontology, and every term is load-bearing:
+
+- **Exploration**, not participation (`LEXICON.md` §7.4) — the observer is **ethereal**: a UI over the world with **no causal access, no action-space**. It only queries. This is the observe-only register, and it is why the milestone is **moratorium-clear**: no endo agent is instantiated, nothing is *governed by* the world, so `ASF.md` §0 is satisfied by construction. (An ethereal observer sits at the Adaptive-System tier, `taxonomy-formalization-spike.md` §4 — it can perceive and even be moved, but it holds no action space and no endo mind is created.)
+- A **Realized, not Lawful, early-Abyssal world** (`LEXICON.md` §7.2) — law immutable (Realized), but honestly *not* self-consistent-to-the-limit (not Lawful): a natural-modeling world is merely Realized, carrying its unLawfulness budget openly. "Early-Abyssal" means the phase's geology/hydrology run (erosion + water cycle) but its later charges (biomineralization, oxygenation) do **not** — habitability *within* the phase does not require the charges that gate the transition *out* of it (`PHASES.md`).
+- **Principled and global** — produced by the store/spine/flux-BC-tile/query frame (§§below), so the world exists everywhere at coarse fidelity and materializes fine near the observer, rather than as one fixed ~5 km patch that forgets itself on movement.
+
+And Joseph's original ask sits exactly here: *"keep playing with the erosion and water-cycle with an actual exploration agent"* — the explorer roams a live-ish Abyssal world where erosion and water are running or freshly settled, and you can dial the parameters and watch.
+
+---
+
+## What the milestone must honor (the conformance checklist)
+
+Everything the last weeks consolidated, as a checklist the build is measured against:
+
+1. **Determinism-as-ontology via fated lifting** — all sub-grid detail is **fated noise** (KRNG/DRNG), so every tile is memoizable and the world is a pure function of (seed, keys).
+2. **The complete content-addressed key** — every memo keyed by inputs + coupling params + seed + source-derived recipe-version; over-key, never under-key.
+3. **The core/view wall** — the ethereal explorer is a *peer view* that only queries; `vivarium-world` never learns it exists.
+4. **The seam discipline, position AND time** (`multiscale-seams.md`) — tiles coupled only by fluxes-as-sufficient-statistics; the space seam drawn by the coarse spine's drainage graph, the time seam by the multirate bands, with each system's dynamic exponent $z$ reconciled at the coupling.
+5. **The fidelity invariant on both axes** — spatial LOD by distance-from-observer, temporal LOD by the perceptual band / horizon; the world ages toward the observer.
+6. **Epistemic honesty (the four axes)** — every phenomenon tagged A/B/C/D; the first landmasses honestly flagged low-A/low-B (conservation-honest only), so a viewer is never misled that fBm relief is principled geology.
+7. **Represent by consequence** — nothing computed finer than a consumer (here, the ethereal observer) depends on.
+
+---
+
+## The status-quo gap (verified in code)
+
+`spikes/worldview` is a **physics testbench, not this runtime** (`framework-to-status-quo.md`, code-verified): one fixed ~5 km patch; telescope mode **re-seeds from the raw prior on movement** (walking discards erosion history; the macro tier has no coarser evolved tier to re-seed from); the only persistence is a whole-run fill-cache blob; and **tiles are not composable** — `accumulate_drainage` seeds every cell at its own area (a patch receives *zero* external discharge) and outlets are hardcoded edge+sea. The kernels (Priority-Flood → D8 → MFD → stream-power → Davy–Lague → talus → creep; the conserved shallow-water + groundwater sim) are proven; **the world-frame around them is unbuilt.** The plan is that frame.
+
+---
+
+## The build — six phases, each with its deliverable and its probe
+
+The ordering is chosen so each phase yields a **visible or testable win**, and so the riskiest coupling (the seam) is de-risked by the spine that precedes it.
+
+### Phase 0 — the run-modes carve *(decision; Joseph's call; gates the store)*
+Settle the store's type system before building it (`LEXICON.md` §3): the strictly-causal run / replay-from-pinned-generators / discardable-iteration run / live-play distinction maps to **Closed vs Open-with-recorded-forcing** (kingdom property) plus the pre-participation **non-intervention** register. The one hard rule the store enforces: an iteration run may write `objects/` (its keys differ) but **never a canon `root`**. *Deliverable:* a one-page decision fixing the run-mode names + which may write roots. *Small, but genuinely first* — it is the store's schema.
+
+### Phase 1 — the store + recipe layer *(build; the foundation)*
+Content-addressed `objects/<hash>` (immutable results), `roots` (`(aspect, face, tile, level, time) → hash`), `manifest` (seed, provenance, pinned recipe-versions), `mutations/` (empty for a read-only explorer — reserved). The load-bearing piece is **the complete key with recipe-version auto-derived from kernel source** (a `build.rs` that hashes each kernel module into a compile-time key component — the Nix move, immune to the `FILL_ALGO_VERSION`-forgetting failure). *Deliverable:* the memo store, replacing the fill-cache blob with per-object memoization. *Probe:* edit a kernel → exactly its dependent cone invalidates and nothing else (a keyed-invalidation test); a scratch iteration run and canon share `objects/` without polluting `roots`.
+
+### Phase 2 — the coarse global spine *(build; the dependency planner + first visible world)*
+Run macro erosion + a hydrological equilibrium at a **coarse global level, per cube-face, on demand, memoized once per (seed, recipe-version)**. Its output is threefold and each is load-bearing: **(a)** elevations — the world's "sense of where global state is"; **(b)** the **drainage graph + basin partition + base levels** — *this is the space-seam dependency map* (the same Priority-Flood/D8/MFD pass that gives elevations gives the islands of interdependence, `multiscale-seams.md` §2.1/§3); **(c)** the analytic hydrological equilibrium seed (the equation-free explicit-macro-solve *intended* to replace the deluge relaxation, `ref/erosion-port/NOTES.md`) — **an unbuilt spike** (flagged below), with the deluge relaxation as the working fallback if the analytic solve does not reach a near-stationary seed.
+
+**The smallest-first visible win lives here** (Joseph's fBm-landmasses idea): the spine's *first* honest output is **fBm elevations showing land and water with globally-conserved mass/elements — the first visualized continents and oceans — before any principled tectonics or erosion fidelity**, tagged low-A / low-B (not statistically principled beyond the conservation values). This is a real milestone you can look at within this phase, and it is honest: the epistemic tags say plainly "this relief is a placeholder that conserves mass and nothing more." *Probe:* the coarse spine renders a globe with continents/oceans; total mass/elements conserved to tolerance; the drainage graph is computed and queryable (the dependency map exists).
+
+### Phase 3 — flux-BC tile recipes *(build; the seam fix = composability)*
+Re-express the `Fluvial` / `WaterSim` kernels as **tile-sized recipes whose boundary conditions are pulled from the spine and neighbours**: upstream discharge + sediment *in*, base level *out*. This means **parameterizing the hardcoded edge policy** (today: edge-outlet, zero-inflow) — the single kernel change that makes tiles composable. This is *also* the seam fix: it is where **refluxing** lands (the conservative flux-balance at the coarse–fine boundary that mean-pin does not do, `multiscale-seams.md` §2.1), and where the **dynamic-exponent reconciliation** is made explicit — the $z=1$ water tile (CFL) fluxing into the $z=2$ erosion/groundwater tile (parabolic) must agree on $z$-consistent resolutions at the seam, or the coupling is silently wrong at fine scales (`multiscale-seams.md` §3). *Probe:* `seam_ridge` → green or bounded; a river crossing a tile edge carries the spine's discharge; two adjacent tiles compose without the floating-mesa artifact; the near-stationarity probe passes on the analytic-seeded water (the time-seam acceptance test).
+
+### Phase 4 — the query front-end *(build; navigation + persistence fall out)*
+A `column_at`-shaped query routes through the store: **hit → load; miss → recurse per the dependency map → compute → store → serve.** The view stops owning `tiers` and simply queries; the telescope becomes a *policy over queries* (what to pull eagerly around the observer), not a state-owner. **Navigation and persistence fall out for free**: walk anywhere, matured state persists, returning is a cache hit — the exact opposite of today's re-seed-from-raw-prior. *Probe:* walk ~10 km and return → the same place, same eroded history (persistence); no history discarded on movement.
+
+### Phase 5 — the ethereal explorer *(build; the milestone)*
+The UI. An **ethereal avatar**: observe-only, no action-space (`LEXICON.md` §7.4). It perceives through an honest **observation channel** — local column state, water depth, slope, flow direction — at a chosen **awareness scale**, with the **fidelity invariant on both axes**: spatial LOD by distance, temporal LOD by the perceptual band / horizon (`LEXICON.md` §8). For a lone ethereal observer, time is elastic (`realizability` is easy — no ~2 Hz human-clock clamp unless a human is watching in real time). "Keep playing with erosion and water-cycle" is the explorer roaming a Realized early-Abyssal world where erosion and water are running or freshly analytic-settled, with the dial-and-watch parameters exposed. *Probe / definition of done:* an ethereal explorer roams some region of a Realized early-Abyssal world — continents from the spine, rivers and lakes emergent from the composed water tiles, erosion visible, state persistent across navigation, everything honestly epistemic-tagged — and no endo mind exists anywhere in it.
+
+**Explicitly deferred (not on this path):** the **RNG fix** (fated agent seeds, `architecture-audit.md` #1) — an ethereal explorer does no agent-stepping, so per-agent splittable seeds wait until the actual agent seam; and **detail→abstract / reversion** — a read-only explorer makes no irreducible edits, so the one open research problem is not triggered (`multiscale-seams.md` §2.4).
+
+---
+
+## The seam technical core, at Abyssal fidelity *(the position-AND-time crux)*
+
+The parity build is where the seam discipline stops being theory. Concretely, for early-Abyssal:
+
+- **Space seam (drainage islands).** The coarse spine's drainage graph tells each fine tile which neighbours it depends on (upstream catchment closure + downstream base-level path), and *by how much* (the discharge crossing the shared edge). A tile whose upstream catchment lies in a neighbour must pull that neighbour — at the coarsest rung whose flux error at the edge stays in tolerance. A creek → a coarse, cheap pull; a major river → the upstream tile evolved (or its time-averaged discharge memoized) first.
+- **Time seam (multirate bands + the $z$ reconciliation).** Erosion is geological (slow), water hydrological (fast): the water tile sees terrain as quasi-static; the erosion tile sees water as a time-averaged discharge (`ref/erosion-port/NOTES.md`). But water is $z=1$ (CFL, finite wave speed) and hillslope diffusion / groundwater is $z=2$ (parabolic): the coupling must be $z$-consistent at the seam, which is the concrete content of "reconcile the dynamic exponent" (`multiscale-seams.md` §3). This is the first place the deep unification pays rent in code.
+- **The observer's resolution cone.** The ethereal explorer's position-and-time defines the region computed at full fidelity (fine + now near it, coarse + early far away — the world ages toward the observer). Its perceptual horizon (spatial and temporal) is the cone boundary. The honest failure mode the unification predicts (`multiscale-seams.md` §3): a slow, distant, steep-$z$ process outside the cone is what pure attention-driven refinement will under-resolve — worth a probe when the explorer roams past the telescope's re-anchor span (the first new specimen the explorer collects; the milestone working as designed — the explorer is itself the next instrument).
+
+---
+
+## Alternative sequencings / drafts *(directions worth holding)*
+
+- **A thinner first milestone — "explorer over the spine."** Phases 1 → 2 → 4 → 5 *without* Phase 3 gives a persistent, navigable, global world at **spine fidelity only** (coarse elevations + drainage, no fine composed erosion tiles). It is honest (heavily epistemic-flagged), reaches "walk a persistent globe" fastest, and defers the hardest coupling (the seam) — at the cost of no fine river detail near the observer. A reasonable *first* target if we want the navigation/persistence win before the composability win. The full plan inserts Phase 3 to get fine, composable erosion under the observer's feet.
+- **Analytic init as its own spike, early.** The equation-free explicit-macro-solve (analytic hydrological init) can be prototyped as a standalone spike against the existing kernels *before* the store lands, since it is the equilibrium seed the spine (Phase 2c) and tiles (Phase 3) both consume, and it independently kills the ~2 h cold-fill pain. A good parallel track.
+- **Climate before biosphere, always deferred.** Nothing on the parity path needs climate/biomes/pedogenesis (`DESIGN-SYSTEMS.md` build order) — "playing with erosion and water" is served entirely by geology + hydrology. Those systems come *after* the milestone, as new recipes behind the same seam contract (`ARCHITECTURE.md` §9).
+
+---
+
+## Honest risks and open questions
+
+- **Water at tile boundaries is harder than erosion at tile boundaries** (`framework-to-status-quo.md` §5). Stream-power composes cleanly given $A$ and base level; the shallow-water sim has *bidirectional* edge exchange (backwater, waves). The multirate answer — fast water sees slow neighbours as quasi-static stage/discharge BCs — needs its own probe; unproven. This is the single biggest technical risk in Phase 3.
+- **How coarse can the spine be** before its drainage topology mis-draws a divide and puts a tile in the wrong catchment? Wants a measurement (basin-partition stability across levels), not an opinion — a Phase 2 spike.
+- **Time-index bookkeeping across tiles** — neighbour tiles at different sim-ages is the differential-aging problem generalized (`seam_ridge` measured 4.3×); the spine's causal-time record (which tile at which epoch, exporting what flux era) must be part of the key or the islands go incoherent.
+- **Convergence-$\varepsilon$ at each freeze** — every Realized memo carries an unLawfulness budget (`LEXICON.md` §7.2). The near-stationarity probe (the analytic seed must be near-stationary under the live sim) is the acceptance gate; if the seed drifts hard, the solver and the sim disagree about equilibrium, and *that disagreement is a finding, not a nuisance*.
+
+---
+
+## The one-line summary
+
+Build the **store** (Phase 1), let the **coarse spine** draw the world and its dependency map — with conservation-honest fBm landmasses as the first visible win (Phase 2), make tiles **composable via flux boundary conditions** — the seam fix, where position-and-time and the $z$ reconciliation pay rent (Phase 3), route the **view through queries** so navigation and persistence fall out (Phase 4), and put an **ethereal, observe-only explorer** in it (Phase 5) — a Realized-not-Lawful early-Abyssal world, principled and global, moratorium-clear, that you can roam while the erosion and water cycle run.

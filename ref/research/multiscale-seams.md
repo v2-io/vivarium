@@ -1,0 +1,127 @@
+# Multiscale seams — position AND time as one discipline
+
+*Companion to `multiscale-methods.md` (the R / L / closure operator algebra) and `DESIGN-REDUX.md` §4–7 (multirate coupling, the four seams). Where `multiscale-methods.md` names the general frame, this doc answers the load-bearing question: **how do position and time work together at the seams, and what does a system-author actually declare?** It is grounded in the four primary methods read directly (Berger–Oliger 1984 AMR; Gear–Wells 1984 multirate; E–Engquist 2003 HMM; Kevrekidis et al. 2003 equation-free) — `BIBLIOGRAPHY.md`. Epistemic status inline: **established** (in a primary), **stance** (our reasoned commitment), **open** (unsolved).*
+
+---
+
+## The one mental model (read this first)
+
+A vivarium world is not computed on one grid at one rate. It is a **lattice of tiles, each at some resolution in space and some rate in time, coupled only at their boundaries by fluxes.** A *seam* is any such boundary — between a coarse tile and a fine one, between a slow system and a fast one, between an early epoch and a recent one. The whole art is: **what crosses a seam, and what is guaranteed about it.**
+
+The answer is the same on both axes, and that sameness is the point. Whether the seam is in **space** (a coarse elevation grid meeting a fine eroded patch) or in **time** (a slow erosion tier meeting a fast water sim), the discipline is identical:
+
+- what crosses is a **flux of a conserved quantity** (sediment volume, discharge, energy) — never a raw state;
+- what is guaranteed is a **sufficient statistic** — the coarse side stored exactly the summary the fine side needs (`DESIGN-REDUX.md` §5), and reconstruct-then-summarize returns it (**R∘L = id**);
+- the flux **balances exactly** (conservation), and the two sides are **scale-separated** (the fast side sees the slow as quasi-static; the slow sees the fast as time-averaged).
+
+Position and time are therefore **one seam on two axes**, and the object that lives at the seam — the flux, as a sufficient statistic integrated over space and averaged over time — is the same kind of object either way. Everything below is that claim, made precise and grounded.
+
+---
+
+## 1. The operator algebra is axis-agnostic *(established)*
+
+Every method reads the same four objects: macro state **U**, micro state **u**, **restriction** $R : u \to U$ (coarse-graining), **lifting** $L : U \to u$ (reconstruction, carrying a closure). The primaries name them identically and use them on **both** axes:
+
+- **HMM** (E–Engquist): compression $\mathcal{Q}$ and reconstruction $\mathcal{R}$ with "$\mathcal{Q}\mathcal{R} = I$"; "different physical models and numerical techniques are used at different scales and different grids." Its $\mathcal{Q}$ averages over space and ensembles (its kinetic→hydrodynamic example takes velocity moments) — restriction over space, time, *and* realizations is the shared idea, stated most explicitly by equation-free (next).
+- **Equation-free** (Kevrekidis): lifting $\mu$ and restriction $\mathcal{M}$ with $\mathcal{M}\mu = I$; the coarse time-stepper is $\mathcal T_c^\tau = \mathcal{M}\,\mathcal T_d^\tau\,\mu$ — **lift → evolve (short) → restrict**. Restriction averages "over microscopic space and/or microscopic time and/or number of realizations."
+- **AMR** (Berger–Oliger): refinement is **in space and time together** — a fine grid at level $l$ has mesh $h_l = h_{l-1}/r$ *and* timestep $k_l = k_{l-1}/r$, holding the mesh ratio $\lambda = k/h$ constant on all grids. "We refine in time as well as space." So a spatial refinement is automatically a temporal refinement.
+- **Multirate** (Gear–Wells): the axis is purely time — slow and fast components on different steps — but the coupling mechanism (interpolate the slow for the fast; extrapolate the fast, time-averaged, for the slow) is the same flux-across-a-seam pattern AMR uses spatially.
+
+So R∘L = id and conservative flux exchange are **not** spatial rules with a temporal analog; they are one rule whose argument happens to be a space cell, a time interval, or (usually) a space-time patch. This is why "position and time at the seams" has a single answer.
+
+---
+
+## 2. The four seam types, each on both axes *(established for 1–3; §4 open)*
+
+`DESIGN-REDUX.md` §7 named four seam *types*; the primaries let us state precisely what each is and which of position/time it crosses. Only one is open.
+
+### 2.1 The spatial seam — coarse tile meets fine tile, one instant
+*Established (AMR mesh-stitching / geomorphing).* Two things must hold at a coarse–fine boundary: **no cracks/pops** (geometric continuity) and **statistical match** (the fine field reproduces the coarse summary). Berger–Oliger's machinery names the two operations vivarium needs, and corrects a mistake we had made:
+
+- **Injection / update** (fine → coarse): at a sync instant, the fine solution is *injected onto* the coarse cells it covers, "for implicit methods, some sort of averaging might be desirable before injecting." **This is what vivarium's `pin_block_means` is** — the fine tier's block-means forced to the parent (averaged injection). It enforces R∘L = id on the mean.
+- **Refluxing** (the conservative flux correction at the interface): Berger–Oliger 1984 *flag* conservative interface BCs as forthcoming work ("stable boundary conditions have been derived which maintain the conservation form … These will also be reported elsewhere") — the mature flux-correction ("refluxing") is standardly credited to **Berger–Colella 1989**. Either way it is **distinct from injection**, and **vivarium does not yet do it** — it is exactly the conservation fix the tile-seam needs. (Mean-pin ≈ injection, *not* refluxing.)
+
+Berger–Oliger's load-bearing design choice is the one vivarium needs: **subgrids are independent overlays coupled only through boundary values**, computed by interpolation from the parent — "each subgrid can be integrated (almost) independently of the other grids except for the determination of its boundary values." That is the flux-BC tile model, from the source: a tile's boundary conditions (upstream discharge in, base level out) are the seam.
+
+**Space-seam probe (vivarium):** `seam_ridge` — differential-aging curvature at a tile boundary; currently red by design. It measures exactly the R∘L-vs-conservation gap: mean-pin conserves the block mean but not the boundary gradient, so a ridge forms. The fix is honest flux-BCs + refluxing, which is why *the seam fix and the tile-composability fix are the same work*.
+
+### 2.2 The temporal downscaling seam — macro-epoch hands off to fine-epoch
+*Established-ish (regional-climate nesting; equation-free lifting).* The fine sim's initial condition must be a valid downscaling of the macro end-state, and there is a **known artifact: spin-up transients** near the handoff. Two primaries pin the mechanism:
+
+- **Lifting is non-unique, and it heals** (equation-free): $L$ is one-to-many, so a lift injects error in the fast (off-manifold) modes; but "the fast modes are damped" and the solution "quickly approaches the slow manifold for any lifting operator" after an initial transient. The transient *is* the spin-up. Vivarium's planned analytic hydrological init is precisely this: seed the equilibrium analytically (an explicit lift), then run a **brief relaxation** to let the estimate heal, then cache "an ordinary morning of year zero" (`ref/erosion-port/NOTES.md`).
+- **AMR substepping** (Berger–Oliger): the constant mesh ratio $\lambda$ forces the fine grid to take $r$ small steps per coarse step, interleaved so all grids reach the same time at each coarse step. Vivarium's **finishers** are a loose cousin (1–2 animated fine passes), but the primary shows the precise version: a fine tile that is finer in space is *also* stepping faster in time, and the two are locked by $\lambda$.
+
+**The distinctive vivarium move here is fated lifting** *(stance)*: equation-free's $L$ is non-unique and any choice heals; vivarium *fates* the choice — the missing sub-grid detail is the deterministic **fated noise** (`LEXICON.md` §3), a pure function of (seed, key). This resolves the non-uniqueness *and* makes memoization sound (two lifts agree, so a cached tile is the true tile). The healing relaxation is still needed because the *analytic* seed (not the noise) is an estimate.
+
+### 2.3 The aspect-coupling seam — geology ↔ hydrology ↔ ecology, on a schedule
+*Established (multirate; Earth-system couplers; HMM on-demand micro).* This is the **time seam proper**, and it is where the multirate discipline lives:
+
+- **The coupling rule** (Gear–Wells): integrate components at different rates; when the fast component needs a slow value at an off-step time, **interpolate** the slow (prediction-like); when the slow component needs the fast, **extrapolate** the fast's value (predictor-like — *not* an average). *Vivarium layers a scale-separation move on top:* erosion reads water as a **time-averaged** discharge — that averaging is the HMM/upscaling idea, not Gear–Wells. Their "slowest-first" ordering (integrate the component with the least-advanced simulated time, largest step, first; back up only on error) is the schedule; the key property is that "the coupling from the fast values to the slow values is generally small," so extrapolating the fast over many of its steps is tolerable. Vivarium's schedule: **fast water sees terrain as quasi-static; slow erosion sees water as a time-averaged discharge** (`ref/erosion-port/NOTES.md`) — Gear–Wells applied to two aspects.
+- **On-demand micro** (HMM): the macro solver runs everywhere; where it lacks a constitutive flux, it spawns a *constrained, short, small* micro run, averages, and continues. Vivarium's lazy query-graph is "HMM made lazy" — the macro (coarse spine) pulls a fine tile's effective flux on demand and memoizes it. Our twist: the pull is **backwards-from-now** and **observer-driven**, where HMM pulls forward-in-time and error-driven.
+- **The coupler is the stable interface** (`DESIGN-REDUX.md` §12): keep the fluxed quantities *per-quantity, fine-grained* — a model upgrade that enriches the flux (erosion-v2 fluxes grain-size, not just volume) changes only the consumers that read the new quantity.
+
+### 2.4 The reversion / upscaling seam — fine + edits back into macro
+*Open — the one research problem.* Forward/downward (L, and dynamics-upscaling R for continuous fields) is **mature**: all four methods do restriction (HMM $\mathcal{Q}$, equation-free $\mathcal{M}$, AMR injection), and Vandenbulcke & Barth 2019 upscale a fine child into a coarse parent by assimilation (`foundation-validation.md` §5, primary-verified). What is unsolved anywhere is **upward R of an *irreducible discrete edit*** (a dammed stream, a placed structure — not a statistical closure) **into a content-addressed, memoized macro with correct up-invalidation**: the edit must alter the macro *after* the fine locus collapses, which works only if the macro stored the right sufficient statistics to receive it (§2.1), and the up-propagation must also invalidate cached macro derivations (Salsa/Adapton do downstream-only). This is **detail→abstract** (`DESIGN-REDUX.md` §6). It is **not on the ethereal-explorer path** — a read-only explorer makes no irreducible edits — and it is plausibly the same shape as vivarium's open AAT bet (does an $\Omega$-perturbation stay legible), which is likely not coincidence: both are *upward re-summarization after a micro perturbation*.
+
+---
+
+## 3. Position and time are one seam — the resolution light-cone and the dynamic exponent *(stance)*
+
+The four seam types above are usually drawn as if space (2.1) and time (2.2, 2.3) were separate. The primaries say otherwise, and the unification is the load-bearing idea for the architecture. It has a genuinely deep form, worked at the end of this section: a *causal cone* whose scaling is set by a *dynamic exponent*, with special relativity as one member of the family.
+
+**A seam is a boundary in the (space × time × fidelity) product, and one flux crosses it.** AMR refines space and time together (constant $\lambda$); equation-free's gap-tooth patches are finite in space *and* run for short bursts in time; a river crossing a tile edge couples in **space** (its upstream catchment closure) *and* **time** (the slow erosion tier reads it as time-averaged discharge). So the flux at a tile boundary is a sufficient statistic **integrated over space and averaged over time at once** — spatially-integrated discharge, temporally-averaged sediment flux. There is no separate "spatial seam discipline" and "temporal seam discipline"; there is one, and the two axes are the arguments.
+
+**The fidelity invariant is this same rule, stated observer-side** (`LEXICON.md` §8): render/simulate at exactly the resolution — **spatial AND temporal** — the most-demanding present participant needs, no finer. Spatial LOD falls off by distance-from-pawn; temporal LOD falls off by the **perceptual band** (couple at $\sim 2$ Hz; demote below the motion/change threshold to event-segmented/lazy). Both are set by the same participant, and — the sharp consequence — **time couples to the most-demanding participant**: a pure-agent world has fully elastic time (measure adaptation at logical time, arbitrarily fast); a human entering clamps the whole apparatus to $\sim 2$ Hz-band real-time. The human is the clock. So the participant sets *both* seam axes' resolution simultaneously.
+
+**The two seams interact, and the interaction is the tile dependency map** *(stance)*:
+- The **space seam** is drainage-shaped: a point's spatial dependency is its **upstream catchment closure + downstream path to base level** — irregular *islands of interdependence*. The *algorithm* that draws the map (Priority-Flood + D8 + MFD) is already in the kernel, but running it **coarse-global across cube-faces** is new integration work (the kernel's drainage pass is per-face-region with a loader-owned halo), and the map's *accuracy* — basin-partition stability across levels — is an open measurement, **not a free readout**. "By what degree" is quantitative — the coupling across a tile edge *is* the discharge crossing it.
+- The **time seam** is the multirate band: which rate a tile runs at, and how it reads its neighbours (quasi-static slow / time-averaged fast).
+- They compose: a tile's neighbour must be pulled at the **coarsest rung in space AND the coarsest rate in time whose combined flux error at the shared boundary stays within the consumer's tolerance.** A creek in a distant, slowly-changing neighbour → a coarse, time-averaged pull. A major river in an actively-eroding neighbour → a fine, more-frequently-coupled pull. This is `DESIGN-REDUX.md` §5's sufficient-statistic seam, made two-dimensional.
+
+### The deep form — a resolution light-cone, scaled by a dynamic exponent
+
+The picture the two-axes framing is reaching for is a **causal cone**, and it makes the whole discipline intuitive.
+
+**Every query lives at a point — *here, now* — and depends on a cone: the past-and-elsewhere it is causally downstream of.** In *space* that cone is the drainage island (upstream catchment closure + downstream path to base level); in *time* it is the coupling lag — a value at $t$ depends on its neighbour at $t-\Delta$, never at $t$, which is exactly how *time breaks every dependency cycle* and turns the coupled system into a DAG (`DESIGN-REDUX.md` §11). It is the **same cone on two axes**, and the lazy pull is literally *"compute my past light-cone."* And because a world **ages toward the observer** (`DESIGN-REDUX.md` §3 — near = fully-pulled = fine-and-now; far = un-pulled = coarse-and-early), the participant drags a co-moving, high-resolution *now* around, with the past-and-elsewhere coarse-grained behind it. That is the unification stated as one image: **not two ladders, but one causal cone — computed fine inside, summarized outside.**
+
+**The scaling of that cone is not universal — it is each system's dynamic exponent $z$** *(established for the numerics; stance for the framing)*. The question a seam actually poses is: *how fine must time be, given how fine space is?* The answer depends on the physics of the process:
+- **Advective / wave systems** (shallow water — the CFL condition $dt \le C\,dx/v$) scale as $z=1$: $dt \sim dx$. There is a finite signal speed; the cone has a finite slope.
+- **Diffusive / relaxational systems** (hillslope creep, groundwater — the explicit-parabolic stability bound $dt \le C\,dx^2/D$) scale as $z=2$: $dt \sim dx^2$. There is no finite propagation speed; refining space demands quadratically finer time.
+
+AMR's "constant mesh ratio" $\lambda = k/h$ is simply the $z=1$ choice baked in (Berger–Oliger's grids are hyperbolic PDEs). **Vivarium's two flagship systems sit *asymmetrically* across this exponent, and the asymmetry is itself instructive:** `water.rs` genuinely obeys $z=1$ — `stable_dt` recomputes a CFL step on the gravity-wave speed $\sqrt{g d}$ per burst, so refining space really does refine time linearly. `erosion.rs`'s creep carries the parabolic **$z=2$ stability *bound*** ($k=\kappa/\text{cell}^2 \le 0.24$) but **clamps rather than sub-steps** — at fine levels it caps the diffusion number and accepts reduced effective diffusivity on a *fixed* epoch budget, instead of taking quadratically more steps. So vivarium exhibits the $z=1$ *scaling* and the $z=2$ *constraint*, **not two live scalings** — and that clamp is a fidelity compromise the seam discipline makes visible. A seam still has a **slope in the space-time plane, and that slope is $z$**. *(Stance, flagged as conjecture, not established numerics:)* multirate coupling (Gear–Wells) handles different *rates* / timescales; reconciling different *$z$* at a seam — a $z=1$ water flux read by a $z=2$ consumer — is an *additional* requirement we do not know to be formalized anywhere ("$z$-consistent resolution" is our coinage, not a known well-posedness criterion; hyperbolic–parabolic domain coupling is a studied problem we have not yet tied it to). The relation $\xi_{\text{time}} \sim \xi_{\text{space}}^{\,z}$ shares its *form* with the **dynamic critical exponent** of statistical physics — a suggestive analogy the RG "coarse-graining" method gestures at — but ours is a numerical-stability exponent (integer, from finite/absent signal speed), not the non-integer critical-slowing-down divergence of a phase transition, and our systems are not critical.
+
+**And this is where it touches Einstein's space-time — as a special case, precisely bounded** *(stance; honest partial isomorphism, not full)*. Special relativity is the $z=1$, finite-and-universal-signal-speed, light-cone sector — the hyperbolic one. Our **causal time** (`LEXICON.md` §6: the happened-before partial order — explicitly Lamport's logical clocks — named as *the only invariant that must survive inside a phase*) **shares the partial-order structure** of relativity's causal order, but it is a dependency DAG, *not* a metric light-cone: it carries no cone *slope*, no invariant signal speed — so it is far weaker than "the relativistic causal structure," and I should not over-identify them. Two further disanalogies keep it well short of Lorentz invariance: (1) we carry **$z=2$ parabolic sectors** — diffusion has no finite propagation speed, so its *spatial* reach is all-to-all and the spatial cone *degenerates*; (2) we have a **preferred frame** (the world's own causal time) — no boosts, no invariant interval. So the honest form is narrower than "one cone on two axes": a **finite-sloped *spatial* cone exists only in the hyperbolic ($z=1$) sector**; in the parabolic sector it degenerates to all-to-all, and **the invariant that survives *every* sector is the *temporal* happened-before DAG** (time-stepping breaks the cycles), *not* a spatial cone. **Special relativity is then the sector where the spatial cone additionally acquires a finite, universal slope** — one signal speed for everything. That is why `LEXICON.md` §6 is right to make the partial order load-bearing and treat the metric clock as derived: relativity is the sector where the order acquires a metric; vivarium keeps the order and lets the metric be per-system.
+
+**Why this earns its place.** It is not decoration: it says a seam-crossing is well-posed only when the two sides agree on $z$-consistent resolutions (a $z=1$ flux read by a $z=2$ consumer needs the exponent reconciled, or the coupling is silently wrong at fine scales), and it tells the coarse spine how to draw the cone in *both* axes at once. It also predicts the honest failure mode of observer-driven refinement (§5 below): the cone is drawn from where attention *is*, so an under-resolved process outside the participant's cone — slow, distant, and steep-$z$ — is exactly what a pure attention criterion will miss.
+
+---
+
+## 4. What a system-author declares — the seam contract *(stance)*
+
+This is the practical payoff: how an arbitrary number of interdependent systems get developed in parallel, each principled, mediated by seams and never by shared mutable state. A system declares its place in the algebra on **both** axes:
+
+1. **Its R / L / closure** — the macro summary it exposes (its restriction $R$), how it materializes detail (its lifting $L$), and its **fated-noise closure** (deterministic, so memoizable — resolving equation-free's lifting non-uniqueness by fating it).
+2. **Its fluxed quantities** — the per-quantity coupler interface it produces and consumes (`{sediment volume}`, `{discharge}`, `{temperature}`). These carry the sufficient statistics across *both* the space and time seams. Fine-grained, never a monolithic blob, or a model upgrade over-invalidates its consumers.
+3. **Its timescale band and execution class** — where it sits in the multirate bands (so coupling knows to treat it quasi-static or time-averaged), and its class (**batch-deep** / **relaxation** / **procedural-tight**, `architecture-migration-2026-07-03.md`). The class is the time-axis analog of the LOD rung.
+4. **Determinism in its keyed inputs**, with **recipe-version auto-derived from source**, so the complete content-addressed key (space-tile + time-index + recipe + seed) stays complete without human discipline.
+5. **Its regime probes, written first** (domain TDD) — including its **seam probes** (a space-seam continuity probe like `seam_ridge`; a time-seam near-stationarity probe like the analytic-init acceptance test).
+
+If those hold, two system-authors cannot break each other: three walls stand between them — the **flux interface** (agree only on fluxed quantities), the **complete key** (each other's edits invalidate exactly the dependent cone), and **execution-class + multirate coupling** (they never fight over one timestep). Interdependence is *mediated*, never *shared-mutable* — which is the whole point, and the reason the count of systems can grow without the coupling cost growing with it.
+
+---
+
+## 5. The distinctive vivarium moves, now grounded *(stance)*
+
+Against the primaries, here is exactly what is ours (defensible, and ours to defend):
+
+- **Fated lifting** — equation-free's $L$ is non-unique and heals; we *fate* the choice with deterministic keyed noise. This is what makes memoization sound (the seam architecture cannot exist without it) and is our closure answer.
+- **Lazy, backwards-from-now coupler pulls** — HMM/equation-free pull forward-in-time; we pull on demand, from the present observer's cone outward, and memoize.
+- **Observer-driven refinement** — AMR refines by an error estimate; we refine by attention (the fidelity invariant, both axes). Cheaper, and honest about what's not-looked-at, but it can miss under-resolved regions the observer isn't looking at — a real limitation to probe.
+- **Consumer-dependent restriction** — the literature fixes one $R$ per method; we want $R$ *per consumer* (hydrology needs conserved totals, line-of-sight needs max, display needs mean). This is the sufficient-statistic seam, and it is the reason a macro cell is a `{mean, min, max, conserved-totals}` tuple with exactness flags, not a scalar.
+- **Phase-transitions as the largest coupling interface** — a phase runs its coupled systems to convergence and freezes a world-scale memo that *becomes law* for everything faster above it (the AAT invariance cut). This is a multirate coupling seam (§2.3) at the scale of geological time, and the memo is the largest instance of pervasive disk memoization.
+
+---
+
+## 6. What this buys the Abyssal parity goal
+
+The seam discipline is what makes "ethereal-explorer-exploring-some-of-Abyssal" reachable *principled and global* rather than as a fixed patch. The coarse spine draws the **space seam** (drainage islands → which neighbours to pull, at what fidelity); the multirate bands draw the **time seam** (erosion slow, water fast, coupled by time-averaged discharge); the participant (an ethereal explorer, observe-only) sets both axes' resolution by attention; and every tile is a memoized recipe keyed by (tile, level, time-index, recipe, seed). The one open seam (reversion / detail→abstract) is off this path because the explorer makes no irreducible edits. The concrete build sequence is in `abyssal-parity-plan.md`.

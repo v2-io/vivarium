@@ -1,12 +1,124 @@
+# vivarium — ARCHITECTURE
 
+*v0.3, 2026-07-10. The consolidating overview — mental-model-first; the derivations live in the docs it points to: `ref/research/multiscale-methods.md` (the R/L/closure operator algebra), `ref/research/multiscale-seams.md` (position AND time at the seams), `DESIGN-REDUX.md` (runtime / fidelity / storage), `DESIGN-MATERIAL.md` (matter model), `DESIGN-SYSTEMS.md` (phenomena graph), `PHASES.md` (world-phases), `LEXICON.md` (vocabulary), `ASF.md` (the AAT bridge). Status marked inline: **settled** / **stance** / **open** / **gap** (designed, not yet built). Vocabulary is `LEXICON.md`-canonical throughout (fated noise, KRNG/DRNG, Realized, Brooding, lawful-steering, exploration/participation).*
 
+> [!note]
+> Erosion and hydrology appear below only as **two early instances of many more systems to come** — the systems that happen to exist in code, not the subject. The subject is the general machinery that lets an arbitrary number of interdependent systems be developed in parallel, each principled.
 
+---
 
-BEQUESTED
+## Layer 0 — the whole architecture in one paragraph
 
+Vivarium builds worlds under **one principle on three axes.** The principle: **represent by consequence** — spend simulation, precision, and storage only where a consumer depends on it. The three axes it runs along:
 
-[ Domain-centric representations ] <-> [ 
+1. **The substrate machinery** — *how any one system is computed.* A world is a **multiscale, heterogeneous, multirate coupled dynamical system**: each aspect runs its own model on its own grid and rate, joined to its neighbours only by **conserved fluxes across seams**, evaluated lazily and memoized. (§§1–5.)
+2. **The developmental ladder** — *the order systems come online, and how they become law.* A world is built as a sequence of **phases**; each phase runs its coupled systems to convergence and freezes the result into a **Realized** macro that *is the law* the next phase reads. A system's algorithms are needed exactly when a downstream phase's **Charge** reads them. (§6.)
+3. **Use-case as fidelity contract** — *what the finished world is for.* A vivium is consumed by many use-cases (exploration, games, Earth-simulation, hypothesis-testing, AAT-calibration), and the use-case *is* a statement of which fidelity axes must be honest. (§7.)
 
+The software layer — a content-addressed, memoized query graph whose **save-file is the memo store** — is how axis 1 is made runnable and reusable. And **AAT is one privileged use-case on axis 3, not the telos**: vivarium authors from the outside ($\theta$, $\Omega$, $\varepsilon$) exactly what an adaptive agent infers from the inside, so calibration is uniquely well-served (ground truth by construction) — but most of world-building produces substrate no agent ever touches, and after a target the space forks wide into stories and games. The bridge is real; it is not the point.
 
+---
 
+# Axis 1 — the substrate machinery
 
+## 1. The general principle — the multiscale operator algebra *(established; `multiscale-methods.md`)*
+
+Every method in the numerical-analysis and Earth-system tradition, whatever its name, is built from **four objects and three laws** — the vocabulary the whole stack speaks. A "system" in vivarium is an instance of it.
+
+- **$U$** — the **macro state** (a coarse field: a 16 m height grid, a drainage graph, a climate-zone map). **$u$** — the **micro state** (0.5 m cells, individual storms).
+- **$R : u \to U$** — **restriction** (coarse-graining): how fine state summarizes upward. Many-to-one, information-destroying *by design* — the whole question is *which* information survives.
+- **$L : U \to u$** — **lifting** (reconstruction): how coarse state materializes downward. One-to-many, so **every $L$ smuggles in a *closure*** — a chosen measure over the missing detail (§3 names ours).
+
+Three laws keep the pair honest: (1) **$R \circ L = \text{id}$ on $U$** — reconstruct-then-summarize returns what the macro claimed (this *is* the fidelity invariant; mean-pinning a fine erosion tier to its parent is $R\circ L=\text{id}$ on the mean, live); (2) **conservative flux exchange** — when a conserved quantity crosses a seam, exchange **fluxes, not states**, and they balance exactly; (3) **scale separation** — the fast process is *equilibrated* seen from above, the slow one *quasi-static* seen from below; **where separation fails, no multiscale method saves you** (the hydrology lesson: erosion is geological, water hydrological — never one timestep). Everything below is this algebra, made runnable.
+
+## 2. The method zoo — the shared vocabulary *(established; primaries read directly)*
+
+The one axis that organizes the zoo: *where does the missing information (the closure) come from?* Each system declares which method it is (often a blend); naming it stops each construct from looking like a one-off invention.
+
+| method | closure source | vivarium instance |
+|---|---|---|
+| **AMR / nesting** (Berger–Oliger 1984) | locally refine the same model in space *and* time where demand is | the **telescope** (refined by observer *attention*, not an error estimate); mean-pin = the fine→coarse **injection/update**; **refluxing** (Berger–Colella 1989's conservative flux-balance at the boundary) is the *missing* piece the seam fix supplies |
+| **Multirate** (Gear–Wells 1984) | split by timescale; interpolate the slow for the fast, extrapolate the fast for the slow (vivarium additionally *time-averages* the fast — an HMM/upscaling move, not Gear–Wells) | §6's coupling schedule; erosion-slow / water-fast |
+| **HMM** (E & Engquist 2003) | macro runs everywhere; spawn a short constrained micro *on demand* for a missing flux | the §5 lazy query graph — "HMM made lazy"; our twist: the pull is **backwards-from-now** and observer-driven |
+| **Equation-free** (Kevrekidis 2003) | lift → evolve (short) → restrict → step the *implicit* macro; **gap-tooth** = micro only in small patches, interpolated across a coarse mesh | the **relaxation** regime; **gap-tooth patches ARE the flux-BC tiles**; the deluge fill was coarse-integration-to-steady-state, the analytic init replaces it with an explicit solve (the classic upgrade) |
+| **Superparameterization** (Grabowski 2001) | embed a cheap fine model inside each coarse cell | none yet; the template for storm-scale weather in climate cells, **and for cognitive LOD** |
+| **Sub-grid parameterization** (climate/NWP) | a fitted statistical closure + a *known error budget* | every #mech stand-in (fBm-as-tectonics) — *missing its error model*, which is what #mech honestly marks |
+| **Flux coupler** (Earth-system models) | different models per aspect, exchanging conservative fluxes on a schedule | the phase structure at world scale; **a phase-transition is a coupler interface** (§6) |
+| **Coarse-graining / renormalization** | derive the effective macro *law* by integrating out fine DOF | mostly aspirational; the systematic way to discover a phase's macro variables |
+
+**The ladder runs both ways.** Climb (stepwise, emergent) to *discover* a system's behaviour; once probe-validated, **descend** to a tight surrogate reproducing the discovered statistics ($R\circ L=\text{id}$ on the chosen statistics is the honesty gate), keeping the expensive rung as calibrator. Each system declares an **execution class** — batch-deep (rare, cache to zero), relaxation (settle per phase, then live), procedural-tight (closed-form/surrogate, evaluated constantly).
+
+## 3. What is distinctively ours — the closure choice *(stance)*
+
+The literature's $L$ *samples* the missing measure (Monte-Carlo, ensemble mean, max-entropy) — equation-free even notes $L$ is non-unique and any choice heals. **Ours is none of these: the missing detail is a deterministic pure function of identity — *fated lifting*.** Lifting doesn't sample a realization; it looks up the one **fated** by (seed, key) — the **fated noise** of `LEXICON.md` §3, realized by a KRNG/DRNG. Consequences, in order: (1) **memoization becomes sound** — if $L$ sampled, two evaluations would disagree and caching would change the world; fated lifting is what lets the entire memo architecture exist (the seeding discipline and the caching architecture are one decision); (2) **determinism-as-ontology** — the world is a pure function of (seed, keys), trustable the way arithmetic is trustable, which is what makes it an epistemically real laboratory rather than an impersonation; (3) **our "ensembles" are degenerate** (one world per seed) — for distributional claims we vary the *seed*, not the *cell*.
+
+Three further twists we own: **lazy, backwards-from-now** coupler pulls (the literature pulls forward-in-time); **observer-driven refinement** (attention, not an error estimate); and — the sharpest systems-theory point — **consumer-dependent restriction**: the literature fixes one $R$ per method; we want **$R$ per consumer** (hydrology needs conserved totals, line-of-sight needs max, display needs mean). So a macro cell honestly carries `{mean, min, max, conserved-totals}` with each field flagged *guaranteed* vs *approximate*. **Store the wrong statistic and the fine materialization silently corrupts the macro** — the one failure mode the whole discipline exists to prevent, and a systems-theory fact (representativity error), not a coding detail.
+
+## 4. The seams — position AND time as one discipline *(stance; `multiscale-seams.md`)*
+
+A world is computed as a **lattice of tiles, each at some resolution in space and some rate in time, coupled only at their boundaries by fluxes.** A *seam* is any such boundary. The load-bearing recognition: **the discipline at a seam is identical whether the seam is in space or in time** — because both are the same $R/L$/closure algebra with the argument being a space cell, a time interval, or (usually) a space-time patch. What crosses is a **flux of a conserved quantity** (never raw state); what is guaranteed is a **sufficient statistic**, integrated over space and averaged over time at once.
+
+So position and time are **one seam on two axes**, and the two axes interact: the **space seam** is drainage-shaped (a point's dependency is its upstream catchment closure + downstream path to base level — irregular *islands of interdependence* the coarse spine draws with kernels we already have, though coarse-global cross-face assembly is new work and its basin-partition accuracy an open measurement, not free), and the **time seam** is the multirate band (which rate a tile runs, how it reads its neighbours — quasi-static slow / time-averaged fast). A river crossing a tile edge couples in **both**: its upstream catchment (space) *and* the slow erosion tier reading it as time-averaged discharge (time). And the **fidelity invariant is this same rule, observer-side**: render/simulate at exactly the resolution — spatial *and* temporal — the most-demanding present participant needs; the participant sets both axes' resolution, and **time couples to the most-demanding participant** (a human clamps the world to ~2 Hz real-time; a pure-agent world has fully elastic logical time). The four seam types (spatial LOD; temporal macro→fine handoff; aspect-coupling; and the one *open* reversion seam) and their primary-source grounding are worked in `multiscale-seams.md`.
+
+## 5. Implementation — the lazy memoized query graph and the store *(established paradigm; the engine is a gap)*
+
+This is how the §1 algebra is made runnable. The runtime is a **demand-driven, memoized query graph**: a query is `(aspect, region, resolution, time)`; a pull recurses into its dependencies; results memoize by key; nothing computes until demanded, nothing twice. It degrades into three scoped pieces that *are* the architecture: a **precomputed coarse-global spine** (planet-spanning aspects at low res — also the dependency planner, §4), **lazy memoized local cones** (fine detail pulled near the observer), and a **research-grade edit-propagation layer** (the one open part, §8).
+
+**The complete content-addressed key is the mechanism that makes parallel development safe** *(stance; enforcement is a gap)*: every memo is keyed by *everything that affects it* — upstream input hashes + coupling params + seed + the recipe's **version auto-derived from kernel source**. So swapping erosion-v1 for erosion-v2 invalidates its cache and its dependent cone **and nothing else**; iteration is cache-transparent; scratch and canon coexist in one store. Under-keying is silent corruption, over-keying only wasted recompute — **the asymmetry is decisive: over-key.** The manual `FILL_ALGO_VERSION` is the known weak link (a stale memo mid-iteration doesn't waste time, it *lies*); source-derived versions are the target (the 2026-07-09 pervasive-memoization directive, `DESIGN-REDUX.md` §12).
+
+**The save-file *is* the memo store** *(`DESIGN-REDUX.md` §13)* — git-repo-shaped, content-addressed: `manifest` · `objects/<hash>` (immutable) · `roots` (current hash per `(aspect, tile, level, time)`) · `mutations/` (append-only, the irreducible truth). Copy the folder → the world moves. Invalidation is correctness (by content hash); eviction is space (LRU on immutable blobs — deleting one costs a recompute, never correctness), so **memoize pervasively**, at every tier and rate. **The run-modes carve** (`LEXICON.md` §3) is the store's typing job — the strictly-causal / replay / discardable-iteration / live-play distinction maps to **Closed vs Open-with-recorded-forcing** (§6/§7 ontology) plus the pre-participation **non-intervention** register; an iteration run must never write a canon `root`.
+
+The substrate the graph addresses *(settled; `DESIGN-MATERIAL.md`)*: a cube-sphere **`CellId(u64)`** Hilbert key orders **chunks**; a chunk's interior is a plain Cartesian array (stencils at ~6 Gcells/s, measured); **halos** carry cross-chunk/face neighbours. The **column** (a stack of real-valued **strata**) is the storage unit; **voxels** are a materialized *view*; **bodies** overlay cross-cutting masses; elevation is always *derived*, its meaning *declared* (§3).
+
+---
+
+# Axis 2 — the developmental ladder
+
+## 6. Phases, coupling, and law-promotion *(established; `PHASES.md`, `multiscale-seams.md`)*
+
+Systems come online in a required order and become law by *freezing*. This is a **co-equal axis** with the substrate machinery, not a detail of it: axis 1 is scale in space-and-fidelity; axis 2 is scale in **developmental time**.
+
+Systems couple **multirate** in four bands, each on its own step: deep drivers (Myr) flux uplift/geothermal; orbital/climate (10–100 Kyr) flux temperature/precip/ice; surface process (Kyr) flux elevation-change/sediment; fast/biological (yr–centuries) flux water-depth/vegetation. Fast sees slow as quasi-static; slow sees fast as time-averaged — the §4 time seam, at world scale.
+
+**A phase-transition is that time seam at the largest scale we have.** A **phase** is a memoization/immutability boundary: it runs its systems to convergence, freezes the converged state into a world-scale **memo**, and that memo *is the macro law* the next phase builds on — the AAT invariance cut. Each phase manufactures the **Charge** to the next gate; its **Bequest** is what it hands forward; its **Record** (readable-in-rock) is a lossy sanity-probe, never the canonical state. Phases enter code **one at a time as runnable recipes** — no phase-enum machinery until they exist.
+
+**This is where axis 1 and axis 2 join — and it answers "when do we need which algorithm."** A system's **$R$** (its macro summary) is what the *next phase* reads as law; its **$L$** (its detail lifting) is what a *consumer's query* materializes. So a system earns its $R$ exactly when a downstream **Charge** reads its macro, and its $L$ exactly when a query reads its detail. Biomineralization is an Abyssal #earth charge that is itself the mechanism of the oxygenation gate, so it needs enough $R$-fidelity *before* Abyssal→Primeval opens; it needs $L$ only when a consumer queries limestone. The #gate/#earth/#mech/#emergent tags already encode how much $R$-fidelity a downstream gate demands.
+
+The honest catch, and the ontology it forces (`LEXICON.md` §7.2; `vivium-operational-workflow.md` BREAK-2): convergence is **undecidable**, so each freeze carries a bounded **unLawfulness budget**. **Realized** (law immutable — frozen at a chosen tolerance) is a threshold you pass; **Lawful** (law self-consistent, no glitches) is an asymptote ($\varepsilon \to 0$) approached forever. Realized ⟂ Lawful; a natural-modeling world is *merely Realized*. This is why the parity target is honestly an early-Abyssal world that is **Realized, not Lawful** — and flagged as such.
+
+---
+
+# Axis 3 — use-case as fidelity contract
+
+## 7. What the world is for, and the AAT bridge *(stance; `LEXICON.md` §5, §7; `ASF.md`)*
+
+A finished world (a **vivium**) is consumed by many use-cases, and **the use-case is a statement of which fidelity axes must be honest** (`LEXICON.md` §5). Each phenomenon is tagged on four independently-failing axes: **A** Earth-history fidelity, **B** physics fidelity (*lawful first, Earth-shaped second*), **C** relation type (the #gate/#earth/#mech/#emergent buckets refined), **D** implementation status. *Vibe-modeling = high D on low B/C* — making the axes explicit turns that from camouflaged into glaring. Then: *speculative-coherent game* needs C-consistency + B (lawful, not Earth-true); *Earth-simulation* pins A hard; *hypothesis-testing* needs A+B+C real; *inhabitation / agentic participation* trips ETHICS.md and the moratorium (exploration — ethereal, observe-only — is moratorium-clear); *AAT-calibration* additionally needs the agent layer legible. The mediation between how systems *produce/store* (domain-centric) and how consumers *query* (consumer-centric) is the memoized query graph of §5, and the seam between them is a chosen sufficient statistic (§3) — the `⟷` the design has circled since the first sketch.
+
+**AAT-calibration is the most demanding use-case, and uniquely well-served** — because vivarium authors from the outside exactly the typed object an adaptive agent infers from inside:
+
+| AAT (agent infers, from inside) | vivarium (we author, from outside) |
+|---|---|
+| law **$\theta$** — transition/observation structure | the physics + constants; each phase's **Bequest** |
+| state **$\Omega$** | the live world state (terrain, water, weather, populations) |
+| chance **$\varepsilon$** | **fated noise** (§3) — a pure function of (seed, key) |
+| **compute-shortfall** (a *ratio* — knowing the generator ≠ running it faster than reality) | the **fidelity ladder / lazy memoized runtime** — our entire runtime *is* a compute-shortfall manager |
+
+A phase-transition promotes converged state into law (the invariance cut, §6); the aleatoric boundary is frame-relative (fated noise is genuine chance to the inside agent, a deterministic lookup to us — we are the housing rule); and the developer is itself an AAT agent whose observation channel is the instruments (TST live here) — which is *why* "build the instrument before tuning by feel" is architecture, not preference. But this is **one column of axis 3**; the calibration bridge does not make the machinery *for* AAT any more than a telescope's optics are *for* one galaxy.
+
+---
+
+## 8. Invariants, gaps, and the one open problem
+
+**Three spine invariants the implementation may never trade away** *(settled)*: (1) **the core/view wall** — `vivarium-world` knows nothing about pixels; every view (renderer, logozoetic agent interface, headless logger) is a peer adapter that only *queries*; (2) **determinism-as-ontology via fated lifting** (§3) — *gap:* the agent-layer RNG is not yet fated (per-agent splittable seeds are the standing prerequisite, `architecture-audit.md` #1); (3) **the complete content-addressed key** (§5).
+
+**Status-quo gaps** (designed, not built — the build path in `abyssal-parity-plan.md`): the **store + recipe layer** (§5); the **coarse global spine** as dependency planner (§4, §6); **tile recipes with flux boundary conditions** replacing today's hardcoded edge policy — *this is also the seam fix*: the present code seeds every patch's drainage at its own area and hardcodes edge-outlets, so tiles are non-composable and the seam pathologies (`seam_ridge` red) are the visible signature; the **query front-end** the view queries through, so navigation and persistence fall out; the **RNG fix** before agents. (Today's `spikes/worldview` is a physics testbench, not this runtime — one fixed patch, re-seeds from the raw prior on movement. The kernels are proven; the world-frame around them is unbuilt.)
+
+**The one open research problem — detail→abstract** *(open)*: forward/downward is mature (all four methods do $R$ and $L$ forward; Vandenbulcke & Barth 2019 upscale by assimilation). What we are not aware of a method for is **upward $R$ of an irreducible discrete edit** (a dammed stream, a placed structure — not a statistical closure) **into a content-addressed, memoized macro with correct up-invalidation** (`multiscale-seams.md` §2.4). It is **not on the ethereal-explorer path** — a read-only explorer makes no edits — and is plausibly the same shape as the open AAT bet (does an $\Omega$-perturbation stay legible): both are *upward re-summarization after a micro perturbation*.
+
+## 9. Adding a system — the contract
+
+To add a world-system and have the machine compose it, declare its place in the algebra: (1) **its $R$/$L$/closure** — the macro summary it exposes, how it materializes detail, and *fated* closure so it is memoizable; (2) **its fluxed quantities** — the per-quantity coupler interface it produces/consumes, the *only* thing others may depend on (fine-grained, never a monolithic blob); (3) **its execution class and timescale band** (so coupling treats it quasi-static or time-averaged); (4) **determinism in its keyed inputs**, recipe-version auto-derived from source; (5) **its four epistemic tags** (§7); (6) **its regime probes, written first** — including its **seam probes** (a space-seam continuity probe like `seam_ridge`; a time-seam near-stationarity probe). If those hold, three walls keep two authors from breaking each other — the **flux interface**, the **complete key**, and **execution-class + multirate coupling** — so interdependence is *mediated*, never *shared-mutable*, and the count of systems can grow without the coupling cost growing with it.
+
+---
+
+*This does not supersede `DESIGN.md`; it consolidates the architecture that `DESIGN.md` opens and the DESIGN-REDUX / DESIGN-MATERIAL / DESIGN-SYSTEMS / multiscale docs develop. The concrete build sequence toward the first playable milestone is `ref/research/abyssal-parity-plan.md`. Future instances inherit what we leave.*

@@ -541,6 +541,48 @@ written tolerance. Plan: `ref/research/water-parallelism.md`.
   sound — which is exactly why §8 (no hidden RNG; all stochasticity is a stateless
   hash of a stable key) is a *precondition* here, not a separate nicety.
 
+### Pervasive disk memoization — the standing directive *(Joseph, 2026-07-09)*
+
+**Memoize to disk wherever it can reasonably be done — at every tier and rate,
+not only at phase-transitions.** The phase memo is merely the *largest* instance
+of the general rule; fills, tier convergences, analytic solves, probe baselines,
+per-patch results at rest all belong in the store. The reasonable-test is
+economic: memoize when expected recompute cost exceeds the store round-trip;
+when in doubt, memoize — eviction is free (content-addressed blobs are
+immutable; deleting one costs a recompute, never correctness — §13), so
+space-fear never justifies non-caching.
+
+**The binding constraint: memoization must never interfere with algorithm
+iteration — and the only lawful mechanism for that is the key, never caution.**
+A complete key (inputs + seed + algorithm identity/version + coupling params +
+backend) makes iteration cache-transparent by construction: edited physics
+misses every old entry and repopulates. The unlawful resolutions, named so they
+are recognized when proposed: disabling caching "while developing"; manual
+cache-clearing as a workflow step (it hides under-keying instead of fixing it);
+and deferring caching "until the algorithms settle" (they never settle — the
+version-in-key exists precisely so they never have to).
+
+**The known weak link is the manual version constant.** `FILL_ALGO_VERSION`
+(worldview's fill cache) is bump-on-physics-change by human discipline; with
+dozens of kernels that discipline WILL eventually be forgotten, and the failure
+mode is the exact interference this directive forbids — a stale memo served
+mid-iteration doesn't just waste time, it *lies* (you conclude your change did
+nothing, or "works," against a world your code no longer produces). Remedy,
+strongest first: **derive recipe-versions from kernel source at build time**
+(build.rs hashes the kernel module's source into a compile-time key component —
+the Nix move, immune to forgetting); where a source-hash is too coarse and
+over-invalidates painfully, fall back to per-kernel version constants
+*colocated with the kernel* plus a tripwire probe that fails when kernel source
+changes without a bump. The asymmetry to hold when forced to choose:
+**over-keying costs recompute; under-keying costs truth. Over-key.**
+
+**Iteration runs share the canon store safely by construction.** A modified
+algorithm produces different keys, so `objects/` cannot be polluted — scratch
+and canon coexist in one store. The only canon-integrity surface is
+`roots`/tags: an iteration run must never write a canon root. (This is the
+store-side reason the run-modes carve — LEXICON §3 — is load-bearing, not
+lexicon garnish.)
+
 ### The coupler is the stable seam; models behind it swap freely
 "Fluxing through a coupler, lazily" is the Heterogeneous Multiscale Method made
 lazy, and it resolves cleanly here:
