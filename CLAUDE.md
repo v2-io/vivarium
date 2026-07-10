@@ -56,3 +56,7 @@ and speculative — say "I don't know" freely; most of this is hypothesis.
 `main`**. Do **not** create branches, worktrees, or PRs unless Joseph explicitly
 asks — the generic "branch before committing on the default branch" default does
 not apply here (Joseph, 2026-07-06). Commit when asked; `main` is the working branch.
+
+## ⚠ Memory bridge (Archema program)
+
+Vivarium is a member of the Archema program (`~/src/archema-io/`; orientation cascades from its CLAUDE.md; charter at `CHARTER-DRAFT.md`). **If you are reading this mid-session because you navigated here from elsewhere, this project's memory did NOT auto-load** — Read `~/.claude/projects/-Users-josephwecker-v2-src-archema-io-vivarium/memory/MEMORY.md` now, before substantive work. (Project memory loads only by exact session-start directory.)
