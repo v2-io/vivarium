@@ -1,18 +1,13 @@
 # vivarium — the world-phenomena graph (systems · timescales · size-scales)
 
-*The concrete aspect-list for the multirate coupling (`DESIGN-REDUX.md` §4) and a
-build-order guide. Each system is a tier in the lazy query graph (§11); the ones
-that must run share the property substrate of `DESIGN-MATERIAL.md` §5.*
+*The concrete aspect-list for the multirate coupling (`DESIGN-REDUX.md` §4) and a build-order guide. Each system is a tier in the lazy query graph (§11); the ones that must run share the property substrate of `DESIGN-MATERIAL.md` §5.*
 
-*Status: **timescales and size-scales are established** (standard Earth-system
-values, high confidence); **crude-payoff and high-fidelity-difficulty are my
-judgment** (medium confidence — worth a research-hardening pass if we want rigor).
+*Status: **timescales and size-scales are established** (standard Earth-system values, high confidence); **crude-payoff and high-fidelity-difficulty are my judgment** (medium confidence — worth a research-hardening pass if we want rigor).
 "vivarium" column is current status.*
 
 ## The systems
 
-Ordered slow → fast (the natural coupling order: slow drivers set boundary
-conditions for fast responders).
+Ordered slow → fast (the natural coupling order: slow drivers set boundary conditions for fast responders).
 
 | system | timescale | size-scale | crude payoff | hi-fid difficulty | crude version → produces | vivarium |
 |---|---|---|---|---|---|---|
@@ -35,14 +30,15 @@ conditions for fast responders).
 | **Isostasy / rebound** | Kyr–10 Kyr | regional | low–med | med | elastic response to (ice/sediment) load | defer |
 | **Ocean circulation** | yr–Kyr (thermohaline ~1000 yr) | global | low (little local-visible) | hard | heat-transport bands → coastal climate | defer |
 
+## Prior-art anchor — the Cordonnier/Braun line *(Galin et al. 2019, "A Review of Digital Terrain Modeling"; ingested 2026-07-10)*
+
+Vivarium's erosion tier **is** the method the CG-terrain field converged on. **Cordonnier–Braun (CBC\*16)** brought geomorphology's **stream-power law** $\partial h/\partial t = -k\,A^m s^n + u$ (drainage area $A$ approximates the upstream-integrated precipitation flux; slope $s$; uplift $u$) into graphics and **solved it implicitly in linear time** over 100 km at ~100 m — exactly our implicit stream-power ($n{=}1$) tier. The **next two rungs are already published:** (a) **CCB\*18** (*Sculpting Mountains*) adds **per-stratum erodibility** — erosion honoring distinct bedrock strata → a layered $2\tfrac{1}{2}$D model with folds and faults, precisely our queued *per-material erodibility → Bryce hoodoos* rung over the strata/column model; and its **geologically-coherent uplift** (crust as incompressible viscous material, folds from layered sheets) is the principled replacement for our fBm-uplift stand-in (the `tectonic uplift` row's "→ P (mantle)"). (b) The review's verdict on our LOD problem is the positioning statement worth keeping: *"the simultaneous need for large extent and high precision has yet to be adequately addressed,"* and the route it proposes — *"multi-resolution methods operating at varying time and space scales, combined with a careful analysis of the cause-effect relationships in geomorphology"* — **is vivarium's multiscale-seam architecture, named by the field as the open direction and not yet built** (`ref/research/multiscale-seams.md`). Two further confirmations: the standard erosion representation is our exact **layered stack** (bedrock + granular thicknesses — BF01, GGP\*15, = `DESIGN-MATERIAL.md` strata); and forward-Euler **thermal/diffusion is a named large-step wall** (*"physically accurate only for small time steps … prevents its use when simulating large scale features"*) — the field's statement of our $z{=}2$ creep clamp (`multiscale-seams.md` §3). Terrain **amplification** (coarse→fine, up to 256×, via sparse construction trees preserving drainage coherence — GDGP16/AAC\*17) is prior art for our lift/materialize $L$ and its basin-partition-stability requirement.
+
 ## Coupling structure (multirate, §4)
 
-Four rough bands, each on its own timestep; **fast bands see slow ones as
-quasi-static; slow bands see fast ones as time-averaged forcings** (the
-separate-the-timescales principle, already the load-bearing hydrology lesson):
+Four rough bands, each on its own timestep; **fast bands see slow ones as quasi-static; slow bands see fast ones as time-averaged forcings** (the separate-the-timescales principle, already the load-bearing hydrology lesson):
 
-- **Deep drivers** (Myr): tectonics, mantle heat → *fluxes* uplift-rate, geothermal
-  gradient, base rock type into everything below.
+- **Deep drivers** (Myr): tectonics, mantle heat → *fluxes* uplift-rate, geothermal gradient, base rock type into everything below.
 - **Orbital / climate** (10–100 Kyr): Milankovitch → climate; glaciation →
   *fluxes* temperature, precipitation, ice load.
 - **Surface process** (Kyr): erosion, weathering, karst, aeolian, coastal →
@@ -53,12 +49,9 @@ separate-the-timescales principle, already the load-bearing hydrology lesson):
 ## Build order (most fidelity per unit effort, crude rung)
 
 1. **(done)** erosion + hydrology — the biggest visual payoff, already in.
-2. **Climate (crude)** — temp/precip from latitude/elevation/continentality; the
-   insolation tier is the seed. Unlocks *everything* downstream. Cheap.
-3. **Biomes** — a Whittaker lookup from climate. Trivial code, whole-biosphere
-   payoff.
-4. **Weathering / pedogenesis** — soil (rich/poor/rocky) + differential rock
-   hardness. Cheap statistical; unlocks agents/farming *and* Bryce-style relief.
+2. **Climate (crude)** — temp/precip from latitude/elevation/continentality; the insolation tier is the seed. Unlocks *everything* downstream. Cheap.
+3. **Biomes** — a Whittaker lookup from climate. Trivial code, whole-biosphere payoff.
+4. **Weathering / pedogenesis** — soil (rich/poor/rocky) + differential rock hardness. Cheap statistical; unlocks agents/farming *and* Bryce-style relief.
 5. **Vegetation / ecosystems** — biome → community. Visible flora, agent food.
 6. Then feature-specific, medium cost: glaciation, volcanism, karst, aeolian,
    coastal, hydrothermal (ore).
@@ -67,12 +60,10 @@ separate-the-timescales principle, already the load-bearing hydrology lesson):
 
 ## Feature-driven growth ("want X? ensure these materials + run these systems")
 
-The curiosity path: pick a real-world landform, and it decomposes into *materials
-present in quantities* + *systems run*.
+The curiosity path: pick a real-world landform, and it decomposes into *materials present in quantities* + *systems run*.
 
 - **Bryce Canyon (hoodoos)** = differential erosion of layered sedimentary →
-  *sedimentary strata with alternating hard/soft erodibility* + erosion honoring
-  per-stratum erodibility. (Exercises strata + `erodibility` directly.)
+  *sedimentary strata with alternating hard/soft erodibility* + erosion honoring per-stratum erodibility. (Exercises strata + `erodibility` directly.)
 - **Fjords / U-valleys** = glaciation → ice + glacial carving.
 - **Caves** = karst → carbonate rock + dissolution + water table.
 - **Deserts / dunes** = aeolian → arid biome (climate) + loose sand + wind field.
@@ -80,71 +71,50 @@ present in quantities* + *systems run*.
   (and the stateless coherent-noise-under-macro materialization, `DESIGN-MATERIAL` §10).
 - **Deltas** = erosion + coastal → sediment transport + sea level.
 
-Each is a small recipe over the same substrate — which is the whole point of the
-stable property interface (`DESIGN-MATERIAL` §6): features are *compositions*, not
-new engines.
+Each is a small recipe over the same substrate — which is the whole point of the stable property interface (`DESIGN-MATERIAL` §6): features are *compositions*, not new engines.
 
 ## Fluvial ladder — named next rungs (Joseph, 2026-07-03; parentheses = processes rather than attributes)
 
-Within the erosion/hydrology rows above — physics we are knowingly not yet
-tracking, listed so the ladder is honest:
+Within the erosion/hydrology rows above — physics we are knowingly not yet tracking, listed so the ladder is honest:
 
-- **Armoring** — winnowing of fines leaves a coarse surface lag that caps
-  incision; interface state (`DESIGN-MATERIAL` §5), the persistent partner of
-  the flow-seal.
-- **Colmation as part of the column** — live in the sim (2026-07-02); needs its
-  Column interface-state home (`DESIGN-MATERIAL` §5).
-- **Aggradation & transient debris flows** — bed *rise* when supply exceeds
-  capacity (we deposit, but no supply-driven regime shift); debris flows are the
-  high-concentration slurry regime — ties to the μ(I)/Paste rung
+- **Armoring** — winnowing of fines leaves a coarse surface lag that caps incision; interface state (`DESIGN-MATERIAL` §5), the persistent partner of the flow-seal.
+- **Colmation as part of the column** — live in the sim (2026-07-02); needs its Column interface-state home (`DESIGN-MATERIAL` §5).
+- **Aggradation & transient debris flows** — bed *rise* when supply exceeds capacity (we deposit, but no supply-driven regime shift); debris flows are the high-concentration slurry regime — ties to the $\mu(I)$/Paste rung
   (`DESIGN-MATERIAL` §6).
 - **(Traction)** — bedload as a transport *mode* distinct from suspension
   (rolls/slides along the bed, different capacity law, builds bars).
-- **(Better, finer-tuned bank erosion)** — lateral erosion from cross-channel
-  shear, distinct from bed incision.
-- **(→ meandering, oxbows, cutoffs)** — river/stream *evolution* on flatter
-  terrain; emerges from bank erosion + point-bar deposition, not from a
-  meander model.
+- **(Better, finer-tuned bank erosion)** — lateral erosion from cross-channel shear, distinct from bed incision.
+- **(→ meandering, oxbows, cutoffs)** — river/stream *evolution* on flatter terrain; emerges from bank erosion + point-bar deposition, not from a meander model.
 
 ## Sediment & fluvial phenomena — the full inventory (2026-07-03)
 
 Joseph asked for the complete map ("do we have a feel for ALL the phenomena?").
-Status: **✓** crude rung in; **~** partial/emergent; **—** absent. The single
-suspended pool + alluvium is today's whole grain model — most gaps below
-resolve into "grain sizes exist" (§15 materials) plus one transport mode.
+Status: **✓** crude rung in; **~** partial/emergent; **—** absent. The single suspended pool + alluvium is today's whole grain model — most gaps below resolve into "grain sizes exist" (§15 materials) plus one transport mode.
 
 **Transport modes** (by grain behaviour):
 - ✓ wash load / suspension (shear-gated settling, eddy diffusion)
 - — saltation (sand, hopping — between suspension and traction)
 - — bed-load TRACTION (rolling/sliding: slower than the flow, thalweg-bound;
-  builds bars; Joseph's list) — the biggest structural gap: one suspended
-  pool currently stands in for all three modes
-- — hyperconcentrated / debris flow (μ(I) regime, §15 rung 3)
-- — Stokes settling per grain size (we cap rates instead — fines vs sand
-  settle identically today, which is wrong by ~100×)
-- — SOLUTION (dissolved load — moves invisibly, precipitates elsewhere; the
-  transport-mode face of karst/corrosion; also evaporites)
-- — FLOCCULATION (clay clumps in brackish water → settles fast: why deltas
-  drop their finest load AT the salt boundary — matters at river mouths)
+  builds bars; Joseph's list) — the biggest structural gap: one suspended pool currently stands in for all three modes
+- — hyperconcentrated / debris flow ($\mu$(I) regime, §15 rung 3)
+- — Stokes settling per grain size (we cap rates instead — fines vs sand settle identically today, which is wrong by ~100×)
+- — SOLUTION (dissolved load — moves invisibly, precipitates elsewhere; the transport-mode face of karst/corrosion; also evaporites)
+- — FLOCCULATION (clay clumps in brackish water → settles fast: why deltas drop their finest load AT the salt boundary — matters at river mouths)
 
 **Bed / interface:**
 - ✓ armoring + winnowing (probe-gated) · ✓ colmation (fines-only)
 - — bedforms (ripples/dunes/antidunes) and their ROUGHNESS feedback
-- — imbrication/packing (φ_pack exists in the schema, unused)
+- — imbrication/packing ($\varphi_{\text{pack}}$ exists in the schema, unused)
 - — bed-load PIPING (subsurface flow drags fines through gravel pores —
   internal restructuring; also the levee/dam internal-failure mechanism)
 - ~ pool-riffle / step-pool (emergent at 4.8 m; watch, don't code)
 - ~ knickpoint migration (emergent in the erosion tier; unverified)
 
-**Erosional mechanism detail** (our shear-threshold bulk erosion bundles
-these; worth unbundling when grain sizes exist):
-- ~ hydraulic action (= our τ > τ_c detachment)
+**Erosional mechanism detail** (our shear-threshold bulk erosion bundles these; worth unbundling when grain sizes exist):
+- ~ hydraulic action (= our $\tau \gt \tau_c$ detachment)
 - — abrasion TOOLS-AND-COVER effect: erosion needs grinding tools (no load ⇒
-  little wear even at high shear) but too much load shields the bed — a
-  non-monotonic dependence our K-only stream power misses (armor/alluvium
-  shield is the cover half; the tools half is absent)
-- — attrition → DOWNSTREAM FINING (grains round and shrink in transit: why
-  real rivers grade gravel→sand→silt downstream; needs grain sizes)
+  little wear even at high shear) but too much load shields the bed — a non-monotonic dependence our K-only stream power misses (armor/alluvium shield is the cover half; the tools half is absent)
+- — attrition → DOWNSTREAM FINING (grains round and shrink in transit: why real rivers grade gravel→sand→silt downstream; needs grain sizes)
 - — cavitation (waterfall plunge-pools, extreme-velocity shock — far rung)
 - ✓ corrosion/solution as karst (system row); dissolved-load mode above
 
@@ -152,15 +122,10 @@ these; worth unbundling when grain sizes exist):
 - ~ lateral shear erosion (emergent side-carving observed 2026-07-03)
 - — bank failure by undercut + cohesive collapse (§15 Mohr–Coulomb rung)
 - — meandering (helical secondary flow → point bars → cutoffs → oxbows)
-- ~ avulsion (channel-jumping on aggrading fans — the braided delta Joseph
-  photographed suggests it may partially emerge; verify before claiming)
-- ~ BRAIDING (named: high load + shallow shifting channels — observed in
-  Joseph's delta shot; same verify-before-claiming caveat)
-- ~ headward erosion (channels lengthening upstream — should emerge from the
-  erosion tier's drainage capture; unverified)
-- — levees + SPLAY formation (overbank deposition builds levees; breaches
-  drop coarse fans on the floodplain — becomes possible once overbank
-  deposition differentiates by distance-from-channel)
+- ~ avulsion (channel-jumping on aggrading fans — the braided delta Joseph photographed suggests it may partially emerge; verify before claiming)
+- ~ BRAIDING (named: high load + shallow shifting channels — observed in Joseph's delta shot; same verify-before-claiming caveat)
+- ~ headward erosion (channels lengthening upstream — should emerge from the erosion tier's drainage capture; unverified)
+- — levees + SPLAY formation (overbank deposition builds levees; breaches drop coarse fans on the floodplain — becomes possible once overbank deposition differentiates by distance-from-channel)
 
 **Hillslope ↔ water:**
 - ✓ soil creep (erosion tier) · ~ sheet/rill erosion (storm shear)
@@ -171,9 +136,7 @@ these; worth unbundling when grain sizes exist):
 **Column / still water:**
 - ✓ infiltration + colmation seal + baseflow · ✓ eddy mixing
 - — Darcy LATERAL groundwater flow (springs at low points need it)
-- — turbidity currents (underwater density flows — an 11 m suspended-mud
-  column over a slope SHOULD slide downslope as a bottom current; relevant
-  to the deluge-legacy mud lakes, and how real lakes build turbidites)
+- — turbidity currents (underwater density flows — an 11 m suspended-mud column over a slope SHOULD slide downslope as a bottom current; relevant to the deluge-legacy mud lakes, and how real lakes build turbidites)
 - — deposit consolidation / mud cohesion aging
 - — closed-basin evaporation → salt flats (ties to the analytic-fill lakes)
 
@@ -183,43 +146,21 @@ coastal/wave transport, karst dissolution, ice/freeze — their own systems.
 **Fundamental-vs-emergent discipline** (from Joseph's survey pass, 2026-07-03):
 the fundamentals are few — fluid-particle mechanics (Shields/settling/drag),
 boundary shear vs cohesion, tools-abrasion, geotechnical failure, chemistry —
-and everything else on this page should EMERGE. Corollary worth stating as a
-rule: **some explicit state is scaffolding with a demolition date.** Our armor
-field parameterizes what selective transport of real grain sizes would emerge
-(D10 mobile, D84 not); when the grain-size split lands, armor should re-emerge
-and the explicit field retire. Same eventual fate for colmation (fines
-percolation) and possibly alluvium (it IS the coarse transport pool at rest).
+and everything else on this page should EMERGE. Corollary worth stating as a rule: **some explicit state is scaffolding with a demolition date.** Our armor field parameterizes what selective transport of real grain sizes would emerge
+(D10 mobile, D84 not); when the grain-size split lands, armor should re-emerge and the explicit field retire. Same eventual fate for colmation (fines percolation) and possibly alluvium (it IS the coarse transport pool at rest).
 
 **Hyperconcentrated / debris regime — actively missing physics** (survey 2):
 our momentum treats a 95% mud column like clear water. Real mixtures have
-(a) concentration-dependent density & viscosity — "flow bulking", the
-feedback that turns flash floods into debris waves — and (b) a BINGHAM YIELD
-STRESS: past ~50% solids the mixture is solid until stress exceeds yield,
-then a scouring slurry. Two small terms (ρ(conc), τ_yield(conc)) bridge the
-water sim to §15's μ(I) rung; debris JAMS additionally need woody-debris /
-boulder BODIES (the §14 overlay), and jam-forced scour + self-clogging
-avulsion then emerge. Named candidates, not yet built.
+(a) concentration-dependent density & viscosity — "flow bulking", the feedback that turns flash floods into debris waves — and (b) a BINGHAM YIELD STRESS: past ~50% solids the mixture is solid until stress exceeds yield,
+then a scouring slurry. Two small terms ($\rho$(conc), $\tau_{\text{yield}}$(conc)) bridge the water sim to §15's $\mu(I)$ rung; debris JAMS additionally need woody-debris /
+boulder BODIES (the §14 overlay), and jam-forced scour + self-clogging avulsion then emerge. Named candidates, not yet built.
 
-**Highest-leverage next three, by visible-truth-per-effort:** (1) grain-size
-split (fines/sand/gravel) with Stokes settling — unlocks saltation/traction
-as behaviours instead of modes, real sorting, honest deltas; (2) bank
-mechanics (undercut + Mohr–Coulomb) — unlocks meandering/oxbows, Joseph's
-long-standing wish; (3) Darcy groundwater — springs, honest baseflow
-geography.
+**Highest-leverage next three, by visible-truth-per-effort:** (1) grain-size split (fines/sand/gravel) with Stokes settling — unlocks saltation/traction as behaviours instead of modes, real sorting, honest deltas; (2) bank mechanics (undercut + Mohr–Coulomb) — unlocks meandering/oxbows, Joseph's long-standing wish; (3) Darcy groundwater — springs, honest baseflow geography.
 
 ## Instruments (regime probes — see DESIGN-REDUX §2b)
 
-Every system rung ships with renderer-free probes asserting invariants nature
-guarantees in a known regime; known issues get their probe written FIRST
-(domain TDD). Current: `topo` (prior slope statistics), `spike_probe` (erosion
-spire instability), `channel_profile` (two-regime water: subcritical must be
-smooth), **`armor_regimes`** (three-regime scour/armor gate: 1/3 green —
-fines sorting robust; armor-vs-eddy interaction and source-cell zero-incision
-anomaly are the two named opens, status in the probe header), and
+Every system rung ships with renderer-free probes asserting invariants nature guarantees in a known regime; known issues get their probe written FIRST
+(domain TDD). Current: `topo` (prior slope statistics), `spike_probe` (erosion spire instability), `channel_profile` (two-regime water: subcritical must be smooth), **`armor_regimes`** (three-regime scour/armor gate: 1/3 green —
+fines sorting robust; armor-vs-eddy interaction and source-cell zero-incision anomaly are the two named opens, status in the probe header), and
 **`seam_ridge`** — the differential-aging ridge probe (built
-2026-07-03, first probe authored UNDER this methodology): cross-seam curvature
-where a fine tier's age exceeds its surroundings'. **Currently red, as
-expected**: seam/interior curvature ratio 4.3× at the standard 18-epoch fine
-pass, growing with the age gap (5.3× @ 60e, 7.1× @ 150e) — the mean-pin
-conserves block means but not boundary gradients. It now gates the future
-seam fix; Joseph's ridge sighting is measured, not anecdotal.
+2026-07-03, first probe authored UNDER this methodology): cross-seam curvature where a fine tier's age exceeds its surroundings'. **Currently red, as expected**: seam/interior curvature ratio 4.3× at the standard 18-epoch fine pass, growing with the age gap (5.3× @ 60e, 7.1× @ 150e) — the mean-pin conserves block means but not boundary gradients. It now gates the future seam fix; Joseph's ridge sighting is measured, not anecdotal.

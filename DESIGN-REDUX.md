@@ -569,11 +569,22 @@ mode is the exact interference this directive forbids — a stale memo served
 mid-iteration doesn't just waste time, it *lies* (you conclude your change did
 nothing, or "works," against a world your code no longer produces). Remedy,
 strongest first: **derive recipe-versions from kernel source at build time**
-(build.rs hashes the kernel module's source into a compile-time key component —
-the Nix move, immune to forgetting); where a source-hash is too coarse and
-over-invalidates painfully, fall back to per-kernel version constants
-*colocated with the kernel* plus a tripwire probe that fails when kernel source
-changes without a bump. The asymmetry to hold when forced to choose:
+(build.rs hashes the kernel into a compile-time key component — the Nix move,
+immune to forgetting). The **safe default is coarse**: hashing whole-module (or
+whole-crate) source over-invalidates on cosmetic edits but errs the safe way,
+and the *one real correctness trap is under-keying on dependencies* — a
+per-module hash that misses a changed cross-module helper serves a stale memo
+that lies. So either fold the **transitive in-crate deps** into the hash, or
+hash coarse enough to already include them. **An optional tightening** *(Joseph,
+2026-07-10, offered non-dogmatically)*: hash a *normalized IR* (tokenize/AST,
+drop comments + whitespace, still covering the deps) so behavior-neutral
+reformatting/comment edits stop churning the cache — **but reach for it only if
+the build-chain makes it clean**; if the toolchain makes IR extraction more
+awkward than it's worth, the coarse source-hash is perfectly fine. Either way it
+is a heuristic, not a semantic hash (renames still churn; behavior-equivalence is
+undecidable). Only where even that over-invalidates painfully, fall back to
+per-kernel version constants *colocated with the kernel* plus a tripwire probe
+that fails when kernel source changes without a bump. The asymmetry to hold when forced to choose:
 **over-keying costs recompute; under-keying costs truth. Over-key.**
 
 **Iteration runs share the canon store safely by construction.** A modified
