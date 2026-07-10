@@ -9,6 +9,7 @@
 //! save). Dependencies between systems become recursion in the pull; system #1
 //! (the spine) has none, so this increment is the loop at its simplest.
 
+use crate::erosion::{Fluvial, FluvialParams};
 use crate::gen;
 use crate::sphere::{CellId, Face};
 use crate::store::{Key, Store};
@@ -87,6 +88,65 @@ fn decode_f32(b: &[u8]) -> Vec<f32> {
         .collect()
 }
 
+/// Recipe version for the fluvial-erosion tier (system #2). Bump on any change
+/// to the erosion recipe.
+const EROSION_VERSION: &str = "erosion-2026-07-10a";
+
+/// The complete key for an eroded tile — including the *upstream* dependency's
+/// identity (the spine version, §12): if the spine changes, this key changes and
+/// the eroded tile recomputes.
+fn erosion_key(face: Face, level: u8, oi: u32, oj: u32, nx: usize, epochs: u32) -> Key {
+    Key::new("erosion-tile", EROSION_VERSION)
+        .field("face", face.index())
+        .field("level", level)
+        .field("oi", oi)
+        .field("oj", oj)
+        .field("nx", nx)
+        .field("epochs", epochs)
+        .field("spine", SPINE_VERSION)
+}
+
+/// System #2 — the fluvial-erosion tier, *composed on the spine through the
+/// store*. On a miss it **pulls its input surface from the spine** (which
+/// recurses into system #1 and memoizes it), seeds the fluvial kernel from that
+/// surface, runs `epochs`, and memoizes the eroded elevation field. This is the
+/// coupling property in miniature: one system depends on another *only* through
+/// a pulled, memoized, keyed surface — never shared mutable state.
+pub fn erosion_tile(
+    store: &Store,
+    face: Face,
+    level: u8,
+    oi: u32,
+    oj: u32,
+    nx: usize,
+    epochs: u32,
+) -> (Vec<f32>, Source) {
+    let key = erosion_key(face, level, oi, oj, nx, epochs);
+    if let Some(bytes) = store.get(&key) {
+        return (decode_f32(&bytes), Source::Hit);
+    }
+    // Dependency: pull the spine surface (memoized — recurses into system #1).
+    let (spine, _) = spine_tile(store, face, level, oi, oj, nx);
+    // Seed erosion from the pulled spine; any cell the kernel samples outside the
+    // tile (edge/halo) falls back to the prior — identical values, since the
+    // spine IS the prior at this rung.
+    let surf = |cell: CellId| -> f64 {
+        let (cf, ci, cj, _) = cell.to_face_ij();
+        if cf.index() == face.index() && ci >= oi && cj >= oj {
+            let (di, dj) = ((ci - oi) as usize, (cj - oj) as usize);
+            if di < nx && dj < nx {
+                return spine[dj * nx + di] as f64;
+            }
+        }
+        gen::surface_prior_m(cell, level)
+    };
+    let mut f = Fluvial::from_surface(face, level, oi, oj, nx, surf);
+    f.erode(&FluvialParams { epochs, ..Default::default() });
+    let eroded = f.h.clone();
+    let _ = store.put(&key, &encode_f32(&eroded));
+    (eroded, Source::Computed)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -140,6 +200,32 @@ mod tests {
         let s2 = Store::open(&dir).unwrap();
         let (_t, src) = spine_tile(&s2, face, 19, 100, 100, nx);
         assert_eq!(src, Source::Hit, "reopened store still holds the walked world");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn erosion_composes_on_the_spine_and_memoizes() {
+        // The coupling proof: erosion pulls the spine as a dependency (memoizing
+        // it), composes on it, and its own result memoizes — all through the
+        // store, no shared mutable state.
+        let dir = tmpdir("erosion");
+        let face = Face::from_index(2);
+        let (nx, epochs) = (32usize, 20u32);
+        let s = Store::open(&dir).unwrap();
+
+        let (e1, src1) = erosion_tile(&s, face, 19, 1000, 2000, nx, epochs);
+        assert_eq!(src1, Source::Computed, "first erosion pull computes");
+        assert_eq!(e1.len(), nx * nx);
+        assert!(e1.iter().all(|x| x.is_finite()), "eroded field is finite");
+
+        // Erosion's pull memoized its spine dependency (the recursion):
+        let (_sp, spine_src) = spine_tile(&s, face, 19, 1000, 2000, nx);
+        assert_eq!(spine_src, Source::Hit, "the spine dependency was memoized by erosion's pull");
+
+        // Re-pull erosion → hit, and deterministic:
+        let (e2, src2) = erosion_tile(&s, face, 19, 1000, 2000, nx, epochs);
+        assert_eq!(src2, Source::Hit);
+        assert_eq!(e1, e2, "a hit returns exactly the eroded bytes it computed");
         let _ = fs::remove_dir_all(&dir);
     }
 }
