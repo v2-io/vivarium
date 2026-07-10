@@ -1,12 +1,8 @@
 # vivarium — verified bibliography (relata-backed)
 
-*(Built 2026-07-03; PDF column updated 2026-07-09. Every entry below was verified
-against its publisher or archive page (title/authors/venue/year/DOI) and lives in
-relata with a `bib-fields` verification event by
+*(Built 2026-07-03; PDF column updated 2026-07-09. Every entry below was verified against its publisher or archive page (title/authors/venue/year/DOI) and lives in relata with a `bib-fields` verification event by
 `claude-fable-5-vivarium-bibliography`. Use `relata show <key>` for full metadata;
-PDFs are registered in relata's external store where we could legitimately obtain
-them. Only publisher-OA, arXiv, HAL/institutional repositories, and authors' own
-pages were used.)*
+PDFs are registered in relata's external store where we could legitimately obtain them. Only publisher-OA, arXiv, HAL/institutional repositories, and authors' own pages were used.)*
 
 > **Local reading copies (2026-07-09).** Seven of the manual-chase items were
 > obtained (author/HAL/eprints copies) and registered in relata. Git-ignored local
@@ -16,6 +12,9 @@ pages were used.)*
 > (`almeida-2012-improving`, `almeida-2013-applicability`). We hold no redistribution
 > rights — these dirs are git-ignored; relata's external store is the canonical
 > registration. PDF filenames are the relata keys.
+
+> [!warning]
+> **Relata is under heavy construction (2026-07-10) — new registrations DEFERRED until after the refactor.** Do not add new relata-backed rows below until relata stabilizes; track pending items here and revisit then. **Pending registrations:** **`cordonnier-2018-sculpting`** (CCB\*18 — *Sculpting Mountains: Interactive terrain modeling based on subsurface geology*, IEEE TVCG 24(5):1756–1769, 2018; metadata from `galin-2019-review`'s reference list; already *cited* in `DESIGN-SYSTEMS.md` but unregistered), plus any ⭐ items from `ref/research/frontier-scan-2026-07-10.md` promoted to citable use (e.g. Tzathas–Cordonnier 2024 analytical erosion, Braun–Deal 2023 threshold-SPIM, L'Ecuyer 2021 splittable RNG, Doehring 2024 AMR-multirate, Kang–Masud 2025 two-way coupling).
 
 ## Multiscale & heterogeneous methods (the `multiscale-methods.md` spine)
 
@@ -38,7 +37,7 @@ pages were used.)*
 | relata key | what it is | PDF |
 |---|---|---|
 | `bates-2010-simple` | local-inertial shallow water, the ancestor scheme (J. Hydrol. 387) | ❌ chase |
-| `almeida-2012-improving` | **the θ flux-smoothing scheme** (WRR 48, W05528) | ✅ (local; relata) |
+| `almeida-2012-improving` | **the $\theta$ flux-smoothing scheme** (WRR 48, W05528) | ✅ (local; relata) |
 | `almeida-2013-applicability` | where local-inertial is valid (WRR 49) | ✅ (local; relata) |
 | `dietrich-1989-sediment` | armor expresses sediment-supply *deficit* (Nature 340) | ❌ chase |
 | `grant-1997-critical` | Froude ≈ 1 self-organization in steep streams (WRR 33) | ❌ chase |
@@ -93,30 +92,21 @@ git-ignored local copies per the note at top): `berger-1984-adaptive`,
 
 ## Corrections found during verification
 
-- **`water.rs:350` misattributes the θ-scheme.** The comment says "θ flux
-  smoothing (de Almeida & Bates 2013)"; the θ-weighted flux scheme is
+- **`water.rs:350` misattributes the $\theta$-scheme.** The comment says "$\theta$ flux smoothing (de Almeida & Bates 2013)"; the $\theta$-weighted flux scheme is
   **de Almeida, Bates, Freer & Souvignet 2012** (WRR 48, W05528,
   `almeida-2012-improving`). The 2013 paper (`almeida-2013-applicability`)
-  is the *applicability* study. One-line comment fix, deliberately not
-  applied here (crates/ was under concurrent integration work at the time).
-- **"Schott 2023" disambiguated**: it is *Large-scale terrain authoring
-  through interactive erosion simulation*, ToG 42(5), DOI 10.1145/3592787.
+  is the *applicability* study. One-line comment fix, deliberately not applied here (crates/ was under concurrent integration work at the time).
+- **"Schott 2023" disambiguated**: it is *Large-scale terrain authoring through interactive erosion simulation*, ToG 42(5), DOI 10.1145/3592787.
   The adjacent 10.1145/3618350 is the same group's meandering-rivers paper —
   a nice future source for the bank-mechanics rung, but a different paper.
 - **All attributions in `multiscale-methods.md` checked out** (Berger &
   Oliger 1984; Brandt 1977; E & Engquist 2003; Kevrekidis et al. 2003; Gear
   & Wells 1984; Grabowski 2001 / Khairoutdinov & Randall 2001) — its
-  "unverified training memory" caveat is now discharged and the doc updated
-  with exact years.
+  "unverified training memory" caveat is now discharged and the doc updated with exact years.
 - Two title typos exist *on Project Euclid's own pages* ("Heterognous",
   "Mocroscopic") — trust the DOIs, not their HTML titles, if scraping.
 
 ## Not ingested, deliberately
 
-Web resources cited in `ref/geology/NOTES.md` that are not papers (Azgaar's
-Fantasy Map Generator notes, Experilous planet-generation blog, Gumin's
-WaveFunctionCollapse repo, Summerville/Aokana posts): real influences, wrong
-shape for a citation manager — they stay as URLs in the NOTES that use them.
-Deeper rungs we haven't built yet (bank-mechanics/meandering sources, glacial
-and aeolian process papers, Whittaker's biome classification) belong to a
-second sweep when those systems are actually being designed.
+Web resources cited in `ref/geology/NOTES.md` that are not papers (Azgaar's Fantasy Map Generator notes, Experilous planet-generation blog, Gumin's WaveFunctionCollapse repo, Summerville/Aokana posts): real influences, wrong shape for a citation manager — they stay as URLs in the NOTES that use them.
+Deeper rungs we haven't built yet (bank-mechanics/meandering sources, glacial and aeolian process papers, Whittaker's biome classification) belong to a second sweep when those systems are actually being designed.
