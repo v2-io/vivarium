@@ -192,9 +192,9 @@ fn cmd_build(rest: &[String]) -> i32 {
     let total = 6 * per_face * per_face;
     let mut done = 0;
     let mut computed = 0;
-    for phase in ["spine", "erosion"] {
-        if phase == "erosion" && epochs == 0 {
-            out.line("erosion skipped (--epochs 0)");
+    for phase in ["spine", "erosion", "water"] {
+        if phase != "spine" && epochs == 0 {
+            out.line("erosion + water skipped (--epochs 0)");
             break;
         }
         done = 0;
@@ -207,7 +207,8 @@ fn cmd_build(rest: &[String]) -> i32 {
                     let (oi, oj) = ((ti * TILE_NX) as u32, (tj * TILE_NX) as u32);
                     let src = match phase {
                         "spine" => world.spine_tile(face, level, oi, oj, TILE_NX).1,
-                        _ => world.erosion_tile(face, level, oi, oj, TILE_NX, epochs).1,
+                        "erosion" => world.erosion_tile(face, level, oi, oj, TILE_NX, epochs).1,
+                        _ => world.water_tile(face, level, oi, oj, TILE_NX, epochs, 200).1,
                     };
                     done += 1;
                     if src == Source::Computed {

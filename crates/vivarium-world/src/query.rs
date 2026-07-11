@@ -18,7 +18,7 @@
 
 use crate::erosion::{Fluvial, FluvialParams};
 use crate::gen;
-use crate::nomotheke::{EROSION, SPINE};
+use crate::nomotheke::{EROSION, SPINE, WATER};
 use crate::sphere::{CellId, Face};
 use crate::store::{Key, Store};
 
@@ -160,6 +160,66 @@ impl<'s> World<'s> {
         let _ = self.store.put(&key, &encode_f32(&eroded));
         (eroded, Source::Computed)
     }
+
+    /// The complete key for a water tile — upstream identity folded in through
+    /// both dependency versions plus the erosion run length its bed came from.
+    fn water_key(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize, erosion_epochs: u32, steps: u32) -> Key {
+        WATER
+            .key()
+            .field("seed", self.seed)
+            .field("face", face.index())
+            .field("level", level)
+            .field("oi", oi)
+            .field("oj", oj)
+            .field("nx", nx)
+            .field("eepochs", erosion_epochs)
+            .field("steps", steps)
+            .field("erosion", EROSION.version)
+            .field("spine", SPINE.version)
+    }
+
+    /// System #3 — conserved shallow water settled on the eroded bed, *composed
+    /// through the store*: pulls `erosion_tile` (memoized), runs a **fixed,
+    /// deterministic** number of kernel steps (a bounded fill — never
+    /// run-until-wall-clock, which would break build-order independence; the
+    /// analytic hydrological init and component E's convergence-ε replace the
+    /// fixed count later), and memoizes the standing-water depth field (m).
+    /// Rivers and lakes exist in the store after this — fill once, hit forever
+    /// (the property that retires the old testbench's re-fill-on-movement).
+    /// Rain/evaporation carry the documented ~10× cycle fudge (ASSUMPTIONS.md
+    /// "rain rate" / "water fill steps").
+    pub fn water_tile(
+        &self,
+        face: Face,
+        level: u8,
+        oi: u32,
+        oj: u32,
+        nx: usize,
+        erosion_epochs: u32,
+        steps: u32,
+    ) -> (Vec<f32>, Source) {
+        let key = self.water_key(face, level, oi, oj, nx, erosion_epochs, steps);
+        if let Some(bytes) = self.store.get(&key) {
+            return (decode_f32(&bytes), Source::Hit);
+        }
+        let (bed, _) = self.erosion_tile(face, level, oi, oj, nx, erosion_epochs);
+        let cell_m = crate::sample::cell_size_m(level, crate::planet::Planet::EARTH.radius_m) as f32;
+        // 2.0 m atmosphere store (ASSUMPTIONS "atmosphere store") + 10× rain,
+        // matching the testbench's proven settle configuration.
+        let mut sim = crate::water::WaterSim::new(face, level, (oi, oj), nx, cell_m, bed, 2.0);
+        let p = crate::water::WaterParams {
+            precip: 3.0e-4,      // default × 10 — the documented fill fudge
+            evaporation: 2.0e-4, // scaled with rain (same cycle)
+            ocean_evap: 1.0e-4,
+            ..Default::default()
+        };
+        for _ in 0..steps {
+            sim.step(&p);
+        }
+        let depth = sim.depth.clone();
+        let _ = self.store.put(&key, &encode_f32(&depth));
+        (depth, Source::Computed)
+    }
 }
 
 fn encode_f32(v: &[f32]) -> Vec<u8> {
@@ -259,6 +319,31 @@ mod tests {
         let (e2, src2) = w.erosion_tile(face, 19, 1000, 2000, nx, epochs);
         assert_eq!(src2, Source::Hit);
         assert_eq!(e1, e2, "a hit returns exactly the eroded bytes it computed");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn water_composes_on_erosion_and_memoizes() {
+        // System #3 through the same loop: water pulls the eroded bed
+        // (memoizing erosion AND spine on the way), settles deterministically,
+        // memoizes. The three-system dependency chain, proven end to end.
+        let dir = tmpdir("water");
+        let face = Face::from_index(2);
+        let (nx, eepochs, steps) = (32usize, 20u32, 60u32);
+        let s = Store::open(&dir).unwrap();
+        let w = World::new(&s, 0);
+        let (d1, src1) = w.water_tile(face, 19, 2000, 3000, nx, eepochs, steps);
+        assert_eq!(src1, Source::Computed);
+        assert_eq!(d1.len(), nx * nx);
+        assert!(d1.iter().all(|x| x.is_finite() && *x >= 0.0), "depths finite + non-negative");
+        assert!(d1.iter().any(|x| *x > 0.01), "somewhere there is standing water (sea or pond)");
+        // The chain memoized its dependencies:
+        assert_eq!(w.erosion_tile(face, 19, 2000, 3000, nx, eepochs).1, Source::Hit);
+        assert_eq!(w.spine_tile(face, 19, 2000, 3000, nx).1, Source::Hit);
+        // Re-pull hits and is byte-identical (deterministic bounded fill):
+        let (d2, src2) = w.water_tile(face, 19, 2000, 3000, nx, eepochs, steps);
+        assert_eq!(src2, Source::Hit);
+        assert_eq!(d1, d2);
         let _ = fs::remove_dir_all(&dir);
     }
 

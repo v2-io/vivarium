@@ -160,8 +160,23 @@ pub static EROSION: NomosDecl = NomosDecl {
     assumptions: &["stream-power `m`", "erosion `k_dt`", "erosion run length"],
 };
 
+/// System #3 — conserved shallow water settling on the eroded bed.
+pub static WATER: NomosDecl = NomosDecl {
+    name: "water-tile",
+    version: "water-2026-07-10a",
+    system: "surface-water",
+    approach: Approach::Relaxation,
+    earth_fidelity: Tier::Low, // real hydraulics, ~10x rain-cycle fudge, bounded (not converged) fill
+    physics: Tier::Med,        // local-inertial shallow water + Manning/Jarrett friction, kernel probe-verified
+    relation: "mechanistic-causal (virtual-pipes shallow water, conserved atmosphere/ocean stores), on a stand-in substrate; tiles are hydrologically ISOLATED until flux-BC (plan Phase-3) — no cross-tile rivers yet",
+    status: "kernel probe-verified (conserves_total_water, rain_pools_in_the_bowl, channel_profile in testbench); tile form runs a FIXED step count (no near-stationarity gate — the analytic init / component E replace it)",
+    deps: &[&EROSION],
+    bequests: &[Bequest { quantity: "standing water depth field (m)", conservation: Conservation::Conserved }],
+    assumptions: &["rain rate", "atmosphere store", "water fill steps", "SEA_LEVEL_M"],
+};
+
 /// Every nomos there is. A store root whose name is not here is a bug.
-pub static NOMOTHEKE: &[&NomosDecl] = &[&SPINE, &EROSION];
+pub static NOMOTHEKE: &[&NomosDecl] = &[&SPINE, &EROSION, &WATER];
 
 /// Look a nomos up by its key-stem name (the part before `@`).
 pub fn lookup(name: &str) -> Option<&'static NomosDecl> {

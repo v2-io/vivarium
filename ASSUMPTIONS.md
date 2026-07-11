@@ -23,6 +23,7 @@
 | axial tilt, radius, solar constant, year length | 23.44°, 6371 km, 1361 W/m², 365.25 d | `planet.rs` `Planet::EARTH` | **earth-ref** | fine as reference; needs *declaring* in the Phase-0 parameter block (TODO) rather than hardcoding |
 | vertical shell, voxel anchor | ~20 km, 0.5 m | DESIGN-MATERIAL §8 | **tuned** (decided anchors, rationale recorded) | stands unless a consumer breaks it |
 | planetary water inventory | **ABSENT** — no water-mass ledger exists at frame level; "sea level" is a datum, not a volume | — | **missing** | declare inventory (earth-ref modern: ocean ≈1.39×10⁹ km³ ≈ 2.7 km global-equivalent depth; atmosphere ≈0.001% ≈ 25 mm — *from memory, verify*). **Early Earth wants MORE: mean ocean depth ~5–6 km** (survey §5/§6 — live debate, direction robust); shallow oceans are the placeholder's load-bearing error |
+| water fill steps | fixed 200 steps @ dt 0.2 s, rain ×10 (`water-tile` nomos defaults) | `query.rs` | **arbitrary** (bounded fill, not converged — no near-stationarity gate) | analytic hydrological init seeds equilibrium; component E records convergence-ε |
 | rock-mass conservation | **NOT enforced** — erosion exports mass through tile outlets with no global ledger | `erosion.rs` | **missing** | conservation-honest spine (plan Phase-2's own stated ambition); flux-BC tiles make exports *accountable* |
 
 ## Known honest fudges (worldview testbench — documented, patch-local)

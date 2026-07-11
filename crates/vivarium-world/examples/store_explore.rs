@@ -17,8 +17,10 @@ use vivarium_world::spec::WorldSpec;
 use vivarium_world::sphere::Face;
 use vivarium_world::store::Store;
 
-/// Print an elevation tile as ASCII: `~` below sea level, a shaded ramp above.
-fn render(tile: &[f32], nx: usize) {
+/// Print a tile as ASCII: water (from the water nomos — the depth field is the
+/// truth, not an elevation threshold) as `~` (shallow) / `≈` (deep), land as a
+/// shaded ramp.
+fn render(tile: &[f32], water: &[f32], nx: usize) {
     const RAMP: &[u8] = b" .:-=+*#%@";
     let (mut lo, mut hi) = (f32::INFINITY, f32::NEG_INFINITY);
     for &h in tile {
@@ -29,10 +31,13 @@ fn render(tile: &[f32], nx: usize) {
     for j in 0..nx {
         let mut line = String::with_capacity(nx);
         for i in 0..nx {
-            let h = tile[j * nx + i];
-            let ch = if (h as f64) < SEA_LEVEL_M {
+            let d = water[j * nx + i];
+            let ch = if d > 2.0 {
+                '≈'
+            } else if d > 0.05 {
                 '~'
             } else {
+                let h = tile[j * nx + i];
                 let t = (((h - lo) / span) * (RAMP.len() - 1) as f32) as usize;
                 RAMP[t.min(RAMP.len() - 1)] as char
             };
@@ -40,7 +45,7 @@ fn render(tile: &[f32], nx: usize) {
         }
         println!("{line}");
     }
-    println!("  relief {lo:.0}..{hi:.0} m (sea {SEA_LEVEL_M:.0} m)");
+    println!("  relief {lo:.0}..{hi:.0} m (sea {SEA_LEVEL_M:.0} m; ~ <2 m standing water, ≈ deeper)");
 }
 
 fn main() -> std::io::Result<()> {
@@ -51,18 +56,19 @@ fn main() -> std::io::Result<()> {
     println!("vivium \"{}\" — seed {} (identity; the name is just a label)", spec.name, spec.seed);
 
     let face = Face::from_index(2);
-    let (level, nx, epochs) = (19u8, 48usize, 40u32);
+    let (level, nx, epochs, steps) = (19u8, 48usize, 40u32, 200u32);
 
     // A little walk: E, then back W to where we started. The return HITS.
     let path = [(2000u32, 3000u32), (2048, 3000), (2000, 3000)];
     for (n, &(oi, oj)) in path.iter().enumerate() {
         let (tile, src) = world.erosion_tile(face, level, oi, oj, nx, epochs);
+        let (water, _) = world.water_tile(face, level, oi, oj, nx, epochs, steps);
         let tag = match src {
             Source::Computed => "COMPUTED fresh (miss → eroded → memoized)",
             Source::Hit => "HIT — served from the store (persisted, no re-seed)",
         };
-        println!("\n=== step {n}: eroded tile at ({oi},{oj}), L{level} {nx}×{nx} — {tag} ===");
-        render(&tile, nx);
+        println!("\n=== step {n}: eroded+watered tile at ({oi},{oj}), L{level} {nx}×{nx} — {tag} ===");
+        render(&tile, &water, nx);
     }
 
     println!("\nvivium lives at {} — copy it and the world moves; delete it for a new seed.", dir.display());
