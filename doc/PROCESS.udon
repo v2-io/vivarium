@@ -104,7 +104,10 @@
       unquoted; attributes always before prose/children; raw blocks via
       !:lang: never triple-backtick fences; no @-references; never start a
       prose line with a bare colon; treat temporal-looking bare values as
-      unvalidated strings. Validate by parse:
+      unvalidated strings; QUOTE list items containing dots (paths,
+      filenames) — bare dotted items hit udon defect #13 (fix pending;
+      caught in this very file by the udon steward, 2026-07-11). Validate by
+      parse:
       !:sh:
         cd ~/src/udon/core && cargo run --example stdin_parse < FILE.udon
 
@@ -157,7 +160,7 @@
 
     |norm[flagged-file-routing]
       :kind prescription
-      :files [ref/research/est-tiw-dossier.md .archive/universal-biological-rhythms.md]
+      :files ["ref/research/est-tiw-dossier.md" ".archive/universal-biological-rhythms.md"]  ; quoted: bare items with dots hit udon defect #13 (fix pending)
       Two reference files trip the current Fable model-family safeguard
       (verified 2026-07-10 twice, again 2026-07-11). In Fable sessions: handle
       them by NAME only — git mv, path greps with the files excluded — and
