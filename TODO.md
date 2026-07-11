@@ -43,6 +43,18 @@ Joseph (2026-07-10, the session that ran out of context; landed here 2026-07-10 
 4. **Surface routing** = today's water-tile, re-forced by climate.
 5. **Groundwater/Darcy; ocean circulation** — existing DESIGN-SYSTEMS rows (Coriolis: gyres live in #5; storm rotation with weather; tile streams honestly Rossby-negligible).
 
+## Regula Terrestris v0 + the Ordinum — the conformance layer (specs the reservoir/thermal work; drives today)
+
+Design: `ref/research/regula-conformance-design.md` **v2** (2026-07-11 — naming settled: regula ✅ / **Regula Terrestris** ✅ / **Ordinum** ✅; LEXICON §1/§4/§5). Build order, thin:
+
+1. **`consumes` field on `NomosDecl`** — quantities in, as shared constants referenced by both bequests and consumes (typos fail the build; the permit-voiding prerequisite found 2026-07-11).
+2. **`regula.rs`** sibling to the nomotheke: `Slot` / `Permit { absent_slots, void_on, note }` / `Regula`; **`TERRESTRIS_V0`** — three slots filled; grandfathered dated permits: moon, magnetosphere×solar-wind, **atmosphere (retirement = the reservoir layer — the rain-without-a-sky specimen written down at last)**.
+3. **Ordinum v0** derived from PHASES.md for the target phase only (later phases = horizon, never failures); PHASES.md stays the prose source (its reportatio) until codification completes, then archives.
+4. Conformance report into `vivarium status` (conformance-to-pin + gap-to-head); voided-permit check in tests.
+5. Later, when it earns its keep: `vivarium audit --add <nomos>` — the requisite-closure dry-run (the anti-whim planner).
+
+**First forced decision the Terrestris audit will surface (design doc §7.6, Joseph's call):** Phase-2's abiogenesis-through-photosynthetic-sea-life charge vs our zero biosphere — declared low-tier reservoir-grade stand-in (photosynthesis as box-flux; doubles as the first non-field representation kind) or an explicit dated permit.
+
 ## The thermal spine — two parallel nomoi, minor boundary exchange (Joseph-confirmed, 2026-07-10)
 
 1. **`mantle-thermal`** — zero-D thermal-evolution ODE: radiogenic decay (U/Th/K — decay constants exact; *abundances are a Phase-0 charge*, tying element conservation into the spine) vs parameterized convection (Nu–Ra; regime-dependent per Cawood's stagnant/squishy/plate modes). Initial $T_p$ page-read (Dong Table 1). **Fated plume/upwelling noise about the secular trend** = the uplift nomos's source term, principled as stochastic realization of a lawful curve (Chowdhury 2021's driver). Sun-irrelevant (flux ratio ~4000×).
@@ -54,9 +66,9 @@ Joseph (2026-07-10, the session that ran out of context; landed here 2026-07-10 
 
 The next spine rung is the **Phase-2 Bequest**, not a mid-Abyssal snapshot: a *submerged* world — generous water over **~modern-depth-or-shallower basins** (corrected 2026-07-10: thick buoyant mafic seafloor; basins deepen over time; inventory ~1.3 OM contested) over seeded-asymmetry crust, ~0% land beyond transient volcanic specks ("meaningful non-volcanic land above sea level" is a #gate charge **Abyssal must deliver** via uplift/proto-tectonic nomoi, never an initial condition — PHASES.md). The early-continents survey's §6 table (land 2–15%, compressed bimodal, relief 3–5 km) is the **mid-Abyssal verification target** those processes must *produce* — a Record-style check partway through the phase. Sea level derived from a declared water inventory (ASSUMPTIONS entry), retiring `SEA_LEVEL_M`. Element/stable-chemical abundances belong to the same P0/P2 declaration work and get their own conservation ledger rows when reservoirs exist.
 
-## Cross-member: nomos → concept-matrix row
+## Cross-member: nomos / regula / ordinum → concept-matrix rows
 
-**nomos/nomoi** settled 2026-07-10 (LEXICON §2). The program-level `charter/concept-matrix.md` should gain a row for the executable law-unit (vivarium: nomos; ASF: nearest = the authored $T$/$\theta$ machinery; phil: nomothetic) — a root-session/cross-member edit, queued rather than done from inside the member.
+**nomos/nomoi** settled 2026-07-10; **regula / Regula Terrestris / Ordinum** settled 2026-07-11 (LEXICON §1/§2/§5). The program-level `charter/concept-matrix.md` should gain rows for the executable law-unit (vivarium: nomos; ASF: nearest = the authored $T$/$\theta$ machinery; phil: nomothetic), the world-conformance profile (regula), and the codified phase floor (ordinum) — a root-session/cross-member edit, queued rather than done from inside the member. Note also: "regula" here ≠ the program's CHARTER-DRAFT (the collision that forced the rename — worth a matrix footnote so no one re-collides).
 
 ## Phase 0 — declare the Ante-mundane parameter block
 
@@ -70,11 +82,23 @@ Phase 1's charges (tilt, spin, insolation rhythm) exist as exact code (`planet.r
 
 The CLI takes an explicit `<dir>`; the globe defaults to `~/.cache/vivarium/globe-world`; `store_explore` uses `$TMPDIR/vivarium-store-explore`. A fresh user running all three sees three different worlds. Pick one convention (likely: a `~/.local/share/vivarium/<name>` home + `VIVARIUM_WORLD` respected everywhere) when the FP explorer lands. (Don't silently move Joseph's existing `globe-world` — first-light lives there.)
 
+## Kernel physics on deck (worldview-testbench era — still live, relocated from ORIENTATION 2026-07-11)
+
+The kernels are canonical even though the testbench architecture is donor-only; these carry into the frame's fine-tier nomoi (#10) and beyond. Full context in the referenced docs, not here:
+
+- **Sediment coupling** (Joseph, 2026-07-02): time-averaged discharge → erosion's $A$; deposition into slack water → oxbows, lake→meadow fill — the honest water↔erosion core, currently off.
+- **Per-material erodibility** — the strata-honoring rung (DESIGN-SYSTEMS §Cordonnier/Braun: CCB\*18 is the published prior art; → Bryce hoodoos).
+- **Highest-leverage three** by visible-truth-per-effort: grain-size split + Stokes settling · bank mechanics (Mohr–Coulomb undercut → meandering) · Darcy lateral groundwater (springs). DESIGN-SYSTEMS §Sediment inventory.
+- **Analytic hydrological init** — solve the equilibrium instead of the ~2 h deluge fill (`ref/erosion-port/NOTES.md` §Next); also the principling path for the water-fill ASSUMPTIONS row (convergence-ε via component E).
+- **Water parallelism** — gather rewrite → rayon 5–8× → wgpu compute 20–40×, CPU-reference determinism policy (`ref/research/water-parallelism.md`).
+- **⚖ Parked physics decision (Joseph):** Fischer-form eddy diffusivity (`ref/research/eddy-fischer-experiment.diff`) + whether armor should form under supply-rich transients at all (Dietrich 1989: armor expresses supply *deficit* — the `armor_regimes` probe's expectation may be the wrong part).
+
+## Explorer intents (Joseph, 2026-07-02 — inherited by the FP explorer, #11)
+
+Stated for the testbench, but they are intents about *experiencing the world* and bind the frame-native explorer's design (some partially landed in worldview — re-triage when #11 is designed): deepen the sediment loop (suspension/sealing/deposition) · reconcile column state with DESIGN-MATERIAL's strata Column · fine nearby water correctly SEAMED to coarser tiers (the nested water telescope) · HUD clarity + toggleable legend · water transparency · pawn visible even under deep water · WASD step/speed precision · water visualization vs velocity/pitch/suspension · ground visualization vs column state (saturation, exfiltration) · wet-ground slumping (saturated banks fail) · **legible, steerable time regimes** (in-world clock vs wall clock, sim rate vs framerate — pre-history vs current sim).
+
 ## Session housekeeping
 
-- **The 2026-07-09 batch is committed** (`9129ba5`, 2026-07-10): lexicon consolidation, PDF/relata work, and the architecture set (ARCHITECTURE v0.3,
-  `DESIGN-REDUX.md` §12, `ref/research/{framework-to-status-quo,multiscale-seams,abyssal-parity-plan}.md`,
-  `SUPERSEDED.md`, `TODO.md`). The `tmp.md` / `tmptmp.md` strays are gone.
 - `DESIGN-REDUX.md` still uses "checkpoint" in four runtime-durability sites —
   decide *memo* vs a distinct persist-boundary name (LEXICON §5 collision ledger,
   `SUPERSEDED.md`). **Still open.**
