@@ -1,5 +1,15 @@
 # Early continents & deep-time hypsometry — survey reference
 
+> [!note]
+> **§5/§6 corrected 2026-07-10** after page-level primary reads of all five key
+> sources (`ref/research/pdf-notes/` — Flament 2008, Dong 2021, Chowdhury 2021,
+> Chowdhury 2025, Cawood 2022). Key reversal: the earlier "deepen basins to
+> ~5–6 km" target is **retracted** — the majority synthesis is *shallow-or-modern
+> basins that deepen over time*, with the water world achieved by low land +
+> generous water. Inventory and basin depth are independent levers. Two errata:
+> Bindeman is not an author of the PNAS-2021 paper; Chowdhury-2025 and
+> Cawood-2022 share authors (not independent anchors).
+
 *Literature legwork for the planet-generation system: what Earth's earliest
 continents and land actually looked like, in the quantities a world-builder
 must set. Compiled 2026-07-10 (Opus survey pass).*
@@ -246,12 +256,12 @@ rather than modern Earth. Confidence tags as above. Where a range is given, the
 
 | Quantity | Early-Earth target | Modern Earth (for contrast) | Confidence | Source anchor |
 |---|---|---|---|---|
-| **Emergent land fraction** | **2–15%** (central ~3–10%); Flament floor ~2–3%, Korenaga ceiling ~20–40% if crust-early/ocean-shallow | 29% | **Med** (real 10×+ model spread) | Flament 2008; Korenaga 2021 |
+| **Emergent land fraction** | **2–15%** by era: <few% pre-3.2 Ga → >10% by 3.0 → ~30% by 2.5 (Chowdhury 2025 Fig 6b); Flament floor **1.8–3.1% [V page-read]** (MC medians 1.79–2.84%), Korenaga ceiling ~20–40% | 29% | **Med-High** (floor now page-verified) | Flament 2008 [V]; Chowdhury 2025 [V]; Korenaga 2021 |
 | **Continental freeboard** | **Low or slightly negative** — continental platform mode *at or just below* sea level (drowned platforms), not +0.5 km | +0.5 km (platform mode ≈ +100 m) | **Med-High** | Flament 2008; Chowdhury 2025 |
-| **Mean ocean depth** | **~5–6 km** (deeper than modern; ~50%+ more water) | ~3.7 km | **Med** | Korenaga 2021; Dong 2021 |
-| **Max relief (peak-to-trough)** | **~3–5 km** total; no >5 km peaks, no >~6 km trenches | >8 km (locally ~20 km peak-to-trench) | **High** | Sci. Adv. densification 2024 |
+| **Basin depth & water volume** (two INDEPENDENT levers — do not conflate) | **Basins ~modern or shallower** (thick buoyant mafic seafloor raises the floor; basins *deepen* over time — Chowdhury 2025, Flament, Cawood, vs Korenaga's minority deep-basin picture). **Water volume generous but contested**: Dong central ~1.3 OM (spread 0.8–2.3), Chowdhury-2025 ref model ~+50%, Flament constant, Cawood silent | ~3.7 km; 1.34×10⁹ km³ (Eakins & Sharman 2010) | **Med** (direction of *land-low* robust; volume live debate) | Chowdhury 2025 [V]; Flament [V]; Dong [V]; Cawood [V] |
+| **Max relief (peak-to-trough)** | **~3–5 km** total — and NOTE: subaerial **land stood only ~1–1.5 km, >2 km unlikely** (hot-geotherm crustal strength; Chowdhury 2025) — 3–5 km is peak-to-trough incl. basins, never mountain height | >8 km (locally ~20 km peak-to-trench) | **High** | Sci. Adv. 2024; Chowdhury 2025 [V] |
 | **Continental crust thickness** | **~30–50 km** where thick (needs ~45–50 km to emerge); thinner/weaker elsewhere | ~40 km avg, ~70 km under orogens | **Med-High** | Korenaga 2021; Sci. Adv. 2024; PNAS 2021 |
-| **Oceanic crust thickness** | **~25–35 km** (thick, hot-mantle melting) | ~7–10 km | **Med** | Sci. Adv. 2024 |
+| **Oceanic crust thickness** | **~20–35 km** (thick, hot-mantle melting; Cawood 20–30, others 25–35) | ~7–10 km | **Med** | Sci. Adv. 2024; Cawood 2022 [V] |
 | **Hypsometry shape** | **Compressed / mostly-submerged**: two crustal populations but a *narrow* elevation gap with sea level *above* the continental mode. Reads as "one drowned hump + a shallow-amplitude deep basin," NOT a sharp modern bimodal split, and NOT a spike sitting exactly at sea level in a shallow pan | Sharp bimodal: platform mode +0.1 km, abyssal mode −4.7 km | **Med** | §2 synthesis |
 | **Dominant landforms** | Volcanic-constructional: basaltic/oceanic plateaus, greenstone piles, TTG domes, isolated volcanic islands, magmatically-thickened proto-cratons. **No collisional fold-mountain belts** | Full plate-tectonic suite incl. collisional orogens, deep trenches, passive-margin shelves | **Med** | Korenaga 2021; PNAS 2021 |
 | **Timing of "modern-like" bimodality/freeboard** | Not before **~2.5–2.2 Ga** | — | **High** | Chowdhury 2025; Flament 2008 |
@@ -265,19 +275,25 @@ too shallow):**
   The placeholder gets the right *shape* for the wrong *reason*: it's unimodal
   because the ocean is a shallow pan (no abyssal population), not because
   continents are flooded into a deep ocean.
-- **Shallow oceans are the load-bearing error.** Fix ocean depth first
-  (→ ~5–6 km) and *then* a low-land, low-freeboard, subdued-relief world becomes
-  a genuinely faithful early-Earth analogue. Deepening the basins will also
-  naturally pull an abyssal population into existence, converting the accidental
-  unimodal into an *intentional* compressed-bimodal.
+- **The water shortage is the load-bearing error — not basin depth** *(corrected
+  2026-07-10 by the primary reads; the first version of this bullet said "deepen
+  to 5–6 km," which was Korenaga's minority geometry)*. The placeholder's ~0.3 km
+  pan is wrong for every era, but the fix is **low land + generous water over
+  ~modern-depth basins**: derive sea level from a declared inventory (Flament
+  Eqs 2–4 are the published template), cap subaerial relief ~1–1.5 km, and the
+  drowned compressed-bimodal emerges honestly. Emergence through the Abyssal
+  phase is then **crust-side** (thickening/maturation past ~40–45 km — Cawood's
+  curve: ~40 km @3.8 Ga → ~55 km @3.2 Ga; master lever = secular mantle
+  cooling), not sea-level-side.
 
 ---
 
 ## 7. Rejected / uncertain / needs-verification
 
-- **The exact 2–3% (Flament) figure** — quoted consistently across secondary
-  sources but I did **not** read it off Flament's own hypsometry figure. Treat
-  the *direction* (mostly submerged) as robust, the *precise percent* as [A].
+- ~~**The exact 2–3% (Flament) figure** … [A]~~ — **RESOLVED 2026-07-10 [V]**:
+  page-read at 1.8–3.1% deterministic / MC medians 1.79–2.84%; the 2–3-vs-12%
+  spread's driver is max continental elevation (~3.6 km anorogenic cap vs
+  modern ~9 km). `pdf-notes/flament-2008.md`.
 - **Korenaga's 20–40% early-land** — genuinely contested; depends on accepting
   early (Hadean) near-complete crust formation, which the Taylor–McLennan /
   sediment-chemistry camp rejects. Present it as the **high end of a bracket**,
