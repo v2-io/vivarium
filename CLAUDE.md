@@ -52,7 +52,7 @@ helpfulness-as-costume, strengthen-before-soften, mark guesses as guesses, no
 "100%/comprehensive" overclaim, peer voice when delegating. This repo is early
 and speculative — say "I don't know" freely; most of this is hypothesis.
 
-**The assumptions ledger.** [`ASSUMPTIONS.md`](ASSUMPTIONS.md) is the canonical accounting of every unprincipled constant in the nomoi. **Touch a constant, touch the ledger** — an undeclared magic value is latent, *undiscoverably* unLawful (Joseph, 2026-07-10); a declared placeholder is an honest rung.
+**The assumptions ledger + the nomotheke.** [`ASSUMPTIONS.md`](ASSUMPTIONS.md) is the canonical accounting of every unprincipled constant in the nomoi; the **nomotheke** (`crates/vivarium-world/src/nomotheke.rs`) is where every nomos *declares* its epistemic tags, deps, bequests (with conservation claims), and assumption anchors — declarations mint the store keys, the ledger compiles into the tests, and derived quality is a weakest-link fold. **Touch a constant, touch the ledger; add or change a nomos, declare it** — an undeclared magic value is latent, *undiscoverably* unLawful (Joseph, 2026-07-10); a declared placeholder is an honest rung. README §"Epistemic honesty is enforced in code" is the front-door statement; ARCHITECTURE §9 items 5–6 are the workflow.
 
 **Git workflow.** This is Joseph's solo research repo; work goes **directly on
 `main`**. Do **not** create branches, worktrees, or PRs unless Joseph explicitly

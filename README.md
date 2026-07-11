@@ -20,6 +20,34 @@ things **under observation**. The project is two things wearing one skin —
 
 That duality is the point, not an accident.
 
+## Epistemic honesty is enforced in code, not culture
+
+Every algorithm that shapes a world — a **nomos** (pl. *nomoi*): one keyed,
+versioned, executable article of world-law — must *declare itself* in the
+**nomotheke** (`crates/vivarium-world/src/nomotheke.rs`): its epistemic tags
+(Earth-fidelity and physics tiers, relation, verification status), its
+dependencies, its **bequests** (each with an explicit conservation claim —
+"are we conserving mass?" is a lookup, never archaeology), and its
+**assumptions** (anchors into [`ASSUMPTIONS.md`](ASSUMPTIONS.md), the canonical
+magic-constant ledger). The enforcement is structural:
+
+- **Declarations mint the store keys** — an undeclared algorithm has no path
+  into a world's law namespace.
+- **Derived quality is computed, not asserted**: a weakest-link fold over the
+  dependency graph, so good physics run on a placeholder yields
+  placeholder-grade state, and the `vivarium status` pyramid prints both
+  (declared/derived) per nomos — the honesty column.
+- **The ledger compiles into the test suite** — a magic constant renamed out
+  from under a nomos fails the build's tests. An unprincipled value is not the
+  sin; an *unaccounted* one is: undeclared constants are latent,
+  *undiscoverably* unLawful.
+- **Declarations pair with probes** (`crates/vivarium-world/examples/` —
+  renderer-free instruments asserting invariants nature guarantees): the
+  declared tier is a falsifiable claim, and the probe is what would convict it.
+
+By forcing the epistemology to be asserted, it becomes strictly auditable and
+falsifiable — audit is a query over the store, not a review of intentions.
+
 ## Status (2026-07-10)
 
 **The principled frame is standing and growing.** Engine = Bevy (decided
