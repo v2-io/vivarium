@@ -21,7 +21,12 @@
 //!
 //! Run: `cargo run --release -p vivarium-globe`
 //! Controls: drag spin (inertia) · wheel / -/= zoom · arrows spin · [ ] level ·
-//!           A auto-level · X relief factor · R reset · Esc quit.
+//!           A auto-level · X relief factor · ,/. scrub solar hour · N/M scrub
+//!           day-of-year · P play the diurnal cycle · Y headlight-vs-ephemeris ·
+//!           R reset · Esc quit. The sun is the REAL Phase-1 ephemeris by
+//!           default (terminator, seasons, polar day/night from planet.rs's
+//!           identities); the ethereal viewer scrubs time freely — a pure view
+//!           freedom, since the analytic regime makes any moment queryable.
 //! Env: VIVARIUM_WORLD (world dir = manifest + store; default
 //!      ~/.cache/vivarium/globe-world — a fresh seed is minted and *persisted*
 //!      on first run, deterministic ever after; point at another world dir to
@@ -478,6 +483,46 @@ impl Default for Orbit {
     }
 }
 
+/// Ethereal time-freedom over the Phase-1 sky (Joseph's ask, 2026-07-10). The
+/// analytic regime means ANY moment is queryable — the ephemeris is a pure
+/// function of (day, hour), so scrubbing time is a *view* freedom touching no
+/// world state ("declare causally, materialize lazily" cashing out as UX). An
+/// ethereal exo viewer sees the sun even though the in-world Phase-2 sky is
+/// diffuse (the clouds part at Phase 4): noumenal access, honestly labeled.
+#[derive(Resource)]
+struct SunEphemeris {
+    /// Day of year, 0..365.25 — 0 = northern vernal equinox (planet.rs convention).
+    day: f32,
+    /// Solar time at longitude 0, hours 0..24.
+    hour: f32,
+    /// Diurnal playback, solar hours per real second (0 = paused).
+    play: f32,
+    /// The old camera-following light (a stated view convenience, no day/night
+    /// claim) — Y toggles back to it.
+    headlight: bool,
+}
+
+impl Default for SunEphemeris {
+    fn default() -> Self {
+        // June-solstice-ish mid-morning: the obliquity is plainly visible in the
+        // terminator's slant and the sunlit pole.
+        SunEphemeris { day: 91.0, hour: 10.0, play: 0.0, headlight: false }
+    }
+}
+
+/// World-frame unit vector toward the sun — the same declination/hour-angle
+/// identities as `planet.rs::insolation`/`sun_direction_enu` (kept in lockstep;
+/// the subsolar point is where the local hour angle is zero, i.e. lon =
+/// 2π(0.5 − day_fraction)), on the +Y-pole frame `Geo` uses.
+fn sun_world_dir(eph: &SunEphemeris) -> Vec3 {
+    let tilt = Planet::EARTH.axial_tilt_rad;
+    let yf = (eph.day as f64 / 365.25).rem_euclid(1.0);
+    let decl = tilt * (std::f64::consts::TAU * yf).sin();
+    let df = (eph.hour as f64 / 24.0).rem_euclid(1.0);
+    let slon = std::f64::consts::TAU * (0.5 - df);
+    Vec3::new((decl.cos() * slon.cos()) as f32, decl.sin() as f32, (decl.cos() * slon.sin()) as f32)
+}
+
 /// Stats of the last landed build, for the HUD.
 struct BuiltStats {
     level: u8,
@@ -581,6 +626,7 @@ fn main() {
         .insert_resource(BuildRx(Mutex::new(res_rx)))
         .insert_resource(WorldIdent { name: spec.name, seed: spec.seed })
         .insert_resource(TilesRes::default())
+        .insert_resource(SunEphemeris::default())
         .add_systems(Startup, setup)
         .add_systems(Update, (input_update, level_update, apply_builds, camera_update, hud_update, maybe_screenshot))
         .run();
@@ -616,7 +662,7 @@ fn setup(mut commands: Commands) {
         HudText,
     ));
 
-    println!("[globe] drag spin · wheel zoom · [ ] level · A auto-level · X relief · R reset · Esc quit");
+    println!("[globe] drag spin · wheel zoom · [ ] level · A auto-level · X relief · ,/. hour · N/M day · P play · Y headlight · R reset · Esc quit");
 }
 
 /// Google-Earth verbs: drag spins (with inertia), wheel zooms toward the surface.
@@ -628,6 +674,7 @@ fn input_update(
     mut wheel: MessageReader<MouseWheel>,
     mut orbit: ResMut<Orbit>,
     mut state: ResMut<GlobeState>,
+    mut eph: ResMut<SunEphemeris>,
     mut exit: MessageWriter<AppExit>,
 ) {
     let dt = time.delta_secs().max(1e-4);
@@ -676,6 +723,36 @@ fn input_update(
         orbit.pitch -= key_rate;
     }
     orbit.pitch = orbit.pitch.clamp(-1.55, 1.55);
+
+    // Ethereal time scrub (the Phase-1 sky): ,/. hour · N/M day · P play · Y headlight.
+    if keys.pressed(KeyCode::Comma) {
+        eph.hour -= 6.0 * dt;
+    }
+    if keys.pressed(KeyCode::Period) {
+        eph.hour += 6.0 * dt;
+    }
+    if keys.pressed(KeyCode::KeyN) {
+        eph.day -= 40.0 * dt;
+    }
+    if keys.pressed(KeyCode::KeyM) {
+        eph.day += 40.0 * dt;
+    }
+    if keys.just_pressed(KeyCode::KeyP) {
+        eph.play = if eph.play == 0.0 { 2.0 } else { 0.0 };
+    }
+    if keys.just_pressed(KeyCode::KeyY) {
+        eph.headlight = !eph.headlight;
+    }
+    eph.hour += eph.play * dt;
+    while eph.hour >= 24.0 {
+        eph.hour -= 24.0;
+        eph.day += 1.0;
+    }
+    while eph.hour < 0.0 {
+        eph.hour += 24.0;
+        eph.day -= 1.0;
+    }
+    eph.day = eph.day.rem_euclid(365.25);
 
     // Zoom: exponential in altitude — each notch takes the same *fraction* of the
     // remaining distance to the surface, so the approach never overshoots.
@@ -791,6 +868,7 @@ fn apply_builds(
 
 fn camera_update(
     orbit: Res<Orbit>,
+    eph: Res<SunEphemeris>,
     mut cam: Query<&mut Transform, (With<GlobeCam>, Without<SunLight>)>,
     mut sun: Query<&mut Transform, (With<SunLight>, Without<GlobeCam>)>,
 ) {
@@ -804,9 +882,16 @@ fn camera_update(
     if let Ok(mut c) = cam.single_mut() {
         *c = t;
     }
-    // The light rides the camera, offset up-right, so the viewed hemisphere is lit.
     if let Ok(mut s) = sun.single_mut() {
-        s.rotation = t.rotation * Quat::from_rotation_y(0.55) * Quat::from_rotation_x(-0.45);
+        if eph.headlight {
+            // The old view convenience: light rides the camera, viewed side lit.
+            s.rotation = t.rotation * Quat::from_rotation_y(0.55) * Quat::from_rotation_x(-0.45);
+        } else {
+            // The REAL sky: light travels from the subsolar direction toward the
+            // planet, so the terminator, the seasons, and polar day/night are the
+            // planet's actual Phase-1 rhythms, not stagecraft.
+            *s = Transform::default().looking_to(-sun_world_dir(&eph), Vec3::Y);
+        }
     }
 }
 
@@ -833,6 +918,7 @@ fn pick_direction(camera: &Camera, cam_gt: &GlobalTransform, cursor: Vec2, r: f3
 
 fn hud_update(
     orbit: Res<Orbit>,
+    eph: Res<SunEphemeris>,
     state: Res<GlobeState>,
     ident: Res<WorldIdent>,
     tiles: Res<TilesRes>,
@@ -922,7 +1008,20 @@ fn hud_update(
             )
         }
     };
-    text.0 = status;
+    let yf = (eph.day as f64 / 365.25).rem_euclid(1.0);
+    let decl_deg = (Planet::EARTH.axial_tilt_rad * (std::f64::consts::TAU * yf).sin()).to_degrees();
+    let sun_line = if eph.headlight {
+        "sun: HEADLIGHT (view convenience, no day/night claim) | Y = real ephemeris".to_string()
+    } else {
+        format!(
+            "sun: day {:.0}/365 {:04.1}h @lon0 | subsolar lat {:+.1} deg (axial tilt 23.44 deg) | {} | ,/. hour N/M day P play Y headlight",
+            eph.day,
+            eph.hour,
+            decl_deg,
+            if eph.play != 0.0 { "PLAYING" } else { "paused" },
+        )
+    };
+    text.0 = format!("{status}\n{sun_line}");
 }
 
 /// The worldview verification idiom: VIVARIUM_AUTOSHOT=1 waits for the first

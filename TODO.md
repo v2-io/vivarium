@@ -37,6 +37,10 @@ Joseph (2026-07-10, the session that ran out of context; landed here 2026-07-10 
 
 **nomos/nomoi** settled 2026-07-10 (LEXICON §2). The program-level `charter/concept-matrix.md` should gain a row for the executable law-unit (vivarium: nomos; ASF: nearest = the authored $T$/$\theta$ machinery; phil: nomothetic) — a root-session/cross-member edit, queued rather than done from inside the member.
 
+## Phase 0 — declare the Ante-mundane parameter block
+
+Phase 1's charges (tilt, spin, insolation rhythm) exist as exact code (`planet.rs`); Phase 0's charges are mostly **implicit hardcoded constants** (Earth radius, tilt 23.44°, solar constant; orbit/mass/abundances/moon not declared anywhere). Per *declare causally, materialize lazily* (PHASES design notes), the P0 Bequest ("the constants themselves — the box") wants an explicit declared parameter block — law-side identity (manifest identity bucket or a `planet` nomos-version), not view-side. Neither phase is *gated* yet (no phase machinery — fine until component E / the first freeze). Found 2026-07-10 while wiring the globe's sun ephemeris.
+
 ## Component E — time-indexed stage chains (un-drop decision, then build)
 
 `framework-to-status-quo.md` §4's component **E** (the settle sequence as explicit chained nomoi with time-indices, each stage a memo with its recorded convergence-ε) did **not** carry into `abyssal-parity-plan.md`'s six phases, and no deliberate deferral is recorded — it fell through the consolidation crack (found 2026-07-10). It keeps resurfacing as load-bearing: it is what makes "the beginning of Phase 3.3" *addressable* (beacons need it), what makes intermediate stages monitorable by explorers, what the "watch erosion happen while floating downstream" experience plays back, and its recorded ε *is* the unLawfulness budget (LEXICON §7.2) as data. Recommendation: treat it as plan-Phase-2½ — build it when the builder daemon's stage progression first needs a second time-index.
