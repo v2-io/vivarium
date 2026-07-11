@@ -30,7 +30,7 @@
       Every document has exactly one home, chosen at creation: root = front
       doors (README, CLAUDE, ORIENTATION, TODO) + the ethics/moratorium unit
       (ASF.md, ETHICS.md) + the three ledgers (LEXICON, SUPERSEDED, ASSUMPTIONS);
-      doc/ = durable thinking (ARCHITECTURE + PHASES; design/ plan/ theory/);
+      doc/ = durable thinking (ARCHITECTURE; design/ plan/ theory/); the codified phase floor is tabularium/*.ordinum.udon;
       ref/ = true reference, consulted not onboarded; msc/ = session
       reflections; .archive/ = accounted-for retirements. A new doc that fits
       none of these is a taxonomy question to raise, not a root file to drop.

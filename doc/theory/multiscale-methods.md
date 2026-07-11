@@ -103,7 +103,7 @@ Ordered roughly by how much micro physics each keeps alive:
   schedule. The coupler — regridding, averaging, lag conventions — is a
   first-class artifact, often the hardest one. *Vivarium:* the phase
   structure is this at world scale; **a phase-transition is a coupler
-  interface** (`doc/PHASES.md` design notes say so); DESIGN-SYSTEMS' coupling bands are
+  interface** (`.archive/PHASES.md` design notes say so); DESIGN-SYSTEMS' coupling bands are
   the schedule.
 - **Multigrid** (Brandt 1977). Not model reduction — solver acceleration:
   the same equation on a grid hierarchy, using coarse grids to kill

@@ -56,7 +56,7 @@
       |rel :to charge :kind must-deliver
       |rel :to promise :kind hands-forward
       |rel :to phase-gate :kind bounded-by
-      |source doc/PHASES.md
+      |source tabularium/terrestris.ordinum.udon
 
     |term[epoch]
       :status settled
@@ -77,7 +77,7 @@
       :since 2026-07-04
       The regime-change EVENT at a phase-gate. Incremental, never a wholesale
       swap: most systems perpetuate, a few sunset, a larger group of new and
-      finer-scale systems spins up at the gate (doc/PHASES.md Design notes).
+      finer-scale systems spins up at the gate (.archive/PHASES.md Design notes).
       It leaves the largest memo, and it promotes converged state into Law.
       |rel :to law :kind revises
       |rel :to memo :kind leaves
@@ -135,7 +135,7 @@
       ancient ongoing processes as clutter). So the promises IN FORCE at phase
       N = union(promises 0..N) minus union(defeasances 0..N). Canonical
       instance: Phase 6's decomposers void Phase 5's coal-window limit.
-      |confused PHASES.md's "sunset" (a system stopping) — sunset is the
+      |confused .archive/PHASES.md's "sunset" (a system stopping) — sunset is the
         friendly gloss for the regime case; defeasance is the precise
         mechanism, and it pairs with the property word "defeasible".
       |rel :to promise :kind voids
@@ -178,7 +178,7 @@
       :forms full formal name Ordinatio Ordinum; keyed ordinum@version
       The codified, pinned, versioned phase-expectations artifact — the
       per-phase Charge/Promise floor as DATA, which every regula cites as the
-      floor it may extend but never silently undercut. doc/PHASES.md is its
+      floor it may extend but never silently undercut. .archive/PHASES.md is its
       reportatio (the prose working text the authorized version compiles
       from — the medieval ordinatio-vs-reportatio carve, Scotus precedent) and
       archives once codification lands. A PHASES revision yields a NEW ordinum
@@ -498,7 +498,7 @@
         rejection sampling; splits into same-seed run-further vs vary-seed
         across trajectories, and only the latter touches cache-invalidation).
         |carve replaced "Incubation / Fine-tune-setup" — SUPERSEDED.md; echoes
-          doc/PHASES.md Phase 1 ("brooded upon").
+          tabularium/terrestris.ordinum.udon Phase 1 ("brooded upon").
 
       |term[interventional-scaffolding]
         :status settled
@@ -785,7 +785,7 @@
       state/information-carrying medium — the capability-promise, cf. the
       coal window) · homeostatic inertia (old regime's buffering vs the new
       attractor's pull) · exogenous triggers (shocks crossing a tipping
-      point). Several already appear in doc/PHASES.md charges — mild
+      point). Several already appear in tabularium/terrestris.ordinum.udon charges — mild
       convergence-evidence the decomposition is real.
 
   ; ==========================================================================

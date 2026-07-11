@@ -23,7 +23,7 @@ sections were read only where they date a tectonic or emergence event.*
 
 ## 0. Headline findings (the five that matter for vivarium)
 
-1. **The seven-phase scheme is a named, dated skeleton that maps almost 1:1 onto doc/PHASES.md**
+1. **The seven-phase scheme is a named, dated skeleton that maps almost 1:1 onto tabularium/terrestris.ordinum.udon**
    — and it is explicitly a *tectonic-mode* progression driven by monotonic mantle cooling.
    Proto → Primordial → Primitive → Juvenile → Youthful → Middle → Contemporary, with
    tectonic sub-modes magma-ocean → heat-pipe → squishy-lid → transitional → early-plate →
@@ -267,11 +267,11 @@ bimodality-as-plate-tectonic-fingerprint claim (§2 above).
 
 ## 6. World-builder extraction
 
-Material for doc/PHASES.md phase/sub-phase structure and for uplift / tectonic *nomoi*. Grades are
+Material for tabularium/terrestris.ordinum.udon phase/sub-phase structure and for uplift / tectonic *nomoi*. Grades are
 **evidence grades for the real-Earth claim** (per Cawood's hedging), separate from this note's
 [PR]/[INF] source-fidelity tags.
 
-### 6.1 Phase/regime timeline (drop-in for doc/PHASES.md cross-check)
+### 6.1 Phase/regime timeline (drop-in for tabularium/terrestris.ordinum.udon cross-check)
 Vivarium's **Abyssal (Phase 3)** — "a mostly-submerged early world whose land emerges *during*
 the phase" — maps precisely onto Cawood's **Primitive→Juvenile (3.8–2.5 Ga)** window:
 - **Phase-3 opening state** ≙ Primitive Earth: squishy-lid tectonics, granite-greenstone +
@@ -285,7 +285,7 @@ the phase" — maps precisely onto Cawood's **Primitive→Juvenile (3.8–2.5 Ga
   drives CO₂ drawdown and the O₂ whiffs that build toward the GOE (late-Archean onset) — i.e.
   Abyssal's photosynthesizers + the *newly emergent, weatherable land* together manufacture the
   oxygenation key. Cawood ties GOE onset to "subaerial exposure of the cratons and widespread
-  mafic magmatism" (p25). Grade: MED. [PR] This corroborates doc/PHASES.md's charge-chain logic.
+  mafic magmatism" (p25). Grade: MED. [PR] This corroborates tabularium/terrestris.ordinum.udon's charge-chain logic.
 
 ### 6.2 Parameters for an uplift / tectonics nomos (with grades)
 | Parameter | Value / behavior | Grade | Source [PR] |

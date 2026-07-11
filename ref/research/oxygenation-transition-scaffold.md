@@ -4,7 +4,7 @@
 tagging and the §1 regime vocabulary. Purpose: argue about a **specific table**,
 not a framework. The subject is Earth's Great Oxygenation — the geochemical
 regime-change in which free molecular oxygen first accumulated in the atmosphere
-and ocean, spanning the Phase 3 → Phase 4 transition (`doc/PHASES.md`: Abyssal's
+and ocean, spanning the Phase 3 → Phase 4 transition (`tabularium/terrestris.ordinum.udon`: Abyssal's
 "oxygen accumulating toward the Great Oxygenation" #emergent and its
 banded-iron-formation Record → Primeval's "Earth-like post-oxygenation
 atmosphere" #gate and "ozone shield" #emergent). It is chosen because it exercises
@@ -107,7 +107,7 @@ run, present in A because the oscillation is, absent in B because it isn't.
   source and the deep Fe²⁺ reservoir. *The connectivity-and-lag on this wire is
   precisely the A-vs-B knob.*
 - **Substrate innovation** — oxygenic photosynthesis is the genuinely new
-  capability; like the coal/lignin window (`doc/PHASES.md` Promise legend), a
+  capability; like the coal/lignin window (`tabularium/terrestris.ordinum.udon` Promise legend), a
   new capability **rewrites the material-flux rules** for every later phase.
 - **Homeostatic inertia** — the reducing buffer (ferrous iron + reduced
   minerals + volcanic gases) **damps the transition**; its size and recharge

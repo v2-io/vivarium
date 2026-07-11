@@ -1,5 +1,14 @@
 # World-Phases
 
+> **⚠ ARCHIVED 2026-07-11 — this is the reportatio, not the live artifact.** The
+> live, codified phase floor is `tabularium/terrestris.ordinum.udon` (the
+> Terrestris ordinum), which supersedes this prose and pins it at
+> `:reportatio-pin 42621d5`. This file is kept, frozen and unedited (Bequest-era
+> terms — the ordinum renamed Bequest→Promise), as the honest first-guess the
+> ordinum was authorized from. Its Design notes live on in `LEXICON.udon` §1; its
+> Algorithms & approaches ledger moved to `doc/design/DESIGN-SYSTEMS.md`. Do not
+> tactically depend on this file — read the ordinum.
+
 *(Joseph's draft, 2026-07-03; second pass same day; boundary terminology settled 2026-07-04. **Phase** = a span in which a set of macro systems runs until converged; **phase-transition** = the regime-change at a **phase-gate**, where a phase's **Charge** (what it must deliver) is met and the next phase's systems spin up. "Phase" avoids three collisions on "epoch": geology's, the erosion solver's step unit, and ordinary usage. The boundary's earlier working name — "checkpoint" — is retired: it bundled three distinct things now named apart (the gate, the cached **memo**, the **Record**) and collided with ASF's agent-state checkpoint. See the plumbing note in Design notes.)*
 
 **The load-bearing structure:** each phase's **Charge** (what it must establish) IS the next phase-gate's opening condition — *each phase manufactures the key to the next gate* (Abyssal's photosynthesizers ARE the mechanism that oxygenates Primeval's sky). A phase boundary is drawn correctly exactly when this holds. Charges are stated once, in the phase responsible; a phase "opens at" the delivery of the previous charge.

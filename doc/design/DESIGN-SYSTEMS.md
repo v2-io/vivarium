@@ -164,3 +164,94 @@ Every system rung ships with renderer-free probes asserting invariants nature gu
 fines sorting robust; armor-vs-eddy interaction and source-cell zero-incision anomaly are the two named opens, status in the probe header), and
 **`seam_ridge`** — the differential-aging ridge probe (built
 2026-07-03, first probe authored UNDER this methodology): cross-seam curvature where a fine tier's age exceeds its surroundings'. **Currently red, as expected**: seam/interior curvature ratio 4.3× at the standard 18-epoch fine pass, growing with the age gap (5.3× @ 60e, 7.1× @ 150e) — the mean-pin conserves block means but not boundary gradients. It now gates the future seam fix; Joseph's ridge sighting is measured, not anecdotal.
+
+---
+
+*The ledger below was relocated here 2026-07-11 from `.archive/PHASES.md` (now archived as the Terrestris ordinum's reportatio). It is DESIGN-SYSTEMS-native — how each process wants to be modelled — and the `nomotheke` references its approach codes. The per-process status columns are a first-pass snapshot; the live per-nomos status is the nomotheke's declarations.*
+
+## Algorithms & approaches ledger *(first pass — accrete as we hit them in practice)*
+
+*A place to park what we learn about HOW each process wants to be modelled, the
+day we hit it (today: scouring/armoring). Not a plan — a growing map.*
+
+**Approach codes** (a process may blend them): **A** analytic / closed-form /
+functional (+ fated-noise seeded stochasticity) · **R** relaxation-to-attractor (settle,
+then memo-cache) · **S** statistical / empirical (fit, lookup, sub-grid
+parameterization) · **T** taxonomy / bestiary import (curated tables — materials,
+biomes, species) · **P** procedural-physical stepwise sim *(annotate physics-
+understood hi/med/lo + cost)*.
+
+**Reading the "agent-fidelity" column — the prioritization backbone.** It asks:
+does an inhabitant of the final three (agent) phases *perceive, depend on, or act
+through* this? That is why we may run tectonics crude forever but must get rivers
+and biomes right — an agent fords a river and forages a biome; none has ever
+touched mantle convection. Work backward from what agents touch.
+
+### Geology & landscape (Phase 3, mostly)
+
+| process | approach | physics | cost | agent-fidelity | status |
+| --- | --- | --- | --- | --- | --- |
+| terrain prior | A (2-band fBm) | proxy | O(n·oct) | low (sets stage) | built |
+| tectonic uplift | A stand-in → P (mantle) | lo | — | low-direct | crude (fBm) |
+| stream-power incision (Shields τ_c) | P | hi | O(n)/epoch | **high** (the land) | built |
+| Priority-Flood depressions | P/algo | hi | O(n log n) | high | built |
+| MFD drainage | P | hi | O(n) | high | built |
+| hillslope creep (diffusion) | P | hi | O(n) | med | built |
+| glaciation · volcanism · karst · aeolian · coastal | P/S | med | varies | med (landforms) | — |
+
+### Water & sediment (Phase 3 — today's earned detail)
+
+| process | approach | physics | cost | agent-fidelity | status |
+| --- | --- | --- | --- | --- | --- |
+| shallow-water flow (local-inertial pipes) | P | hi | O(n)/step, CFL | **high** (fording, mills, drink) | built + stabilized |
+| suspension + shear-gated settling (Rouse) | P | med | O(n) | med (clarity) | built crude |
+| turbulent eddy diffusion | P | hi | O(n) | med | built today |
+| armoring + winnowing | P | med | O(n) | med (stony beds) | built, probe-partial |
+| colmation (fines seal) | P | med | O(n) | low-med | built |
+| **grain-size split + Stokes** (→ saltation, traction, sorting) | P | hi | O(n·k) | med | **planned — top pick** |
+| **bank mechanics** (Mohr–Coulomb + undercut → meander, oxbow) | P | hi (geotech) | O(n) | **high** (banks, fords, slumps) | planned |
+| Darcy lateral groundwater (→ springs) | P | hi | O(n) | med | planned |
+| hyperconcentrated / Bingham + flow-bulking | P | med | O(n) | med (flash-flood hazard) | named |
+| analytic hydrological init | A + R | hi | O(n log n) | indirect (clean worlds) | planned |
+
+### Climate & weather (Phase 2 base, Phase 4 modern) — the next system
+
+| process | approach | physics | cost | agent-fidelity | status |
+| --- | --- | --- | --- | --- | --- |
+| insolation (declination/hour-angle) | A | hi | O(1)/query | med | built |
+| climate (T/precip ← lat, elev, continentality) | S + A | med | O(n) | **high** (biomes, seasons) | **next** |
+| storms / weather | A jitter → P | med | O(n) | **high** (agents feel it) | crude (jittered) |
+| orographic rain, rain shadow | P/S | med | O(n) | high | planned |
+
+### Materials & record (spans all phases)
+
+| process | approach | physics | cost | agent-fidelity | status |
+| --- | --- | --- | --- | --- | --- |
+| material taxonomy (undifferentiated → refined) | T + A (det. refine) | — | O(1) | **high** (what things are) | schema |
+| strata / column | data structure | — | — | high (digging, cliffs) | frame built |
+| chronostratigraphic Record = the verification artifact | (emerges) | — | — | high (readable history) | conceptual |
+
+### Biosphere (Phases 3→6; final-3-critical) — mostly import + statistics
+
+| process | approach | physics | cost | agent-fidelity | status |
+| --- | --- | --- | --- | --- | --- |
+| biomes (Whittaker T×P) | T + S lookup | — | O(1)/cell | **high** | — |
+| vegetation / succession | S + T | med | O(n) | **high** (food, cover) | — |
+| species / fauna | **T (bestiary import)** | — | curated | **high** | — |
+| evolution / speciation | S / procedural | lo | — | low-med (flavour) | defer |
+
+### Agents — the real bet (Phases 6→8)
+
+| process | approach | physics | cost | agent-fidelity | status |
+| --- | --- | --- | --- | --- | --- |
+| fast ASF/AAT layer (formal dynamics) | P | hi (our theory) | O(agents)/tick | **the point** | the bet |
+| slow layer (LLM at aporia) | import (the model) | — | event-driven | **the point** | the bet |
+| cognitive LOD swap | A (component swap) | — | ~free | high | designed |
+
+*Note on complexity: the per-cell O(n) stencils are the cheap common case —
+memory-bound, and the GPU/rayon path (`doc/plan/water-parallelism.md`) is
+what keeps them affordable as fidelity and area grow. The expensive-but-rare
+ones (Priority-Flood O(n log n), any global solve) run once per phase-transition
+and cache. The genuinely open-complexity items are the ones marked lo physics
+(tectonics, evolution) — where we deliberately run a cheap statistical stand-in
+because agent-fidelity does not yet demand more.*

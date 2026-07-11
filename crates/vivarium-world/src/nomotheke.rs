@@ -52,7 +52,7 @@ impl Tier {
     }
 }
 
-/// The approach codes of `doc/PHASES.md`'s ledger (A/R/S/T/P).
+/// The approach codes of DESIGN-SYSTEMS.md's algorithm ledger (A/R/S/T/P).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Approach {
     Analytic,

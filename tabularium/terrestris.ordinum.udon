@@ -4,7 +4,7 @@
   :status draft-until-first-pinned
   :created 2026-07-11
   :manifold cube-sphere-3d-voxel
-  :reportatio doc/PHASES.md
+  :reportatio .archive/PHASES.md
   :reportatio-pin 42621d5
 
   ; Terrestris = the earthlike world-kind — the TRACK. Its floor (this ordinum)
@@ -21,11 +21,11 @@
   ; Charge/Promise floor as DATA, which every regula pins (`ordinum@version`)
   ; as the floor it may extend but never silently undercut. The whole ladder
   ; lives here; a regula SLICES its target phase from it (later phases render
-  ; as horizon, never as failures). doc/PHASES.md is this document's
+  ; as horizon, never as failures). .archive/PHASES.md is this document's
   ; reportatio — the prose working text it was authorized from; a PHASES
   ; revision yields a NEW ordinum version (immutable once any regula pins
   ; one), and existing regulae opt in by re-versioning. Faithfulness to the
-  ; reportatio is the governing constraint: the terms here are PHASES.md's
+  ; reportatio is the governing constraint: the terms here are the reportatio's
   ; terms, verbatim in substance.
 
   |meta[reading-rules]

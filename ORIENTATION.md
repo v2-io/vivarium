@@ -31,7 +31,7 @@ carries the conceptual bridge, the reading gates, and the **standing moratorium
    cell semantics, the property set, the spatial-key plan (§8).
 5. `doc/design/DESIGN-SYSTEMS.md` — the phenomena graph: systems × timescales, coupling
    bands, build order, the fluvial inventory, the instruments.
-6. `doc/PHASES.md` — the developmental ladder (Charge / Promise / Record; the moral
+6. `tabularium/terrestris.ordinum.udon` — the codified developmental ladder (Charge / Promise / Record; the moral
    line at Phase 7).
 7. `LEXICON.udon` — canonical vocabulary; `SUPERSEDED.md` — the do-not-reuse
    ledger; `ASSUMPTIONS.md` — the magic-constant ledger (touch a constant,

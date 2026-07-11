@@ -14,7 +14,7 @@
 
 ## 0. Headline (the question asked)
 
-**Can this mechanism, as published, be the world's first land-maker? — Yes, and it is the *right* one for the pre-plate-tectonic early-Abyssal phase.** It makes **low-relief emergent cratons** (a few hundred m to ~1 km of freeboard) by the **isostatic rise of thickened, silica-*light* crust**, with **no plate collision required** — exactly the "uplift that predates full plate tectonics" that doc/PHASES.md Phase 3 needs to discharge its `#gate` ("meaningful non-volcanic land above sea level"). Two load-bearing qualifications: (a) **only the isostasy is lawful**; the *driver* — where and how fast crust thickens — is a magmatic/mantle-upwelling source term the paper *assumes as given*, so a faithful nomos gets lawful uplift from a **tuned/fated** source field; (b) it **only clears sea level if the ocean is made deep in the right way** — emergence in their own model is *marginal* and flips on ocean depth (4.4 vs 4.7 km) and protocrust thickness (20 vs 30 km). That marginality aligns precisely with the survey's load-bearing "deepen the oceans" fix and with "only a few percent land."
+**Can this mechanism, as published, be the world's first land-maker? — Yes, and it is the *right* one for the pre-plate-tectonic early-Abyssal phase.** It makes **low-relief emergent cratons** (a few hundred m to ~1 km of freeboard) by the **isostatic rise of thickened, silica-*light* crust**, with **no plate collision required** — exactly the "uplift that predates full plate tectonics" that tabularium/terrestris.ordinum.udon Phase 3 needs to discharge its `#gate` ("meaningful non-volcanic land above sea level"). Two load-bearing qualifications: (a) **only the isostasy is lawful**; the *driver* — where and how fast crust thickens — is a magmatic/mantle-upwelling source term the paper *assumes as given*, so a faithful nomos gets lawful uplift from a **tuned/fated** source field; (b) it **only clears sea level if the ocean is made deep in the right way** — emergence in their own model is *marginal* and flips on ocean depth (4.4 vs 4.7 km) and protocrust thickness (20 vs 30 km). That marginality aligns precisely with the survey's load-bearing "deepen the oceans" fix and with "only a few percent land."
 
 ---
 
@@ -146,7 +146,7 @@ No survey claim is *contradicted*; these are tier-upgrades and precision sharpen
 
 A sketch of the smallest honest nomos implementing this mechanism, in ARCHITECTURE §9 / nomotheke language. **This is a design sketch, not a spec** [inferred throughout, grounded in the §1–5 quantities].
 
-**Name (provisional):** `magmatic_uplift` (or `isostatic_emergence`). Discharges doc/PHASES.md Phase-3 `#gate` "meaningful non-volcanic land above sea level" via a `#mech` that is *not* plate tectonics.
+**Name (provisional):** `magmatic_uplift` (or `isostatic_emergence`). Discharges tabularium/terrestris.ordinum.udon Phase-3 `#gate` "meaningful non-volcanic land above sea level" via a `#mech` that is *not* plate tectonics.
 
 **Keyed inputs (the complete content-addressed key):**
 - per-column **crustal thickness** field `C(x,t)` and **crustal density** `ρ_c(x,t)`;
@@ -173,7 +173,7 @@ A sketch of the smallest honest nomos implementing this mechanism, in ARCHITECTU
 **Epistemic tags to declare (the four axes, §7):**
 - **A (Earth-history fidelity): Medium.** Real Earth mechanism with real numbers, but craton-specific (Singhbhum), and CLM Δρ / protocrust thickness are poorly constrained inputs the paper sweeps over.
 - **B (physics fidelity): split — High for the isostatic closure, Low for the magmatic source term.** The nomos must not let the lawful isostasy launder the tuned driver's low B. Declare per-promise.
-- **C (relation type): `#mech` discharging a `#gate`.** *Tension to flag honestly:* the land is *magmatically built* (igneous granitoid crust) yet rises by **isostasy, not by piling lava above water** — the surface is an eroded felsic craton, not an active volcanic edifice. It plausibly satisfies "**non-volcanic land**" in the sense doc/PHASES.md means (broad emergent craton, not a volcano poking up), but a reviewer could contest the label — surface it, don't bury it.
+- **C (relation type): `#mech` discharging a `#gate`.** *Tension to flag honestly:* the land is *magmatically built* (igneous granitoid crust) yet rises by **isostasy, not by piling lava above water** — the surface is an eroded felsic craton, not an active volcanic edifice. It plausibly satisfies "**non-volcanic land**" in the sense the ordinum means (broad emergent craton, not a volcano poking up), but a reviewer could contest the label — surface it, don't bury it.
 - **D (implementation status): unbuilt.** New nomos; would follow the store/nomos + flux-BC spine currently gapped (ARCHITECTURE §8).
 
 **Regime probes to write first (§9 item 6):**

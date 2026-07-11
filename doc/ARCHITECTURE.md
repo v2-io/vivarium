@@ -1,6 +1,6 @@
 # vivarium — ARCHITECTURE
 
-*v0.3, 2026-07-10. The consolidating overview — mental-model-first; the derivations live in the docs it points to: `doc/theory/multiscale-methods.md` (the R/L/closure operator algebra), `doc/theory/multiscale-seams.md` (position AND time at the seams), `doc/design/DESIGN-REDUX.md` (runtime / fidelity / storage), `doc/design/DESIGN-MATERIAL.md` (matter model), `doc/design/DESIGN-SYSTEMS.md` (phenomena graph), `doc/PHASES.md` (world-phases), `LEXICON.udon` (vocabulary), `ASF.md` (the AAT bridge). Status marked inline: **settled** / **stance** / **open** / **gap** (designed, not yet built). Vocabulary is `LEXICON.udon`-canonical throughout (fated noise, KRNG/DRNG, Realized, Brooding, lawful-steering, exploration/participation).*
+*v0.3, 2026-07-10. The consolidating overview — mental-model-first; the derivations live in the docs it points to: `doc/theory/multiscale-methods.md` (the R/L/closure operator algebra), `doc/theory/multiscale-seams.md` (position AND time at the seams), `doc/design/DESIGN-REDUX.md` (runtime / fidelity / storage), `doc/design/DESIGN-MATERIAL.md` (matter model), `doc/design/DESIGN-SYSTEMS.md` (phenomena graph), `tabularium/terrestris.ordinum.udon` (world-phases, codified), `LEXICON.udon` (vocabulary), `ASF.md` (the AAT bridge). Status marked inline: **settled** / **stance** / **open** / **gap** (designed, not yet built). Vocabulary is `LEXICON.udon`-canonical throughout (fated noise, KRNG/DRNG, Realized, Brooding, lawful-steering, exploration/participation).*
 
 > [!note]
 > Erosion and hydrology appear below only as **two early instances of many more systems to come** — the systems that happen to exist in code, not the subject. The subject is the general machinery that lets an arbitrary number of interdependent systems be developed in parallel, each principled.
@@ -76,7 +76,7 @@ The substrate the graph addresses *(settled; `doc/design/DESIGN-MATERIAL.md`)*: 
 
 # Axis 2 — the developmental ladder
 
-## 6. Phases, coupling, and law-promotion *(established; `doc/PHASES.md`, `doc/theory/multiscale-seams.md`)*
+## 6. Phases, coupling, and law-promotion *(established; `tabularium/terrestris.ordinum.udon`, `doc/theory/multiscale-seams.md`)*
 
 Systems come online in a required order and become law by *freezing*. This is a **co-equal axis** with the substrate machinery, not a detail of it: axis 1 is scale in space-and-fidelity; axis 2 is scale in **developmental time**.
 
