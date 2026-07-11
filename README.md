@@ -48,7 +48,7 @@ magic-constant ledger). The enforcement is structural:
 By forcing the epistemology to be asserted, it becomes strictly auditable and
 falsifiable — audit is a query over the store, not a review of intentions.
 
-## Status (2026-07-10)
+## Status (2026-07-11)
 
 **The principled frame is standing and growing.** Engine = Bevy (decided
 2026-06-22 by head-to-head spike). Proven physics — fluvial erosion and a
@@ -62,8 +62,12 @@ away and return: the world persists. Current build target: an **ethereal
 
 **Start reading at [`ORIENTATION.md`](ORIENTATION.md)** (the current-state
 map), then [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) (the consolidated frame).
-Ethics of in-world agents: [`ETHICS.md`](ETHICS.md); the standing moratorium:
-[`ASF.md`](ASF.md) §0.
+The tree in one line: root = front doors + ledgers · `doc/` = the durable
+thinking (design / plan / theory) · `ref/` = true reference · `.archive/` =
+accounted-for retirements (never referenced from the main tree). Agent
+onboarding tiers: [`CLAUDE.md`](CLAUDE.md); working norms:
+[`doc/PROCESS.udon`](doc/PROCESS.udon). Ethics of in-world agents:
+[`ETHICS.md`](ETHICS.md); the standing moratorium: [`ASF.md`](ASF.md) §0.
 
 Quick taste, no GPU needed:
 

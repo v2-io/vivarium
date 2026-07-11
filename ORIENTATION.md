@@ -36,11 +36,17 @@ carries the conceptual bridge, the reading gates, and the **standing moratorium
 7. `LEXICON.md` — canonical vocabulary; `SUPERSEDED.md` — the do-not-reuse
    ledger; `ASSUMPTIONS.md` — the magic-constant ledger (touch a constant,
    touch the ledger).
-8. `ref/research/` — the technical core and plans: `doc/theory/multiscale-seams.md`
-   (position AND time as one seam discipline; the resolution-light-cone /
-   dynamic-exponent-$z$ unification), `doc/plan/abyssal-parity-plan.md` (the build path),
-   `doc/plan/builder-explorer-decoupling.md` (operational design),
-   `doc/plan/regula-conformance-design.md` (world-level conformance, two chapters).
+8. `doc/theory/` — the technical core: `multiscale-seams.md` (position AND time
+   as one seam discipline; the resolution-light-cone / dynamic-exponent-$z$
+   unification) + `multiscale-methods.md` (the R/L/closure operator algebra).
+9. `doc/plan/` — the live build path: `abyssal-parity-plan.md` (the six phases),
+   `builder-explorer-decoupling.md` (operational design),
+   `regula-conformance-design.md` (world-level conformance, two chapters),
+   `framework-to-status-quo.md`, `vivium-operational-workflow.md`,
+   `water-parallelism.md`.
+10. `ref/` — true reference, consulted on demand: surveys, dossiers, NOTES from
+    past work eras, pdfs. `doc/PROCESS.udon` — the working norms;
+    `doc/toolchain.md` — the epistemics toolchain.
 
 ## Decisions locked (rationale in the design docs)
 

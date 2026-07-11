@@ -2,6 +2,15 @@
 
 Work preserved for reference, not part of the active build.
 
+## The early view spikes (pre-engine-decision era, 2026-06)
+
+`tilemap/`, `topdown/`, `bevy-iso/`, `iso-tiles/`, `iso-voxels/`, `bevy-voxel/`
+— the ladder of 2-D/isometric/voxel view experiments over `vivarium-core` that
+preceded and informed the engine decision. Each carries its own README/SPEC;
+`iso-tiles` self-declares its retirement. Superseded as views by
+`spikes/worldview` (and `spikes/globe`); kept as reference for the rendering
+lessons recorded inside them.
+
 ## `godot-voxel/` + `vivarium-godot/`
 
 The Godot half of the engine spike (2026-06-22). A full, working voxel view over

@@ -52,6 +52,7 @@ Design: `doc/plan/regula-conformance-design.md` **v2** (2026-07-11 — naming se
 3. **Ordinum v0** derived from doc/PHASES.md for the target phase only (later phases = horizon, never failures); doc/PHASES.md stays the prose source (its reportatio) until codification completes, then archives.
 4. Conformance report into `vivarium status` (conformance-to-pin + gap-to-head); voided-permit check in tests.
 5. Later, when it earns its keep: `vivarium audit --add <nomos>` — the requisite-closure dry-run (the anti-whim planner).
+6. **Toolchain adopt-now items ride with this wave** (`doc/toolchain.md`): workspace `clippy.toml` disallowed-lists (determinism bans) + a `bin/check` that runs clippy `-D warnings` beside the tests · `#[must_use]` on `Quantity`/`Unit` · typed indices for any new id type. The build-time nomos-version source-hash (DESIGN-REDUX §12) is the highest-value structural piece — same wave.
 
 **First forced decision the Terrestris audit will surface (design doc §7.6, Joseph's call):** Phase-2's abiogenesis-through-photosynthetic-sea-life charge vs our zero biosphere — declared low-tier reservoir-grade stand-in (photosynthesis as box-flux; doubles as the first non-field representation kind) or an explicit dated permit.
 

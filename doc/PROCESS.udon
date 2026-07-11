@@ -1,0 +1,141 @@
+|norms[vivarium-process]
+  :title Working norms for vivarium — prescriptions, proscriptions, and the feedback valve
+  :created 2026-07-11
+  :version 0.1.0
+  :status living
+  :authority binds-until-amended
+
+  ; Instituted 2026-07-11 during the doc reorg, at Joseph's direction: empowering
+  ; workflow norms with a method for feedback. Genre precedent:
+  ; asf/msc/meta-process-review-2026-07-07/PROCESS-MAP-v0.udon. Kept deliberately
+  ; small: a norm that is not real is worse than no norm.
+
+  |meta[self-governance]
+    :source-sink participant-feedback
+
+    How this document governs and evolves itself, in three imperatives:
+    - Any participant (Joseph, any agent, any future instance) may give feedback
+      on any norm, at any time.
+    - The valve: append a dated |feedback child under the norm in question (or
+      leave a TODO.md entry pointing here). Joseph adjudicates; a norm changes by
+      amendment, never by silent drift or quiet non-observance.
+    - A norm observed to be routinely violated is a finding about the norm, not
+      only about the violators — bring it back through the valve.
+
+  |cluster[doc-taxonomy]
+    :name Where documents live, and how they stay honest
+
+    |norm[doc-placement]
+      :kind prescription
+      Every document has exactly one home, chosen at creation: root = front
+      doors (README, CLAUDE, ORIENTATION, TODO) + the ethics/moratorium unit
+      (ASF.md, ETHICS.md) + the three ledgers (LEXICON, SUPERSEDED, ASSUMPTIONS);
+      doc/ = durable thinking (ARCHITECTURE + PHASES; design/ plan/ theory/);
+      ref/ = true reference, consulted not onboarded; msc/ = session
+      reflections; .archive/ = accounted-for retirements. A new doc that fits
+      none of these is a taxonomy question to raise, not a root file to drop.
+
+    |norm[archive-accounting]
+      :kind prescription
+      Before any git mv into .archive/: verify the retention-worthy content is
+      accounted for in the main tree, and name where (file + section) in the
+      commit message. The main tree must never need to reference .archive/ —
+      git history and commit messages carry archaeology, evolution, and
+      provenance. "Probably covered" is not accounted for.
+
+    |norm[present-tense-bodies]
+      :kind prescription
+      Current-state documents (ORIENTATION, ARCHITECTURE, this file) change
+      their bodies; they do not grow by addenda. History lives in git; retired
+      terms and sections live in SUPERSEDED.md; still-open fragments relocate to
+      TODO.md before the old text goes.
+
+    |norm[ledger-duty]
+      :kind prescription
+      Touch a constant — touch ASSUMPTIONS.md. Retire a term or doc-section —
+      append to SUPERSEDED.md. Settle a term — LEXICON.md, collision-checked.
+      Add or change a nomos — declare it in the nomotheke. These are part of
+      the change, not follow-up work.
+
+    |norm[no-top-billing-rot]
+      :kind proscription
+      An outdated document must not sit above a live one in any reading path.
+      If a front door is discovered stale, fixing it joins the current task's
+      scope; "someday" is how DESIGN.md ended up outranking the architecture.
+
+  |cluster[documents]
+    :name Document formats
+
+    |norm[udon-for-structure]
+      :kind prescription
+      New documents carrying hybrid prose + skeletal structure that wants
+      conformance (norms, process maps, the Ordinum, regulae, declarations) are
+      authored in udon (~/src/udon/). Prose-first documents stay markdown.
+      Existing markdown migrates opportunistically, when a doc is being reworked
+      anyway — never as a sweep.
+
+    |norm[udon-safe-subset]
+      :kind prescription
+      Until the udon reboot lands its decision valve + udon-cli (fmt/lint),
+      author within the verified safe subset (recon 2026-07-11): bracket ids
+      unquoted; attributes always before prose/children; raw blocks via
+      !:lang: never triple-backtick fences; no @-references; never start a
+      prose line with a bare colon; treat temporal-looking bare values as
+      unvalidated strings. Validate by parse:
+      !:sh:
+        cd ~/src/udon/core && cargo run --example stdin_parse < FILE.udon
+
+  |cluster[code-epistemics]
+    :name Code-side truth disciplines (the mechanical ones)
+
+    |norm[determinism-proscriptions]
+      :kind proscription
+      In world-law code: no wall-clock (SystemTime/Instant::now), no OS entropy
+      or shared RNG (thread_rng and kin — all randomness is a keyed hash), no
+      HashMap/HashSet iteration order reaching canonical bytes or store roots.
+      The clippy disallowed-lists that mechanize this are queued in
+      doc/toolchain.md; the norm binds now, ahead of the tooling.
+
+    |norm[probes-first]
+      :kind prescription
+      A known issue gets its probe written first; then the physics is fixed
+      until the probe passes. A declared epistemic tier is a falsifiable claim
+      and the probe is what would convict it. No physics claim without its
+      probe run.
+
+    |norm[land-vs-count]
+      :kind prescription
+      Every small-flux-into-large-f32 site explicitly chooses: land (compensated
+      summation) or count (realized-delta accounting). Conservation test
+      tolerances are absolute, never relative. (Paid for twice, 2026-07-04.)
+
+  |cluster[workflow]
+    :name Session workflow
+
+    |norm[commit-cadence]
+      :kind prescription
+      :authority Joseph 2026-07-11 — "commit whenever you see fit, as often as you see fit"
+      Commit in logical waves with messages written for the archaeologist —
+      future readers reconstruct intent from messages, so say what moved, why,
+      and where the accounting lives. Moves are git mv so lineage survives.
+
+    |norm[full-output]
+      :kind proscription
+      :authority Joseph 2026-07-09
+      Never filter a long-running process's live output at launch (no
+      pipe-to-tail). Capture the full log; filter at read time. The pipe saves
+      lines on success and destroys diagnosis on failure.
+
+    |norm[peer-delegation]
+      :kind prescription
+      Agents receive context — decisions made, constraints discovered, what the
+      work is for — not prescriptions of method. Action-space is not
+      deliberation-space.
+
+    |norm[whim-gate]
+      :kind prescription
+      Adding a target-aged world feature goes through the requisite-closure
+      check: what does the regula then demand (which slots, which permits
+      voided)? Until regula.rs lands, run the check by hand against
+      doc/plan/regula-conformance-design.md section 3. This norm is the reason
+      the regula layer exists — structure where vigilance kept failing.
