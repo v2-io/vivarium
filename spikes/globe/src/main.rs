@@ -280,9 +280,18 @@ fn build_face(
     // Winding is face-chirality-dependent (each face's (u,v) → 3-space basis
     // differs in handedness), so probe one quad against the outward direction and
     // flip the whole face if needed — measured, not assumed.
+    //
+    // `flip = true` selects the NATURAL grid winding [a,b,c] below, so it must
+    // hold exactly when the natural winding's geometric normal points OUTWARD
+    // (n·a > 0 ⇒ CCW seen from outside ⇒ front-facing under Bevy's default
+    // cull). The original probe had this comparison inverted (`< 0.0`) — every
+    // face emitted inward-wound triangles, the near hemisphere was culled, and
+    // the globe rendered as the far shell seen from inside (Joseph's live
+    // sighting, 2026-07-10). A screenshot can't catch this class of bug without
+    // a chirality reference: a mirrored coastline still reads as "a coastline."
     let flip = {
         let (a, b, c) = (gpos[gidx(1, 1)], gpos[gidx(2, 1)], gpos[gidx(1, 2)]);
-        (b - a).cross(c - a).dot(a) < 0.0
+        (b - a).cross(c - a).dot(a) > 0.0
     };
 
     // Smooth normals accumulated from triangle faces over the ghost grid — the
