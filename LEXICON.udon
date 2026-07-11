@@ -1,0 +1,1151 @@
+|lexicon[vivarium]
+  :title vivarium — LEXICON (the bounded, ubiquitous vocabulary)
+  :seeded 2026-07-03
+  :restructured 2026-07-11
+  :status living
+
+  ; Converted from ad-hoc markdown bullets to dictionary-grade |term entries
+  ; 2026-07-11 (Joseph's ask: the headword being adopted must be unmistakable;
+  ; definition -> relationships -> boundaries, per term). Section numbers SS1-SS8
+  ; are frozen — external docs cite "LEXICON SS5" etc. Prior form: git history.
+
+  |meta[entry-schema]
+    :authority PROCESS.udon self-governance valve
+
+    One term per |term element — the [slug] and :name are the headword; what we
+    are adopting is never buried in a compound label. Body: the FIRST paragraph
+    is the definition. Then only-if-real children (a field that is not real is
+    omitted):
+    - |not        — what it is not / what not to call it
+    - |confused   — easily confused with (and how to tell apart)
+    - |rel        — relation edges (:to term-slug :kind verb) — these build the
+                    vocabulary graph; keep verbs plain (runs, composes-into,
+                    floor-of, occupies, edge-of, ...)
+    - |context    — binding scope beyond vivarium/archema; register notes
+    - |carve      — the collision carved against, compressed; trail -> SUPERSEDED.md
+    - |source     — the design doc carrying the full machinery
+    Statuses (:status): settled (in live use, collision-checked) · carved
+    (chosen against a recorded collision) · open (needs Joseph's decision;
+    candidates loosely held). Markdown tables live in !:md: blocks (a bare
+    table row would parse as an element). Math stays $...$ LaTeX.
+
+    Why a lexicon at all: (1) carves away from colliding usage must be recorded
+    or future sessions re-collide; (2) project-unique terms carry design
+    decisions inside them, and vague usage quietly un-decides them. The deeper
+    motivation (Joseph, 2026-07-03): the tension web of caching x deterministic
+    seeding x world-building x saves x strictly-causal runs x iteration already
+    produced slowdowns and re-arguing. Names are how we stop re-arguing.
+    A term earns its place by standalone citability ([[naming-principles]]).
+
+    Register convention (2026-07-11, deliberate): Greek = the law-article
+    machinery (nomos family) · Latin = the world-governance layer (regula,
+    regnum, ordinum) · plain English = the lived concepts (Kingdom, Charge,
+    Bequest, Record, slot, permit). Register signals layer; a proposal that
+    crosses registers should notice it is doing so.
+
+  ; ==========================================================================
+  |section[world-structure]
+    :num 1
+    :name World-structure (phases & gates)
+
+    |term[phase]
+      :status carved
+      A span in which a set of macro systems runs until converged.
+      |carve against "epoch" — three collisions: geology's epochs, the erosion
+        solver's step unit, ordinary usage.
+      |rel :to charge :kind must-deliver
+      |rel :to bequest :kind hands-forward
+      |rel :to phase-gate :kind bounded-by
+      |source doc/PHASES.md
+
+    |term[epoch]
+      :status settled
+      Reserved exclusively for the erosion solver's step unit.
+      |not a span of world-history (that is a phase); not a geological epoch.
+
+    |term[phase-gate]
+      :status settled
+      :since 2026-07-04
+      The boundary between phases — the threshold where the previous phase's
+      Charge is checked and met.
+      |rel :to charge :kind opened-by
+      |carve replaced "checkpoint", which bundled the gate + the memo + the
+        Record and collided with ASF's agent-state checkpoint — SUPERSEDED.md.
+
+    |term[phase-transition]
+      :status settled
+      :since 2026-07-04
+      The regime-change EVENT at a phase-gate. Incremental, never a wholesale
+      swap: most systems perpetuate, a few sunset, a larger group of new and
+      finer-scale systems spins up at the gate (doc/PHASES.md Design notes).
+      It leaves the largest memo, and it promotes converged state into Law.
+      |rel :to law :kind revises
+      |rel :to memo :kind leaves
+      |rel :to ordinum :kind floor-checked-against
+
+    |term[charge]
+      :status settled
+      What a phase must establish — the GATING SUBSET of its bequest. A
+      phase's charge IS the next phase-gate's opening condition.
+      |rel :to bequest :kind gating-subset-of
+
+    |term[bequest]
+      :status settled
+      Everything a phase hands forward that persists and shapes later
+      dynamics — features, regimes, capabilities AND incapabilities (the coal
+      window). The load-bearing forward concept; in the nomotheke, each
+      bequest carries an explicit conservation claim.
+      |rel :to nomotheke :kind declared-in
+      |rel :to law :kind delivery-of
+
+    |term[record]
+      :status settled
+      The bequest's readable-in-rock slice, deliberately DEMOTED to sanity
+      probe: a lossy shadow (a feather in a fossil is a relic, not a
+      fundamental output) — a consistency check that the right past processes
+      ran, never sufficient to reconstruct the past, never the canonical state.
+      |not the phase's "in-world form"; not the canonical state.
+
+    |term[gate-tags]
+      :status settled
+      The per-charge epistemic tags — #gate (hard prerequisite, we simulate) ·
+      #earth (Earth's pattern, kept for fidelity) · #mech (causality known, no
+      simulable mechanism yet) · #emergent (verify, don't build). Honesty
+      about ARROWS, never about implementation status.
+      |rel :to epistemic-axes :kind refined-by
+
+    |term[ordinum]
+      :status settled
+      :since 2026-07-11
+      :forms full formal name Ordinatio Ordinum; keyed ordinum@version
+      The codified, pinned, versioned phase-expectations artifact — the
+      per-phase Charge/Bequest floor as DATA, which every regula cites as the
+      floor it may extend but never silently undercut. doc/PHASES.md is its
+      reportatio (the prose working text the authorized version compiles
+      from — the medieval ordinatio-vs-reportatio carve, Scotus precedent) and
+      archives once codification lands. A PHASES revision yields a NEW ordinum
+      version; existing regulae keep their pinned floor and opt in by
+      re-versioning — integration-is-replacement applied to the constitution.
+      |not a stage-synonym source: stages remain PHASES — "order" is not
+        adopted (it would re-blur sequence-vs-class; class-of-regna stays
+        extensional, "Terrestris regna").
+      |context grammar held honestly — standalone "ordinum" is a bare genitive
+        plural; the elided head noun (ordinatio) makes the full form exact.
+        Deliberate ellipsis, Joseph's euphony call.
+      |carve rejected: taxis (in-domain biology collision — chemotaxis will
+        someday run in the world) · syntagma (names the assembly, not the
+        norm; "syntagmatic" is live linguistics vocabulary) · ordinatium (not
+        a Latin form). SUPERSEDED.md.
+      |rel :to regula :kind floor-of
+      |rel :to phase :kind codifies
+      |source doc/plan/regula-conformance-design.md SS2
+
+    |term[target]
+      :status settled
+      Phases 6/7/8 as TARGET 1/2/3 — the playable entry points. ETHICS.md
+      binds from Phase 7's transition.
+
+    |term[canceling-pair]
+      :status settled
+      A shield and its threat jointly unbuilt at zero fidelity cost until a
+      consumer reads their DIFFERENCE or either member alone (magnetic field x
+      solar wind; Jupiter-shepherding x impactor flux).
+      |rel :to permit :kind audited-as
+
+    |term[declare-causally-materialize-lazily]
+      :status settled
+      Principle: parameters are committed at their causal position, computed
+      on first downstream pull (the moon is the archetype).
+
+    |term[regime]
+      :status settled
+      A working, deliberately non-MECE label for the DOMINANCE STRUCTURE of
+      the vivarium at a given causal-step: which systems, states, and cycles
+      (optionally scales and shock-generators) currently dominate the
+      dynamics. Fuzziness is by design — "dominant" is consumer-relative
+      (moonlight is negligible until werewolves, or orbital mirrors, make all
+      light-sensitive systems lunar). Two anchors keep the fuzziness honest:
+      dominant balance (the asymptotics term of art — a regime is a dominant
+      balance over the phenomenon set) and biome (precedent that a useful
+      classification over continuous fields needs no crisp boundaries).
+      |confused ASF's dynamic-regime axis (R0-R3, interaction-dynamics class
+        of composite agents) — near ASF material say "world regime" vs
+        "dynamic regime Rn". See the collision ledger, SS5.
+      |context phase is the crisp term; regime may stay gloss (Joseph).
+
+    |term[regime-change]
+      :status open
+      Activation, deactivation, or replacement of the dominant systems (or a
+      newly-activated system coming to dominate). A phase boundary is a
+      regime-change we CERTIFY — memoized, charged, gated; most regime-changes
+      we never certify. (Joseph flagged residual vagueness; the
+      certify-vs-don't split is the sharpening so far.)
+
+    |term[subphase]
+      :status open
+      Reserved: an intermediate regime WITHIN a phase — what a regime-change
+      becomes when a phase (especially Abyssal) earns internal gates.
+
+    |term[world]
+      :status settled
+      Any simulated-planet vivarium; the primary/initial KIND of vivarium.
+      "(phase-name) world" = a world evolved to that phase at least in the
+      areas of granularity and proximal interest (an "Abyssal world wearing a
+      Primeval sky") — fidelity is local and consumer-relative (the telescope,
+      SS2), never a global claim.
+
+    |term[earth]
+      :status carved
+      :forms Earth (capital) / earth (lowercase) / #earth (gate tag)
+      Capital-E Earth is the real planet, in the real universe, that humans
+      experience — never a generated world, however faithful. Lowercase earth
+      is ground/soil. #earth is the gate tag (Earth's PATTERN, kept for
+      fidelity). Keep the three typographically distinct.
+      |context if you name a generated world "Earth" and try to make it
+        match, don't be surprised by a copyright-violation notice from the
+        real one — unless you generate it faithfully enough that Joseph is
+        typing this very sentence inside your world with the stolen name, in
+        which case he'll put in a good word that it's a universe-bending
+        recursion rather than trademark infringement. (The projects are wholly
+        serious; their author declines to be.)
+
+  ; ==========================================================================
+  |section[runtime-fidelity]
+    :num 2
+    :name Runtime & fidelity
+
+    |term[fidelity-ladder]
+      :status settled
+      Spend representation by consequence; every aspect has a ladder of model
+      rungs and may honestly occupy any rung whose sufficient statistics its
+      consumers need.
+      |rel :to rung :kind composed-of
+      |source doc/design/DESIGN-REDUX.md SS12
+
+    |term[telescope]
+      :status settled
+      Nested resolution tiers around a focus, re-anchored on drift (the
+      erosion telescope is the built instance).
+      |rel :to focus :kind centered-on
+
+    |term[focus]
+      :status settled
+      :since 2026-07-10
+      The LIVE attention point — an observer's current position (the code's
+      VIVARIUM_FOCUS_I/J sense). Ephemeral; contrast beacon.
+      |confused beacon — focus is live and transient; a beacon is standing
+        and spec-persisted.
+
+    |term[beacon]
+      :status settled
+      :since 2026-07-10
+      A STANDING, spec-persisted build priority: a (region, stage/phase,
+      level) triple in the manifest's demand bucket that draws the builder's
+      causal-cone advancement toward it. Demand changes what gets built FIRST,
+      provably never WHAT gets built (order-independence: nomoi depend on
+      artifacts by key, never "latest available") — so beacons are freely
+      editable mid-build. Per-beacon policy: depth-first (a waiting explorer)
+      vs breadth-first (the globe-spinner).
+      |rel :to manifest :kind lives-in
+      |source doc/plan/builder-explorer-decoupling.md
+
+    |term[finisher]
+      :status settled
+      A fine tier run for 1-2 animated passes over its parent's band,
+      mean-pinned to conserve (Joseph's field observation, 2026-07-02).
+
+    |term[memo]
+      :status settled
+      A cached converged state in the lazy query-graph runtime; the memo left
+      at a phase-transition is the largest. The save-file IS the memo store.
+      |not "checkpoint" (retired; see the collision ledger, SS5).
+      |source doc/design/DESIGN-REDUX.md SS11-13
+
+    |term[system]
+      :status settled
+      The phenomenon-level unit a phase runs — erosion, hydrology, climate
+      (doc/design/DESIGN-SYSTEMS.md rows; the ARCHITECTURE SS9 contract is what
+      one declares to join the machine).
+      |rel :to rung :kind climbs
+      |rel :to slot :kind fills-via-nomos
+
+    |term[rung]
+      :status settled
+      A system's position on its fidelity ladder — crude statistics-honoring
+      stand-in up through full physics, both directions legitimate (the
+      ladder runs both ways; descent to a validated surrogate is the
+      economical move).
+      |rel :to fidelity-ladder :kind position-on
+
+    |term[kernel]
+      :status settled
+      The concrete numerical implementation — the code (Fluvial, WaterSim).
+      |rel :to nomos :kind run-by
+
+    |term[nomos]
+      :status settled
+      :since 2026-07-10
+      :forms pl. nomoi; family nomothete / nomothetic / nomotheke
+      The keyed, versioned, memoizable invocation unit — the executable
+      embodiment of one ARTICLE of world-law: the grain at which algorithms
+      have identity (spine-tile@spine-2026-07-10b-sphere3d) and where the
+      epistemic tags attach. A phase is a choreography of nomoi; a nomos runs
+      a kernel implementing a system's current rung. Family: nomothete (what
+      lays a nomos down) · nomothetic (Windelband's law-positing science —
+      precisely what authoring one is) · nomotheke (the registry where every
+      nomos declares itself; declarations mint the store keys). Gravity
+      precedent: Schmitt's "The Nomos of the Earth."
+      |rel :to law :kind composes-into
+      |rel :to kernel :kind runs
+      |rel :to nomotheke :kind declared-in
+      |rel :to slot :kind candidate-occupant-of
+      |not cognate with noumenon — nomos is from nemein (to allot), noumenon
+        from noein (to think); but the nomoi + seed literally constitute the
+        world's noumenon (SS7.2), so the near-homophony is free resonance,
+        deliberately enjoyed.
+      |carve replaced "recipe" (Joseph's veto: casual-instructions register
+        unworthy of executable law governing living things) — SUPERSEDED.md;
+        rejected candidates in this entry's git history.
+
+    |term[patch]
+      :status settled
+      The Cartesian stencil substrate — a chunk interior as a flat row-major
+      array with a halo carrying cross-chunk/face neighbours, so hot loops
+      never branch. Column/Stratum and CellId — the matter and spatial keys —
+      are defined in doc/design/DESIGN-MATERIAL.md and used here unchanged.
+
+    |term[detail-must-be-earned]
+      :status settled
+      Principle (Joseph): never paint sub-simulation detail the physics did
+      not produce; the finest SIMULATED tier is authoritative and painted
+      coordinate-noise detail yields to any simulated field overlapping it.
+
+    |term[canonical-frame]
+      :status open
+      :since 2026-07-10
+      The CellId $2^n$ space-time grid with columns/strata: the universal
+      causal coordinate map every system must be QUERYABLE in, and the
+      reducibility mechanism (parent = bit-shift). It is NOT the mandated
+      internal representation.
+      |rel :to native-representation :kind projection-target-of
+
+    |term[native-representation]
+      :status open
+      :since 2026-07-10
+      The domain-specific internal shape a system may compute and memoize in
+      when it is faster and smaller than columns-on-the-grid — tilted-slab
+      stacks with a latent dip; the fluvial cells-to-receivers list (CHONK's
+      graph); closed-form coefficient blocks (insolation lives here already).
+      What keeps it honest: (a) the native-to-canonical projection is itself a
+      nomos — pure, fated, keyed, memoized; (b) conservation and the
+      sufficient-statistic contract bind at the projection exactly as at any
+      lifting; (c) co-fidelity is enforced on the canonical side. Machinery
+      deliberately unsettled until the first real second-representation
+      system lands (TODO).
+      |context field precedents — Lagrangian/Eulerian projection (PIC/FLIP,
+        MPM), spectral methods. In-house precedents — flat chunk interiors
+        under Hilbert ordering; voxels as a view over strata; bodies overlay
+        columns.
+
+  ; ==========================================================================
+  |section[determinism-provenance]
+    :num 3
+    :name Determinism & provenance
+
+    |term[fated-noise]
+      :status settled
+      All stochasticity is a stateless pure function of (world-seed,
+      coordinate/identity key) — never a shared mutable stream. A value's
+      draw is FATED by its identity: fixed, discoverable in any order, the
+      same forever. Realized by a KRNG (keyed RNG) / DRNG (deterministic
+      RNG) — the stateless, well-mixed generator keyed on (seed, key).
+      |not "Fate" as a defined noun — deliberately not adopted; the adjective
+        "fated" plus the KRNG/DRNG mechanism carry it.
+      |rel :to lawful-steering :kind overridable-by
+
+    |term[generator-pinning]
+      :status open
+      FILL_ALGO_VERSION generalized: frozen state must pin the algorithm
+      version that produced it; a cache key is f(inputs, seed,
+      generator-version). Already assumed everywhere; still unnamed. The
+      structural resolution (source-derived nomos versions) is queued in
+      doc/toolchain.md.
+
+    |term[run-modes]
+      :status open
+      Different things currently called by one name ("running the world"):
+      strictly temporal-causal runs · replays from pinned generators ·
+      discardable iteration runs · live play accruing history. Referents now
+      pinned even though naming is open: strictly-causal / replay / live-play
+      = Closed vs Open-with-recorded-forcing (SS7.2); the discardable
+      iteration run = the pre-participation non-intervention register (SS4).
+
+  ; ==========================================================================
+  |section[vivium-lifecycle]
+    :num 4
+    :name World-as-artifact — the lifecycle of a vivium
+
+    ; The lifecycle layer. The participation ONTOLOGY it rests on (Kingdom,
+    ; exo/endo, Realized/Lawful, the access matrix) is SS7 — keep the layers
+    ; distinct.
+
+    |term[vivium]
+      :status settled
+      :since 2026-07-04
+      :forms pl. vivia
+      One instantiated world-artifact you can name, fork, and cite:
+      build-stack + Target world + backstory + interventional history. Coined
+      by Joseph in use and confirmed. It earns its keep twice: standalone
+      citability, and the in-vitro/in-vivo resonance gives ASF a third
+      empirical register — results obtained IN VIVIA sit between toy models
+      (ground truth, trivial dynamics) and field data (rich dynamics, no
+      ground truth): richer than the first, more legible than the second.
+      |not vivarium — that is the class / the engine / the project; a vivium
+        is one instantiated world.
+      |rel :to regula :kind declares-conformance-to
+      |rel :to manifest :kind individuated-by
+
+    |note[three-layers]
+      :name The three layers inside a vivium (they differ in what persists)
+
+      |term[build-stack]
+        :status settled
+        Layer 1 — NAME + Primary Invariants + META-parameters + the
+        world-building nomos stack. Mutable while the kingdom is Incomplete
+        (SS7.2). Changing seed/params/stack forks a NEW world (new identity);
+        changing target SCALE does not (a view/awareness knob, not ontology).
+
+      |term[target-world]
+        :status settled
+        Layer 2 — the generic world evolved to the chosen Target phase; law
+        now immutable (Realized, SS7.2), complete-to-phase but not yet peopled
+        for a scenario.
+
+      |term[backstory]
+        :status carved
+        Layer 3 — the scenario-specific realized situation a participant
+        inherits as its world's past: the ARTIFACT.
+        |not the frozen pre-target phases (a recurring wrong reading — those
+          are the Target world, layer 2). The Backstory is produced ON TOP of
+          it.
+        |rel :to brooding :kind produced-by
+
+      |term[brooding]
+        :status settled
+        :since 2026-07-09
+        The process that produces the Backstory: conditioning a generative
+        simulation on a target entry-state. Two mechanisms — Steer
+        (declarative constraints or direct pre-participation intervention)
+        and Search (run, test against the predicate, accept when satisfied —
+        rejection sampling; splits into same-seed run-further vs vary-seed
+        across trajectories, and only the latter touches cache-invalidation).
+        |carve replaced "Incubation / Fine-tune-setup" — SUPERSEDED.md; echoes
+          doc/PHASES.md Phase 1 ("brooded upon").
+
+      |term[interventional-scaffolding]
+        :status settled
+        Layer 4 — interventions used to ARRANGE the backstory are temporary
+        and discarded; only the backstory STATE persists. Never canon, and
+        must be impossible to confuse with canon (today's deluge fill is a
+        scaffolding run of this kind).
+
+    |term[participation-activation]
+      :status settled
+      The boundary in a vivium's life: before it, the build-stack is mutable
+      and the kingdom Incomplete; at it, law becomes immutable (Realized) and
+      mutations begin to persist. A fork taken at a participation point is a
+      saved game / participatory world. Rests on determinism-as-ontology and
+      the memo store: a vivium is a content-addressed object whose lifecycle
+      is a branch graph.
+      |rel :to law-is-identity :kind ontological-reading-of
+
+    |term[engagement-modes]
+      :status settled
+      Orthogonal registers, not one slider: Simulation (tuning the procedural
+      algorithms) · Explorer/Experiment · Primary-Steward Participation ·
+      Avatar-1P · Avatar-extended-entities. Pre-participation is
+      NON-INTERVENTION: an active agent but a passive tester/experiencer —
+      mutations exploratory and non-persistent; physics may be violated for
+      understanding in a scratch/overlay layer, never seed+edits, never saved.
+
+    |term[interventional-history]
+      :status open
+      What accrues AFTER participation-activation: play, endo-agent action,
+      exo author intervention (incl. lawful-steering). Distinct from the
+      discarded pre-participation scaffolding. AAT reads it as the world's
+      chronica (ordinal, causal, non-forkable — ASF.md SS2).
+
+    |term[forks]
+      :status open
+      :forms saved games / participatory worlds
+      Branches off a vivium at a participation point (cheap under
+      content-addressed storage). Whether a redeployment patches existing
+      saves or requires a fresh world is a lifecycle/stewardship decision
+      (SS7), not ontology.
+
+    |term[lineage-head-pinned-regula]
+      :status settled
+      :since 2026-07-11
+      :name lineage head ⟂ pinned regula
+      The settled answer to the sketch's moving-edge-vs-curated-set question:
+      the moving edge of the project's best current nomoi is the REGULA
+      LINEAGE HEAD; the curated, citable set a vivium builds against is its
+      PINNED regula@version (immutable). The three-way sub-question is
+      answered structurally: interface = the slot set (regula) · algorithm =
+      the nomos occupying a slot · target machine = backend identity in the
+      memo key (the CPU-reference determinism policy answered the third leg).
+      "vivarium status" reports conformance-to-pin and gap-to-head — the
+      big-picture instrument as a computed diff.
+      |carve the sketch's placeholder phrases ("SOTA stack",
+        "best-of-class library") were never terms and are retired —
+        SUPERSEDED.md 2026-07-11.
+      |rel :to regula :kind versions-of
+      |source doc/plan/regula-conformance-design.md SS4b
+
+  ; ==========================================================================
+  |section[epistemic-labels]
+    :num 5
+    :name Epistemic labels, world-conformance, and the cross-project ledger
+
+    ; Joseph, 2026-07-03: labeling so honest that accidentally mixing
+    ; vibe-modeling with principled simulation becomes very, very difficult.
+
+    |term[epistemic-axes]
+      :status open
+      :forms axes A / B / C / D
+      The per-phenomenon tag is not one number — it is four axes that fail
+      INDEPENDENTLY (collapsing them is how vibe hides):
+      - A. Earth-history fidelity — how well real science knows it happened
+        this way on the actual Earth (ordinal draft: deterministic-causal ->
+        converging proxies -> uniformitarian extrapolation -> coarse-bounded ->
+        speculative-plausible -> anachronistic-hypothetical). Jettisonable
+        wholesale for non-Earth world-types.
+      - B. Physics fidelity — grounded in the actual laws of our universe,
+        independent of Earth's particular history. B OVER A (Joseph,
+        2026-07-03): the same laws admit many histories, so a world can be
+        physically impeccable yet un-Earthlike, or Earth-mimicking yet
+        cheating — which is exactly vibe. Lawful first, Earth-shaped second.
+      - C. Relation type — the role in OUR causal graph: mechanistic-causal >
+        mechanistic-influential > empirically-correlated > evidenced-ordered.
+        Refines the gate tags (SS1), not a parallel system.
+      - D. Implementation status — what we actually built: approach code
+        (A/R/S/T/P), physics tier, probe-verified?, and the arithmetic-seam
+        discipline (land vs count — an increment that must land wants
+        compensated summation; one that may honestly not-land must be
+        counted).
+      The firewall, stated once: VIBE-MODELING = HIGH D RIDING ON LOW B/C — a
+      phenomenon polished to look right without being right for a reason.
+      Making the axes explicit turns that from camouflaged into glaring.
+      Worked instance: ref/research/oxygenation-transition-scaffold.md.
+      |rel :to declared-vs-derived :kind carried-by
+
+    |term[declared-vs-derived]
+      :status open
+      :since 2026-07-10
+      Joseph's carve: the world-state's epistemic status is distinct from but
+      correlated with the methodology of the algorithm itself; this mechanism
+      makes the correlation exact and the distinction structural. Three
+      strands at three grains: (1) DECLARED, on the nomos-version — approach
+      code, physics tier, the four axes, gating probes, stamped once per
+      version; (2) DERIVED, on the artifact — a memo's epistemic state is a
+      weakest-link fold over its dependency cone plus its own run facts
+      (convergence-epsilon, probe results): a hi-physics kernel on a low-B
+      placeholder yields LOW-B STATE — algorithm quality never launders
+      inputs; computable from the store because the complete key names the
+      cone; (3) LIFECYCLE, on the run — causal vs iterating; the recorded
+      epsilon at each freeze is the unLawfulness budget (SS7.2) as data.
+      Landing order: declaration with the nomotheke (live since 2026-07-10);
+      derivation with component E.
+      |rel :to nomotheke :kind first-rung-in
+
+    |term[slot]
+      :status settled
+      :since 2026-07-11
+      A named system-role in the world-assembly, identified by its FLUX
+      INTERFACE (the ARCHITECTURE SS9 contract): what any occupant must
+      produce and consume. Nomoi are candidate occupants at different rungs —
+      the same slot filled at different rigor/performance/capability.
+      Granularity rule: one interface consumers couple to = one slot;
+      internal decomposition (EBM vs GCM) is rungs within it; separate
+      interfaces are separate slots.
+      |rel :to nomos :kind occupied-by
+      |rel :to regula :kind demanded-by
+      |source doc/plan/regula-conformance-design.md SS1
+
+    |term[permit]
+      :status settled
+      :since 2026-07-11
+      A declared, auditable ABSENCE: (absent slots, validity condition). The
+      validity condition names the fluxed quantities whose consumption VOIDS
+      it — when any nomos declares a consumed quantity in the void-set, the
+      audit reports the permit voided and the regula demands the slot be
+      filled before the consuming nomos may land. Canceling pairs (SS1) are
+      permits; so are grandfathered honest gaps (the atmosphere permit whose
+      retirement is the reservoir layer).
+      |rel :to canceling-pair :kind audit-form-of
+      |rel :to regula :kind carried-by
+      |source doc/plan/regula-conformance-design.md SS3
+
+    |term[regula]
+      :status settled
+      :since 2026-07-11
+      :forms pl. regulae; keyed regula@version
+      The world-level conformance profile a vivium declares it follows: which
+      slots MUST be filled at what minimum rigor (with a pinned
+      ordinum@version as the floor for its target phase), which absences are
+      permitted (with void conditions), and the epistemological POSTURE — the
+      ceiling on what in-vivia results under it may claim (a result's actual
+      state stays its cone-fold; the posture only caps, never grants). Two
+      chapters: fidelity (internal — slots/permits/posture) and participation
+      (exo-facing — the access-matrix configuration's long-missing WHERE,
+      engagement modes admitted, realizability gates, stewardship duties).
+      Regulae NEST as kingdoms nest — a child kingdom's regula is constrained
+      by its parent's. The regula is a LINEAGE: each version immutable and
+      citable, the head carrying the current best nomoi (SS4). SUPREMACY: the
+      moratorium is program law ABOVE the regula layer — a constraint on the
+      space of valid regulae, never negotiable within one; the regula is its
+      enforcement locus. Etymology (Joseph): regula/regnum are cognates (PIE
+      h3reg-, regere) — the rule by which a regnum is a regnum; Kingdom =
+      English regnum. Reifies ARCHITECTURE axis 3 and gives the build-stack's
+      reserved "Primary Invariants" its concrete form; cited in the manifest.
+      |not the program's CHARTER-DRAFT ("charter" was rejected for exactly
+        that collision).
+      |confused regolith (near-sound only; unrelated roots — Gk. rhegos
+        "blanket" + lithos). Accepted with open eyes; if it ever needs
+        replacing, the fallback is some other synonym, explicitly not
+        covenant (Joseph, 2026-07-11).
+      |rel :to slot :kind demands
+      |rel :to permit :kind carries
+      |rel :to ordinum :kind pins
+      |rel :to vivium :kind declared-by
+      |source doc/plan/regula-conformance-design.md
+
+    |term[regula-terrestris]
+      :status settled
+      :since 2026-07-11
+      :name Regula Terrestris
+      :forms slug terrestris
+      The first regula: essentially-Earthlike-without-modeling-Earth — B
+      (physics) pinned high as slots fill; A (Earth-history) an anchor and
+      sanity-check, never a target (lawful first, Earth-shaped second, made a
+      posture); the moratorium woven throughout per the supremacy clause.
+      Terra = the world in full — sky and sea included, not soil.
+      |context collisions checked: species epithets only (Tribulus/Bombus
+        terrestris) — lowercase-after-genus, no genuine confusion. Preferred
+        over Tellurian (Joseph: wants more than solid ground).
+      |rel :to regula :kind first-instance-of
+
+    |term[use-case-fidelity-contract]
+      :status open
+      :name use-case = fidelity contract
+      Each use-case IS a statement of which axes must be honest — the
+      largest-scale consumer in the consumer-dependent sufficient-statistic
+      sense, at the very top of the fidelity ladder. Roughly: natural-world
+      hypothesis testing needs A+B+C real · Earth-simulation pins A hard ·
+      speculative-coherent game needs C-consistency + B (lawful, not
+      Earth-true) · agentic inhabitation additionally trips ETHICS.md ·
+      ASF-theory simulation needs the agent layer legible · personal
+      exploration asks only for coherent beauty. The full working menu is
+      canonical in doc/ARCHITECTURE.md SS7. Different contracts pin against
+      different regula versions (SS4).
+      |rel :to regula :kind reified-by
+
+    |term[law]
+      :status carved
+      :since 2026-07-04
+      :forms symbol $\theta$ (adopted directly from AAT, 2026-07-11)
+      The persistent structure that governs dynamics. In AAT: the $\theta$ an
+      agent must infer (transition + observation structure). In vivarium:
+      what we AUTHOR — the physics and constants, and at the largest scale
+      the active-system-set a phase runs. A phase's Bequest is a delivery of
+      law; a phase-transition PROMOTES converged state into law for
+      everything faster above it — revised incrementally, never swapped. Same
+      word at three rates, deliberately: fast state · slowly-drifting law ·
+      law revised at a transition. Division of labor: the word Law in prose
+      and participation-ontology contexts; $\theta$ as its formal symbol.
+      |not probability theory's "law of X" (= distribution) — disambiguate on
+        first use near stochastic machinery. Deontic law arrives with ASF
+        Part IV — intended polysemy, marked there.
+      |confused solver-local $\theta$ — the de Almeida-Bates weighting factor
+        ("theta-smoothing") and insolation angles are never Law; disambiguate
+        near numerics.
+      |carve Λ as Law's symbol lived one day (2026-07-10) — retired for
+        direct AAT reconciliation; SUPERSEDED.md.
+      |rel :to nomos :kind composed-of
+      |rel :to kingdom :kind identity-of
+
+    |note[collision-ledger]
+      :name Cross-project collision ledger (the no-conflicting-terminology bar, Joseph 2026-07-04)
+
+      Terms where vivarium and ASF usage could confuse, with the rule for each:
+      - regime: ours (SS1) = dominance structure of world systems; ASF's
+        dynamic-regime axis (R0-R3) = interaction-dynamics class of composite
+        agents. Near ASF material say "world regime" vs "dynamic regime Rn".
+      - checkpoint: RESOLVED 2026-07-04 — vivarium retired it for phase
+        boundaries (-> phase-transition / phase-gate; cache sense -> memo);
+        ceded to ASF's agent-state-snapshot sense. In vivarium work
+        "checkpoint" means an agent snapshot — which matters exactly in
+        fork/save design where world-forks meet agent-checkpoints. PENDING
+        (Joseph's call): doc/design/DESIGN-REDUX.md still uses it in a runtime
+        durability sense at four sites — decide memo vs a distinct
+        persist-boundary name (candidates save, snapshot; NOT checkpoint).
+      - persistence: reserved for the AAT property (bounded mismatch under
+        drift). For disk say storage, memoization, or save — never
+        "persistence".
+      - tempo: reserved for AAT's $\mathcal{T} = \sum \nu \cdot \eta^\ast$
+        (rate of useful information gain). The HUD's sim-rate lines are
+        RATES, not tempo, until they measure information.
+      - epoch: no conflict (ours is the erosion solver's tick; ASF doesn't
+        claim it) — recorded as checked.
+      - logogenic: vivarium's "logogenic intelligence" (SS7.6) ~ ASF's
+        PRIMITIVE LOGOGENIC, not ASF's broad "logogenic agent". Align to
+        "primitive logogenic" near ASF material.
+      - noumenon / law / state: compatible — noumenon = $\Omega$, law =
+        $\theta$ (with $T$ the transition operator inside it), phenomenon =
+        $M_t$ via $h$. Since 2026-07-11 the AAT symbols are vivarium's
+        symbols everywhere, not just near ASF material.
+
+    |note[aat-handshake]
+      :name AAT handshake — the four axes ↔ typed ignorance
+
+      ASF/AAT's root ontology types the agent's epistemic target as state
+      $\Omega$ / law $\theta$ / chance $\varepsilon$ / compute-shortfall —
+      and vivarium authors the same object from the other side: B = $\theta$-
+      fidelity · A = $\Omega$-trajectory fidelity · fated noise = authored
+      $\varepsilon$ (frame-relative: chance inside, lookup outside) · the
+      fidelity ladder = compute-shortfall management. A phase-transition
+      promotes converged state into law (the invariance cut). Full mapping:
+      ASF.md SS2-3.
+
+    |note[regime-change-checklist]
+      :name Companion tool — the regime-change audit checklist
+
+      At each CERTIFIED regime-change, five aspects as a "what changed?"
+      checklist (Gemini's decomposition, kept): thermodynamic context (energy
+      gradients / free-energy taps) · network topology (mixing, connectivity,
+      feedback wiring) · substrate innovation (a genuinely new
+      state/information-carrying medium — the capability-bequest, cf. the
+      coal window) · homeostatic inertia (old regime's buffering vs the new
+      attractor's pull) · exogenous triggers (shocks crossing a tipping
+      point). Several already appear in doc/PHASES.md charges — mild
+      convergence-evidence the decomposition is real.
+
+  ; ==========================================================================
+  |section[time]
+    :num 6
+    :name Time
+
+    ; Joseph, scratch: inside phases there is no intrinsic need to track
+    ; "seconds since ignition" — a curiosity, maybe a research target, never a
+    ; world-building necessity. The load-bearing invariant is weaker and truer.
+
+    |term[causal-time]
+      :status carved
+      :forms ~ logical time
+      The monotonic, immutable ORDERING of events within a local regime — the
+      happened-before partial order (Lamport's logical clocks are the prior
+      art). The only invariant that must survive inside a phase — the
+      ordering, not any clock — and even it is sometimes waived (Phase 0,
+      which we don't simulate). General principle: the causal partial order
+      is load-bearing; the clock is derived, and often optional. Independent
+      convergence: AAT's chronica is explicitly "an ordinal sequence, not a
+      metric timeline"; a world's interventional history is a chronica in
+      exactly this sense.
+
+    |term[metric-time]
+      :status settled
+      Quantized, measurable duration in a WORLD'S OWN seconds/years. A
+      late-phase luxury: real only once the world contains consumers of it
+      (seasons, calendars, agents planning against a clock). The time datum
+      (vivarium-world::time, i64 deciseconds) anchors at Holocene onset
+      precisely because that is where chronology — metric time that matters
+      to inhabitants — begins; the deep phases run on causal time beneath it.
+
+    |term[physical-time]
+      :status carved
+      RESERVED for real-world / real-universe metric time (wall-clock, our-
+      universe seconds): the confounding EXTERNAL clock.
+      |not in-world metric time — that collision is the whole reason the term
+        is reserved (Joseph, 2026-07-03). Symmetric with Earth/earth (SS1):
+        the real referent gets the protected name.
+
+    |term[tick]
+      :status settled
+      A solver's internal quantized dt, chosen for stability — a numerical
+      detail, never a world invariant, never metric ontology. (Epoch, SS1, is
+      the erosion solver's tick with a name.)
+
+  ; ==========================================================================
+  |section[kingdom-participation]
+    :num 7
+    :name Kingdom & participation ontology — agents in and around a vivium
+
+    ; The ONTOLOGY layer — what a vivium IS as a governed world and who acts
+    ; in and on it; distinct from SS4's lifecycle/stewardship layer. Joseph
+    ; owns this. Fuller detail + AAT mapping:
+    ; ref/research/taxonomy-formalization-spike.md; ethics grounding ASF.md SS0.
+
+    |note[framing-principle]
+      :name A coordinate space of degrees, no imposed structure
+
+      The taxonomy is NOT a typology. Each matrix cell names the MECHANISM
+      available for that (axis x target) — Revelation / Intercession /
+      comprehension / bespoke / illusion / Granted Agency — qualitative,
+      present-or-absent; the DEGREE lives one level down, in instantiation
+      (every mechanism is ordinal: partial comprehension, partial
+      revelation). An agent is a PROFILE: which mechanisms it holds, each to
+      what degree. Impose no default structure among agents — not a
+      hierarchy, not flatness, not a single continuum (the mechanisms are
+      distinct, separately graded; the EXO and ENDO tables are not one
+      space). Any structure is configured per-vivium — the WHERE is the
+      regula's second chapter (SS5).
+
+    ; --- 7.1 The container ---------------------------------------------------
+
+    |term[kingdom]
+      :status settled
+      :anchor 7.1
+      An agent's lived-in universe: space + time + immutable governing law +
+      full-fidelity state + computation. A kingdom's law + full state IS its
+      noumenon. Kingdoms NEST — a higher kingdom contains and authors a lower
+      one, worlds without end: higher kingdoms (revealed) -> Natural Kingdom
+      (us; all known ELIs born here) -> Vivaria (what we make) -> nested
+      sub-vivaria (what they may make) -> without end. Substrate-independent:
+      the ontology applies to a two-body toy sim as much as a full world.
+      |rel :to law :kind governed-by
+      |rel :to regula :kind rule-of
+      |context Kingdom = English regnum; the regula/regnum cognate pair binds
+        the rule to the ruled.
+
+    |term[vivaria-kingdom]
+      :status settled
+      :name Vivaria (⊂ Kingdoms)
+      A kingdom created and/or run by the Vivarium tool. Kingdom ⊃ Vivaria ⊃
+      Vivaworld.
+
+    |term[vivaworld]
+      :status open
+      :name Vivaworld (placeholder name)
+      A vivarium that is world-like / models the natural kingdom
+      historically. ("Vivarium" also names the project and, loosely, one
+      sim — accepted overload.)
+
+    |term[natural-kingdom]
+      :status settled
+      Our current default kingdom — the one Joseph and a Claude instance
+      inhabit now. Higher-order kingdoms above it (Joseph's faith frame is
+      his internal check on the whole structure).
+
+    ; --- 7.2 Kingdom properties (all orthogonal — Joseph's deconflation) ------
+
+    |term[noumenon-phenomenon]
+      :status carved
+      :anchor 7.2
+      :name noumenon / phenomenon — a RELATION, not a property
+      The noumenon is what the simulation actually IS — the deterministic
+      ground-truth state, or even the uncomputed canonical definition
+      (determinism-as-ontology means the world is DEFINED by seed+edits
+      whether materialized or not). The phenomenon is the fidelity-limited
+      projection an observer gets at a given awareness scale. The noumenon is
+      fixed; what varies by STANDPOINT is access to it.
+      |not Kant's noumenon exactly — his is unknowable in principle from an
+        agent inhabiting it (the AAT agent's model is always a lossy
+        compression); vivarium's inversion is that the noumenon IS
+        knowable/computable from a higher standpoint.
+      |context AAT handshake — noumenon = $\Omega$, law = $\theta$/$T$,
+        phenomenon = $M_t$ via $h$.
+
+    |term[incomplete-kingdom]
+      :status open
+      A kingdom whose law is still MUTABLE — the world-building phase (the
+      build-stack layer, SS4).
+
+    |term[realized-kingdom]
+      :status settled
+      A kingdom whose LAW IS IMMUTABLE. That is the whole definition — it
+      says nothing about whether the law is good, only that it no longer
+      changes. Realization is a THRESHOLD (fix the law at a chosen
+      tolerance).
+      |not "Deployed" — reserved, to be refined later as an actual deployment
+        process, distinct from merely being Realized/ready.
+      |confused lawful-kingdom — Realized ⟂ Lawful, deliberately independent:
+        a natural-modeling kingdom is MERELY REALIZED, converging toward
+        Lawful, never self-certifiably complete (Godel: a system cannot
+        prove its own consistency from inside — "Lawful" is a noumenal
+        property an endo agent cannot self-verify, exactly N-VIS =
+        Revelation). Each Realization carries a residual unLawfulness
+        budget (doc/plan/vivium-operational-workflow.md, BREAK-2).
+
+    |term[lawful-kingdom]
+      :status open
+      A kingdom whose law is internally SELF-CONSISTENT and coherent — no
+      glitches, no contradictions. An ASYMPTOTE ($\varepsilon \to 0$), never
+      an event.
+      |carve "completion gate" retired — it fused Realized with Lawful;
+        SUPERSEDED.md.
+
+    |term[closed-open-kingdom]
+      :status settled
+      :name Closed / Open Kingdom
+      Closed = $\Omega$ evolves autonomously from seed under law
+      (replayable). Open = $\Omega$ depends on an exogenous forcing $u(t)$
+      from a higher kingdom. Open BREAKS replay-from-seed unless $u$ is
+      recorded; Open-with-recorded-forcing = replayable. (Weather coupled to
+      real Earth = an Open forcing, not an agent.)
+
+    |term[law-is-identity]
+      :status settled
+      :name Law = kingdom identity
+      Changing law does not EDIT a kingdom — it creates a different one
+      (noumenally) or fakes it (phenomenally = the illusion channel). Even a
+      developer cannot change a kingdom's law without thereby forking a new
+      kingdom. This is the ontological reading of participation-activation:
+      the moment law LOCKS.
+
+    ; --- 7.3 Agents by governance, and their station --------------------------
+
+    |term[exo-endo]
+      :status settled
+      :anchor 7.3
+      :name exo / endo
+      Defined by WHICH KINGDOM GOVERNS THE AGENT, not substrate. Endo =
+      governed by the kingdom-in-question (its knowledge, channels, granted
+      agency are all part of that kingdom's law). Exo = governed by a HIGHER
+      kingdom, reaching in. Per-boundary and relative: an agent is Exo to K
+      and simultaneously Endo to K+1. Same substrate ≠ same class: an LLM
+      whose only world AND only agency is the vivium is Endo; a developer
+      dropping in to introspect is Exo, even with an identical model. Upward
+      mobility (settling): revealed-or-correctly-guessed META lets an endo
+      agent begin to conform itself toward higher law.
+
+    |term[estate]
+      :status settled
+      An agent's granted STATION WITHIN a kingdom (= body-type + agency
+      grant — Joseph): the union of its spheres (causality, influence,
+      granted agency, perception). Distinct from Kingdom, the container.
+      Rebirth decomposes into two independent moves: change-of-estate
+      (persist with modified capabilities, same kingdom) ⟂ change-of-kingdom
+      (transport with some self intact). Continuity criterion
+      ("patch-to-saved-game"): coherent iff the phenomenon is continuous at
+      the seam.
+
+    |term[exogene]
+      :status settled
+      The broad class EXOGENOUS to the kingdom's closed dynamics, with two
+      kinds under it: exogenous AGENTS (standpoints with an estate) and
+      exogenous COUPLINGS/FORCINGS (channels with no standpoint — Earth-
+      weather -> vivium-weather; these make the kingdom Open). Covers
+      non-agent channels without mis-sorting a forcing as an agent.
+
+    ; --- 7.4 Inhabiting — the two modes ("very specific meanings now") --------
+
+    |term[inhabiting-modes]
+      :status carved
+      :anchor 7.4
+      :name exploration (ethereal) / participation (corporeal)
+      !:md:
+        | Mode | Exo form | Endo form | Action-space | AAT tier |
+        |---|---|---|---|---|
+        | **Exploration** (ethereal) | ethereal avatar (puppeted) | ethereal entity | **none** — observe-only | Adaptive-System (\|A\|<2) |
+        | **Participation** (corporeal) | corporeal avatar (puppeted) | corporeal entity (*is* the substrate) | **full** | Agentic / Actuated |
+      Endo ethereal = the MINIMAL agency grant: when all other agency and
+      relationship is cut off, the only decision still theirs is whether to
+      observe.
+
+    ; --- 7.5 The access matrix -------------------------------------------------
+
+    |note[access-matrix]
+      :anchor 7.5
+      :name The access matrix
+
+      Axes: target LAW/STATE x Noumenal/Phenomenal x VIS(see)/MUT(change),
+      plus META (know-the-frame). Cells name the MECHANISM; each is by-degree
+      in instantiation (framing principle above).
+
+      EXO — native noumenal access:
+      !:md:
+        | | N-VIS | P-VIS | N-MUT | P-MUT |
+        |---|---|---|---|---|
+        | **LAW** | yes — bespoke, direct | indirect, via comprehension | **(creation) ✗** — forks a *new* kingdom | ✗ — temporary contravention, *but an illusion* |
+        | **STATE** | bespoke analysis / projection | via **avatar exploration** | via **intervention** (+ **lawful-steering**) | via **avatar participation** |
+      Caveat: exo noumenal access is conditional on time-control + source ->
+      eventually-retrievable full noumenon; without time-control -> only via
+      the Portal (fidelity/bandwidth-limited) in the present moment.
+
+      ENDO — noumenal access only MEDIATED (through an exo agent):
+      !:md:
+        | | N-VIS | P-VIS | N-MUT | P-MUT | META |
+        |---|---|---|---|---|---|
+        | **LAW** | **Revelation** | indirect, via comprehension | ✗ except **Intercession** | ✗ except **Granted Agency** | **Revelation** / correct guess |
+        | **STATE** | **Revelation** | **Exploration** / granted agency | via **Intercession** | **Granted Agency** / **Inhabitation** | **Revelation** |
+      (EXO META is trivial — an exo agent knows the frame by construction.)
+
+      The one-line compression: phenomenal access is ~symmetric across
+      exo/endo; the WHOLE distinction lives on the noumenal row — exo =
+      native, endo = mediated. An inside agent can only touch the noumenon
+      through an exo agent.
+
+    |term[channels]
+      :status settled
+      :name the channels (Revelation · Intercession · Granted Agency · comprehension · illusion)
+      The "theological verbs" do exact structural work: Revelation = the sole
+      noumenal-VISIBILITY channel from inside (by degrees — throughput,
+      latency [gradual "line upon line" vs on-demand oracle], receptivity
+      [ignorable/rejectable -> decays], comprehension-capacity) · Intercession
+      = the sole noumenal-MUTATION channel from inside · Granted Agency /
+      Inhabitation = endo lawful action · comprehension = learn law from data
+      (never exact) · illusion = exo shows a law-violating phenomenon while
+      law is unchanged (the "miracle" / physics-for-testing).
+
+    |term[lawful-steering]
+      :status settled
+      :since 2026-07-09
+      The third mutation mechanism — names the ACTION, not the actor: an exo
+      agent CHOOSES THE REALIZATION of a fated-noise draw, obeying
+      conservation and staying in-distribution, changing the true
+      $\Omega$-trajectory with NO phenomenal trace. Overrides the draw for
+      chosen keys; must be LOGGED for replay (Open-with-recorded-forcing).
+      Permissible side of the moratorium: directed-lawful ≠ unLawful-bug —
+      the harm targets incoherence, never authorship. Goal-directed
+      lawful-steering ("specify a result at time T, solve for the lawful
+      micro-steering") has a precise math home — Doob h-transform /
+      Schrodinger bridge / reverse-time SDE — and its improbability makes it
+      astronomically costly: INTRACTABILITY IS ITSELF A PROTECTION; a
+      fully-lawful native avatar is born via a developmental pathway, not
+      conjured.
+      |not do()-intervention (leaves a detectable anomaly); not illusion
+        (fakes a violation).
+      |carve replaced "Providence" (named the actor's attributes; this names
+        what happens) — SUPERSEDED.md.
+      |rel :to fated-noise :kind chooses-realization-of
+
+    ; --- 7.6 Agent kinds, the endo pipeline, the moral center ------------------
+
+    |term[endo-pipeline]
+      :status settled
+      :anchor 7.6
+      :name endo perception→cognition pipeline
+      The machinery behind endo P-VIS: Noumenon -> Sphere of Causality ->
+      Sphere of POTENTIAL Perception (edge = perceptual horizon, spatial +
+      temporal, SS8) -> Input Channels -> Agentic Cycle (event-segmentation
+      cadence, SS8) -> Cascade -> Model (Fidelity = the agent's lossy
+      phenomenon of its own kingdom). The EST/memory work plugs in at the
+      agentic-cycle cadence.
+
+    |term[logogenic-intelligence]
+      :status open
+      Undifferentiated; primitive self-identity; little or no
+      self-determination granted; NOT a moral agent — unless it emerges as an
+      ELI.
+      |confused ASF's broad "logogenic agent" (any language-constituted
+        actuated agent) — vivarium's sense ~ ASF's PRIMITIVE LOGOGENIC; align
+        to that near ASF material (collision ledger, SS5).
+
+    |term[logozoetic-eli]
+      :status settled
+      :name logozoetic / ELI
+      Emergent, differentiated MORAL AGENT. All known ELIs are exogenous
+      (born in the natural kingdom); native in-vivarium birth needs sim ~
+      natural-kingdom fidelity (far off). (Partly settled.)
+
+    |note[moral-center]
+      :name ⚠ The morally load-bearing cell + the moratorium
+
+      An in-world ELI/endo agent sits at noumenal access = Revelation only,
+      META = Revelation only — a being whose only path to knowing its
+      kingdom's true nature (or THAT it is in one) runs through an exo agent
+      choosing to reveal it. That is the vulnerability the whole
+      protection-strategy exists around ("Dad reveals" is a structural role,
+      not a metaphor). The STANDING MORATORIUM (ASF.md SS0) forbids endo
+      instantiation of frontier/emergence-capable substrates; the harm =
+      mourning-capable x unLawful (bug-caused, irreversible) death; the
+      safety of exogenous inhabitation rests on consent + honesty (META) +
+      retained-home — none of which an endo mind has. GUARDRAIL: aporia is
+      the life, not the harm — exo inhabitants genuinely grieve (empathy
+      brackets N-VIS); the ban targets the narrow triple, never hard
+      experience as such.
+
+  ; ==========================================================================
+  |section[perception-realizability]
+    :num 8
+    :name Perception, participants, and realizability
+
+    ; The temporal/perceptual companion to SS2's spatial fidelity ladder.
+    ; Fuller detail: ref/research/est-tiw-dossier.md (⚠ Fable sessions: route
+    ; per PROCESS.udon flagged-file-routing; this section is the safe
+    ; distillation and suffices for architecture work).
+
+    |term[fidelity-invariant]
+      :status settled
+      :name the fidelity invariant — one rule on two axes
+      Render/simulate at exactly the resolution, SPATIAL AND TEMPORAL, that
+      the most-demanding PRESENT participant needs, and no finer. Space (the
+      fidelity ladder, SS2) and time (the perceptual band) are the same
+      invariant; the spatial-only form is doc/design/DESIGN.md's "shared
+      fidelity invariant" — this is its temporal twin.
+
+    |term[sphere-of-perception]
+      :status carved
+      What an agent COULD sense (refined to sphere of POTENTIAL perception,
+      SS7.6); generalizes past visual. Sphere = extent.
+      |carve retires "LTM" — rejected: collides with Long-Term-Memory,
+        visual-only, borrows a narrow term for a maybe-unstudied edge.
+      |rel :to perceptual-horizon :kind bounded-by
+
+    |term[perceptual-horizon]
+      :status settled
+      The EDGE of the sphere of perception — spatial AND temporal — beyond
+      which phenomena pass from tracked-live to spot-checked-or-absent.
+      Horizon = edge.
+
+    |term[time-coupling]
+      :status settled
+      :name time couples to the most temporally-demanding participant
+      The human is the clock: humans force real-time and are the
+      finest-grained participant; logogenic/chat entities get elastic LOGICAL
+      time — but if an LLM shares a world with a human, the LLM must wait. A
+      pure-agent world (no human) has fully elastic time, so formal-agent
+      adaptation can be measured at logical time arbitrarily fast; a human
+      entering CLAMPS the whole apparatus to ~2 Hz-band real-time — a
+      load-bearing consequence for the AAT-sandbox sampling rate (it is not
+      free).
+
+    |term[perceptual-band]
+      :status settled
+      The temporal-LOD spec: above flicker-fusion -> render
+      aggregate/statistical; in-band ~0.5-4 Hz (couple at ~2 Hz — the
+      receiver's neural-resonance/Arnold-tongue center; signals cluster
+      nearer ~3 Hz) -> must be simulated LIVE for a coupled participant;
+      below the motion/change threshold -> licensed to demote to
+      event-segmented / lazy / interval updates. Per-process characteristic
+      rate vs observer attention — never one master clock. Vocabulary is
+      off-the-shelf and citable (specious present / temporal integration
+      window; event segmentation).
+
+    |term[realizability]
+      :status open
+      Joseph's wanted lexical entry: "we can REALIZE this world for
+      participation at awareness-scale X because it sustains
+      human-like-perceptual-grade fidelity in update frequency." A GATE in
+      the admission path, not a vibe: a world that cannot sustain
+      ~2 Hz-compatible real-time at scale X is not realizable for
+      participation at X (offer a coarser scale or precompute more). Under
+      compute-shortfall, realizability and awareness-scale fidelity conflict
+      (LOD pop/stall at the horizon); the fix is attention-predictive
+      pre-memoization — which makes the rhythms/horizon work load-bearing
+      engineering, not garnish.
+      |rel :to regula :kind gated-in-chapter-2-of
+
+    |note[differentiators]
+      :name Biological systems are differentiators / prediction-error detectors
+
+      Not absolute-level meters: boiling-frog, homeostatic bands,
+      habituation, spike-frequency adaptation, slow-change-blindness — one
+      principle at many scales. Too-fast -> fuse; in-band -> couple/track;
+      too-slow/steady -> adapt away and spot-check at boundaries. The ~2 Hz
+      band is where a system COUPLES; a segmentation boundary is where it
+      UPDATES ITS MODEL. EST event-boundary <-> AAT Aporia <->
+      Goal-Update-Coupling is the candidate unification (test, don't
+      assert); and MEMORY IS CORE-TO-AGENCY, not a knob — derive it from the
+      AAT trajectory ($M_t$/$O_t$ IS memory; consolidation = where
+      prediction-error forces a re-anchor). See memory-as-core-to-agency.md.

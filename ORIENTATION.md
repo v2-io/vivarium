@@ -33,7 +33,7 @@ carries the conceptual bridge, the reading gates, and the **standing moratorium
    bands, build order, the fluvial inventory, the instruments.
 6. `doc/PHASES.md` — the developmental ladder (Charge / Bequest / Record; the moral
    line at Phase 7).
-7. `LEXICON.md` — canonical vocabulary; `SUPERSEDED.md` — the do-not-reuse
+7. `LEXICON.udon` — canonical vocabulary; `SUPERSEDED.md` — the do-not-reuse
    ledger; `ASSUMPTIONS.md` — the magic-constant ledger (touch a constant,
    touch the ledger).
 8. `doc/theory/` — the technical core: `multiscale-seams.md` (position AND time

@@ -311,8 +311,8 @@ LEXICON's cross-project collision ledger.)*
    simulation claim can cite a *specific* world-artifact — seed + generator
    versions + phase memo + intervention script — as its reproducible
    substrate (content-addressed storage makes the citation exact). That is
-   the operational meaning of results **in vivia** (LEXICON §3, pending
-   Joseph's confirmation of the noun): a third empirical register between
+   the operational meaning of results **in vivia** (LEXICON §4, settled
+   2026-07-04): a third empirical register between
    toy model and field study, with the transfer assumptions stated.
 6. **What stays open.** The additional (non-world-building) gates a real
    crèche would need (§3); which upstream segments receive the first

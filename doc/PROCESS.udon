@@ -76,7 +76,7 @@
     |norm[ledger-duty]
       :kind prescription
       Touch a constant — touch ASSUMPTIONS.md. Retire a term or doc-section —
-      append to SUPERSEDED.md. Settle a term — LEXICON.md, collision-checked.
+      append to SUPERSEDED.md. Settle a term — LEXICON.udon, collision-checked.
       Add or change a nomos — declare it in the nomotheke. These are part of
       the change, not follow-up work.
 
@@ -166,7 +166,7 @@
       Opus agent, under a report-paths-not-content contract (the agent reports
       old/new path strings and line counts, never quotes surroundings). The
       engineering distillation a Fable session actually needs is already in
-      LEXICON.md section 8, which is safe. Extend this list if another file
+      LEXICON.udon section 8, which is safe. Extend this list if another file
       starts tripping; retire entries when the safeguard stops firing.
 
     |norm[whim-gate]

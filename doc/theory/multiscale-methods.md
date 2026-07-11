@@ -177,7 +177,7 @@ is presumably not a coincidence.
 
 ---
 
-*Lexicon hooks (for LEXICON.md when terms settle): restriction/lifting (R/L),
+*Lexicon hooks (for LEXICON.udon when terms settle): restriction/lifting (R/L),
 closure, scale separation, refluxing/pinning, coupler, parameterization +
 error budget, fated lifting (Ⓝ — the §8 discipline's multiscale role),
 detail→abstract (already named).*
