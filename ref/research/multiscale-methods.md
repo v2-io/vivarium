@@ -60,7 +60,11 @@ Ordered roughly by how much micro physics each keeps alive:
   fine patches substep; coarse–fine interfaces reconciled conservatively
   ("refluxing"). *Vivarium:* the **telescope** is AMR with the refinement
   criterion = observer attention rather than error estimate; **finishers**
-  are the fine substeps; mean-pinning is the refluxing.
+  are the fine substeps; mean-pinning is the **injection/update** (averaged
+  fine→coarse). *(Corrected 2026-07-10 after the primary read: mean-pin is NOT
+  refluxing — refluxing is the distinct conservative flux correction at the
+  coarse–fine boundary (Berger–Colella 1989), which vivarium does not yet do;
+  that gap is why `seam_ridge` is red. See `multiscale-seams.md` §2.1.)*
 - **Multirate time integration** (Gear & Wells 1984 lineage). Split one system by
   timescale; fast components substep with interpolated slow forcings; slow
   components see time-averaged fast output. *Vivarium:* §4's stance verbatim;

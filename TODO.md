@@ -29,6 +29,10 @@ The ASF conventions worth adopting (`~/src/archema-io/asf/`, `doc/sop/format.sop
 **Next concrete step when we return to this:** decide port-`bin/term`-vs-shared-store,
 then either migrate `LEXICON.md` entries into `terminology/entries/` or finish the in-place format pass (§1–§6 LaTeX + de-hard-wrap). Not urgent.
 
+## Native↔canonical representation machinery — deferred, tracked
+
+Joseph (2026-07-10, the session that ran out of context; landed here 2026-07-10 by its successor): systems will often want **domain-specific internal representations** — faster and smaller than columns-on-the-grid — memoized natively and *projected* to the canonical `CellId` frame by lazy keyed recipes. Named examples: tilted-slab bodies computed as horizontal stacks (+ latent dip); the fluvial cells→receivers linked list (CHONK's graph); closed-form coefficient blocks. The interplay with current concepts is recorded in `LEXICON.md` §2 (*native representation / canonical frame*). **Figure out the general machinery when it's tactically intuitive** — i.e. when the first real second-representation system lands (most likely the drainage graph becoming a first-class store object in plan-Phase 2, or slab bodies) — not in advance.
+
 ## Session housekeeping
 
 - **The 2026-07-09 batch is committed** (`9129ba5`, 2026-07-10): lexicon consolidation, PDF/relata work, and the architecture set (ARCHITECTURE v0.3,

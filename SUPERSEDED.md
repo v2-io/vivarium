@@ -43,6 +43,7 @@
 
 ## Doc sections / files
 
+- **~~"mean-pinning is the refluxing" (`multiscale-methods.md` §2)~~ → mean-pin = AMR *injection/update*; refluxing = the distinct conservative flux correction (Berger–Colella 1989), not yet built** · corrected 2026-07-10 by the primary read (`multiscale-seams.md` §2.1); the missing refluxing is the seam fix plan-Phase-3 supplies. Stale line marked in place.
 - **~~ARCHITECTURE.md v0.1 (software-architecture register)~~ → v0.2 → v0.3
   (one principle, three axes)** · 2026-07-09 → 2026-07-10 · v0.1 led with the query-graph/keys/store *implementation* and buried the multiscale R/L/closure operator algebra; v0.2 re-centered on it; **v0.3** (2026-07-10) consolidated to
   *one principle (represent by consequence) on three axes* — substrate machinery /
