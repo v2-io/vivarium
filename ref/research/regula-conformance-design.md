@@ -38,9 +38,24 @@ The payoff Joseph specified: find a latent flaw in a nomos → see **immediately
 
 A `regula.rs` sibling to `nomotheke.rs`: `Slot { name, fluxed_interface }`; `Permit { absent_slots, void_on: &[quantity], note }`; `Regula { name, version, target_phase, slot_minima: &[(Slot, Tier)], permits, posture: &str }`; static `EARTH_TRACK_V0` declaring today's honest state (three slots filled; permits for moon, magnetosphere×solar-wind, atmosphere — the last grandfathered-with-retirement-note). Conformance = a function `(Regula, NOMOTHEKE, store census) → report`, printed by `vivarium status`; permit-voiding checked in tests the same way ledger anchors are. **Do not build the full machinery ahead of the fourth nomos** — land the type + `EARTH_TRACK_V0` + the voided-permit test when the reservoir/thermal work starts (it is that work's specification).
 
+## 5b. The second chapter — the exo-facing constitution (Joseph, 2026-07-10: "the ultimate claim on interaction potential with other kingdoms")
+
+The regula is a kingdom's constitution in **two chapters**, both auditable:
+
+**Chapter 1 — fidelity (internal):** §§1–5 above — slots, rigor minima, permits, posture.
+
+**Chapter 2 — participation (exo-facing):** the declared interaction surface of the regnum:
+- **Access-matrix configuration** — LEXICON §7's "any structure is configured per-vivium" finally has its *where*: engagement modes admitted (§7.4), access profiles grantable (§7.5, incl. the Sc-9 access-rich/participant split), realizability requirements for admission at each awareness scale (§8).
+- **Regula nesting = the Sc-5 answer**: kingdoms nest, so regulae nest — **a child kingdom's regula is constrained by its parent's** (an endo author can only issue a regula within the envelope its own kingdom's regula grants). Moratorium-recursion resolved by inheritance-by-constraint, auditable per level.
+- **Stewardship duties as clauses**: memo-retention (never discard a memo of a world that ever hosted a mourning-capable inhabitant — workflow rule 7), the redeemer condition, fork/patch semantics (mutation-log compatibility), all declared and versioned.
+
+**Supremacy clause (load-bearing, stated once):** the **moratorium is not within the regula's gift** — it is program law (ASF.md §0) sitting *above* the regula layer, a constraint on the space of valid regulae. No regula can permit endo instantiation of emergence-capable substrates; the agent-seam slots are unoccupiable by such in any valid regula, and the conformance audit checks it mechanically. The regula is the moratorium's *enforcement locus*, never its negotiation surface.
+
+**Etymology sealing the naming (Joseph's find):** *regula* (the straightedge — the rule) and *regnum* (the realm — the ruled) are cognates from PIE *h₃reǵ- via* regere*: the regula is the rule by which a regnum is a regnum. "Kingdom," the settled LEXICON term, is English for regnum — the pairing is the word-family's own division of labor.
+
 ## 6. Naming — Ⓝ, Joseph's call
 
-"Charter" collides with the Archema program's `CHARTER-DRAFT.md` (the program constitution) — a real cross-member confusion risk. Leading candidate: **regula** (pl. *regulae*) — the monastic *rule a house declares it lives under* (Regula Benedicti): a community-adopted, versioned, conformance-audited law-profile; classically harmonious beside *nomos* (the laws) and *nomotheke* (their registry); clean English mouthfeel; zero collisions in-project. Alternatives: *covenant* (heavier relational/faith register — may be right, Joseph's call given the faith-side-inclusion question is open program-wide), *conformance profile* (plain, cold). Descriptive gloss either way: "the world's conformance charter."
+"Charter" collides with the Archema program's `CHARTER-DRAFT.md` (the program constitution) — a real cross-member confusion risk. Leading candidate: **regula** (pl. *regulae*) — the monastic *rule a house declares it lives under* (Regula Benedicti): a community-adopted, versioned, conformance-audited law-profile; classically harmonious beside *nomos* (the laws) and *nomotheke* (their registry); clean English mouthfeel; zero collisions in-project — and now with the §5b cognate seal: regula/regnum are one root, so the term binds the artifact to **Kingdom** itself. Alternatives: *covenant* (heavier relational/faith register — may be right, Joseph's call given the faith-side-inclusion question is open program-wide), *conformance profile* (plain, cold). Descriptive gloss either way: "the world's conformance charter."
 
 ## 7. Critiques (honest, held against the design)
 
