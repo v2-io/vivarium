@@ -66,6 +66,10 @@ Phase 1's charges (tilt, spin, insolation rhythm) exist as exact code (`planet.r
 
 `framework-to-status-quo.md` §4's component **E** (the settle sequence as explicit chained nomoi with time-indices, each stage a memo with its recorded convergence-ε) did **not** carry into `abyssal-parity-plan.md`'s six phases, and no deliberate deferral is recorded — it fell through the consolidation crack (found 2026-07-10). It keeps resurfacing as load-bearing: it is what makes "the beginning of Phase 3.3" *addressable* (beacons need it), what makes intermediate stages monitorable by explorers, what the "watch erosion happen while floating downstream" experience plays back, and its recorded ε *is* the unLawfulness budget (LEXICON §7.2) as data. Recommendation: treat it as plan-Phase-2½ — build it when the builder daemon's stage progression first needs a second time-index.
 
+## Small UX: unify default world dirs
+
+The CLI takes an explicit `<dir>`; the globe defaults to `~/.cache/vivarium/globe-world`; `store_explore` uses `$TMPDIR/vivarium-store-explore`. A fresh user running all three sees three different worlds. Pick one convention (likely: a `~/.local/share/vivarium/<name>` home + `VIVARIUM_WORLD` respected everywhere) when the FP explorer lands. (Don't silently move Joseph's existing `globe-world` — first-light lives there.)
+
 ## Session housekeeping
 
 - **The 2026-07-09 batch is committed** (`9129ba5`, 2026-07-10): lexicon consolidation, PDF/relata work, and the architecture set (ARCHITECTURE v0.3,

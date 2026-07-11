@@ -313,6 +313,40 @@ testbench (SUPERSEDED watch-list) — kernels canonical, architecture donor-only
 Its known cold-fill pain (~2 h) is *bypassed*, not fixed, by the frame path:
 tiles memoize once, forever.
 
-**Next:** the initial slice in `builder-explorer-decoupling.md` §5 — CLI +
-builder v0, demand spool, time-indexed stages (component E, see TODO), the
-first-person ethereal explorer.
+**Later the same day (increments #6–#9 + the honesty stack + the research pass):**
+
+6. **The `vivarium` CLI** (`src/bin/vivarium.rs`): `new`/`build`/`status`/
+   `attach` — builder v0 sweeps spine→erosion→water over all six faces under
+   `builder.lock` (second build ATTACHES); `status` renders the **fidelity
+   pyramid** with the honesty column (declared/derived physics per nomos).
+   Whole planet at L7: ~630 ms cold, ~1 ms warm.
+7. **Spine v2** — the prior sampled on the 3-D sphere (`fbm3`): v1 had
+   *measured* ~3 km cliffs at every cube-face edge, exposed within hours by
+   the first whole-globe view (`spikes/globe`, agent-built: spin/zoom/pick,
+   real sun ephemeris + ethereal time scrub `,./N/M/P/Y`). Probe-sensitivity
+   lesson recorded in `gen.rs`'s continuity probe.
+8. **The nomotheke** (`nomotheke.rs`) — every nomos declares its epistemics,
+   deps, bequests-with-conservation-claims, and ASSUMPTIONS anchors as DATA;
+   declarations mint the keys; the ledger compiles into tests; derived
+   quality = weakest-link fold. **ASSUMPTIONS.md** = the magic-constant
+   ledger (touch a constant, touch the ledger — CLAUDE.md rule). README
+   front-door section states the whole posture.
+9. **The water nomos** — bounded deterministic fill on the eroded bed,
+   memoized; the three-system chain (spine→erosion→water) proven end-to-end.
+   Honest limits declared: tiles hydrologically isolated (flux-BC pending),
+   rain from per-tile stores (no atmosphere yet — see TODO's water
+   decomposition + thermal spine).
+
+**Also landed:** the **regula** design (`ref/research/regula-conformance-design.md`
+— world-level conformance, two chapters: fidelity + exo-facing participation;
+PHASES as floor; permits-with-void-conditions; moratorium supremacy) ·
+**LEXICON**: nomos/nomoi/nomotheke ✅ settled (replaced "recipe", swept) ·
+five early-Earth papers page-read (`ref/research/pdf-notes/`), survey
+corrected (deep-basin target RETRACTED: low land + generous water over
+~modern basins; emergence is crust-side via mantle cooling) · `hypsometry`
++ `globe_ascii` probes.
+
+**Next (parity ladder, conservation riding WITH it — not behind it):**
+#10 fine-tier erosion nomoi (L21/L24 seeded from coarser tiles — walkable-scale
+ground) · #11 first-person ethereal explorer · reservoir layer + thermal spine
+(`mantle-thermal` + `climate-ebm`, TODO) · regula v0 lands as that work's spec.
