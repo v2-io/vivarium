@@ -1,5 +1,5 @@
-|ordinum[tellus]
-  :title Ordinatio Ordinum — the Tellus phase floor, as instituted data
+|ordinum[terrestris]
+  :title Ordinatio Ordinum — the Terrestris phase floor, as instituted data
   :version 0.1.0
   :status draft-until-first-pinned
   :created 2026-07-11
@@ -7,14 +7,15 @@
   :reportatio doc/PHASES.md
   :reportatio-pin 42621d5
 
-  ; Tellus = the Earth-world-kind (Tellus Mater, the whole world-body — not
-  ; soil). This is ONE ordinum among a planned many in the tabularium; a
+  ; Terrestris = the earthlike world-kind — the TRACK. Its floor (this ordinum)
+  ; and its conformance profile (Regula Terrestris) share the track name and
+  ; are told apart by artifact type (.ordinum.udon vs .regula.udon): one track,
+  ; two faces. This is ONE ordinum among a planned many in the tabularium; a
   ; second, wholly different one is anticipated (a cellular-automata testbed,
   ; likely a 2-D plane — `:manifold euclidean-plane-2d`). The SCHEMA here
   ; (phase / charge / promise / defeasance / record) is world-kind-agnostic;
-  ; only the CONTENT below is Earth-lineage. Regula Terrestris pins this
-  ; ordinum; other regulae over the same ladder are possible (one ordinum,
-  ; many regulae).
+  ; only the CONTENT below is Earth-lineage. One ordinum, many regulae: other
+  ; profiles over the same ladder are possible.
 
   ; The first instituted artifact of the tabularium: the per-phase
   ; Charge/Promise floor as DATA, which every regula pins (`ordinum@version`)

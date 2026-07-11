@@ -116,7 +116,7 @@
       :authority Joseph 2026-07-11 (relaying the convention to the udon team too)
       Name a structured udon artifact `<name>.<root-element-type>.udon` — the
       root element type IS the schema, so the file self-describes and tools
-      filter by it (`ls *.ordinum.udon`). Examples: tellus.ordinum.udon ·
+      filter by it (`ls *.ordinum.udon`). Examples: terrestris.ordinum.udon ·
       terrestris.regula.udon · vivarium.lexicon.udon. The schema segment makes
       per-type subdirectories redundant; keep the tabularium flat. VERSION
       lives in the artifact's `:version` attribute, NOT the filename (git

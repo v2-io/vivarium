@@ -123,7 +123,7 @@
       |rel :to predicate :kind checked-by
       |rel :to nomotheke :kind declared-in
       |rel :to law :kind promoted-into
-      |source tabularium/tellus.ordinum.udon (reading-rules)
+      |source tabularium/terrestris.ordinum.udon (reading-rules)
 
     |term[defeasance]
       :status settled
@@ -140,7 +140,7 @@
         mechanism, and it pairs with the property word "defeasible".
       |rel :to promise :kind voids
       |rel :to permit :kind same-shape-as
-      |source tabularium/tellus.ordinum.udon (reading-rules)
+      |source tabularium/terrestris.ordinum.udon (reading-rules)
 
     |term[predicate]
       :status settled
