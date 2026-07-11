@@ -92,20 +92,25 @@ struct GlobeMsg {
     /// Fraction of cells above [`SEA_LEVEL_M`] (≈ by-area: equiangular cells
     /// subtend near-equal solid angles, max/min ≈ 1.41 — so "≈", not "=").
     land_frac: f32,
+    /// The SEAM INSTRUMENT (see [`seam_stats`]). The view's mesh bridges face
+    /// edges C0 — which would quietly *hide* a world-side cross-face-prior
+    /// discontinuity (Joseph: "don't accidentally hide our bug by making the
+    /// globe look too nice") — so the disagreement is measured and displayed
+    /// instead: the whole-globe twin of gen.rs's seam-continuity probe.
+    /// Healthy = cross ≈ within on both mean and max.
+    seam: SeamStats,
 }
 
 /// Corner-grid elevations for one face, with a one-corner **ghost ring**:
 /// `(nx+3)²` heights (m above bedrock datum), indexed so grid `(i, j)` is corner
 /// `(i−1, j−1)` — the ring at `−1` and `nx+1` lies *on the neighbouring faces*.
 ///
-/// Every corner — interior, boundary, ghost — is the average of its 4 adjacent
-/// **cells**. In-face cells come from the pulled tile (the source of truth);
-/// out-of-face cells are fetched by evaluating the prior at the ghost cell's
-/// *centre* direction: `to_unit`'s tan runs past the face edge and `from_unit`
-/// re-homes the direction onto the neighbour face, landing (by the equiangular
-/// identity tan(π/4+x)·tan(π/4−x) = 1) exactly half-a-cell *inside* it, where
-/// the face choice is unambiguous. Both faces of a shared edge therefore average
-/// the same four discrete cells and agree to summation-order ulps.
+/// Cell-value fetch for one face's neighbourhood: in-face cells come from the
+/// pulled tile (the source of truth); out-of-face cells are fetched by
+/// evaluating the prior at the ghost cell's *centre* direction: `to_unit`'s tan
+/// runs past the face edge and `from_unit` re-homes the direction onto the
+/// neighbour face, landing (by the equiangular identity tan(π/4+x)·tan(π/4−x)
+/// = 1) exactly half-a-cell *inside* it, where the face choice is unambiguous.
 ///
 /// Never sample *on* the edge itself: a direction with |u| = 1 sits on
 /// `from_unit`'s dominant-axis tie, and the two faces build that component
@@ -113,33 +118,101 @@ struct GlobeMsg {
 /// tie resolves differently per face and each samples a different edge cell —
 /// whole-edge elevation cliffs, found live as a 60 km-deep skirt canyon.
 ///
-/// (All of this leans on the spine being a pure function of (seed, position),
-/// which at this rung it is — the spine IS the prior. When the spine matures
-/// past that, out-of-face cells must come from neighbour-face tile pulls
-/// instead; noted so the shortcut can't silently outlive its premise.)
-fn corner_heights(world: &World, face: Face, level: u8, tile: &[f32]) -> Vec<f32> {
+/// (Leans on the spine being a pure function of (seed, position), which at this
+/// rung it is — the spine IS the prior. When the spine matures past that,
+/// out-of-face cells must come from neighbour-face tile pulls instead; noted so
+/// the shortcut can't silently outlive its premise.)
+fn cell_value(world: &World, face: Face, level: u8, tile: &[f32], ci: i64, cj: i64) -> f32 {
     let nx = 1usize << level;
     let n = nx as i64;
-    let cell_h = |ci: i64, cj: i64| -> f32 {
-        if ci >= 0 && ci < n && cj >= 0 && cj < n {
-            tile[cj as usize * nx + ci as usize]
-        } else {
-            let cu = ((ci as f64 + 0.5) / nx as f64) * 2.0 - 1.0;
-            let cv = ((cj as f64 + 0.5) / nx as f64) * 2.0 - 1.0;
-            let dir = CubeCoord { face, u: cu, v: cv }.to_unit();
-            let cell = CubeCoord::from_unit(dir).cell(level);
-            gen::surface_prior_m(world.seed(), cell, level) as f32
-        }
-    };
+    if ci >= 0 && ci < n && cj >= 0 && cj < n {
+        tile[cj as usize * nx + ci as usize]
+    } else {
+        let cu = ((ci as f64 + 0.5) / nx as f64) * 2.0 - 1.0;
+        let cv = ((cj as f64 + 0.5) / nx as f64) * 2.0 - 1.0;
+        let dir = CubeCoord { face, u: cu, v: cv }.to_unit();
+        let cell = CubeCoord::from_unit(dir).cell(level);
+        gen::surface_prior_m(world.seed(), cell, level) as f32
+    }
+}
+
+/// Corner-grid elevations with a one-corner ghost ring: `(nx+3)²` heights,
+/// grid `(gi, gj)` = corner `(gi−1, gj−1)`. Every corner — interior, boundary,
+/// ghost — is the average of its 4 adjacent **cells** via [`cell_value`], so
+/// both faces of a shared edge average the same four discrete cells and agree
+/// to summation-order ulps: the mesh is C0 at face seams by construction.
+///
+/// NOTE this C0 bridge is a *mesh* property, deliberately NOT a claim about the
+/// world: where the prior itself is discontinuous across an edge (the known
+/// engine-side per-face-fBm deficiency, ~2–3 km cliffs), the bridge renders a
+/// one-cell V-trench — and the seam *instrument* ([`seam_stats`], HUD + S
+/// paint) keeps that disagreement loudly visible rather than smoothed away.
+fn corner_heights(world: &World, face: Face, level: u8, tile: &[f32]) -> Vec<f32> {
+    let nx = 1usize << level;
     let gn = nx + 3; // corners −1 ..= nx+1
     let mut h = vec![0.0f32; gn * gn];
     for gj in 0..gn {
         for gi in 0..gn {
             let (ki, kj) = (gi as i64 - 1, gj as i64 - 1); // corner coords
-            h[gj * gn + gi] = (cell_h(ki - 1, kj - 1) + cell_h(ki, kj - 1) + cell_h(ki - 1, kj) + cell_h(ki, kj)) * 0.25;
+            let sum = cell_value(world, face, level, tile, ki - 1, kj - 1)
+                + cell_value(world, face, level, tile, ki, kj - 1)
+                + cell_value(world, face, level, tile, ki - 1, kj)
+                + cell_value(world, face, level, tile, ki, kj);
+            h[gj * gn + gi] = sum * 0.25;
         }
     }
     h
+}
+
+/// Per-face seam aggregates, in metres. `cross` = elevation step ACROSS the
+/// edge (tile edge cell vs the neighbour face's abutting cell); `within` = the
+/// matched-arc-length baseline (edge cell vs its inward neighbour) — the same
+/// cross-vs-within method as gen.rs's seam-continuity probe, wall-to-wall.
+#[derive(Clone, Copy, Default)]
+struct SeamStats {
+    cross_max: f32,
+    within_max: f32,
+    cross_sum: f64,
+    within_sum: f64,
+    n: usize,
+}
+
+/// The seam instrument. Returns the aggregates plus a per-corner **excess**
+/// grid `(nx+1)²` for the S paint mode: excess = cross step beyond 3× the
+/// *local* within step (plus a 100 m floor). Terrain that is merely steep is
+/// steep on both measures and stays dark; a genuine discontinuity is loud on
+/// cross alone and lights up — the instrument discriminates, it doesn't just
+/// flag mountains that happen to touch an edge.
+fn seam_stats(world: &World, face: Face, level: u8, tile: &[f32]) -> (SeamStats, Vec<f32>) {
+    let nx = 1usize << level;
+    let n1 = nx + 1;
+    let n = nx as i64;
+    let mut excess = vec![0.0f32; n1 * n1];
+    let mut st = SeamStats::default();
+    // (in-cell, ghost-cell, within-neighbour, the two bounding corners) per edge cell.
+    let mut edge = |ic: (i64, i64), gc: (i64, i64), wc: (i64, i64), ca: (usize, usize), cb: (usize, usize)| {
+        let h = cell_value(world, face, level, tile, ic.0, ic.1);
+        let d_cross = (h - cell_value(world, face, level, tile, gc.0, gc.1)).abs();
+        let d_within = (h - cell_value(world, face, level, tile, wc.0, wc.1)).abs();
+        st.cross_max = st.cross_max.max(d_cross);
+        st.within_max = st.within_max.max(d_within);
+        st.cross_sum += d_cross as f64;
+        st.within_sum += d_within as f64;
+        let e = (d_cross - 3.0 * d_within - 100.0).max(0.0);
+        for (i, j) in [ca, cb] {
+            let k = j * n1 + i;
+            excess[k] = excess[k].max(e);
+        }
+    };
+    for k in 0..nx {
+        let ki = k as i64;
+        edge((ki, 0), (ki, -1), (ki, 1), (k, 0), (k + 1, 0)); // j = 0 edge
+        edge((ki, n - 1), (ki, n), (ki, n - 2), (k, nx), (k + 1, nx)); // j = nx−1 edge
+        edge((0, ki), (-1, ki), (1, ki), (0, k), (0, k + 1)); // i = 0 edge
+        edge((n - 1, ki), (n, ki), (n - 2, ki), (nx, k), (nx, k + 1)); // i = nx−1 edge
+    }
+    st.n = 4 * nx;
+    (st, excess)
 }
 
 /// Hypsometric colour for an elevation (m above bedrock datum). Water is a depth
@@ -174,12 +247,20 @@ fn shade(h_m: f32) -> [f32; 4] {
 /// the sphere at `R + max(0, h − sea) · exag` — the ocean renders as the smooth
 /// sea-level sphere (bathymetry is colour-only), which is exactly the ask: the
 /// landmasses *above water*.
-fn build_face(world: &World, face: Face, level: u8, tile: &[f32], exag: f32) -> FaceMesh {
+fn build_face(
+    world: &World,
+    face: Face,
+    level: u8,
+    tile: &[f32],
+    exag: f32,
+    audit: bool,
+) -> (FaceMesh, SeamStats) {
     let nx = 1usize << level;
     let n1 = nx + 1; // rendered corners per edge
     let gn = nx + 3; // + ghost ring (normals only)
     let r_km = radius_km();
     let h = corner_heights(world, face, level, tile);
+    let (seam, excess) = seam_stats(world, face, level, tile);
 
     // Positions over the WHOLE ghost grid (normals need them); colors and the
     // final vertex buffer use only the interior n1 × n1 slice.
@@ -232,7 +313,15 @@ fn build_face(world: &World, face: Face, level: u8, tile: &[f32], exag: f32) -> 
             let g = gidx(i + 1, j + 1);
             positions[idx(i, j) as usize] = gpos[g].to_array();
             normals[idx(i, j) as usize] = gnorm[g].normalize_or_zero().to_array();
-            colors[idx(i, j) as usize] = shade(h[g]);
+            let mut col = shade(h[g]);
+            if audit {
+                let t = (excess[j * n1 + i] / 1000.0).clamp(0.0, 1.0);
+                if t > 0.0 {
+                    // Blend toward magenta (linear space): disagreement made loud.
+                    col = [col[0] + (1.0 - col[0]) * t, col[1] * (1.0 - t), col[2] + (1.0 - col[2]) * t, 1.0];
+                }
+            }
+            colors[idx(i, j) as usize] = col;
         }
     }
     let mut indices = Vec::with_capacity(nx * nx * 6);
@@ -277,14 +366,14 @@ fn build_face(world: &World, face: Face, level: u8, tile: &[f32], exag: f32) -> 
         }
     }
 
-    FaceMesh { positions, normals, colors, indices }
+    (FaceMesh { positions, normals, colors, indices }, seam)
 }
 
 /// The worker: owns the World (store + seed), serves (level, exag) build requests,
 /// one at a time, latest result wins on the ECS side. Faces build in parallel
 /// (they share only the Store, which is safe: worst case two threads compute the
 /// same object and the put is idempotent).
-fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32)>, tx: Sender<GlobeMsg>) {
+fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx: Sender<GlobeMsg>) {
     std::thread::spawn(move || {
         let store = match Store::open(&world_dir) {
             Ok(s) => s,
@@ -294,7 +383,7 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32)>, tx: Send
             }
         };
         let world = World::new(&store, seed);
-        while let Ok((level, exag)) = rx.recv() {
+        while let Ok((level, exag, audit)) = rx.recv() {
             let t0 = std::time::Instant::now();
             let nx = 1usize << level;
             let mut computed = 0usize;
@@ -302,6 +391,7 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32)>, tx: Send
             let mut land = 0usize;
             let mut total = 0usize;
             let mut tiles = Vec::with_capacity(6);
+            let mut seam = SeamStats::default();
             let faces: Vec<FaceMesh> = std::thread::scope(|s| {
                 let world = &world;
                 let handles: Vec<_> = (0u8..6)
@@ -310,15 +400,15 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32)>, tx: Send
                             let face = Face::from_index(f);
                             let (tile, src) = world.spine_tile(face, level, 0, 0, nx);
                             let land = tile.iter().filter(|&&h| h as f64 > SEA_LEVEL_M).count();
-                            let mesh = build_face(world, face, level, &tile, exag);
-                            (mesh, tile, src, land)
+                            let (mesh, fseam) = build_face(world, face, level, &tile, exag, audit);
+                            (mesh, tile, src, land, fseam)
                         })
                     })
                     .collect();
                 handles
                     .into_iter()
                     .map(|h| {
-                        let (fm, tile, src, l) = h.join().expect("face build panicked");
+                        let (fm, tile, src, l, fseam) = h.join().expect("face build panicked");
                         match src {
                             Source::Computed => computed += 1,
                             Source::Hit => hits += 1,
@@ -326,6 +416,11 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32)>, tx: Send
                         land += l;
                         total += tile.len();
                         tiles.push(tile);
+                        seam.cross_max = seam.cross_max.max(fseam.cross_max);
+                        seam.within_max = seam.within_max.max(fseam.within_max);
+                        seam.cross_sum += fseam.cross_sum;
+                        seam.within_sum += fseam.within_sum;
+                        seam.n += fseam.n;
                         fm
                     })
                     .collect()
@@ -339,6 +434,7 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32)>, tx: Send
                 hits,
                 pull_s: t0.elapsed().as_secs_f32(),
                 land_frac: land as f32 / total.max(1) as f32,
+                seam,
             };
             if tx.send(msg).is_err() {
                 return; // view closed
@@ -373,27 +469,41 @@ impl Default for Orbit {
     }
 }
 
+/// Stats of the last landed build, for the HUD.
+struct BuiltStats {
+    level: u8,
+    exag: f32,
+    computed: usize,
+    hits: usize,
+    pull_s: f32,
+    land_frac: f32,
+    seam: SeamStats,
+}
+
 /// What the globe should be showing vs what it is showing.
 #[derive(Resource)]
 struct GlobeState {
     auto_level: bool,
     level: u8,
     exag_i: usize,
-    /// (level, exag) of the last *requested* build; None until first request.
-    requested: Option<(u8, f32)>,
+    /// Seam-audit paint mode (S): cross-face disagreement in magenta.
+    audit: bool,
+    /// (level, exag, audit) of the last *requested* build; None until first request.
+    requested: Option<(u8, f32, bool)>,
     inflight: bool,
-    /// Stats of the last landed build, for the HUD.
-    built: Option<(u8, f32, usize, usize, f32, f32)>, // (level, exag, computed, hits, pull_s, land_frac)
+    built: Option<BuiltStats>,
 }
 
 impl Default for GlobeState {
     fn default() -> Self {
-        GlobeState { auto_level: true, level: 8, exag_i: 2, requested: None, inflight: false, built: None }
+        // VIVARIUM_AUDIT=1 starts in seam-audit paint mode (scripted verification).
+        let audit = std::env::var("VIVARIUM_AUDIT").map(|v| v == "1").unwrap_or(false);
+        GlobeState { auto_level: true, level: 8, exag_i: 2, audit, requested: None, inflight: false, built: None }
     }
 }
 
 #[derive(Resource)]
-struct BuildTx(Sender<(u8, f32)>);
+struct BuildTx(Sender<(u8, f32, bool)>);
 #[derive(Resource)]
 struct BuildRx(Mutex<Receiver<GlobeMsg>>);
 /// The viewed world's identity, for the HUD (name + seed from its manifest).
@@ -442,7 +552,7 @@ fn main() {
         spec.seed,
         dir.display()
     );
-    let (req_tx, req_rx) = std::sync::mpsc::channel::<(u8, f32)>();
+    let (req_tx, req_rx) = std::sync::mpsc::channel::<(u8, f32, bool)>();
     let (res_tx, res_rx) = std::sync::mpsc::channel::<GlobeMsg>();
     spawn_worker(dir.clone(), spec.seed, req_rx, res_tx);
 
@@ -576,6 +686,9 @@ fn input_update(
     if keys.just_pressed(KeyCode::KeyX) {
         state.exag_i = (state.exag_i + 1) % EXAG_STEPS.len();
     }
+    if keys.just_pressed(KeyCode::KeyS) {
+        state.audit = !state.audit;
+    }
     if keys.just_pressed(KeyCode::KeyA) {
         state.auto_level = true;
     }
@@ -606,7 +719,7 @@ fn level_update(orbit: Res<Orbit>, mut state: ResMut<GlobeState>, tx: Res<BuildT
         let l = (quarter / target_cell).log2().ceil() as i32;
         state.level = l.clamp(LEVEL_MIN as i32, LEVEL_MAX as i32) as u8;
     }
-    let want = (state.level, EXAG_STEPS[state.exag_i]);
+    let want = (state.level, EXAG_STEPS[state.exag_i], state.audit);
     if !state.inflight && state.requested != Some(want) {
         if tx.0.send(want).is_ok() {
             state.requested = Some(want);
@@ -648,7 +761,15 @@ fn apply_builds(
         mesh.insert_indices(Indices::U32(fm.indices));
         commands.spawn((Mesh3d(meshes.add(mesh)), MeshMaterial3d(mat.clone()), Transform::default(), FaceEntity));
     }
-    state.built = Some((msg.level, msg.exag, msg.computed, msg.hits, msg.pull_s, msg.land_frac));
+    state.built = Some(BuiltStats {
+        level: msg.level,
+        exag: msg.exag,
+        computed: msg.computed,
+        hits: msg.hits,
+        pull_s: msg.pull_s,
+        land_frac: msg.land_frac,
+        seam: msg.seam,
+    });
 }
 
 fn camera_update(
@@ -750,23 +871,37 @@ fn hud_update(
     // ASCII only: Bevy's default font has no glyphs for middle-dot/degree/etc.
     let status = match (&state.built, state.inflight) {
         (None, _) => "pulling the spine...".to_string(),
-        (Some((l, exag, computed, hits, pull_s, land)), inflight) => {
-            let cell_km = (r * std::f32::consts::FRAC_PI_2) / (1u32 << l) as f32;
+        (Some(b), inflight) => {
+            let cell_km = (r * std::f32::consts::FRAC_PI_2) / (1u32 << b.level) as f32;
+            let s = &b.seam;
+            let (c_mean, w_mean) = (
+                (s.cross_sum / s.n.max(1) as f64) as f32,
+                (s.within_sum / s.n.max(1) as f64) as f32,
+            );
             format!(
-                "world \"{}\" (seed {:016x}) | spine L{l} | cell ~{cell_km:.0} km | pull {computed} computed / {hits} hit, {pull_s:.2} s | land ~{:.0}%{}\n\
-                 alt {alt:.0} km | centre {:.1}{} {:.1}{} | relief x{exag:.0} (1 = honest) | level {}\n\
+                "world \"{}\" (seed {:016x}) | spine L{} | cell ~{cell_km:.0} km | pull {} computed / {} hit, {:.2} s | land ~{:.0}%{}\n\
+                 alt {alt:.0} km | centre {:.1}{} {:.1}{} | relief x{:.0} (1 = honest) | level {}\n\
                  {pick_line}\n\
+                 face-seam dh: cross {c_mean:.0} m mean, {:.0} m max | within-face {w_mean:.0} m mean, {:.0} m max{}\n\
                  fBm surface prior -- placeholder relief: conserves nothing, no tectonics/erosion yet\n\
-                 drag spin | wheel zoom | [ ] level | A auto | X relief | R reset | Esc quit",
+                 drag spin | wheel zoom | [ ] level | A auto | X relief | S seam audit | R reset | Esc quit",
                 ident.name,
                 ident.seed,
-                land * 100.0,
+                b.level,
+                b.computed,
+                b.hits,
+                b.pull_s,
+                b.land_frac * 100.0,
                 if inflight { " | rebuilding..." } else { "" },
                 lat.abs(),
                 if lat >= 0.0 { "N" } else { "S" },
                 lon.abs(),
                 if lon >= 0.0 { "E" } else { "W" },
+                b.exag,
                 if state.auto_level { "auto".to_string() } else { format!("manual L{}", state.level) },
+                s.cross_max,
+                s.within_max,
+                if state.audit { " | AUDIT PAINT ON" } else { "" },
             )
         }
     };
