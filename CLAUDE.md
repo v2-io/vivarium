@@ -52,6 +52,8 @@ helpfulness-as-costume, strengthen-before-soften, mark guesses as guesses, no
 "100%/comprehensive" overclaim, peer voice when delegating. This repo is early
 and speculative — say "I don't know" freely; most of this is hypothesis.
 
+**The assumptions ledger.** [`ASSUMPTIONS.md`](ASSUMPTIONS.md) is the canonical accounting of every unprincipled constant in the nomoi. **Touch a constant, touch the ledger** — an undeclared magic value is latent, *undiscoverably* unLawful (Joseph, 2026-07-10); a declared placeholder is an honest rung.
+
 **Git workflow.** This is Joseph's solo research repo; work goes **directly on
 `main`**. Do **not** create branches, worktrees, or PRs unless Joseph explicitly
 asks — the generic "branch before committing on the default branch" default does
