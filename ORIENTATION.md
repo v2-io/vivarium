@@ -31,7 +31,7 @@ carries the conceptual bridge, the reading gates, and the **standing moratorium
    cell semantics, the property set, the spatial-key plan (§8).
 5. `doc/design/DESIGN-SYSTEMS.md` — the phenomena graph: systems × timescales, coupling
    bands, build order, the fluvial inventory, the instruments.
-6. `doc/PHASES.md` — the developmental ladder (Charge / Bequest / Record; the moral
+6. `doc/PHASES.md` — the developmental ladder (Charge / Promise / Record; the moral
    line at Phase 7).
 7. `LEXICON.udon` — canonical vocabulary; `SUPERSEDED.md` — the do-not-reuse
    ledger; `ASSUMPTIONS.md` — the magic-constant ledger (touch a constant,
@@ -79,7 +79,7 @@ All committed and tested — **62/62 green in `vivarium-world`** (verified
   methods on `World { store, seed }` so key-seed ≡ compute-seed by
   construction; seed 0 = the legacy world, pinned by golden tests.
 - **Nomotheke** (`nomotheke.rs`) — every nomos declares its epistemics, deps,
-  bequests-with-conservation-claims, and `ASSUMPTIONS.md` anchors as DATA;
+  promises-with-conservation-claims, and `ASSUMPTIONS.md` anchors as DATA;
   declarations mint the store keys; the ledger compiles into tests; derived
   quality = weakest-link fold. README §"Epistemic honesty is enforced in code"
   is the front-door statement; ARCHITECTURE §9 items 5–6 are the workflow.

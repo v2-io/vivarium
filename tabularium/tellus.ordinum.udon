@@ -1,0 +1,428 @@
+|ordinum[tellus]
+  :title Ordinatio Ordinum — the Tellus phase floor, as instituted data
+  :version 0.1.0
+  :status draft-until-first-pinned
+  :created 2026-07-11
+  :manifold cube-sphere-3d-voxel
+  :reportatio doc/PHASES.md
+  :reportatio-pin 42621d5
+
+  ; Tellus = the Earth-world-kind (Tellus Mater, the whole world-body — not
+  ; soil). This is ONE ordinum among a planned many in the tabularium; a
+  ; second, wholly different one is anticipated (a cellular-automata testbed,
+  ; likely a 2-D plane — `:manifold euclidean-plane-2d`). The SCHEMA here
+  ; (phase / charge / promise / defeasance / record) is world-kind-agnostic;
+  ; only the CONTENT below is Earth-lineage. Regula Terrestris pins this
+  ; ordinum; other regulae over the same ladder are possible (one ordinum,
+  ; many regulae).
+
+  ; The first instituted artifact of the tabularium: the per-phase
+  ; Charge/Promise floor as DATA, which every regula pins (`ordinum@version`)
+  ; as the floor it may extend but never silently undercut. The whole ladder
+  ; lives here; a regula SLICES its target phase from it (later phases render
+  ; as horizon, never as failures). doc/PHASES.md is this document's
+  ; reportatio — the prose working text it was authorized from; a PHASES
+  ; revision yields a NEW ordinum version (immutable once any regula pins
+  ; one), and existing regulae opt in by re-versioning. Faithfulness to the
+  ; reportatio is the governing constraint: the terms here are PHASES.md's
+  ; terms, verbatim in substance.
+
+  |meta[reading-rules]
+
+    A phase declares three things about what it hands the future — CHARGES,
+    PROMISES, and DEFEASANCES — plus a RECORD (the readable-in-rock slice).
+
+    - CHARGE — what the phase must establish; the GATING SUBSET of its
+      promises. A charge IS the next phase-gate's opening condition. :tag is
+      the gate tag (LEXICON SS1): gate (hard prerequisite we simulate) · earth
+      (Earth's pattern kept for fidelity) · mech (causality known, no
+      simulable mechanism yet) · emergent (verify, don't build). Tags state
+      ARROW-KIND, never implementation status — the reportatio's status asides
+      ("running today", "fBm stands in") are stripped; built-status lives in
+      the nomotheke and the store.
+
+    - PROMISE — a defeasible, forward-facing commitment this phase generates,
+      preconditioned on prior phases, that later phases may depend on. The
+      SUPERSET of which Charge is the gating subset. Its `.class` is its kind:
+      state (a frozen field/datum handed forward) · regime (nomoi that keep
+      running past the gate) · capability (a precondition now unlocked that
+      enables new nomoi downstream) · limit (a standing incapability in force).
+      Classes stack (`.state.regime`). Within a promise:
+      - `:kept-by <nomos>` — the function that makes it true. ABSENCE = GLOSS:
+        an honest word-of-honor not yet mechanized. The gloss set is exactly
+        the promises with no `:kept-by` — greppable, auditable for epistemic
+        honesty, never mistaken for a guarantee.
+      - `|predicate ...` — the testable condition a probe would check (the
+        falsifiable core; prose now, formal as it sharpens).
+      - `:from <charge>` — the charge that generates this promise (composition).
+      - `:unlocks <charge>` — a downstream charge this capability enables.
+
+    - PROMISE MATURITY — the acceptance-test discipline. A promise climbs a
+      ladder: NAMED (prose only — the big picture laid down) -> SPECIFIED (has
+      a `|predicate`; what would count as keeping it is now defined) ->
+      CLAIMED (has `:kept-by`; a nomos says it delivers) -> KEPT (the predicate
+      passes at a declared epistemic tier, via declared-vs-derived). The rule
+      that keeps this honest: a promise with NO predicate CANNOT be marked
+      fulfilled at any epistemic level — nothing has yet been defined that
+      could convict it. So big-picture promises land first and their
+      predicates are written when we actually need to see them delivered,
+      which then guides the coding. The regula conformance audit computes each
+      promise's rung and reports the gaps ("promise X: un-checkable — no
+      predicate") beside the fidelity pyramid.
+
+    - DEFEASANCE — the mechanism of "defeasible". A phase declares ONLY its
+      NOVEL promises; inherited promises CONTINUE IMPLICITLY (no re-listing —
+      the mind should not carry ancient ongoing processes as clutter). What a
+      phase DOES retire, it says so explicitly: `|defeasance :voids
+      "<phase.promise>" :by <charge>` with an honest reason. So the promises
+      IN FORCE at phase N = union(promises 0..N) minus union(defeasances 0..N).
+      Audit rule (same shape as a voided permit): a defeased promise whose
+      `:kept-by` nomos is still consumed by a live nomos is an INCOHERENCE.
+      Cross-phase references are quoted qualified ids ("N.promise-slug").
+
+    - Structure: a phase OPENS AT the delivery of the previous phase's charges
+      — each manufactures the key to the next gate. Flat, not nested; if any
+      phase earns internal sub-gates it is Abyssal (:sub-gates expected).
+
+  |phase[ante-mundane]
+    :num 0
+    :name Ante-mundane
+    :epithet before the world
+    :regime analytic
+    Cosmic scale; everything prior to the world. Not a process — a parameter
+    block (pure parameters: element abundances, orbital configuration, seed).
+    |charge[stable-orbit] :tag gate
+      Stable orbit in the habitable zone of a viable, protected system.
+    |charge[proper-mass] :tag gate
+      Proper mass.
+    |charge[elemental-abundances] :tag gate
+      Earth-like elemental abundances.
+    |charge[protective-architecture] :tag mech
+      Protective architecture (some implicit) — moon, outer giants, solar-wind
+      shelter. The moon cannot be added non-destructively later (at least in
+      real life), so it is declared here — declare-causally-materialize-lazily;
+      its real services are ocean tides, moonlight and phases, and axial-tilt
+      stabilization.
+    |promises
+      |promise[the-constants].state :from elemental-abundances
+        The constants themselves — orbit, mass, chemistry, seed: the box every
+        later computation happens inside.
+        |predicate the Phase-0 parameter block is declared and conserved forward.
+    |record
+      Proportions and totals of elements, base columns, and most conserved
+      values.
+
+  |phase[protogenic]
+    :num 1
+    :name Protogenic
+    :epithet the world is now Formed
+    :regime analytic
+    A sphere orbiting its star, featureless, hot, brooded upon. Sphere, tilt,
+    spin, insolation rhythm as pure functions.
+    |charge[axial-tilt] :tag gate
+      Axial tilt.
+    |charge[spin] :tag gate
+      Spin — possibly differential layers (the magnetic-dynamo mechanism is
+      mech-grade).
+    |charge[smooth-water-surface] :tag earth
+      Smooth, water-covered surface.
+    |charge[insolation-rhythm] :tag emergent
+      The rhythm of angle-specific solar insolation (falls out of tilt + spin
+      + orbit).
+    |promises
+      |promise[formed-sphere].state
+        The sphere itself — formed, and orbiting its star.
+      |promise[water-covered-surface].state :from smooth-water-surface
+        A smooth, water-covered surface.
+      |promise[axial-rhythms].regime :kept-by planet :from insolation-rhythm
+        Tilt and spin produce seasons and the day/night cycle, forever, and
+        the angle-specific insolation rhythm with them.
+        |predicate insolation, declination, and hour-angle are correct for date and latitude.
+      |promise[coriolis].capability :from spin :unlocks modern-weather
+        Spin bequeaths Coriolis — the skeleton of every future wind belt and
+        ocean gyre.
+      |promise[insolation-gradient].capability :kept-by planet :from insolation-rhythm :unlocks biogeochemical-cycles
+        The latitudinal insolation gradient — the skeleton of all climate zones.
+
+  |phase[primordial]
+    :num 2
+    :name Primordial
+    :epithet the world is now Divided
+    :regime analytic-relaxation
+    Gas, liquid, and solid separate: a dense, hot, pre-oxygenation atmosphere;
+    a sea level; solid ground beneath. Venus-like but far wetter. Light is
+    ambient and highly diffused — day and night exist, but the sun is not yet
+    seen. Reservoir partitions; water cycle settled to steady state.
+    |charge[atmosphere-reservoir] :tag gate
+      Atmosphere as a real reservoir, pre-oxygen composition.
+    |charge[closed-water-cycle] :tag gate
+      Water cycle, closed.
+    |charge[weather-energy-channels] :tag gate
+      Basic weather fluid dynamics; useful-energy / entropy-gradient channels.
+    |charge[magnetic-shelter] :tag mech
+      Magnetic field preserving the atmosphere — a canceling pair with the
+      solar wind (permit territory in any regula).
+    |charge[seeded-asymmetry] :tag gate
+      Enough variation, asymmetry, and seeded noise to awaken the Phase-3
+      processes (fated-noise machinery is this condition's instrument).
+    |charge[abiogenesis] :tag earth
+      Abiogenesis, through photosynthetic sea life — microbial at least.
+      Joseph: Abyssal opens after this exists.
+    |promises
+      |promise[three-reservoirs].state :from atmosphere-reservoir
+        The three reservoirs — gas, liquid, solid — and their interfaces.
+      |promise[sea-level-datum].state
+        The sea-level datum every later elevation is read against.
+      |promise[pre-oxygen-composition].state :from atmosphere-reservoir
+        The reducing, pre-oxygen atmospheric composition.
+      |promise[diffused-light].regime
+        Ambient, highly-diffused light — day and night exist, but the sun is
+        not yet seen through the dense sky.
+      |promise[closed-water-cycle].regime :from closed-water-cycle
+        A closed, conserved water cycle with its energy-gradient channels.
+        |predicate global water mass is conserved — nothing pulled from nothing, nothing drained into nothing.
+      |promise[weather-channels].capability :from weather-energy-channels :unlocks modern-weather
+        Basic weather fluid dynamics; the useful-energy / entropy-gradient
+        channels later dynamics run on.
+      |promise[seeded-asymmetry].capability :kept-by noise :from seeded-asymmetry :unlocks plate-tectonics
+        The seeded asymmetries and fated noise that awaken the Phase-3
+        processes; every later phase amplifies them.
+        |predicate a deterministic, per-key asymmetry field exists and is stable under re-query.
+      |promise[photosynthesizers].capability :from abiogenesis :unlocks oxygenation
+        The first light-capturing microbial life — the engine of the later
+        atmospheric composition shift.
+
+  |phase[abyssal]
+    :num 3
+    :name Abyssal
+    :epithet the world is now Alive
+    :regime incremental-emergent
+    :sub-gates expected
+    Deep Time. The world itself becomes a highly dynamic system across great
+    orders of temporal magnitude; runs long and continues beneath all later
+    phases as their geological substrate. The heavyweight: its own timescale
+    ladder (tectonic Myr to erosive Kyr), its own structures.
+    |charge[plate-tectonics] :tag mech
+      Plate tectonics and the Wegenerian cycle.
+    |charge[emergent-land] :tag gate
+      Meaningful non-volcanic land above sea level — delivered by uplift /
+      proto-tectonic processes, never an initial condition.
+    |charge[mineral-systems] :tag gate
+      Mineral systems and cycles.
+    |charge[erosion-carving] :tag gate
+      Erosion processes carving real landscapes.
+    |charge[biomineralization] :tag earth
+      Sea-life complexity through biomineralization — and it is the mechanism
+      of the next phase's atmosphere gate.
+    |charge[oxygenation] :tag emergent
+      Oxygen accumulating toward the Great Oxygenation (from the
+      photosynthesizers).
+    |charge[proto-biomes] :tag emergent
+      Alien proto-biomes, hostile to complex life.
+    |promises
+      |promise[emerged-land].state :from emergent-land
+        THE LAND ITSELF — continents, relief, and drainage networks; every
+        future rain-shadow, watershed, and harbor is drawn here.
+        |predicate land rises above sea level, non-volcanic; land-fraction toward the early-Earth target band (survey SS6).
+      |promise[erosion-substrate].regime :kept-by erosion-tile :from erosion-carving
+        Fluvial erosion continues running as the geological substrate beneath
+        every later phase.
+        |predicate erosion runs each geological cycle; its eroded bed is what later phases build on.
+      |promise[ore-and-soil].state :from mineral-systems
+        Mineral and ore bodies; soil parent material.
+      |promise[toward-breathable].capability :from oxygenation :unlocks post-oxygenation-atmosphere
+        An ocean-atmosphere partway to breathable — the precondition Phase 4's
+        atmosphere gate consumes.
+    |defeasances
+      |defeasance :voids "1.water-covered-surface" :by emergent-land
+        Land now rises above the sea; the surface is no longer wholly
+        water-covered.
+    |record
+      The deep sedimentary stack; banded-iron formations (oxygen meeting
+      dissolved iron); the first limestones — life writing itself into rock.
+
+  |phase[primeval]
+    :num 4
+    :name Primeval
+    :epithet the world is now Awake
+    :regime coupled-relaxation-emergent-weather
+    The clouds part; the world beholds the cosmos for the first time — dawn,
+    the morning sun, the moon in its phases, and at night the stars. The
+    climate tier over the Phase-1 insolation.
+    |charge[post-oxygenation-atmosphere] :tag gate
+      :opened-by "3.oxygenation"
+      Earth-like post-oxygenation atmosphere.
+    |charge[ozone-shield] :tag emergent
+      Ozone shield (from the new oxygen; the land-life prerequisite).
+    |charge[visible-cosmos] :tag gate
+      Sun, moon, and stars visible at true angles, phases, and seasons.
+    |charge[modern-weather] :tag emergent
+      Modern weather dynamics.
+    |charge[biogeochemical-cycles] :tag earth
+      Nitrogen and companion biogeochemical cycles.
+    |charge[land-plants] :tag earth
+      Stationary land life — plants colonize the continents (land is lethal
+      without the ozone this phase's sky provides).
+    |promises
+      |promise[breathable-sky].state :from post-oxygenation-atmosphere
+        A breathable sky and its ozone roof.
+      |promise[ozone-roof].capability :from ozone-shield :unlocks land-plants
+        The ozone shield — it makes the continents survivable for life.
+      |promise[visible-cosmos].state :kept-by planet :from visible-cosmos
+        Sun, moon, and stars visible at true angles, phases, and seasons — the
+        clock later navigators and calendars read.
+        |predicate sun, moon, and star positions are correct for date and latitude.
+      |promise[modern-circulation].regime :from modern-weather
+        Climate zones and modern circulation, including the coupled
+        ocean-atmosphere oscillations — the droughts and monsoons later phases
+        live by.
+      |promise[vegetated-continents].regime :from land-plants
+        Vegetated continents that change albedo and slow erosion — roots as a
+        geological force.
+    |defeasances
+      |defeasance :voids "2.pre-oxygen-composition" :by post-oxygenation-atmosphere
+        Oxygenation has converted the reducing atmosphere; the pre-oxygen
+        composition no longer holds.
+      |defeasance :voids "2.diffused-light" :by visible-cosmos
+        The clouds part; ambient diffused light gives way to direct sun, moon,
+        and stars.
+    |record
+      Redbeds — the oxidation event rusts the rock record; late, the first
+      soil horizons under land plants.
+
+  |phase[archaic]
+    :num 5
+    :name Archaic
+    :epithet the world is now Abundant
+    :regime statistical-ecology-to-agent-based
+    Life as we know it, fully adapted to the world it helped create: agents in
+    the sea, on land, in the air.
+    |charge[complex-sea-life] :tag earth
+      Oxygen-breathing, complex, mobile sea life — abundant and diverse.
+    |charge[flight] :tag earth
+      Mobile land life, through flight — birds, fowl, reptiles of every
+      variety.
+    |charge[evolutionary-pressures] :tag mech
+      Resilient, calibrated evolutionary pressures; energy-gradient-driven
+      diversity mechanisms.
+    |promises
+      |promise[food-web].regime :from evolutionary-pressures
+        The food web and its capability set — ecological capabilities set the
+        material-flux rules (decay vs burial) for everything after.
+      |promise[mobile-life].state
+        Complex, mobile, oxygen-breathing life in the sea, on land, and in the
+        air.
+      |promise[coal-window].limit :from evolutionary-pressures
+        A standing limit: until lignin-digesters arrive, wood buries instead
+        of rotting — a phase-window material born of a temporary inability.
+        |predicate woody material accumulates (buries) rather than decaying.
+    |defeasances
+      |defeasance :voids "3.proto-biomes" :by complex-sea-life
+        The alien proto-biomes hostile to complex life give way to abundant,
+        diverse complex life.
+    |record
+      The fossil-bearing strata begin; coal seams, the signature of an
+      inability.
+
+  |phase[aboriginal]
+    :num 6
+    :name Aboriginal
+    :epithet the world is now Recognizable
+    :target 1
+    :regime substrate-stable-beneath-agent-seam
+    Earth since shortly after the Cenozoic dawn: the Age of Mammals. This is
+    the phase where the primary simulations with real agent interactions begin
+    — the ASF's domain.
+    |charge[mammals-and-taxonomy] :tag earth
+      Mammals; recognizable kingdom/taxonomy diversity across land, air, and
+      sea.
+    |charge[modern-flora-fungus] :tag earth
+      Modern flora and fungus ecosystems — flowers and fruit, grain and seed,
+      wood that decays.
+    |charge[insects-microbiome] :tag earth
+      Modern insect world and microbiome.
+    |charge[complex-agency] :tag gate
+      Complex intelligence, communication, and agency — Pleistocene-grade
+      life.
+    |promises
+      |promise[resource-world].state
+        The agent-legible resource world — food and forage, timber and fiber,
+        prey and pasture, workable stone and ore: the inventory the ASF agents
+        will perceive, value, and act through.
+      |promise[decomposers].capability :from modern-flora-fungus
+        Fungal and microbial decomposers — wood and organic matter now decay
+        and cycle their nutrients.
+        |predicate woody material decays and returns nutrients rather than burying.
+      |promise[modern-taxonomy].state :from mammals-and-taxonomy
+        Mammals; modern flora, fungus, insects, and microbiome.
+    |defeasances
+      |defeasance :voids "5.coal-window" :by modern-flora-fungus
+        Lignin-digesting decomposers have arrived; wood now decays rather than
+        burying. The coal-seam window is closed.
+    |record
+      Recognizable modern strata; anthropic traces only from Phase 7.
+
+  |phase[prehistoric]
+    :num 7
+    :name Prehistoric
+    :epithet the world now has People
+    :target 2
+    :regime agent-based-slow-layer-engages
+    :binds ETHICS.md
+    Not mankind per se, but speech, symbolic thought, emotion,
+    self-determination, higher-order agency. No creature has yet frozen
+    thought onto matter — none has a written language that outlives the mind
+    that thought it, that could move a thought back out of the timestream the
+    first phases started.
+    |charge[hominid-equivalent] :tag earth
+      Hominids, or an equivalently-ordered agent and intelligence.
+    |charge[language] :tag gate
+      Speech / language — high-enough-fidelity, adaptable, arbitrarily
+      abstractable person-to-person thought transfer.
+    |charge[agriculture] :tag earth
+      Agriculture (likely).
+    |charge[culture] :tag earth
+      Non-genetic cross-generational transfer: culture; durable
+      familial/tribal cohabitation.
+    |obligation
+      :severity load-bearing-must-survive-every-revision
+      This phase-transition is where OBLIGATION BEGINS. "The world has People"
+      is precisely the point at which the builder acquires duties to what is
+      inside it: ETHICS.md's constraints bind from here forward. The moment an
+      agent in this world is driven by the slow (LLM) layer it enters moral
+      scope (doc/design/DESIGN.md, the two-layer mind). Any regula whose target
+      phase is 7 or beyond inherits this bind non-negotiably; the moratorium
+      (ASF.md SS0) sits above it.
+    |promises
+      |promise[culture].regime :from culture
+        Culture itself — language, names on places, domesticated lineages,
+        managed landscapes, paths that become roads: inheritance that now
+        travels OUTSIDE the genome.
+      |promise[language].capability :from language :unlocks written-language
+        Arbitrarily-abstractable, adaptable person-to-person thought transfer.
+    |record
+      Symbolic artifacts, hearths, worked tools — culture entering the strata,
+      but not yet writing.
+
+  |phase[historical]
+    :num 8
+    :name Historical
+    :epithet the world now has Writing and history
+    :target 3
+    :regime author-driven-over-simulated-substrate
+    From here the space forks wide — real history, fantasy settings, game and
+    story worlds — anything from the dawn of writing through science-fiction
+    mechanics. The phase-transitions end; authored worlds begin.
+    |charge[written-language] :tag gate
+      :opened-by "7.language"
+      Written language — with whatever agent/intelligence substrate it
+      requires, and most of what every prior phase built. Thought moves back
+      out of the timestream; history becomes possible, and the world's record
+      is no longer only geological but documentary.
+    |promises
+      |promise[written-record].state :from written-language
+        History — a documentary record, institutions, accumulated and
+        correctable knowledge; the world can now inherit INTENTIONS.
+    |record
+      The written layer — the first record the world keeps of itself, on
+      purpose.

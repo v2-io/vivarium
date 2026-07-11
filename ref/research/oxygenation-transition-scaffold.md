@@ -19,7 +19,7 @@ fidelity over Earth-history fidelity.)*
 
 ```
 [ TARGET: a breathable (oxygenated) atmosphere + an ozone roof ]        ← Phase 4 gate
-   │   bequest: land habitable; modern redox-driven material cycles
+   │   promise: land habitable; modern redox-driven material cycles
    │
    ├─[ PREREQ: free O₂ accumulates and stays ]                          ← the transition itself
    │     │  (requires the O₂ sources to finally outrun the O₂ sinks)
@@ -107,7 +107,7 @@ run, present in A because the oscillation is, absent in B because it isn't.
   source and the deep Fe²⁺ reservoir. *The connectivity-and-lag on this wire is
   precisely the A-vs-B knob.*
 - **Substrate innovation** — oxygenic photosynthesis is the genuinely new
-  capability; like the coal/lignin window (`doc/PHASES.md` Bequest legend), a
+  capability; like the coal/lignin window (`doc/PHASES.md` Promise legend), a
   new capability **rewrites the material-flux rules** for every later phase.
 - **Homeostatic inertia** — the reducing buffer (ferrous iron + reduced
   minerals + volcanic gases) **damps the transition**; its size and recharge

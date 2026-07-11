@@ -76,7 +76,7 @@ side:
 
 | AAT (agent infers, from inside) | vivarium (we author, from outside) |
 |---|---|
-| law $\theta$ — transition/observation structure | the physics + constants; each phase's **Bequest** ("the constants themselves — the box every later computation happens inside," doc/PHASES.md P0, is verbatim a $\theta$-slot declaration) |
+| law $\theta$ — transition/observation structure | the physics + constants; each phase's **Promise** ("the constants themselves — the box every later computation happens inside," doc/PHASES.md P0, is verbatim a $\theta$-slot declaration) |
 | state $\Omega_t$ | the live world state (terrain, water, weather, populations) |
 | chance $\varepsilon$ | §8 **fated noise** — pure function of (seed, key) |
 | compute-shortfall | the **fidelity ladder** / lazy memoized evaluation — our entire runtime is a compute-shortfall manager |

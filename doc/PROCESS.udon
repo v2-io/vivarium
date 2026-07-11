@@ -111,6 +111,20 @@
       !:sh:
         cd ~/src/udon/core && cargo run --example stdin_parse < FILE.udon
 
+    |norm[udon-filenames]
+      :kind prescription
+      :authority Joseph 2026-07-11 (relaying the convention to the udon team too)
+      Name a structured udon artifact `<name>.<root-element-type>.udon` — the
+      root element type IS the schema, so the file self-describes and tools
+      filter by it (`ls *.ordinum.udon`). Examples: tellus.ordinum.udon ·
+      terrestris.regula.udon · vivarium.lexicon.udon. The schema segment makes
+      per-type subdirectories redundant; keep the tabularium flat. VERSION
+      lives in the artifact's `:version` attribute, NOT the filename (git
+      versions the file; renaming on every bump would break refs and history)
+      — a version-in-filename is minted ONLY when a fork forces two lineages
+      to coexist. (`.udon` vs `.udn` for the base suffix is the udon team's
+      open call; stay on `.udon`, what the parser uses today.)
+
   |cluster[code-epistemics]
     :name Code-side truth disciplines (the mechanical ones)
 
@@ -162,15 +176,18 @@
       :kind prescription
       :files ["ref/research/est-tiw-dossier.md" ".archive/universal-biological-rhythms.md"]  ; quoted: bare items with dots hit udon defect #13 (fix pending)
       Two reference files trip the current Fable model-family safeguard
-      (verified 2026-07-10 twice, again 2026-07-11). In Fable sessions: handle
-      them by NAME only — git mv, path greps with the files excluded — and
-      route any operation that would read or emit their CONTENT (opening,
-      editing innards, content greps, link-checking their insides) through an
-      Opus agent, under a report-paths-not-content contract (the agent reports
-      old/new path strings and line counts, never quotes surroundings). The
-      engineering distillation a Fable session actually needs is already in
-      LEXICON.udon section 8, which is safe. Extend this list if another file
-      starts tripping; retire entries when the safeguard stops firing.
+      (verified 2026-07-10 twice, again 2026-07-11). REFINEMENT (Fable-agent
+      test, 2026-07-11): the safeguard fires on Fable *generation about* this
+      content, NOT on reading it — a Fable agent read the whole biology-dense
+      ordinum cleanly, then tripped while writing its own summary. So the rule
+      is narrower than "don't open": READING is fine; what routes through an
+      Opus agent is CONTENT-EDITING/SUMMARIZING of the biology-dense material
+      (and any operation that emits it), under a report-paths-not-content
+      contract (the agent reports old/new path strings and line counts, never
+      quotes surroundings). Path-only ops (git mv, excluded greps) are always
+      safe. The engineering distillation a Fable session needs is in
+      LEXICON.udon section 8, safe. Extend this list if another file starts
+      tripping; retire entries when the safeguard stops firing.
 
     |norm[whim-gate]
       :kind prescription

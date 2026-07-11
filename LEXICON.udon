@@ -40,7 +40,7 @@
     Register convention (2026-07-11, deliberate): Greek = the law-article
     machinery (nomos family) · Latin = the world-governance layer (regula,
     regnum, ordinum) · plain English = the lived concepts (Kingdom, Charge,
-    Bequest, Record, slot, permit). Register signals layer; a proposal that
+    Promise, Record, slot, permit). Register signals layer; a proposal that
     crosses registers should notice it is doing so.
 
   ; ==========================================================================
@@ -54,7 +54,7 @@
       |carve against "epoch" — three collisions: geology's epochs, the erosion
         solver's step unit, ordinary usage.
       |rel :to charge :kind must-deliver
-      |rel :to bequest :kind hands-forward
+      |rel :to promise :kind hands-forward
       |rel :to phase-gate :kind bounded-by
       |source doc/PHASES.md
 
@@ -85,26 +85,84 @@
 
     |term[charge]
       :status settled
-      What a phase must establish — the GATING SUBSET of its bequest. A
+      What a phase must establish — the GATING SUBSET of its promises. A
       phase's charge IS the next phase-gate's opening condition.
-      |rel :to bequest :kind gating-subset-of
+      |rel :to promise :kind gating-subset-of
 
-    |term[bequest]
+    |term[promise]
       :status settled
-      Everything a phase hands forward that persists and shapes later
-      dynamics — features, regimes, capabilities AND incapabilities (the coal
-      window). The load-bearing forward concept; in the nomotheke, each
-      bequest carries an explicit conservation claim.
+      :since 2026-07-11
+      A defeasible, forward-facing commitment a phase generates (preconditioned
+      on prior phases) that later phases may depend on — the SUPERSET of which
+      Charge is the gating subset. Its `.class` is its kind (stackable): state
+      (a frozen field/datum handed forward) · regime (nomoi that keep running
+      past the gate) · capability (a precondition now unlocked that enables new
+      nomoi downstream) · limit (a standing incapability in force, e.g. the
+      coal window). A promise names, when exact, the nomos that keeps it
+      (`:kept-by`) and the predicate that would convict it (`|predicate`); with
+      NEITHER it is an honest GLOSS — a word-of-honor not yet mechanized, and
+      the gloss set is greppable/auditable. Maturity ladder: named (prose only)
+      → specified (has a predicate) → claimed (has :kept-by) → kept (predicate
+      passes at a declared tier). The rule that keeps it honest: **no promise
+      may be marked fulfilled at any epistemic level without a predicate** —
+      nothing has been defined that could convict it (acceptance-test
+      discipline). At the nomos grain a promise is `{quantity, conservation}`
+      (`nomotheke.rs`); at the phase grain it is the promotion of its nomoi's
+      promises into standing law.
+      |not the active-system-set (what MACHINERY runs) — a promise is the
+        OUTCOME/affordance guaranteed forward, not the process that keeps it.
+      |confused the async CS "Promise/Future" — carved: no async exists in this
+        codebase and the world-phase domain disambiguates; the referent is a
+        forward commitment, never a deferred value.
+      |carve replaced "Bequest" (Joseph, 2026-07-11: ornate, faintly
+        legalistic, the odd sibling of Charge/Record; Promise is natively
+        defeasible and pairs — Charge → Promise → Record = must-do → committed
+        → kept). "provisions/affordances/pledge" also considered. SUPERSEDED.md.
+      |rel :to charge :kind generated-by
+      |rel :to defeasance :kind voided-by
+      |rel :to predicate :kind checked-by
       |rel :to nomotheke :kind declared-in
-      |rel :to law :kind delivery-of
+      |rel :to law :kind promoted-into
+      |source tabularium/tellus.ordinum.udon (reading-rules)
+
+    |term[defeasance]
+      :status settled
+      :since 2026-07-11
+      The mechanism of "defeasible": a later phase's explicit retirement of a
+      prior promise (`|defeasance :voids "<phase.promise>" :by <charge>`, with
+      an honest reason). Phases declare only their NOVEL promises; inherited
+      promises CONTINUE IMPLICITLY (no re-listing — the mind should not carry
+      ancient ongoing processes as clutter). So the promises IN FORCE at phase
+      N = union(promises 0..N) minus union(defeasances 0..N). Canonical
+      instance: Phase 6's decomposers void Phase 5's coal-window limit.
+      |confused PHASES.md's "sunset" (a system stopping) — sunset is the
+        friendly gloss for the regime case; defeasance is the precise
+        mechanism, and it pairs with the property word "defeasible".
+      |rel :to promise :kind voids
+      |rel :to permit :kind same-shape-as
+      |source tabularium/tellus.ordinum.udon (reading-rules)
+
+    |term[predicate]
+      :status settled
+      :since 2026-07-11
+      A promise's testable condition — the falsifiable core a probe would check
+      to decide whether the promise is kept (`|predicate ...` inside a promise;
+      prose now, formal as it sharpens; ≈ an acceptance criterion). A promise
+      with no predicate is UN-CHECKABLE (cannot be marked fulfilled at any
+      tier) — so big-picture promises land first and their predicates are
+      written when we need to see them delivered, which then guides the coding.
+      |rel :to promise :kind falsifiable-core-of
 
     |term[record]
       :status settled
-      The bequest's readable-in-rock slice, deliberately DEMOTED to sanity
+      A promise's readable-in-rock slice, deliberately DEMOTED to sanity
       probe: a lossy shadow (a feather in a fossil is a relic, not a
       fundamental output) — a consistency check that the right past processes
       ran, never sufficient to reconstruct the past, never the canonical state.
+      The evidence that a phase's promises were KEPT (drill a core; the phases
+      must appear in order, or the machinery is lying).
       |not the phase's "in-world form"; not the canonical state.
+      |rel :to promise :kind verifies-keeping-of
 
     |term[gate-tags]
       :status settled
@@ -119,7 +177,7 @@
       :since 2026-07-11
       :forms full formal name Ordinatio Ordinum; keyed ordinum@version
       The codified, pinned, versioned phase-expectations artifact — the
-      per-phase Charge/Bequest floor as DATA, which every regula cites as the
+      per-phase Charge/Promise floor as DATA, which every regula cites as the
       floor it may extend but never silently undercut. doc/PHASES.md is its
       reportatio (the prose working text the authorized version compiles
       from — the medieval ordinatio-vs-reportatio carve, Scotus precedent) and
@@ -657,7 +715,7 @@
       The persistent structure that governs dynamics. In AAT: the $\theta$ an
       agent must infer (transition + observation structure). In vivarium:
       what we AUTHOR — the physics and constants, and at the largest scale
-      the active-system-set a phase runs. A phase's Bequest is a delivery of
+      the active-system-set a phase runs. A phase's Promise is a delivery of
       law; a phase-transition PROMOTES converged state into law for
       everything faster above it — revised incrementally, never swapped. Same
       word at three rates, deliberately: fast state · slowly-drifting law ·
@@ -724,7 +782,7 @@
       checklist (Gemini's decomposition, kept): thermodynamic context (energy
       gradients / free-energy taps) · network topology (mixing, connectivity,
       feedback wiring) · substrate innovation (a genuinely new
-      state/information-carrying medium — the capability-bequest, cf. the
+      state/information-carrying medium — the capability-promise, cf. the
       coal window) · homeostatic inertia (old regime's buffering vs the new
       attractor's pull) · exogenous triggers (shocks crossing a tipping
       point). Several already appear in doc/PHASES.md charges — mild

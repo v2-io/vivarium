@@ -166,13 +166,13 @@ A sketch of the smallest honest nomos implementing this mechanism, in ARCHITECTU
 
 **Execution class & timescale band:** **quasi-static, geological — ~10⁷–10⁸ yr** (thickening over 260 Myr). Decoupled from the hydrology timestep exactly per the house "separate the timescales" lesson (CLAUDE.md): uplift advances on the erosion/tectonic clock; water re-equilibrates against a frozen bedrock snapshot. This nomos is a **slow** producer feeding the water sim's boundary.
 
-**Bequests + conservation claims (§9 item 5):**
-- **Bequest: bedrock elevation H** — conservation claim: isostatic balance holds per-column (mass-of-column ↔ displaced-asthenosphere), continuous across tile seams.
-- **Bequest: added crustal volume** — conservation claim: crust added = mantle melt extracted (a **mass ledger** the magmatism source must honor; today's rock-mass conservation is `NOT enforced` per ASSUMPTIONS.md — this nomos would need the flux-BC spine before its source term is honest).
+**Promises + conservation claims (§9 item 5):**
+- **Promise: bedrock elevation H** — conservation claim: isostatic balance holds per-column (mass-of-column ↔ displaced-asthenosphere), continuous across tile seams.
+- **Promise: added crustal volume** — conservation claim: crust added = mantle melt extracted (a **mass ledger** the magmatism source must honor; today's rock-mass conservation is `NOT enforced` per ASSUMPTIONS.md — this nomos would need the flux-BC spine before its source term is honest).
 
 **Epistemic tags to declare (the four axes, §7):**
 - **A (Earth-history fidelity): Medium.** Real Earth mechanism with real numbers, but craton-specific (Singhbhum), and CLM Δρ / protocrust thickness are poorly constrained inputs the paper sweeps over.
-- **B (physics fidelity): split — High for the isostatic closure, Low for the magmatic source term.** The nomos must not let the lawful isostasy launder the tuned driver's low B. Declare per-bequest.
+- **B (physics fidelity): split — High for the isostatic closure, Low for the magmatic source term.** The nomos must not let the lawful isostasy launder the tuned driver's low B. Declare per-promise.
 - **C (relation type): `#mech` discharging a `#gate`.** *Tension to flag honestly:* the land is *magmatically built* (igneous granitoid crust) yet rises by **isostasy, not by piling lava above water** — the surface is an eroded felsic craton, not an active volcanic edifice. It plausibly satisfies "**non-volcanic land**" in the sense doc/PHASES.md means (broad emergent craton, not a volcano poking up), but a reviewer could contest the label — surface it, don't bury it.
 - **D (implementation status): unbuilt.** New nomos; would follow the store/nomos + flux-BC spine currently gapped (ARCHITECTURE §8).
 

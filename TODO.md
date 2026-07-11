@@ -28,7 +28,7 @@ Joseph (2026-07-10, the session that ran out of context; landed here 2026-07-10 
 
 Design: `doc/plan/regula-conformance-design.md` **v2** (2026-07-11 — naming settled: regula ✅ / **Regula Terrestris** ✅ / **Ordinum** ✅; LEXICON §1/§4/§5). Build order, thin:
 
-1. **`consumes` field on `NomosDecl`** — quantities in, as shared constants referenced by both bequests and consumes (typos fail the build; the permit-voiding prerequisite found 2026-07-11).
+1. **`consumes` field on `NomosDecl`** — quantities in, as shared constants referenced by both promises and consumes (typos fail the build; the permit-voiding prerequisite found 2026-07-11).
 2. **`regula.rs`** sibling to the nomotheke: `Slot` / `Permit { absent_slots, void_on, note }` / `Regula`; **`TERRESTRIS_V0`** — three slots filled; grandfathered dated permits: moon, magnetosphere×solar-wind, **atmosphere (retirement = the reservoir layer — the rain-without-a-sky specimen written down at last)**.
 3. **Ordinum v0** derived from doc/PHASES.md for the target phase only (later phases = horizon, never failures); doc/PHASES.md stays the prose source (its reportatio) until codification completes, then archives.
 4. Conformance report into `vivarium status` (conformance-to-pin + gap-to-head); voided-permit check in tests.
@@ -46,7 +46,7 @@ Design: `doc/plan/regula-conformance-design.md` **v2** (2026-07-11 — naming se
 
 ## Prior v3 — phase-correct it (Joseph, 2026-07-10)
 
-The next spine rung is the **Phase-2 Bequest**, not a mid-Abyssal snapshot: a *submerged* world — generous water over **~modern-depth-or-shallower basins** (corrected 2026-07-10: thick buoyant mafic seafloor; basins deepen over time; inventory ~1.3 OM contested) over seeded-asymmetry crust, ~0% land beyond transient volcanic specks ("meaningful non-volcanic land above sea level" is a #gate charge **Abyssal must deliver** via uplift/proto-tectonic nomoi, never an initial condition — doc/PHASES.md). The early-continents survey's §6 table (land 2–15%, compressed bimodal, relief 3–5 km) is the **mid-Abyssal verification target** those processes must *produce* — a Record-style check partway through the phase. Sea level derived from a declared water inventory (ASSUMPTIONS entry), retiring `SEA_LEVEL_M`. Element/stable-chemical abundances belong to the same P0/P2 declaration work and get their own conservation ledger rows when reservoirs exist.
+The next spine rung is the **Phase-2 Promise**, not a mid-Abyssal snapshot: a *submerged* world — generous water over **~modern-depth-or-shallower basins** (corrected 2026-07-10: thick buoyant mafic seafloor; basins deepen over time; inventory ~1.3 OM contested) over seeded-asymmetry crust, ~0% land beyond transient volcanic specks ("meaningful non-volcanic land above sea level" is a #gate charge **Abyssal must deliver** via uplift/proto-tectonic nomoi, never an initial condition — doc/PHASES.md). The early-continents survey's §6 table (land 2–15%, compressed bimodal, relief 3–5 km) is the **mid-Abyssal verification target** those processes must *produce* — a Record-style check partway through the phase. Sea level derived from a declared water inventory (ASSUMPTIONS entry), retiring `SEA_LEVEL_M`. Element/stable-chemical abundances belong to the same P0/P2 declaration work and get their own conservation ledger rows when reservoirs exist.
 
 ## Cross-member: nomos / regula / ordinum → concept-matrix rows
 
@@ -54,7 +54,7 @@ The next spine rung is the **Phase-2 Bequest**, not a mid-Abyssal snapshot: a *s
 
 ## Phase 0 — declare the Ante-mundane parameter block
 
-Phase 1's charges (tilt, spin, insolation rhythm) exist as exact code (`planet.rs`); Phase 0's charges are mostly **implicit hardcoded constants** (Earth radius, tilt 23.44°, solar constant; orbit/mass/abundances/moon not declared anywhere). Per *declare causally, materialize lazily* (PHASES design notes), the P0 Bequest ("the constants themselves — the box") wants an explicit declared parameter block — law-side identity (manifest identity bucket or a `planet` nomos-version), not view-side. Neither phase is *gated* yet (no phase machinery — fine until component E / the first freeze). Found 2026-07-10 while wiring the globe's sun ephemeris.
+Phase 1's charges (tilt, spin, insolation rhythm) exist as exact code (`planet.rs`); Phase 0's charges are mostly **implicit hardcoded constants** (Earth radius, tilt 23.44°, solar constant; orbit/mass/abundances/moon not declared anywhere). Per *declare causally, materialize lazily* (PHASES design notes), the P0 Promise ("the constants themselves — the box") wants an explicit declared parameter block — law-side identity (manifest identity bucket or a `planet` nomos-version), not view-side. Neither phase is *gated* yet (no phase machinery — fine until component E / the first freeze). Found 2026-07-10 while wiring the globe's sun ephemeris.
 
 ## Component E — time-indexed stage chains (un-drop decision, then build)
 

@@ -32,7 +32,7 @@ pub enum Source {
     Hit,
 }
 
-// Nomos identities (name, version, epistemic declaration, bequests,
+// Nomos identities (name, version, epistemic declaration, promises,
 // assumptions) live in the NOMOTHEKE (`nomotheke.rs`) — the registry is the
 // only key-mint for world-law computations, so an undeclared nomos cannot
 // reach the store. Bump a version by re-declaring there (source-derived

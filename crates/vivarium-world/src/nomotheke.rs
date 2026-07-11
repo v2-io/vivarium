@@ -1,12 +1,12 @@
 //! The nomotheke — the registry of nomoi, as *data* (Joseph, 2026-07-10: "I
-//! would love code-level enforcement of exactly what is being bequested and
+//! would love code-level enforcement of exactly what is being promised and
 //! the epistemic labels and propagations").
 //!
 //! Every nomos declares itself here: its identity, its **epistemic tags**
 //! (LEXICON §5's four axes — declared on the version, once), its **deps**
 //! (from which *derived* state quality is computed by weakest-link fold — a
 //! hi-physics kernel fed a placeholder yields placeholder-grade state, and
-//! that is now a computation, not a discipline), its **bequests** (what it
+//! that is now a computation, not a discipline), its **promises** (what it
 //! hands forward, each with an explicit conservation claim — so "is mass
 //! conserved?" is answerable by lookup, never by archaeology), and its
 //! **assumptions** (entries in `ASSUMPTIONS.md`, the magic-constant ledger).
@@ -62,7 +62,7 @@ pub enum Approach {
     Procedural,
 }
 
-/// What a bequest claims about conservation — explicit, so the honest answer
+/// What a promise claims about conservation — explicit, so the honest answer
 /// to "are we conserving X?" is a lookup.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Conservation {
@@ -75,8 +75,8 @@ pub enum Conservation {
     NotTracked,
 }
 
-/// One quantity a nomos hands forward (its slice of a phase Bequest).
-pub struct Bequest {
+/// One quantity a nomos hands forward (its slice of a phase Promise).
+pub struct Promise {
     pub quantity: &'static str,
     pub conservation: Conservation,
 }
@@ -102,7 +102,7 @@ pub struct NomosDecl {
     /// Upstream nomoi whose outputs this one consumes.
     pub deps: &'static [&'static NomosDecl],
     /// What it hands forward.
-    pub bequests: &'static [Bequest],
+    pub promises: &'static [Promise],
     /// Verbatim anchors into `ASSUMPTIONS.md` — every magic constant this
     /// nomos leans on. Checked against the ledger by test.
     pub assumptions: &'static [&'static str],
@@ -138,10 +138,10 @@ pub static SPINE: NomosDecl = NomosDecl {
     approach: Approach::Analytic,
     earth_fidelity: Tier::None, // no Earth process; hypsometry measured wrong for every era
     physics: Tier::None,        // pure coordinate noise; conserves nothing
-    relation: "#mech stand-in: fBm-as-tectonics (ARCHITECTURE §2 — parameterization missing its error model); phase-structurally it impersonates Abyssal output rather than the Phase-2 submerged bequest (Joseph, 2026-07-10)",
+    relation: "#mech stand-in: fBm-as-tectonics (ARCHITECTURE §2 — parameterization missing its error model); phase-structurally it impersonates Abyssal output rather than the Phase-2 submerged promise (Joseph, 2026-07-10)",
     status: "built; deterministic + cross-face continuity + golden probed; hypsometry probe scores it (land 41.5%, unimodal, oceans shallow — all flagged)",
     deps: &[],
-    bequests: &[Bequest { quantity: "surface elevation field (m)", conservation: Conservation::NotTracked }],
+    promises: &[Promise { quantity: "surface elevation field (m)", conservation: Conservation::NotTracked }],
     assumptions: &["SEA_LEVEL_M", "continental band", "mountain band", "fBm shape"],
 };
 
@@ -156,7 +156,7 @@ pub static EROSION: NomosDecl = NomosDecl {
     relation: "mechanistic-causal (stream-power incision + deposition + talus + creep), on a stand-in substrate",
     status: "kernel probe-verified in the testbench (channel_profile, spike_probe, armor_regimes 1/3); tile form has fixed epochs (no convergence-ε — component E) and non-composable edges (plan Phase-3)",
     deps: &[&SPINE],
-    bequests: &[Bequest { quantity: "eroded surface elevation field (m)", conservation: Conservation::ExportsAtBoundary }],
+    promises: &[Promise { quantity: "eroded surface elevation field (m)", conservation: Conservation::ExportsAtBoundary }],
     assumptions: &["stream-power `m`", "erosion `k_dt`", "erosion run length"],
 };
 
@@ -171,7 +171,7 @@ pub static WATER: NomosDecl = NomosDecl {
     relation: "mechanistic-causal (virtual-pipes shallow water, conserved atmosphere/ocean stores), on a stand-in substrate; tiles are hydrologically ISOLATED until flux-BC (plan Phase-3) — no cross-tile rivers yet",
     status: "kernel probe-verified (conserves_total_water, rain_pools_in_the_bowl, channel_profile in testbench); tile form runs a FIXED step count (no near-stationarity gate — the analytic init / component E replace it)",
     deps: &[&EROSION],
-    bequests: &[Bequest { quantity: "standing water depth field (m)", conservation: Conservation::Conserved }],
+    promises: &[Promise { quantity: "standing water depth field (m)", conservation: Conservation::Conserved }],
     assumptions: &["rain rate", "atmosphere store", "water fill steps", "SEA_LEVEL_M"],
 };
 
@@ -242,11 +242,11 @@ mod tests {
     }
 
     #[test]
-    fn every_bequest_makes_a_conservation_claim() {
+    fn every_promise_makes_a_conservation_claim() {
         // Vacuously structural (the type forces it) — kept as the statement of
-        // intent: a bequest without a conservation stance cannot exist.
+        // intent: a promise without a conservation stance cannot exist.
         for n in NOMOTHEKE {
-            for b in n.bequests {
+            for b in n.promises {
                 let _ = b.conservation;
                 assert!(!b.quantity.is_empty());
             }

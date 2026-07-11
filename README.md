@@ -26,7 +26,7 @@ Every algorithm that shapes a world — a **nomos** (pl. *nomoi*): one keyed,
 versioned, executable article of world-law — must *declare itself* in the
 **nomotheke** (`crates/vivarium-world/src/nomotheke.rs`): its epistemic tags
 (Earth-fidelity and physics tiers, relation, verification status), its
-dependencies, its **bequests** (each with an explicit conservation claim —
+dependencies, its **promises** (each with an explicit conservation claim —
 "are we conserving mass?" is a lookup, never archaeology), and its
 **assumptions** (anchors into [`ASSUMPTIONS.md`](ASSUMPTIONS.md), the canonical
 magic-constant ledger). The enforcement is structural:
