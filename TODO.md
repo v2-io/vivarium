@@ -33,6 +33,16 @@ then either migrate `LEXICON.md` entries into `terminology/entries/` or finish t
 
 Joseph (2026-07-10, the session that ran out of context; landed here 2026-07-10 by its successor): systems will often want **domain-specific internal representations** — faster and smaller than columns-on-the-grid — memoized natively and *projected* to the canonical `CellId` frame by lazy keyed nomoi. Named examples: tilted-slab bodies computed as horizontal stacks (+ latent dip); the fluvial cells→receivers linked list (CHONK's graph); closed-form coefficient blocks. The interplay with current concepts is recorded in `LEXICON.md` §2 (*native representation / canonical frame*). **Figure out the general machinery when it's tactically intuitive** — i.e. when the first real second-representation system lands (most likely the drainage graph becoming a first-class store object in plan-Phase 2, or slab bodies) — not in advance.
 
+## The water system, decomposed (Joseph's probe, 2026-07-10: "principled water without a cycle or global conservation?" — No)
+
+`water-tile` (increment #9) is only the **routing/settling rung**; its declaration says so. The principled water system is several nomoi, sequenced *after* parity (#10/#11):
+
+1. **Planetary water inventory** — conserved reservoir set (ocean/atmosphere/groundwater/ice), declared as law; global conservation lives here. Doubles as the framework's first **reservoir/box-model** system → the domain-fixation guard's generality proof (ARCHITECTURE §0 note; four representation kinds).
+2. **Sea level derived** from ocean reservoir + hypsometry (`SEA_LEVEL_M` ledger row's inversion).
+3. **Crude climate nomos** — insolation (built) + **spin → circulation band structure** (Coriolis enters HERE, parameterized: bands as f(rotation rate)) → geographic precip field → **retires the rain fudge** (water_tile rains climate's output, not ×10 uniform). DESIGN-SYSTEMS build-order #2.
+4. **Surface routing** = today's water-tile, re-forced by climate.
+5. **Groundwater/Darcy; ocean circulation** — existing DESIGN-SYSTEMS rows (Coriolis: gyres live in #5; storm rotation with weather; tile streams honestly Rossby-negligible).
+
 ## Prior v3 — phase-correct it (Joseph, 2026-07-10)
 
 The next spine rung is the **Phase-2 Bequest**, not a mid-Abyssal snapshot: a *submerged* world — deep global ocean (survey: ~5–6 km mean, more water than modern) over seeded-asymmetry crust, ~0% land beyond transient volcanic specks ("meaningful non-volcanic land above sea level" is a #gate charge **Abyssal must deliver** via uplift/proto-tectonic nomoi, never an initial condition — PHASES.md). The early-continents survey's §6 table (land 2–15%, compressed bimodal, relief 3–5 km) is the **mid-Abyssal verification target** those processes must *produce* — a Record-style check partway through the phase. Sea level derived from a declared water inventory (ASSUMPTIONS entry), retiring `SEA_LEVEL_M`. Element/stable-chemical abundances belong to the same P0/P2 declaration work and get their own conservation ledger rows when reservoirs exist.
