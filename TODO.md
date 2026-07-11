@@ -43,6 +43,13 @@ Joseph (2026-07-10, the session that ran out of context; landed here 2026-07-10 
 4. **Surface routing** = today's water-tile, re-forced by climate.
 5. **Groundwater/Darcy; ocean circulation** — existing DESIGN-SYSTEMS rows (Coriolis: gyres live in #5; storm rotation with weather; tile streams honestly Rossby-negligible).
 
+## The thermal spine — two parallel nomoi, minor boundary exchange (Joseph-confirmed, 2026-07-10)
+
+1. **`mantle-thermal`** — zero-D thermal-evolution ODE: radiogenic decay (U/Th/K — decay constants exact; *abundances are a Phase-0 charge*, tying element conservation into the spine) vs parameterized convection (Nu–Ra; regime-dependent per Cawood's stagnant/squishy/plate modes). Initial $T_p$ page-read (Dong Table 1). **Fated plume/upwelling noise about the secular trend** = the uplift nomos's source term, principled as stochastic realization of a lawful curve (Chowdhury 2021's driver). Sun-irrelevant (flux ratio ~4000×).
+2. **`climate-ebm`** — Budyko–Sellers 1-D latitudinal energy balance: annual-mean insolation (built) + declared albedo + greenhouse from the atmosphere reservoir → $T(\mathrm{lat})$ steady state → evaporation/precip geography (retires the rain fudge). Requires: atmosphere reservoir; **solar constant promoted to $S(t)$** in the P0 block (faint young sun ~75–80%; the dense Phase-2 greenhouse is what keeps water liquid).
+
+**The seam** (first aspect-coupling seam between non-field systems; cleanest possible instance): $Q_{geo}(t)$ up (~0.09 W/m² — small, accounted), mean $T_s$ down (mantle upper BC). Two scalars, no shared state; timescale separation Gyr-vs-year satisfies Gear–Wells by nature.
+
 ## Prior v3 — phase-correct it (Joseph, 2026-07-10)
 
 The next spine rung is the **Phase-2 Bequest**, not a mid-Abyssal snapshot: a *submerged* world — generous water over **~modern-depth-or-shallower basins** (corrected 2026-07-10: thick buoyant mafic seafloor; basins deepen over time; inventory ~1.3 OM contested) over seeded-asymmetry crust, ~0% land beyond transient volcanic specks ("meaningful non-volcanic land above sea level" is a #gate charge **Abyssal must deliver** via uplift/proto-tectonic nomoi, never an initial condition — PHASES.md). The early-continents survey's §6 table (land 2–15%, compressed bimodal, relief 3–5 km) is the **mid-Abyssal verification target** those processes must *produce* — a Record-style check partway through the phase. Sea level derived from a declared water inventory (ASSUMPTIONS entry), retiring `SEA_LEVEL_M`. Element/stable-chemical abundances belong to the same P0/P2 declaration work and get their own conservation ledger rows when reservoirs exist.
