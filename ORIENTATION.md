@@ -1,8 +1,11 @@
 # vivarium — orientation (start here)
 
 *Current-state map for a fresh session. Supersedes the archived
-`.archive/HANDOFF.md`. Last updated 2026-07-02 (end of the live-simulation
-session: erosion telescope + live water + instruments).*
+`.archive/HANDOFF.md`. Last updated **2026-07-10** (the frame increments — see
+the addendum at the bottom, which is the CURRENT state; the body below it is
+accurate history whose "next steps" have been overtaken). This file has grown
+by addenda and is due a consolidation pass like ARCHITECTURE got — until then,
+read the LAST addendum first.*
 
 ## What vivarium is
 A sim game (RimWorld/DF lineage) on a deterministic 3-D voxel world, whose real
@@ -275,3 +278,41 @@ equation-free — `ref/research/pdfs/` + relata):
 11. Intuition + control over "pre-history sim" vs "current sim": in-world
     clock vs wall clock, sim rate vs framerate — make the time regimes
     legible and steerable.
+
+## Session addendum (2026-07-10 — the principled frame stands; identity lands)
+
+**The paradigm shifted from prose to working code.** Increments #1–#5, each
+committed and tested (52/52 green in `vivarium-world`):
+
+1. **`store.rs`** — the content-addressed store (objects/roots, atomic,
+   domain-neutral: keys→bytes). The save-file IS the memo store (§13), real.
+2. **`query.rs`** — the lazy pull-query: recipes check the store, compute on
+   miss, memoize. The fBm spine is system #1; **erosion composes on it as
+   system #2** purely through pulled/keyed surfaces — the coupling contract
+   (ARCHITECTURE §9) proven in miniature.
+3. **`examples/store_explore.rs`** — headless ASCII walk: leave a tile, return,
+   get "HIT — persisted, no re-seed." Exploration-parity on the NEW frame.
+4. **`spec.rs`** — the **vivium manifest**: identity (seed) / label (name) /
+   demand (future: beacons) buckets. A world is individuated by its manifest;
+   the seed is minted once and recorded.
+5. **The world-seed threaded to every KRNG draw** — seed-first convention in
+   `noise.rs` (seed 0 = the legacy world, pinned by golden tests); recipes are
+   methods on a **`World { store, seed }`** context so key-seed and
+   compute-seed cannot diverge; worldview takes `VIVARIUM_SEED` (its
+   fill-cache key now folds the seed in).
+
+**The operational design around it:** `ref/research/builder-explorer-decoupling.md`
+— builder daemon / read-only explorers / demand spool / **beacons** (LEXICON §2,
+settled) / watchpoints / the fidelity pyramid; build-order independence and the
+one invariant that preserves it (depend by key, never "latest available").
+A Bevy **globe viewer** over the spine (breadth-first, plan-Phase-2's visible
+win) is in flight at `spikes/globe`.
+
+**Where the old spike stands:** `spikes/worldview` remains the physics
+testbench (SUPERSEDED watch-list) — kernels canonical, architecture donor-only.
+Its known cold-fill pain (~2 h) is *bypassed*, not fixed, by the frame path:
+tiles memoize once, forever.
+
+**Next:** the initial slice in `builder-explorer-decoupling.md` §5 — CLI +
+builder v0, demand spool, time-indexed stages (component E, see TODO), the
+first-person ethereal explorer.

@@ -38,6 +38,7 @@ Names are how we stop re-arguing.
 
 - ✅ **Fidelity ladder** — spend representation by consequence (`DESIGN-REDUX`).
 - ✅ **Telescope** — nested resolution tiers around a focus, re-anchored on drift (the erosion telescope).
+- ✅ **Focus / Beacon** *(settled 2026-07-10, Joseph)* — a **focus** is the *live* attention point (an observer's current position — the code's `VIVARIUM_FOCUS_I/J` sense); a **beacon** is a *standing, spec-persisted* priority: a `(region, stage/phase, level)` triple in the manifest's **demand** bucket that draws the builder's causal-cone advancement toward it ("get I611-2899 to the start of Phase 3.3 at the finest available scale"). Demand fields change what gets built *first*, provably never *what* gets built (order-independence: recipes depend on artifacts by key, never "latest available"), so beacons may be edited mid-build freely. Per-beacon scheduling policy: **depth-first** (push one region to target fidelity — what a waiting explorer wants) vs **breadth-first** (level the whole cone coarsely — the globe-spinner). `ref/research/builder-explorer-decoupling.md`.
 - ✅ **Finisher** — a fine tier run for 1–2 animated passes over its parent's band, mean-pinned to conserve (Joseph's field observation, 2026-07-02).
 - ✅ **Memo** — a cached converged state in the lazy query-graph runtime (`DESIGN-REDUX` §11–13); the memo left at a phase-transition is the largest.
 - ✅ **Patch / halo** — the Cartesian stencil substrate. **Column / Stratum**, **CellId** — the matter and spatial keys (`DESIGN-MATERIAL`).
