@@ -2,7 +2,7 @@
 //! (`DESIGN-REDUX.md` §13: "the save-file *is* the memo store").
 //!
 //! **Domain-neutral by construction.** Keys and values here are opaque; the
-//! recipes above (`query.rs`) give them meaning. Nothing in this module knows
+//! nomoi above (`query.rs`) give them meaning. Nothing in this module knows
 //! about terrain, columns, or `CellId`s — a spatial field, a geochemical
 //! reservoir, a food-web state-vector, or an agent population all persist
 //! through this *same* interface. That neutrality is the framework's invariant
@@ -43,18 +43,19 @@ fn hex(h: u64) -> String {
 }
 
 /// A *complete* content-addressed key: a canonical string of everything that
-/// affects the value — recipe name + version + every input. Build it with
+/// affects the value — nomos name + version + every input. Build it with
 /// [`Key::field`] per input; omitting one is the under-keying trap (§12), so
 /// fold in all of them (upstream hashes, params, seed, resolution, time).
 #[derive(Clone, Debug)]
 pub struct Key(String);
 
 impl Key {
-    /// Start a key for `recipe` at `version`. (Version is a constant for the
+    /// Start a key for the nomos named `nomos` at `version`. (Version is a
+    /// constant for the
     /// MVP; it graduates to a source-derived hash — coarse-enough-to-cover-deps
     /// first, IR-normalized only if the build-chain makes it clean — later.)
-    pub fn new(recipe: &str, version: &str) -> Self {
-        Key(format!("{recipe}@{version}"))
+    pub fn new(nomos: &str, version: &str) -> Self {
+        Key(format!("{nomos}@{version}"))
     }
 
     /// Fold one input into the key. Chainable.

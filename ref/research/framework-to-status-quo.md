@@ -1,5 +1,8 @@
 # Framework-to-status-quo — the honest gap, and the drainage-shaped dependency design
 
+> [!note]
+> **Terminology (2026-07-10):** “recipe” throughout this dated document = **nomos** (pl. *nomoi*) — the term settled after this was written (LEXICON §2). Kept verbatim as history.
+
 *2026-07-09. Written after Joseph corrected a session's overclaim that the worldview spike was "the workflow, just manually cranked." It is not, and this file records
 (1) the code-verified status quo, (2) what the framework target actually requires that has zero implementation, (3) a design answer to Joseph's dependency question —
 "what coarse-pos/coarse-time evolution needs to run on adjacent areas, lazily pulled?" — whose answer is drainage-shaped, and (4) the build shape. Facts below are marked **[code]** (read in source this session) or **[design]** (hypothesis/proposal).*

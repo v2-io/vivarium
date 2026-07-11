@@ -643,9 +643,11 @@ fn input_update(
     if buttons.pressed(MouseButton::Left) && d != Vec2::ZERO {
         // Grab-the-surface semantics, sign set EMPIRICALLY (Joseph, 2026-07-10:
         // dragging left must take the globe's front left, not the rear): the
-        // front face follows the cursor. If a future refactor of camera_update
-        // changes the yaw→eye mapping, re-verify by dragging, not by derivation
-        // — this sign has been gotten wrong once already.
+        // front face follows the cursor. Resolution of the sign's history: the
+        // original sign was tuned against the INSIDE-OUT globe (the winding
+        // bug), whose mirror flips apparent chirality — two bugs masking each
+        // other; fixing the winding made the drag wrong. If camera_update's
+        // yaw→eye mapping ever changes, re-verify by dragging.
         orbit.yaw += d.x * grab;
         orbit.pitch += d.y * grab;
         orbit.vel_yaw = d.x * grab / dt;

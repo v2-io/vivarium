@@ -229,7 +229,7 @@ written layer — the first record the world keeps of itself, on purpose.*
   sub-gates grow when the details force them, not before.
 - **Gate status ≠ sim status.** The #gate/#earth/#mech/#emergent tags say what
   *kind* of arrow a condition is, never whether it is built. Implementation
-  state lives elsewhere (the §12 recipe keys, or a tracking layer) so this
+  state lives elsewhere (the §12 nomos keys, or a tracking layer) so this
   document never quietly claims the world exists.
 - **Declare causally, materialize lazily** *(Joseph, resolving the moon
   fuzziness)*. Physical universes must BUILD prerequisites at their causal

@@ -239,7 +239,7 @@ erosion feedback loop). All stages deterministic on integer/seeded arithmetic.
 | Minder & Roe (orographic precip encyclopedia) | rigorous upslope-model backing | UNVERIFIED (PDF not decoded) |
 | Red Blob Games 1843 | rivers-on-a-sphere reference impl | fetched/verified |
 
-**DESIGN-HYPOTHESIS (not shipped recipes — spike candidates):** the ocean-gyre
+**DESIGN-HYPOTHESIS (not shipped nomoi — spike candidates):** the ocean-gyre
 SST proxy and the exact seasonality formula are our syntheses from earth-science
 shape, not techniques found in a shipping game.
 

@@ -128,8 +128,8 @@ struct WaterMsg {
 /// unitless in the solver; this is the display anchor for aging speed).
 const EPOCH_YEARS: f32 = 100.0;
 
-/// Physics/recipe version for the fill cache — the crude rung of §12's
-/// recipe-hash: BUMP THIS whenever erosion or water physics changes, or stale
+/// Physics/nomos version for the fill cache — the crude rung of §12's
+/// nomos-version hash: BUMP THIS whenever erosion or water physics changes, or stale
 /// caches will serve worlds the current algorithms would not produce.
 const FILL_ALGO_VERSION: &str = "2026-07-10g"; // g: sphere-continuous prior (spine v2 — face-edge cliffs gone)
 

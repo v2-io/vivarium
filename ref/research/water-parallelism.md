@@ -41,7 +41,7 @@ bit-reproducible on one device+driver but NOT across devices. Policy:
 - The **CPU kernel is the reference implementation** — canon for tests,
   replay, and probes. It never goes away.
 - A GPU backend is a **rung on the implementation ladder** behind the same
-  flux interface (§12): swappable, and its identity is part of the recipe key
+  flux interface (§12): swappable, and its identity is part of the nomos key
   (FILL_ALGO_VERSION-style), so caches and saves never silently mix backends.
 - Validation is by probe, not vibes: conservation totals, channel_profile
   regime invariants, and velocity_histogram fingerprints must agree with the

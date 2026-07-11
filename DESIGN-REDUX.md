@@ -508,18 +508,19 @@ move is the DESCENT: climb stepwise-emergent to *discover* a system's
 behaviour; once its patterns are characterized and probe-validated, descend to
 a tight procedural surrogate that reproduces the discovered statistics (§5
 agreement is the honesty gate), keeping the expensive rung as calibrator —
-re-run on recipe change, feeding the surrogate's calibration. Insolation
+re-run on nomos change, feeding the surrogate's calibration. Insolation
 already lives at the bottom (closed-form); weather should end there; Abyssal
 geology never needs to descend because checkpoints amortize it to zero. Every
 system-in-a-phase declares its execution class (batch-deep / relaxation /
-procedural-tight) in its recipe — see
+procedural-tight) in its nomos — see
 `ref/research/architecture-migration-2026-07-03.md`.
 
 ### The payoff: swap a model, rerun only what changed
 The requirement that makes the ladder practical: **memoize each aspect's progress
 to disk, keyed so that the model's own identity and version are part of the key —
 not just its data inputs.** This is the Nix insight (a derivation's hash includes
-its *recipe*, so changing the recipe rebuilds exactly that and its dependents).
+its *recipe* — Nix's word for what we call a **nomos** — so changing it rebuilds
+exactly that and its dependents).
 Then swapping erosion-v1 (single hardness) for erosion-v2 (layered hardness)
 changes erosion's key ⇒ **its cached outputs and everything downstream invalidate;
 everything else stays cached. No more, no less.** Independent aspects are
@@ -528,7 +529,7 @@ untouched; the rerun is minimal *by construction*.
 **Accelerated backends are rungs too** *(2026-07-03)*: a GPU implementation of
 a kernel is a swappable rung behind the same flux interface — with the CPU
 kernel kept forever as the *reference implementation* (canon for tests,
-replay, probes), backend identity in the recipe key (GPU bit-reproducibility
+replay, probes), backend identity in the nomos key (GPU bit-reproducibility
 is per-device, not universal), and agreement validated by probe within a
 written tolerance. Plan: `ref/research/water-parallelism.md`.
 
@@ -568,7 +569,7 @@ dozens of kernels that discipline WILL eventually be forgotten, and the failure
 mode is the exact interference this directive forbids — a stale memo served
 mid-iteration doesn't just waste time, it *lies* (you conclude your change did
 nothing, or "works," against a world your code no longer produces). Remedy,
-strongest first: **derive recipe-versions from kernel source at build time**
+strongest first: **derive nomos-versions from kernel source at build time**
 (build.rs hashes the kernel into a compile-time key component — the Nix move,
 immune to forgetting). The **safe default is coarse**: hashing whole-module (or
 whole-crate) source over-invalidates on cosmetic edits but errs the safe way,
@@ -654,7 +655,7 @@ The appealing idea: tag each object by whether it is derivable from seed + macro
 (*regenerable*) or its lineage touches a user mutation (*irreducible*). If that bit
 holds up, it would buy (a) GC that prunes regenerable objects freely — including
 *truly deleting* them on an algo-version bump — while never touching irreducible
-ones, and (b) **tunable save size**: a *thin* save (recipe + irreducible + roots,
+ones, and (b) **tunable save size**: a *thin* save (nomoi + irreducible + roots,
 regenerate the rest) vs. a *fat* save (also ship materialized regenerable state,
 for instant and version-drift-robust pickup), with a natural "fat for developed
 regions, thin elsewhere" policy. **What is deliberately unfixed:** the exact split,

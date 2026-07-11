@@ -1,5 +1,9 @@
 # Architecture migration review (2026-07-03, fresh-eyes architect + session assessment)
 
+> [!note]
+> **Terminology (2026-07-10):** “recipe” throughout this dated document = **nomos** (pl. *nomoi*) — the term settled after this was written (LEXICON §2). Kept verbatim as history.
+
+
 *A Plan-agent with a clean context read Checkpoints.md, all DESIGN-*, ORIENTATION,
 both written plans, and the code, and reported; the session agent (full two-day
 context) assessed. Verdict: **the physics crate is already the right shape; the

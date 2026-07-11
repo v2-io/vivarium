@@ -8,13 +8,13 @@
 //! - `vivarium new <dir> [name]` — individuate a world: write its manifest
 //!   (fresh seed unless the dir already has one — identity is never re-minted).
 //! - `vivarium build <dir> [--level L] [--epochs E]` — builder v0: sweep all six
-//!   cube faces at level `L` through the spine recipe (the breadth-first,
+//!   cube faces at level `L` through the spine nomos (the breadth-first,
 //!   whole-world degenerate beacon — "all of the world to the end of Phase 2"),
 //!   then erode the same tiles (`--epochs 0` skips erosion). Appends `build.log`,
 //!   maintains `status.json`, holds `builder.lock`; a second invocation on a
 //!   LIVE build **attaches** (tails the log) instead of failing.
 //! - `vivarium status <dir>` — the **fidelity pyramid**: a census of the store's
-//!   roots by recipe × level (what exists, at what fidelity — readable while a
+//!   roots by nomos × level (what exists, at what fidelity — readable while a
 //!   build runs).
 //! - `vivarium attach <dir>` — follow a running build's log (Ctrl-C detaches;
 //!   the builder is unaffected).
@@ -271,27 +271,27 @@ fn cmd_status(rest: &[String]) -> i32 {
             return 1;
         }
     };
-    // The fidelity pyramid: recipe × level counts, levels descending (coarse at
+    // The fidelity pyramid: nomos × level counts, levels descending (coarse at
     // the top — the half-population-pyramid Joseph pictured).
     let mut census: std::collections::BTreeMap<(u8, String), usize> = std::collections::BTreeMap::new();
     let mut unknown = 0;
     for (key, _) in &roots {
-        let recipe = key.split('@').next().unwrap_or("").to_string();
+        let nomos = key.split('@').next().unwrap_or("").to_string();
         let level = key
             .split('|')
             .find_map(|f| f.strip_prefix("level="))
             .and_then(|v| v.parse::<u8>().ok());
-        match (recipe.is_empty(), level) {
-            (false, Some(l)) => *census.entry((l, recipe)).or_default() += 1,
+        match (nomos.is_empty(), level) {
+            (false, Some(l)) => *census.entry((l, nomos)).or_default() += 1,
             _ => unknown += 1,
         }
     }
     println!("\nfidelity pyramid ({} roots):", roots.len());
-    println!("{:>5}  {:<14} {:>7}  ", "level", "recipe", "tiles");
+    println!("{:>5}  {:<14} {:>7}  ", "level", "nomos", "tiles");
     let max = census.values().copied().max().unwrap_or(1);
-    for ((level, recipe), n) in &census {
+    for ((level, nomos), n) in &census {
         let bar = "█".repeat((n * 40 / max).max(1));
-        println!("{level:>5}  {recipe:<14} {n:>7}  {bar}");
+        println!("{level:>5}  {nomos:<14} {n:>7}  {bar}");
     }
     if unknown > 0 {
         println!("{unknown} pre-census roots (format v1 — valid, not attributable)");

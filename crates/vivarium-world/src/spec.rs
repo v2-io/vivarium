@@ -9,13 +9,13 @@
 //! **Fields divide into three buckets, and the divide is load-bearing:**
 //! - **identity** — participates in content-addressed keys; changing one forks a
 //!   *new* world (law = kingdom identity, LEXICON §7.2). Today: `seed`.
-//!   (Law/generator versions live in each recipe's key, not here — the manifest
+//!   (Law/generator versions live in each nomos's key, not here — the manifest
 //!   will *pin* them at Realization, later.)
 //! - **label** — human-facing, never in keys; renaming invalidates nothing.
 //!   Today: `name`.
 //! - **demand** *(future)* — target phase, beacons, watchpoints: changes what
 //!   gets built *first*, provably never what gets built (order-independence
-//!   holds because recipes depend on artifacts by key, never "latest available").
+//!   holds because nomoi depend on artifacts by key, never "latest available").
 //!
 //! Format: a minimal `key = value` TOML subset, hand-parsed to keep this crate
 //! dependency-free. Graduates to real TOML when the CLI crate exists — the file
@@ -26,7 +26,7 @@ use std::io;
 use std::path::Path;
 
 /// Store-format version this code writes (byte-format compatibility — the only
-/// version that lives in the *path/manifest* rather than in recipe keys, per
+/// version that lives in the *path/manifest* rather than in nomos keys, per
 /// `DESIGN-REDUX.md` §13).
 pub const FORMAT: u32 = 1;
 

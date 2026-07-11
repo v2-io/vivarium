@@ -71,7 +71,7 @@ The curiosity path: pick a real-world landform, and it decomposes into *material
   (and the stateless coherent-noise-under-macro materialization, `DESIGN-MATERIAL` §10).
 - **Deltas** = erosion + coastal → sediment transport + sea level.
 
-Each is a small recipe over the same substrate — which is the whole point of the stable property interface (`DESIGN-MATERIAL` §6): features are *compositions*, not new engines.
+Each is a small composition over the same substrate — which is the whole point of the stable property interface (`DESIGN-MATERIAL` §6): features are *compositions*, not new engines.
 
 ## Fluvial ladder — named next rungs (Joseph, 2026-07-03; parentheses = processes rather than attributes)
 

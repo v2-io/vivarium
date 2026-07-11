@@ -12,6 +12,7 @@
 
 ## Terms
 
+- **~~recipe~~ → nomos (pl. nomoi)** · 2026-07-10 (Joseph's call: "Make it so") · The keyed, versioned, memoizable invocation unit — the executable embodiment of an article of world-law. "Recipe" (Nix heritage) connoted casual ad-hoc instructions, unworthy of the referent. Law (Λ) = the totality; a nomos = one instituted article of it; family nomothete/nomothetic/nomotheke. Swept through code + live docs same day; dated docs (`framework-to-status-quo.md`, `architecture-migration-2026-07-03.md`) carry a terminology header note instead. "Recipe" remains only when referring to *Nix's* concept. LEXICON §2.
 - **~~Providence~~ → Lawful-steering** · 2026-07-09 (Joseph's naming call) · The third mutation mechanism (an exo agent choosing a fated-noise realization,
   lawfully and trace-free). "Providence" named the *actor's attributes*
   (providential/divine); "lawful-steering" names *what happens* — the intended focus. *Reconcile:* `taxonomy-formalization-spike.md` §9.2 and the
@@ -67,7 +68,7 @@
 
 - **The whole `spikes/worldview` runtime** is a physics testbench, **not** the target framework (one fixed patch; re-seeds from raw prior on movement;
   non-composable tiles). Not "deprecated" — it is the proving ground — but its
-  *architecture* is superseded by the store/recipe/spine design
+  *architecture* is superseded by the store/nomos/spine design
   (`framework-to-status-quo.md`, ARCHITECTURE.md §5–6). Track so nobody mistakes the testbench for the frame.
 - **`vivarium-core`** (flat `i32` patch) is the *physics donor* being ported into
   `vivarium-world`; superseded as the live frame but retained as the algorithm reference until the port is proven (ORIENTATION, `world-model-foundation.md`).

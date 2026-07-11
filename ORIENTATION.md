@@ -286,7 +286,7 @@ committed and tested (52/52 green in `vivarium-world`):
 
 1. **`store.rs`** — the content-addressed store (objects/roots, atomic,
    domain-neutral: keys→bytes). The save-file IS the memo store (§13), real.
-2. **`query.rs`** — the lazy pull-query: recipes check the store, compute on
+2. **`query.rs`** — the lazy pull-query: nomoi check the store, compute on
    miss, memoize. The fBm spine is system #1; **erosion composes on it as
    system #2** purely through pulled/keyed surfaces — the coupling contract
    (ARCHITECTURE §9) proven in miniature.
@@ -296,7 +296,7 @@ committed and tested (52/52 green in `vivarium-world`):
    demand (future: beacons) buckets. A world is individuated by its manifest;
    the seed is minted once and recorded.
 5. **The world-seed threaded to every KRNG draw** — seed-first convention in
-   `noise.rs` (seed 0 = the legacy world, pinned by golden tests); recipes are
+   `noise.rs` (seed 0 = the legacy world, pinned by golden tests); nomoi are
    methods on a **`World { store, seed }`** context so key-seed and
    compute-seed cannot diverge; worldview takes `VIVARIUM_SEED` (its
    fill-cache key now folds the seed in).

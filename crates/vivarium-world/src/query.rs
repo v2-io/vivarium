@@ -1,4 +1,4 @@
-//! The lazy pull-query + the first recipes — the runtime as a demand-driven,
+//! The lazy pull-query + the first nomoi — the runtime as a demand-driven,
 //! memoized query graph (`DESIGN-REDUX.md` §11).
 //!
 //! Queries are methods on a [`World`]: the context that owns `(store, seed)`
@@ -7,11 +7,11 @@
 //! *cannot* diverge, because there is only one source (Joseph's question,
 //! 2026-07-10: "is it wise to rely on coders always putting the right seed in
 //! the KRNG?" — no; this struct is the structural answer). A `World` is built
-//! from a manifest (`spec.rs`) in one place; recipes never see a bare seed.
+//! from a manifest (`spec.rs`) in one place; nomoi never see a bare seed.
 //!
 //! A query is *coordinate-addressed*: it builds a complete [`Key`] from its
-//! (recipe, version, seed, region, resolution) inputs, checks the [`Store`], and
-//! on a miss computes via the recipe and memoizes the result. Walking the world
+//! (nomos, version, seed, region, resolution) inputs, checks the [`Store`], and
+//! on a miss computes via the nomos and memoizes the result. Walking the world
 //! is then just pulling the tiles around the observer — revisits hit the store,
 //! so matured state **persists** (no re-seed-from-raw-prior; the store is the
 //! save). Dependencies between systems become recursion in the pull.
@@ -31,14 +31,14 @@ pub enum Source {
     Hit,
 }
 
-/// Recipe version for the coarse spine. Constant for the MVP; bump on any change
+/// Nomos-version for the coarse spine. Constant for the MVP; bump on any change
 /// to [`World::compute_spine_tile`] (it graduates to a source-derived hash later
 /// — see `DESIGN-REDUX.md` §12). Under-keying is the one unsafe failure, so this
 /// is part of the key.
 const SPINE_VERSION: &str = "spine-2026-07-10b-sphere3d";
 
-/// Recipe version for the fluvial-erosion tier (system #2). Bump on any change
-/// to the erosion recipe.
+/// Nomos-version for the fluvial-erosion tier (system #2). Bump on any change
+/// to the erosion nomos.
 const EROSION_VERSION: &str = "erosion-2026-07-10a";
 
 /// One vivium, opened for querying: the store it persists in and the seed that

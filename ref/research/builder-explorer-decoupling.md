@@ -8,9 +8,9 @@
 
 Two builds of the same spec, advanced along different demand orders (different explorers, different beacons, different walking routes), converge to **byte-identical state wherever both have materialized**. This is not aspiration; it is a property of the frame: every memo is a pure function of its complete key, so computation order changes only *which* entries exist so far, never their values.
 
-**The invariant that preserves it** (the one rule that must survive plan-Phase-3's flux-BC tiles): **a recipe may depend on a neighbour only *by key*** — a specific `(tile, level, time-index)` chosen by the dependency map — **never on "the finest/latest available."** "Use the best data we happen to have" is the tempting optimization that would silently make the world a function of the walking route. The fidelity dial lives in the *demand planner* (which keys get scheduled), never in the *recipe* (which keys get read).
+**The invariant that preserves it** (the one rule that must survive plan-Phase-3's flux-BC tiles): **a nomos may depend on a neighbour only *by key*** — a specific `(tile, level, time-index)` chosen by the dependency map — **never on "the finest/latest available."** "Use the best data we happen to have" is the tempting optimization that would silently make the world a function of the walking route. The fidelity dial lives in the *demand planner* (which keys get scheduled), never in the *nomos* (which keys get read).
 
-Native-representation memos (LEXICON §2) fit unchanged: keys name **artifacts** (recipe outputs — a drainage-graph object, a slab-set), not grid cells; the canonical frame is how *queries* address the world, not how *dependencies* must be shaped. The one tension to manage is **invalidation granularity** — a large native object invalidates all its dependents at its own grain (over-keying: safe, possibly wasteful) — so a native system chooses its memo grain to match its consumers' cones (per-basin, not one global graph).
+Native-representation memos (LEXICON §2) fit unchanged: keys name **artifacts** (nomos outputs — a drainage-graph object, a slab-set), not grid cells; the canonical frame is how *queries* address the world, not how *dependencies* must be shaped. The one tension to manage is **invalidation granularity** — a large native object invalidates all its dependents at its own grain (over-keying: safe, possibly wasteful) — so a native system chooses its memo grain to match its consumers' cones (per-basin, not one global graph).
 
 ## 1. The four pieces — and the store is the bus *(settled)*
 
@@ -41,11 +41,11 @@ Hilbert order (`CellId`) makes any region a contiguous id range — *storage/str
 
 ## 3. Access profiles = process boundaries *(design; answers taxonomy Sc-9)*
 
-The BDD stress-test's sharpest gap — exo-by-governance splits into *access-rich* (source-holder) vs *plain participant* — is naturally **enforced** by this architecture: a builder process holds recipes + write-capable store access; an explorer process holds a phenomenal-grade query API. The OS process boundary mechanically instantiates the access-profile split the ontology wants. Profiles attach at the **query front-end** (plan-Phase-4), not in the store. Note for the run-modes carve: the moment two processes share a store, the Phase-0 "convention-only" canon-root guard is worth revisiting (the tripwire may fire earlier than "first graduation").
+The BDD stress-test's sharpest gap — exo-by-governance splits into *access-rich* (source-holder) vs *plain participant* — is naturally **enforced** by this architecture: a builder process holds nomoi + write-capable store access; an explorer process holds a phenomenal-grade query API. The OS process boundary mechanically instantiates the access-profile split the ontology wants. Profiles attach at the **query front-end** (plan-Phase-4), not in the store. Note for the run-modes carve: the moment two processes share a store, the Phase-0 "convention-only" canon-root guard is worth revisiting (the tripwire may fire earlier than "first graduation").
 
 ## 4. The temporal ladder *(design; recovered from the context-exhausted 2026-07-10 session)*
 
-The staged physics progression the builder's stage chains implement, each rung a keyed recipe composing on the one below:
+The staged physics progression the builder's stage chains implement, each rung a keyed nomos composing on the one below:
 
 1. **Macro-erosion epochs** — coarse geological erosion (today's `erosion_tile`).
 2. **Macro water-cycle + alluvial coupling** — water at aggregated scale, sediment fluxed back into erosion; slow erosion reads water as *time-averaged discharge*, water sees terrain as quasi-static (`multiscale-seams.md` §2.3). The rung with the real open nuance.
