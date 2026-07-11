@@ -40,7 +40,7 @@ fn main() {
     let epochs = arg(5, 80.0) as u32;
 
     let t0 = std::time::Instant::now();
-    let mut f = Fluvial::from_prior(Face::ZPos, level, oi, oj, nx);
+    let mut f = Fluvial::from_prior(0, Face::ZPos, level, oi, oj, nx);
     let seed_ms = t0.elapsed().as_millis();
     let (lo0, hi0, smean0, smax0) = stats(&f.h, nx, f.cell_m);
 

@@ -51,7 +51,7 @@ pub fn column_from_surface(cell: CellId, surface_m: f64, soil_m: f64) -> Column 
 /// `surface_prior_m(cell, cell.level()) - surface_prior_m(cell, region_level)` —
 /// exactly the octave band finer than what the erosion grid simulated (fBm
 /// truncation is a prefix, §8, so the difference IS the fine octaves).
-pub fn surface_prior_m(cell: CellId, nyquist_level: u8) -> f64 {
+pub fn surface_prior_m(seed: u64, cell: CellId, nyquist_level: u8) -> f64 {
     let c = cell.to_cube();
     // Two-band prior (the 2009 neworld idea — "change parameters based on earlier
     // noise" — and core's proven scaling). Slope is what makes terrain read, and
@@ -65,7 +65,7 @@ pub fn surface_prior_m(cell: CellId, nyquist_level: u8) -> f64 {
     const CONT_PER_FACE: f64 = 8.0; // ~1250 km
     const MTN_PER_FACE: f64 = 400.0; // ~25 km
     let (su, sv) = (c.u + 1.0, c.v + 1.0);
-    let cont_m = (fbm(0, su * CONT_PER_FACE, sv * CONT_PER_FACE, 4, 2.0, 0.5) - 0.5) * 3000.0;
+    let cont_m = (fbm(seed, 0, su * CONT_PER_FACE, sv * CONT_PER_FACE, 4, 2.0, 0.5) - 0.5) * 3000.0;
     let mtn_amp = 1800.0 * ((cont_m + 200.0) / 800.0).clamp(0.0, 1.0);
     // Mountain octaves run from the 25 km base down to the SAMPLE's Nyquist (2
     // cells at this cell's level): un-eroded terrain is epic at every scale it is
@@ -77,12 +77,12 @@ pub fn surface_prior_m(cell: CellId, nyquist_level: u8) -> f64 {
     let cell_m = face_edge_m / (1u64 << nyquist_level) as f64;
     let base_lambda_m = face_edge_m / MTN_PER_FACE; // ~25 km
     let n_oct = ((base_lambda_m / (2.0 * cell_m)).log2().floor() as i64 + 1).clamp(1, 16) as u32;
-    let mtn_m = (fbm(1, su * MTN_PER_FACE, sv * MTN_PER_FACE, n_oct, 2.0, 0.5) - 0.5) * 2.0 * mtn_amp;
+    let mtn_m = (fbm(seed, 1, su * MTN_PER_FACE, sv * MTN_PER_FACE, n_oct, 2.0, 0.5) - 0.5) * 2.0 * mtn_amp;
     SEA_LEVEL_M + cont_m + mtn_m
 }
 
-pub fn baseline_column(cell: CellId) -> Column {
-    column_from_surface(cell, surface_prior_m(cell, cell.level()), 2.0)
+pub fn baseline_column(seed: u64, cell: CellId) -> Column {
+    column_from_surface(cell, surface_prior_m(seed, cell, cell.level()), 2.0)
 }
 
 #[cfg(test)]
@@ -112,11 +112,27 @@ mod tests {
     #[test]
     fn baseline_is_deterministic_and_varied() {
         let a = some_cell(0.2, -0.3);
-        assert_eq!(baseline_column(a).solid_thickness_m(), baseline_column(a).solid_thickness_m());
+        assert_eq!(baseline_column(0, a).solid_thickness_m(), baseline_column(0, a).solid_thickness_m());
         // different cells generally differ
-        let h1 = baseline_column(some_cell(-0.5, 0.4)).solid_thickness_m();
-        let h2 = baseline_column(some_cell(0.6, -0.1)).solid_thickness_m();
+        let h1 = baseline_column(0, some_cell(-0.5, 0.4)).solid_thickness_m();
+        let h2 = baseline_column(0, some_cell(0.6, -0.1)).solid_thickness_m();
         assert!(h1 > 0.0 && h2 > 0.0);
         assert_ne!(h1, h2);
+    }
+
+    #[test]
+    fn seed_zero_prior_matches_legacy_golden() {
+        // Golden values from the pre-seed code (2026-07-10): seed 0 IS that world.
+        use crate::sphere::Face;
+        let c1 = CellId::from_face_ij(Face::from_index(2), 5308416, 13238272, 24);
+        let c2 = CellId::from_face_ij(Face::from_index(1), 100, 100, 19);
+        assert_eq!(surface_prior_m(0, c1, 24), 5.03513744323030824e3);
+        assert_eq!(surface_prior_m(0, c2, 19), 4.22947287420960311e3);
+    }
+
+    #[test]
+    fn different_seeds_are_different_worlds() {
+        let c = some_cell(0.3, 0.3);
+        assert_ne!(surface_prior_m(0, c, 12), surface_prior_m(42, c, 12));
     }
 }

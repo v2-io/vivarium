@@ -49,7 +49,7 @@ fn teeth(f: &Fluvial) -> usize {
 fn run(label: &str, p: &FluvialParams) {
     // Fine field straight from the prior (L24, ~0.6 m cells) — the mechanism
     // doesn't need parent tiers.
-    let mut f = Fluvial::from_prior(Face::ZPos, 24, 5_308_288, 13_238_144, 192);
+    let mut f = Fluvial::from_prior(0, Face::ZPos, 24, 5_308_288, 13_238_144, 192);
     print!("{label:<26}");
     for round in 0..6 {
         f.erode(p);
@@ -63,7 +63,7 @@ fn run(label: &str, p: &FluvialParams) {
 /// block means every cycle (sustained relative uplift = the tooth amplifier).
 fn run_live(label: &str, level: u8, p: &FluvialParams) {
     let shift = 24 - level as i32;
-    let mut f = Fluvial::from_prior(Face::ZPos, level, 5_308_288 >> shift, 13_238_144 >> shift, 192);
+    let mut f = Fluvial::from_prior(0, Face::ZPos, level, 5_308_288 >> shift, 13_238_144 >> shift, 192);
     let seed_h = f.h.clone();
     let (nx, oi, oj) = (f.nx, f.origin.0, f.origin.1);
     let seed_at = move |c: vivarium_world::sphere::CellId| -> f64 {

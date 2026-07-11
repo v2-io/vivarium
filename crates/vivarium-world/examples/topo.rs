@@ -33,7 +33,7 @@ fn main() {
     let h_at = |i: i64, j: i64| -> f64 {
         let i = i.clamp(0, n as i64 - 1) as u32;
         let j = j.clamp(0, n as i64 - 1) as u32;
-        baseline_column(CellId::from_face_ij(Face::ZPos, i, j, level)).solid_thickness_m() - SEA_LEVEL_M
+        baseline_column(0, CellId::from_face_ij(Face::ZPos, i, j, level)).solid_thickness_m() - SEA_LEVEL_M
     };
 
     let mut grid = vec![0.0f64; COLS * ROWS];

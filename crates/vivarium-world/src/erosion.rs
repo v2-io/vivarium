@@ -169,6 +169,9 @@ pub struct Fluvial {
     pub face: Face,
     pub level: u8,
     pub origin: (u32, u32),
+    /// The world-seed — identity for every fated-noise draw this run makes
+    /// (differential uplift today; anything stochastic later).
+    pub seed: u64,
     /// Cached per-cell uplift weights (built on first uplifting epoch).
     uplift_w: Option<Vec<f32>>,
     /// Mean |Δh| (m) of the LAST epoch — Joseph's convergence instrument: when
@@ -182,14 +185,14 @@ const NEIGHBORS: [(i32, i32); 8] =
 impl Fluvial {
     /// Seed from the band-limited prior over `nx × nx` cells of `face` at `level`
     /// starting at `(oi, oj)` — the honest initial condition (no imposed shapes).
-    pub fn from_prior(face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> Self {
-        Self::from_surface(face, level, oi, oj, nx, |c| gen::surface_prior_m(c, c.level()))
+    pub fn from_prior(seed: u64, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> Self {
+        Self::from_surface(seed, face, level, oi, oj, nx, |c| gen::surface_prior_m(seed, c, c.level()))
     }
 
     /// Seed from an arbitrary surface function — how a FINE tier is seeded from
     /// the coarse tiers below it (the §7.2 downscaling seam: the fine sim's
     /// initial condition is the downscaled coarse end-state + detail increment).
-    pub fn from_surface(face: Face, level: u8, oi: u32, oj: u32, nx: usize, surf: impl Fn(CellId) -> f64) -> Self {
+    pub fn from_surface(seed: u64, face: Face, level: u8, oi: u32, oj: u32, nx: usize, surf: impl Fn(CellId) -> f64) -> Self {
         let cell_m = crate::sample::cell_size_m(level, crate::planet::Planet::EARTH.radius_m) as f32;
         let mut h = vec![0.0f32; nx * nx];
         for y in 0..nx {
@@ -198,19 +201,19 @@ impl Fluvial {
                 h[y * nx + x] = surf(cell) as f32;
             }
         }
-        Self { nx, cell_m, h, drainage: vec![0.0; nx * nx], face, level, origin: (oi, oj), uplift_w: None, last_delta_m: f32::INFINITY }
+        Self { nx, cell_m, h, drainage: vec![0.0; nx * nx], face, level, origin: (oi, oj), seed, uplift_w: None, last_delta_m: f32::INFINITY }
     }
 
     /// Resume a simulation over an existing eroded field (e.g. the startup tier),
     /// so the live loop can keep running epochs without redoing the initial work.
     pub fn from_region(r: &ErodedRegion) -> Self {
         let cell_m = crate::sample::cell_size_m(r.level, crate::planet::Planet::EARTH.radius_m) as f32;
-        Self { nx: r.nx, cell_m, h: r.h.clone(), drainage: vec![0.0; r.nx * r.nx], face: r.face, level: r.level, origin: (r.oi, r.oj), uplift_w: None, last_delta_m: f32::INFINITY }
+        Self { nx: r.nx, cell_m, h: r.h.clone(), drainage: vec![0.0; r.nx * r.nx], face: r.face, level: r.level, origin: (r.oi, r.oj), seed: r.seed, uplift_w: None, last_delta_m: f32::INFINITY }
     }
 
     /// Snapshot into a sampleable region.
     pub fn to_region(&self) -> ErodedRegion {
-        ErodedRegion { face: self.face, level: self.level, oi: self.origin.0, oj: self.origin.1, nx: self.nx, h: self.h.clone() }
+        ErodedRegion { face: self.face, level: self.level, oi: self.origin.0, oj: self.origin.1, nx: self.nx, h: self.h.clone(), seed: self.seed }
     }
 
     #[inline]
@@ -521,7 +524,7 @@ impl Fluvial {
                         for x in 0..self.nx {
                             let cell = CellId::from_face_ij(self.face, self.origin.0 + x as u32, self.origin.1 + y as u32, self.level);
                             let c = cell.to_cube();
-                            let f = crate::noise::fbm(3, (c.u + 1.0) * 2000.0, (c.v + 1.0) * 2000.0, 3, 2.0, 0.5);
+                            let f = crate::noise::fbm(self.seed, 3, (c.u + 1.0) * 2000.0, (c.v + 1.0) * 2000.0, 3, 2.0, 0.5);
                             w[y * self.nx + x] = (0.25 + 1.5 * f) as f32; // ~0.25×..1.75×
                         }
                     }
@@ -580,7 +583,7 @@ mod fluvial_tests {
     use super::*;
 
     fn small() -> Fluvial {
-        Fluvial::from_prior(Face::ZPos, 19, 165_800, 413_600, 96)
+        Fluvial::from_prior(0, Face::ZPos, 19, 165_800, 413_600, 96)
     }
 
     #[test]
@@ -655,23 +658,26 @@ pub struct ErodedRegion {
     pub oj: u32,
     pub nx: usize,
     pub h: Vec<f32>,
+    /// The world-seed the run was made under — needed to sample honestly (the
+    /// detail increment re-derives prior octaves, which are seed-dependent).
+    pub seed: u64,
 }
 
 impl ErodedRegion {
     /// Seed from the prior around a centre (face cells at `level`), erode, keep.
-    pub fn build(face: Face, level: u8, center_i: u32, center_j: u32, nx: usize, p: &FluvialParams) -> Self {
-        Self::build_from(face, level, center_i, center_j, nx, p, |c| gen::surface_prior_m(c, c.level()))
+    pub fn build(seed: u64, face: Face, level: u8, center_i: u32, center_j: u32, nx: usize, p: &FluvialParams) -> Self {
+        Self::build_from(seed, face, level, center_i, center_j, nx, p, |c| gen::surface_prior_m(seed, c, c.level()))
     }
 
     /// Seed from an arbitrary surface (e.g. the coarser tiers of the telescope),
     /// erode, keep. The nesting primitive for progressive fine-detail erosion.
-    pub fn build_from(face: Face, level: u8, center_i: u32, center_j: u32, nx: usize, p: &FluvialParams, surf: impl Fn(CellId) -> f64) -> Self {
+    pub fn build_from(seed: u64, face: Face, level: u8, center_i: u32, center_j: u32, nx: usize, p: &FluvialParams, surf: impl Fn(CellId) -> f64) -> Self {
         let half = (nx / 2) as u32;
         let oi = center_i.saturating_sub(half);
         let oj = center_j.saturating_sub(half);
-        let mut f = Fluvial::from_surface(face, level, oi, oj, nx, surf);
+        let mut f = Fluvial::from_surface(seed, face, level, oi, oj, nx, surf);
         f.erode(p);
-        Self { face, level, oi, oj, nx, h: f.h }
+        Self { face, level, oi, oj, nx, h: f.h, seed }
     }
 
     /// Does this region cover `cell` (same face, level ≥ region's, inside bounds)?
@@ -720,7 +726,7 @@ impl ErodedRegion {
             + at(x0 + 1, y0) * fx * (1.0 - fy)
             + at(x0, y0 + 1) * (1.0 - fx) * fy
             + at(x0 + 1, y0 + 1) * fx * fy;
-        let detail = gen::surface_prior_m(cell, level) - gen::surface_prior_m(cell, self.level);
+        let detail = gen::surface_prior_m(self.seed, cell, level) - gen::surface_prior_m(self.seed, cell, self.level);
         Some(base + detail)
     }
 }
@@ -728,7 +734,7 @@ impl ErodedRegion {
 /// Surface through a TELESCOPE of tiers, finest-first: the first region that
 /// contains the cell answers (its coarser parents already shaped its seed); the
 /// baseline prior answers everywhere else. `regions` is ordered coarse → fine.
-pub fn surface_at(cell: CellId, regions: &[ErodedRegion]) -> f64 {
+pub fn surface_at(seed: u64, cell: CellId, regions: &[ErodedRegion]) -> f64 {
     // Ordering is a CONTRACT, and passing fine-first fails silently (the coarse
     // tier answers everything, the fine tier is dead weight — a probe lost an
     // hour to this). Cheap guard in debug builds.
@@ -738,7 +744,7 @@ pub fn surface_at(cell: CellId, regions: &[ErodedRegion]) -> f64 {
             return s;
         }
     }
-    gen::surface_prior_m(cell, cell.level())
+    gen::surface_prior_m(seed, cell, cell.level())
 }
 
 /// The finest tier level covering `cell`, if any — the fidelity-debug query
@@ -749,6 +755,6 @@ pub fn tier_at(cell: CellId, regions: &[ErodedRegion]) -> Option<u8> {
 
 /// A column through the fidelity ladder: the finest materialized tier that covers
 /// the cell, the baseline prior elsewhere.
-pub fn column_at(cell: CellId, regions: &[ErodedRegion]) -> crate::column::Column {
-    gen::column_from_surface(cell, surface_at(cell, regions), 2.0)
+pub fn column_at(seed: u64, cell: CellId, regions: &[ErodedRegion]) -> crate::column::Column {
+    gen::column_from_surface(cell, surface_at(seed, cell, regions), 2.0)
 }

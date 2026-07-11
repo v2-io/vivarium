@@ -1,15 +1,19 @@
 //! Headless "explorer" — the principled scaffold made *visible*.
 //!
-//! Walks a short path of tiles, pulling each eroded tile through the store,
-//! rendering it as ASCII, and printing whether it was COMPUTED fresh or served
-//! as a HIT (persisted). Returning to a tile you've already visited hits the
-//! store — the exploration-parity property (matured state persists, no re-seed)
-//! shown without a GPU.
+//! Opens (or creates) a **vivium**: a directory whose `manifest` declares the
+//! world's identity (seed) and label (name), and whose store IS the save. Walks
+//! a short path of tiles, pulling each eroded tile through the [`World`] query
+//! context, rendering it as ASCII, and printing whether it was COMPUTED fresh or
+//! served as a HIT (persisted). Returning to a visited tile hits the store — the
+//! exploration-parity property (matured state persists, no re-seed) shown
+//! without a GPU. Delete the directory (printed at the end) to be dealt a fresh
+//! world with a fresh seed next run; re-running keeps the same world.
 //!
 //! Run: `cargo run --release -p vivarium-world --example store_explore`
 
 use vivarium_world::gen::SEA_LEVEL_M;
-use vivarium_world::query::{erosion_tile, Source};
+use vivarium_world::query::{Source, World};
+use vivarium_world::spec::WorldSpec;
 use vivarium_world::sphere::Face;
 use vivarium_world::store::Store;
 
@@ -41,8 +45,10 @@ fn render(tile: &[f32], nx: usize) {
 
 fn main() -> std::io::Result<()> {
     let dir = std::env::temp_dir().join("vivarium-store-explore");
-    let _ = std::fs::remove_dir_all(&dir);
+    let spec = WorldSpec::load_or_create(&dir, "demo")?;
     let store = Store::open(&dir)?;
+    let world = World::new(&store, spec.seed);
+    println!("vivium \"{}\" — seed {} (identity; the name is just a label)", spec.name, spec.seed);
 
     let face = Face::from_index(2);
     let (level, nx, epochs) = (19u8, 48usize, 40u32);
@@ -50,7 +56,7 @@ fn main() -> std::io::Result<()> {
     // A little walk: E, then back W to where we started. The return HITS.
     let path = [(2000u32, 3000u32), (2048, 3000), (2000, 3000)];
     for (n, &(oi, oj)) in path.iter().enumerate() {
-        let (tile, src) = erosion_tile(&store, face, level, oi, oj, nx, epochs);
+        let (tile, src) = world.erosion_tile(face, level, oi, oj, nx, epochs);
         let tag = match src {
             Source::Computed => "COMPUTED fresh (miss → eroded → memoized)",
             Source::Hit => "HIT — served from the store (persisted, no re-seed)",
@@ -59,6 +65,6 @@ fn main() -> std::io::Result<()> {
         render(&tile, nx);
     }
 
-    println!("\nstore lives at {} — copy it and the world moves.", dir.display());
+    println!("\nvivium lives at {} — copy it and the world moves; delete it for a new seed.", dir.display());
     Ok(())
 }

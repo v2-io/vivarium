@@ -20,7 +20,7 @@ fn main() {
     let mut height = vec![0.0f64; (n as usize) * (n as usize)];
     for j in 0..n {
         for i in 0..n {
-            let col = baseline_column(CellId::from_face_ij(Face::ZPos, i, j, SCAN_LEVEL));
+            let col = baseline_column(0, CellId::from_face_ij(Face::ZPos, i, j, SCAN_LEVEL));
             height[(j as usize) * (n as usize) + (i as usize)] = col.solid_thickness_m() - SEA_LEVEL_M;
         }
     }

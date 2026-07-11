@@ -12,7 +12,7 @@
 //! ratio ≈ 1  → seamless. ratio >> 1 → the seam is visible as a ridge/trench.
 //! This probe is expected to FAIL (ratio well above 1) as of 2026-07-03 —
 //! it exists to make that failure measured, and to gate the future fix.
-use vivarium_world::erosion::{self, ErodedRegion, Fluvial, FluvialParams};
+use vivarium_world::erosion::{self, Fluvial, FluvialParams};
 use vivarium_world::sphere::{CellId, Face};
 
 fn main() {
@@ -31,7 +31,7 @@ fn run(fine_epochs: u32) {
     let p = FluvialParams::default();
 
     // Macro tier (L19), fully eroded.
-    let mut macro_t = Fluvial::from_prior(face, 19, oi, oj, nx);
+    let mut macro_t = Fluvial::from_prior(0, face, 19, oi, oj, nx);
     macro_t.erode(&p);
     let macro_r = macro_t.to_region();
 
@@ -40,9 +40,9 @@ fn run(fine_epochs: u32) {
     let fine_nx = nx; // half the macro span at 4x the resolution
     let (ci, cj) = ((oi + nx as u32 / 2) * 4, (oj + nx as u32 / 2) * 4);
     let fp = FluvialParams { epochs: fine_epochs, ..FluvialParams::default() };
-    let mut fine_f = Fluvial::from_surface(face, 21, ci - fine_nx as u32 / 2, cj - fine_nx as u32 / 2, fine_nx, |c| erosion::surface_at(c, std::slice::from_ref(&macro_r)));
+    let mut fine_f = Fluvial::from_surface(0, face, 21, ci - fine_nx as u32 / 2, cj - fine_nx as u32 / 2, fine_nx, |c| erosion::surface_at(0, c, std::slice::from_ref(&macro_r)));
     fine_f.erode(&fp);
-    fine_f.pin_block_means(19, |c| erosion::surface_at(c, std::slice::from_ref(&macro_r)));
+    fine_f.pin_block_means(19, |c| erosion::surface_at(0, c, std::slice::from_ref(&macro_r)));
     // ORDER MATTERS: surface_at expects coarse -> fine (it walks from the end).
     let tiers = vec![macro_r, fine_f.to_region()];
 
@@ -59,7 +59,7 @@ fn run(fine_epochs: u32) {
         let h: Vec<f64> = (-half..half)
             .map(|di| {
                 let i = (edge_i as i64 + di).max(0) as u32;
-                erosion::surface_at(CellId::from_face_ij(face, i, j, 21), &tiers)
+                erosion::surface_at(0, CellId::from_face_ij(face, i, j, 21), &tiers)
             })
             .collect();
         for (k, hv) in h.iter().enumerate() {

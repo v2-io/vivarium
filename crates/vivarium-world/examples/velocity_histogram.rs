@@ -14,7 +14,7 @@ use vivarium_world::water::{WaterParams, WaterSim};
 fn main() {
     let face = Face::ZPos;
     let (oi, oj, nx) = (165_800u32, 413_600u32, 128usize);
-    let mut macro_t = Fluvial::from_prior(face, 19, oi, oj, nx);
+    let mut macro_t = Fluvial::from_prior(0, face, 19, oi, oj, nx);
     macro_t.erode(&FluvialParams::default());
     let macro_r = macro_t.to_region();
 
@@ -25,7 +25,7 @@ fn main() {
     for y in 0..wnx {
         for x in 0..wnx {
             let c = vivarium_world::sphere::CellId::from_face_ij(face, woi + x as u32, woj + y as u32, 21);
-            bed[y * wnx + x] = erosion::surface_at(c, std::slice::from_ref(&macro_r)) as f32;
+            bed[y * wnx + x] = erosion::surface_at(0, c, std::slice::from_ref(&macro_r)) as f32;
         }
     }
     let mut w = WaterSim::new(face, 21, (woi, woj), wnx, cell, bed, 2.0);

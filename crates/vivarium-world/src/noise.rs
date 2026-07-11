@@ -12,6 +12,14 @@
 //! Continuous [`value_noise`]/[`fbm`] give spatial *coherence* (a vein continues
 //! across cells); modulate their amplitude by a macro field to get §10's
 //! "coherent detail under a macro constraint."
+//!
+//! **The world-seed is the first argument, everywhere** (2026-07-10). A vivium's
+//! identity is `(seed, law)` (LEXICON §4; the manifest, `spec.rs`) — so the seed
+//! is a *required* parameter of every primitive, not ambient state; forgetting it
+//! is a compile error, never an under-keyed memo. `seed = 0` reproduces the
+//! pre-seed world bit-for-bit (the fold contributes nothing at zero — pinned by
+//! the `seed_zero_is_the_legacy_world` golden test), so the long-lived testbench
+//! world and every probe baseline remain exactly what they were.
 
 // Known domain tags (keep unique; collisions silently correlate fields):
 //   0 continents fBm · 1 mountains fBm · 3 differential-uplift fBm ·
@@ -29,13 +37,16 @@ pub fn splitmix64(mut z: u64) -> u64 {
     z ^ (z >> 31)
 }
 
-/// Hash a domain tag + a 2-D integer lattice key to a well-mixed `u64`.
+/// Hash a world-seed + domain tag + a 2-D integer lattice key to a well-mixed
+/// `u64`. The seed multiplier is odd (xorshift*'s constant) so the fold is a
+/// bijection of the seed; `seed = 0` contributes nothing (legacy world).
 #[inline]
-pub fn hash2(domain: u32, ix: i64, iy: i64) -> u64 {
+pub fn hash2(seed: u64, domain: u32, ix: i64, iy: i64) -> u64 {
     let a = (ix as u64).wrapping_mul(0xD1B5_4A32_D192_ED03);
     let b = (iy as u64).wrapping_mul(0xABBF_AA6E_9B7F_1B95);
     let d = (domain as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
-    splitmix64(a ^ b ^ d)
+    let s = seed.wrapping_mul(0x2545_F491_4F6C_DD1D);
+    splitmix64(a ^ b ^ d ^ s)
 }
 
 /// Map a hash to `[0, 1)` using its top 53 bits (full `f64` mantissa).
@@ -46,29 +57,29 @@ pub fn unit_f64(h: u64) -> f64 {
 
 /// Deterministic lattice value in `[0, 1)` for an integer key.
 #[inline]
-pub fn hash01(domain: u32, ix: i64, iy: i64) -> f64 {
-    unit_f64(hash2(domain, ix, iy))
+pub fn hash01(seed: u64, domain: u32, ix: i64, iy: i64) -> f64 {
+    unit_f64(hash2(seed, domain, ix, iy))
 }
 
 /// Deterministic offset in `[lo, hi]` keyed by an integer coordinate — Joseph's
 /// "jitter baked into the coordinates" (§8). E.g. sub-voxel elevation jitter.
 #[inline]
-pub fn jitter(domain: u32, ix: i64, iy: i64, lo: f64, hi: f64) -> f64 {
-    lo + hash01(domain, ix, iy) * (hi - lo)
+pub fn jitter(seed: u64, domain: u32, ix: i64, iy: i64, lo: f64, hi: f64) -> f64 {
+    lo + hash01(seed, domain, ix, iy) * (hi - lo)
 }
 
 /// Smooth (smoothstep-interpolated) value noise in `[0, 1)` — spatially coherent,
 /// so adjacent samples are close (a feature continues rather than speckling).
-pub fn value_noise(domain: u32, x: f64, y: f64) -> f64 {
+pub fn value_noise(seed: u64, domain: u32, x: f64, y: f64) -> f64 {
     let (x0, y0) = (x.floor(), y.floor());
     let (ix, iy) = (x0 as i64, y0 as i64);
     let (fx, fy) = (x - x0, y - y0);
     let sx = fx * fx * (3.0 - 2.0 * fx); // smoothstep
     let sy = fy * fy * (3.0 - 2.0 * fy);
-    let c00 = hash01(domain, ix, iy);
-    let c10 = hash01(domain, ix + 1, iy);
-    let c01 = hash01(domain, ix, iy + 1);
-    let c11 = hash01(domain, ix + 1, iy + 1);
+    let c00 = hash01(seed, domain, ix, iy);
+    let c10 = hash01(seed, domain, ix + 1, iy);
+    let c01 = hash01(seed, domain, ix, iy + 1);
+    let c11 = hash01(seed, domain, ix + 1, iy + 1);
     let a = c00 + (c10 - c00) * sx;
     let b = c01 + (c11 - c01) * sx;
     a + (b - a) * sy
@@ -77,10 +88,10 @@ pub fn value_noise(domain: u32, x: f64, y: f64) -> f64 {
 /// Fractal (fBm) value noise in `[0, 1)`: `octaves` of [`value_noise`] at rising
 /// frequency and falling amplitude. Each octave uses a distinct domain so they are
 /// independent. `lacunarity` ~2.0, `gain` ~0.5 are the usual defaults.
-pub fn fbm(domain: u32, x: f64, y: f64, octaves: u32, lacunarity: f64, gain: f64) -> f64 {
+pub fn fbm(seed: u64, domain: u32, x: f64, y: f64, octaves: u32, lacunarity: f64, gain: f64) -> f64 {
     let (mut freq, mut amp, mut sum, mut norm) = (1.0, 1.0, 0.0, 0.0);
     for o in 0..octaves {
-        sum += amp * value_noise(domain.wrapping_add(o.wrapping_mul(0x9E37)), x * freq, y * freq);
+        sum += amp * value_noise(seed, domain.wrapping_add(o.wrapping_mul(0x9E37)), x * freq, y * freq);
         norm += amp;
         freq *= lacunarity;
         amp *= gain;
@@ -94,8 +105,37 @@ mod tests {
 
     #[test]
     fn deterministic() {
-        assert_eq!(fbm(1, 3.2, 4.7, 5, 2.0, 0.5), fbm(1, 3.2, 4.7, 5, 2.0, 0.5));
-        assert_eq!(hash01(7, -123, 456), hash01(7, -123, 456));
+        assert_eq!(fbm(9, 1, 3.2, 4.7, 5, 2.0, 0.5), fbm(9, 1, 3.2, 4.7, 5, 2.0, 0.5));
+        assert_eq!(hash01(9, 7, -123, 456), hash01(9, 7, -123, 456));
+    }
+
+    #[test]
+    fn seed_zero_is_the_legacy_world() {
+        // Golden values captured from the pre-seed code (2026-07-10) — seed 0 must
+        // reproduce them bit-for-bit, so the testbench world and every probe
+        // baseline survive the seed threading unchanged.
+        assert_eq!(hash01(0, 0, 0, 0), 8.83310808213642606e-1);
+        assert_eq!(hash01(0, 3, 17, -4), 4.21163256717576373e-1);
+        assert_eq!(fbm(0, 0, 1.234, 5.678, 4, 2.0, 0.5), 3.76766550031588376e-1);
+        assert_eq!(fbm(0, 1, 3.2, 4.7, 7, 2.0, 0.5), 4.34910877336530055e-1);
+    }
+
+    #[test]
+    fn seeds_are_independent_worlds() {
+        // Different seeds decorrelate every field; and the seed fold is not a
+        // trivial offset (two nearby seeds differ as much as two distant ones).
+        assert_ne!(hash01(1, 0, 5, 5), hash01(2, 0, 5, 5));
+        assert_ne!(fbm(1, 0, 1.5, 2.5, 4, 2.0, 0.5), fbm(0xDEAD_BEEF, 0, 1.5, 2.5, 4, 2.0, 0.5));
+        let n = 32i64;
+        let mut agree = 0;
+        for i in 0..n {
+            for j in 0..n {
+                if (hash01(1, 3, i, j) - hash01(2, 3, i, j)).abs() < 0.001 {
+                    agree += 1;
+                }
+            }
+        }
+        assert!(agree < 8, "seeds 1 and 2 correlate ({agree} near-equal of {})", n * n);
     }
 
     #[test]
@@ -103,8 +143,8 @@ mod tests {
         for j in -3..3 {
             for i in -3..3 {
                 let (x, y) = (i as f64 * 1.7 + 0.3, j as f64 * 1.3 - 0.2);
-                let v = value_noise(0, x, y);
-                let f = fbm(0, x, y, 6, 2.0, 0.5);
+                let v = value_noise(0, 0, x, y);
+                let f = fbm(0, 0, x, y, 6, 2.0, 0.5);
                 assert!((0.0..1.0).contains(&v), "value {v}");
                 assert!((0.0..1.0).contains(&f), "fbm {f}");
             }
@@ -114,14 +154,14 @@ mod tests {
     #[test]
     fn spatially_coherent() {
         // A tiny step changes the value only a little (continuity ⇒ features connect).
-        let a = value_noise(0, 10.0, 10.0);
-        let b = value_noise(0, 10.001, 10.0);
+        let a = value_noise(0, 0, 10.0, 10.0);
+        let b = value_noise(0, 0, 10.001, 10.0);
         assert!((a - b).abs() < 0.01, "not coherent: {a} vs {b}");
     }
 
     #[test]
     fn domains_are_independent() {
-        assert_ne!(hash01(1, 5, 5), hash01(2, 5, 5));
+        assert_ne!(hash01(0, 1, 5, 5), hash01(0, 2, 5, 5));
     }
 
     #[test]
@@ -133,9 +173,9 @@ mod tests {
         let mut same_ish = 0;
         for i in 0..n {
             for j in 0..n {
-                let v = hash01(3, i, j);
+                let v = hash01(0, 3, i, j);
                 sum += v;
-                if (v - hash01(3, i + 1, j)).abs() < 0.001 {
+                if (v - hash01(0, 3, i + 1, j)).abs() < 0.001 {
                     same_ish += 1;
                 }
             }

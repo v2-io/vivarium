@@ -24,8 +24,8 @@ pub fn cell_size_m(level: u8, planet_radius_m: f64) -> f64 {
 /// Sample a `w×w` region of `face` at `level` (origin = interior top-left face cell),
 /// with a 1-cell halo (for edge normals), using the baseline generator. One column
 /// generated per cell — the swap point for erosion / caching later.
-pub fn sample_surface(face: Face, level: u8, origin_i: u32, origin_j: u32, w: usize) -> SurfacePatch {
-    sample_surface_with(face, level, origin_i, origin_j, w, gen::baseline_column)
+pub fn sample_surface(seed: u64, face: Face, level: u8, origin_i: u32, origin_j: u32, w: usize) -> SurfacePatch {
+    sample_surface_with(face, level, origin_i, origin_j, w, |c| gen::baseline_column(seed, c))
 }
 
 /// [`sample_surface`] with a caller-supplied column generator — the swap point the
@@ -64,7 +64,7 @@ mod tests {
         // A large enough region to span noise variation (a small patch can be
         // entirely above OR below sea level — so land-presence is not an invariant;
         // plausible heights and non-negative water are).
-        let s = sample_surface(Face::ZPos, 10, 200, 200, 128);
+        let s = sample_surface(0, Face::ZPos, 10, 200, 200, 128);
         let (mut lo, mut hi) = (f32::INFINITY, f32::NEG_INFINITY);
         for y in 0..128 {
             for x in 0..128 {
@@ -81,8 +81,8 @@ mod tests {
 
     #[test]
     fn deterministic() {
-        let a = sample_surface(Face::YPos, 12, 500, 700, 8);
-        let b = sample_surface(Face::YPos, 12, 500, 700, 8);
+        let a = sample_surface(0, Face::YPos, 12, 500, 700, 8);
+        let b = sample_surface(0, Face::YPos, 12, 500, 700, 8);
         for y in 0..8 {
             for x in 0..8 {
                 assert_eq!(a.height.get(x, y), b.height.get(x, y));

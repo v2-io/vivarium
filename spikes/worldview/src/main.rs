@@ -51,6 +51,16 @@ use vivarium_world::sample::{cell_size_m, sample_surface_with, SurfacePatch};
 use vivarium_world::water::{WaterParams, WaterRegion, WaterSim};
 use vivarium_world::sphere::{CellId, Face};
 
+/// The world-seed for this testbench run — `VIVARIUM_SEED` env, default 0 (the
+/// long-lived legacy world every probe baseline was captured against; seed 0 is
+/// bit-identical to the pre-seed code, pinned by golden tests in `noise.rs`).
+fn world_seed() -> u64 {
+    static SEED: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
+    *SEED.get_or_init(|| {
+        std::env::var("VIVARIUM_SEED").ok().and_then(|s| s.parse().ok()).unwrap_or(0)
+    })
+}
+
 const SKY: Color = Color::srgb(0.80, 0.82, 0.84);
 /// Water colour by depth (Beer–Lambert). Tuned for STREAMS AND POOLS, not open
 /// ocean (Joseph: sea-calibrated absorption made mountain water glint-only):
@@ -130,6 +140,7 @@ const FILL_ALGO_VERSION: &str = "2026-07-03f"; // f: realized-delta reservoir ac
 /// phase — the fun one — becomes the default experience). VIVARIUM_NOCACHE=1
 /// bypasses. Format: local-machine binary, native endianness, versioned magic.
 mod fill_cache {
+    use crate::world_seed;
     use std::io::{Read, Write};
     use std::path::PathBuf;
     use vivarium_world::erosion::ErodedRegion;
@@ -142,6 +153,12 @@ mod fill_cache {
         let mut h = std::collections::hash_map::DefaultHasher::new();
         use std::hash::{Hash, Hasher};
         key.hash(&mut h);
+        // The world-seed is part of the key (2026-07-10): without it a cached
+        // fill from seed A would be served for seed B — a stale memo that LIES
+        // (§12's one unsafe failure). Seed 0 keeps its pre-seed cache entries
+        // only via the seed being new in the string — old caches simply miss
+        // and refill once.
+        crate::world_seed().hash(&mut h);
         let dir = dirs_cache().join("vivarium").join("worldview");
         let _ = std::fs::create_dir_all(&dir);
         dir.join(format!("fill-{:016x}.bin", h.finish()))
@@ -222,7 +239,7 @@ mod fill_cache {
             let oj = u32::from_le_bytes(take(&mut inp, 4)?.try_into().ok()?);
             let h = get_f32s(&mut inp)?;
             let nx = (h.len() as f64).sqrt() as usize;
-            tiers.push(ErodedRegion { face, level, oi, oj, nx, h });
+            tiers.push(ErodedRegion { face, level, oi, oj, nx, h, seed: world_seed() });
         }
         let level = take(&mut inp, 1)?[0];
         let oi = u32::from_le_bytes(take(&mut inp, 4)?.try_into().ok()?);
@@ -292,7 +309,7 @@ fn build_tier0(view: &View) -> Vec<ErodedRegion> {
     let (ci, cj) = ((view.focus.x * scale) as u32, (view.focus.y * scale) as u32);
     let t = std::time::Instant::now();
     eprintln!("[worldview] eroding L{SIM_LEVEL} {nx}x{nx} around ({ci},{cj})…");
-    let region = ErodedRegion::build(view.face, SIM_LEVEL, ci, cj, nx, &FluvialParams::default());
+    let region = ErodedRegion::build(world_seed(), view.face, SIM_LEVEL, ci, cj, nx, &FluvialParams::default());
     eprintln!("[worldview] tier L{SIM_LEVEL} done in {:.1} s", t.elapsed().as_secs_f32());
     vec![region]
 }
@@ -424,14 +441,14 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
                 (None, None) => return,
             };
             let coarser = tiers.clone();
-            let mut fine = Fluvial::from_surface(face, 21, oi, oj, fine_nx, |c| erosion::surface_at(c, &coarser));
+            let mut fine = Fluvial::from_surface(world_seed(), face, 21, oi, oj, fine_nx, |c| erosion::surface_at(world_seed(), c, &coarser));
             let parent = tiers.iter().find(|r| r.level == 19).cloned();
             let mut done = 0u32;
             while done < fine_total {
                 let chunk = 2.min(fine_total - done);
                 fine.erode(&FluvialParams { epochs: chunk, ..Default::default() });
                 if let Some(par) = &parent {
-                    fine.pin_block_means(19, |c| par.surface_bilinear_m(c).unwrap_or_else(|| vivarium_world::gen::surface_prior_m(c, 19)));
+                    fine.pin_block_means(19, |c| par.surface_bilinear_m(c).unwrap_or_else(|| vivarium_world::gen::surface_prior_m(world_seed(), c, 19)));
                 }
                 done += chunk;
                 let region = fine.to_region();
@@ -452,7 +469,7 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
             for y in 0..wnx {
                 for x in 0..wnx {
                     let c = CellId::from_face_ij(face, woi + x as u32, woj + y as u32, wl);
-                    wbed[y * wnx + x] = erosion::surface_at(c, &tiers) as f32;
+                    wbed[y * wnx + x] = erosion::surface_at(world_seed(), c, &tiers) as f32;
                 }
             }
             WaterSim::new(face, wl, (woi, woj), wnx, cell, wbed, atmos_m)
@@ -499,10 +516,10 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
                 use vivarium_world::noise::hash01;
                 let (mut n, mut start) = (0i64, 0.0f32);
                 loop {
-                    let on = storm_on * (((hash01(17, n, 0) - 0.5) * 1.6).exp()) as f32;
-                    let gap = storm_off * (((hash01(17, n, 1) - 0.5) * 1.6).exp()) as f32;
+                    let on = storm_on * (((hash01(world_seed(), 17, n, 0) - 0.5) * 1.6).exp()) as f32;
+                    let gap = storm_off * (((hash01(world_seed(), 17, n, 1) - 0.5) * 1.6).exp()) as f32;
                     if sim_total < start + on {
-                        break (true, (((hash01(17, n, 2) - 0.5) * 1.4).exp()) as f32, start + on - sim_total);
+                        break (true, (((hash01(world_seed(), 17, n, 2) - 0.5) * 1.4).exp()) as f32, start + on - sim_total);
                     }
                     if sim_total < start + on + gap {
                         break (false, 1.0, start + on + gap - sim_total);
@@ -669,7 +686,7 @@ fn spawn_telescope(
                     }
                     // Seed from the tiers COARSER than this one only.
                     let coarser: Vec<ErodedRegion> = tiers.iter().filter(|r| r.level < st.level).cloned().collect();
-                    let mut f = Fluvial::from_surface(face, st.level, noi, noj, st.nx, |c| erosion::surface_at(c, &coarser));
+                    let mut f = Fluvial::from_surface(world_seed(), face, st.level, noi, noj, st.nx, |c| erosion::surface_at(world_seed(), c, &coarser));
                     f.erode(&FluvialParams { epochs: st.init_epochs.max(1), uplift_m: st.uplift_m, ..Default::default() });
                     st.sim = Some((f, noi, noj, st.init_epochs));
                     epochs_run = st.init_epochs;
@@ -691,7 +708,7 @@ fn spawn_telescope(
                     if let Some(parent) = tiers.iter().find(|r| r.level == parent_level).cloned() {
                         let sim = &mut st.sim.as_mut().unwrap().0;
                         sim.pin_block_means(parent_level, |c| {
-                            parent.surface_bilinear_m(c).unwrap_or_else(|| vivarium_world::gen::surface_prior_m(c, parent_level))
+                            parent.surface_bilinear_m(c).unwrap_or_else(|| vivarium_world::gen::surface_prior_m(world_seed(), c, parent_level))
                         });
                     }
                 }
@@ -1306,7 +1323,7 @@ fn view_update(
                 if d > 0.05 && (vx != 0.0 || vy != 0.0) {
                     use vivarium_world::noise::hash01;
                     let rate = wmeta.0.as_ref().map(|w| w.rate).unwrap_or(1.0).clamp(0.0, 30.0) as f64;
-                    let wob = (hash01(13, (view.focus.x * 4.0) as i64, (view.focus.y * 4.0) as i64) - 0.5) * 0.9;
+                    let wob = (hash01(world_seed(), 13, (view.focus.x * 4.0) as i64, (view.focus.y * 4.0) as i64) - 0.5) * 0.9;
                     let (sw, cw) = wob.sin_cos();
                     let (rx, ry) = (vx * cw - vy * sw, vx * sw + vy * cw);
                     let cell = view.cell_m();
@@ -1654,7 +1671,7 @@ fn spawn_mesher() -> (MesherTx, MesherRx) {
 #[allow(clippy::too_many_arguments)]
 fn build_full(face: Face, level: u8, w: usize, oi: u32, oj: u32, vert: f32, tier_debug: bool, edge_lines: bool, tiers: &[ErodedRegion], live: Option<&WaterRegion>) -> MeshDone {
     let t0 = std::time::Instant::now();
-    let mut fields = sample_surface_with(face, level, oi, oj, w, |c| erosion::column_at(c, tiers));
+    let mut fields = sample_surface_with(face, level, oi, oj, w, |c| erosion::column_at(world_seed(), c, tiers));
     let mut base_water = vec![0.0f32; w * w];
     for j in 0..w {
         for i in 0..w {
@@ -1977,7 +1994,7 @@ fn build_ground_mesh(
             positions.push([px(i), py(x, y), pz(j)]);
             let (gi, gj) = (origin.0 as i64 + x as i64, origin.1 as i64 + y as i64);
             // Deterministic per-cell mottle (§8): real ground is not one green.
-            let m = 0.88 + 0.24 * hash01(7, gi, gj) as f32;
+            let m = 0.88 + 0.24 * hash01(world_seed(), 7, gi, gj) as f32;
             let c = ground_color(h(x, y) - SEA_LEVEL_M as f32);
             let mut col = [c[0] * m, c[1] * m, c[2] * m, 1.0];
             // Bed state from the live water sim (Joseph): settled alluvium reads
@@ -2004,8 +2021,8 @@ fn build_ground_mesh(
             if armor > 0.03 {
                 use vivarium_world::noise::value_noise;
                 let (xm, ym) = ((origin.0 as f64 + i as f64) * cell, (origin.1 as f64 + j as f64) * cell);
-                let cob = value_noise(18, xm * 1.1, ym * 1.1) as f32;
-                let bld = value_noise(19, xm * 0.28, ym * 0.28) as f32;
+                let cob = value_noise(world_seed(), 18, xm * 1.1, ym * 1.1) as f32;
+                let bld = value_noise(world_seed(), 19, xm * 0.28, ym * 0.28) as f32;
                 let sc = ((cob - 0.58) / 0.14).clamp(0.0, 1.0);
                 let sb = ((bld - 0.62) / 0.12).clamp(0.0, 1.0);
                 let stone = sc.max(sb) * armor.clamp(0.0, 1.0);
