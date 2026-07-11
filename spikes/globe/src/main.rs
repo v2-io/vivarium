@@ -641,9 +641,14 @@ fn input_update(
     }
     let grab = 0.0022 * ((orbit.dist - r) / r).clamp(0.03, 2.5);
     if buttons.pressed(MouseButton::Left) && d != Vec2::ZERO {
-        orbit.yaw -= d.x * grab;
+        // Grab-the-surface semantics, sign set EMPIRICALLY (Joseph, 2026-07-10:
+        // dragging left must take the globe's front left, not the rear): the
+        // front face follows the cursor. If a future refactor of camera_update
+        // changes the yaw→eye mapping, re-verify by dragging, not by derivation
+        // — this sign has been gotten wrong once already.
+        orbit.yaw += d.x * grab;
         orbit.pitch += d.y * grab;
-        orbit.vel_yaw = -d.x * grab / dt;
+        orbit.vel_yaw = d.x * grab / dt;
         orbit.vel_pitch = d.y * grab / dt;
     } else {
         // Inertia: keep spinning, decay smoothly.
@@ -655,11 +660,12 @@ fn input_update(
     }
     // Arrow keys spin too (constant angular rate feels right for keys).
     let key_rate = 1.2 * dt * ((orbit.dist - r) / r).clamp(0.08, 1.0).max(0.15);
+    // Arrows mirror the drag semantics (left arrow ≈ dragging left).
     if keys.pressed(KeyCode::ArrowLeft) {
-        orbit.yaw += key_rate;
+        orbit.yaw -= key_rate;
     }
     if keys.pressed(KeyCode::ArrowRight) {
-        orbit.yaw -= key_rate;
+        orbit.yaw += key_rate;
     }
     if keys.pressed(KeyCode::ArrowUp) {
         orbit.pitch += key_rate;
