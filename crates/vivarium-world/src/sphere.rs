@@ -78,6 +78,14 @@ impl CubeCoord {
     /// Inverse of [`to_unit`](Self::to_unit): pick the dominant axis (the face),
     /// recover the face ratios, and undo the equiangular `tan`. `d` need not be
     /// normalized.
+    ///
+    /// ⚠ **Edge-tie trap** (found by the globe view, 2026-07-10): exactly *on* a
+    /// cube edge the dominant-axis comparison is a float tie, and the two faces
+    /// reach it by different arithmetic paths (a literal `1.0` vs
+    /// `tan(π/4) = 0.99999…`), so the winner differs per approach direction.
+    /// Consumers must never sample *on* an edge — sample at **cell centers**
+    /// (which are never on edges) and use ghost/halo cells across the boundary
+    /// (the idiom documented in `spikes/globe`'s `cell_value`).
     pub fn from_unit(d: [f64; 3]) -> Self {
         let [x, y, z] = d;
         let (ax, ay, az) = (x.abs(), y.abs(), z.abs());
