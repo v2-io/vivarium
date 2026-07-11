@@ -49,6 +49,19 @@ pub fn hash2(seed: u64, domain: u32, ix: i64, iy: i64) -> u64 {
     splitmix64(a ^ b ^ d ^ s)
 }
 
+/// Hash a world-seed + domain tag + a **3-D** integer lattice key — the
+/// sphere-continuous twin of [`hash2`], for fields sampled on unit-sphere
+/// directions (the spine prior since v2) rather than per-face `(u, v)`.
+#[inline]
+pub fn hash3(seed: u64, domain: u32, ix: i64, iy: i64, iz: i64) -> u64 {
+    let a = (ix as u64).wrapping_mul(0xD1B5_4A32_D192_ED03);
+    let b = (iy as u64).wrapping_mul(0xABBF_AA6E_9B7F_1B95);
+    let c = (iz as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F);
+    let d = (domain as u32 as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+    let s = seed.wrapping_mul(0x2545_F491_4F6C_DD1D);
+    splitmix64(a ^ b ^ c ^ d ^ s)
+}
+
 /// Map a hash to `[0, 1)` using its top 53 bits (full `f64` mantissa).
 #[inline]
 pub fn unit_f64(h: u64) -> f64 {
@@ -83,6 +96,38 @@ pub fn value_noise(seed: u64, domain: u32, x: f64, y: f64) -> f64 {
     let a = c00 + (c10 - c00) * sx;
     let b = c01 + (c11 - c01) * sx;
     a + (b - a) * sy
+}
+
+/// 3-D smooth value noise in `[0, 1)` — trilinear over [`hash3`] lattice values
+/// with smoothstep fades. Continuous everywhere in ℝ³, which is the whole point:
+/// sampled on unit-sphere points there are no chart seams to cross.
+pub fn value_noise_3d(seed: u64, domain: u32, x: f64, y: f64, z: f64) -> f64 {
+    let (x0, y0, z0) = (x.floor(), y.floor(), z.floor());
+    let (ix, iy, iz) = (x0 as i64, y0 as i64, z0 as i64);
+    let (fx, fy, fz) = (x - x0, y - y0, z - z0);
+    let sx = fx * fx * (3.0 - 2.0 * fx);
+    let sy = fy * fy * (3.0 - 2.0 * fy);
+    let sz = fz * fz * (3.0 - 2.0 * fz);
+    let at = |dx: i64, dy: i64, dz: i64| unit_f64(hash3(seed, domain, ix + dx, iy + dy, iz + dz));
+    let lerp = |a: f64, b: f64, t: f64| a + (b - a) * t;
+    let c00 = lerp(at(0, 0, 0), at(1, 0, 0), sx);
+    let c10 = lerp(at(0, 1, 0), at(1, 1, 0), sx);
+    let c01 = lerp(at(0, 0, 1), at(1, 0, 1), sx);
+    let c11 = lerp(at(0, 1, 1), at(1, 1, 1), sx);
+    lerp(lerp(c00, c10, sy), lerp(c01, c11, sy), sz)
+}
+
+/// Fractal 3-D value noise in `[0, 1)` — [`fbm`]'s sphere-continuous twin.
+pub fn fbm3(seed: u64, domain: u32, x: f64, y: f64, z: f64, octaves: u32, lacunarity: f64, gain: f64) -> f64 {
+    let (mut freq, mut amp, mut sum, mut norm) = (1.0, 1.0, 0.0, 0.0);
+    for o in 0..octaves {
+        sum += amp
+            * value_noise_3d(seed, domain.wrapping_add(o.wrapping_mul(0x9E37)), x * freq, y * freq, z * freq);
+        norm += amp;
+        freq *= lacunarity;
+        amp *= gain;
+    }
+    if norm > 0.0 { sum / norm } else { 0.0 }
 }
 
 /// Fractal (fBm) value noise in `[0, 1)`: `octaves` of [`value_noise`] at rising
@@ -136,6 +181,27 @@ mod tests {
             }
         }
         assert!(agree < 8, "seeds 1 and 2 correlate ({agree} near-equal of {})", n * n);
+    }
+
+    #[test]
+    fn noise_3d_deterministic_ranged_coherent_and_seeded() {
+        assert_eq!(
+            fbm3(9, 0, 1.1, 2.2, 3.3, 5, 2.0, 0.5),
+            fbm3(9, 0, 1.1, 2.2, 3.3, 5, 2.0, 0.5)
+        );
+        for k in 0..40 {
+            let t = k as f64 * 0.37;
+            let v = value_noise_3d(0, 0, t, t * 1.3, t * 0.7);
+            assert!((0.0..1.0).contains(&v), "3d value {v}");
+        }
+        let a = value_noise_3d(0, 0, 5.0, 5.0, 5.0);
+        let b = value_noise_3d(0, 0, 5.001, 5.0, 5.0);
+        assert!((a - b).abs() < 0.01, "not coherent: {a} vs {b}");
+        assert_ne!(
+            value_noise_3d(1, 0, 5.5, 5.5, 5.5),
+            value_noise_3d(2, 0, 5.5, 5.5, 5.5),
+            "seeds must decorrelate 3d fields"
+        );
     }
 
     #[test]

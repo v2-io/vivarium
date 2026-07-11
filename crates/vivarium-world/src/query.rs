@@ -35,7 +35,7 @@ pub enum Source {
 /// to [`World::compute_spine_tile`] (it graduates to a source-derived hash later
 /// — see `DESIGN-REDUX.md` §12). Under-keying is the one unsafe failure, so this
 /// is part of the key.
-const SPINE_VERSION: &str = "spine-2026-07-10a";
+const SPINE_VERSION: &str = "spine-2026-07-10b-sphere3d";
 
 /// Recipe version for the fluvial-erosion tier (system #2). Bump on any change
 /// to the erosion recipe.
