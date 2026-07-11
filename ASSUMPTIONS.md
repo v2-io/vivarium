@@ -10,8 +10,8 @@
 
 | constant | value | lives at | status | principling path |
 |---|---|---|---|---|
-| `SEA_LEVEL_M` datum | 4000 m above bedrock datum | `gen.rs` | **arbitrary** | invert: sea level should be *derived* — fill the hypsometry with a declared water inventory; the constant then retires |
-| continental band λ, amplitude | ~1250 km, ±1500 m | `gen.rs` (`CONT_PER_FACE`, ×3000) | **tuned** (slope argument documented) | two-mode crustal prior (hypsometry probe + early-continents survey → target stats), then real uplift |
+| `SEA_LEVEL_M` datum | 4000 m above bedrock datum | `gen.rs` | **arbitrary** | invert: sea level should be *derived* — fill the hypsometry with a declared water inventory; the constant then retires. Early-Earth targets now exist: `ref/research/early-continents-survey.md` §6 |
+| continental band λ, amplitude | ~1250 km, ±1500 m | `gen.rs` (`CONT_PER_FACE`, ×3000) | **tuned** (slope argument documented) | two-mode crustal prior (hypsometry probe + early-continents survey → target stats), then real uplift. Survey §6 targets: land 2–15%, freeboard low-to-negative, max relief ~3–5 km, *compressed* bimodal |
 | mountain band λ, amplitude, gate | ~25 km, ±1800 m, on cont>−200..+600 m | `gen.rs` (`MTN_PER_FACE` etc.) | **tuned** (core-proven scaling) | superseded by the erosion tier earning the relief |
 | fBm shape | 4 octaves (cont), lacunarity 2.0, gain 0.5, octave-domain stride 0x9E37 | `gen.rs`/`noise.rs` | **arbitrary** (standard defaults) | irrelevant once noise is only sub-grid texture |
 | soil mantle | 2.0 m everywhere | `gen.rs` `baseline_column` | **arbitrary** | pedogenesis system (DESIGN-SYSTEMS row) |
@@ -22,7 +22,7 @@
 | erosion run length | `epochs=40` (CLI/store_explore), 80 default | callers | **arbitrary** | convergence-ε gate (component E) replaces fixed counts |
 | axial tilt, radius, solar constant, year length | 23.44°, 6371 km, 1361 W/m², 365.25 d | `planet.rs` `Planet::EARTH` | **earth-ref** | fine as reference; needs *declaring* in the Phase-0 parameter block (TODO) rather than hardcoding |
 | vertical shell, voxel anchor | ~20 km, 0.5 m | DESIGN-MATERIAL §8 | **tuned** (decided anchors, rationale recorded) | stands unless a consumer breaks it |
-| planetary water inventory | **ABSENT** — no water-mass ledger exists at frame level; "sea level" is a datum, not a volume | — | **missing** | declare inventory (earth-ref: ocean ≈1.39×10⁹ km³ ≈ 2.7 km global-equivalent depth; atmosphere ≈0.001% ≈ 25 mm — *from memory, verify*); derive sea level from it |
+| planetary water inventory | **ABSENT** — no water-mass ledger exists at frame level; "sea level" is a datum, not a volume | — | **missing** | declare inventory (earth-ref modern: ocean ≈1.39×10⁹ km³ ≈ 2.7 km global-equivalent depth; atmosphere ≈0.001% ≈ 25 mm — *from memory, verify*). **Early Earth wants MORE: mean ocean depth ~5–6 km** (survey §5/§6 — live debate, direction robust); shallow oceans are the placeholder's load-bearing error |
 | rock-mass conservation | **NOT enforced** — erosion exports mass through tile outlets with no global ledger | `erosion.rs` | **missing** | conservation-honest spine (plan Phase-2's own stated ambition); flux-BC tiles make exports *accountable* |
 
 ## Known honest fudges (worldview testbench — documented, patch-local)
