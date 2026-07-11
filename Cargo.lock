@@ -4881,6 +4881,14 @@ name = "vivarium-core"
 version = "0.0.0"
 
 [[package]]
+name = "vivarium-globe"
+version = "0.0.0"
+dependencies = [
+ "bevy",
+ "vivarium-world",
+]
+
+[[package]]
 name = "vivarium-slabs"
 version = "0.0.0"
 dependencies = [
