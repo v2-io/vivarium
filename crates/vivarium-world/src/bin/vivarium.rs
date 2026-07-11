@@ -32,6 +32,7 @@
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
 
+use vivarium_world::nomotheke;
 use vivarium_world::query::{Source, World};
 use vivarium_world::spec::WorldSpec;
 use vivarium_world::sphere::Face;
@@ -286,12 +287,16 @@ fn cmd_status(rest: &[String]) -> i32 {
             _ => unknown += 1,
         }
     }
-    println!("\nfidelity pyramid ({} roots):", roots.len());
-    println!("{:>5}  {:<14} {:>7}  ", "level", "nomos", "tiles");
+    println!("\nfidelity pyramid ({} roots; B = physics tier, declared/derived — the honesty column):", roots.len());
+    println!("{:>5}  {:<14} {:>9}  {:>7}  ", "level", "nomos", "B dcl/drv", "tiles");
     let max = census.values().copied().max().unwrap_or(1);
     for ((level, nomos), n) in &census {
+        let b = match nomotheke::lookup(nomos) {
+            Some(d) => format!("{}/{}", d.physics.letter(), d.derived_physics().letter()),
+            None => "?/?".to_string(), // a root the registry doesn't know — itself a finding
+        };
         let bar = "█".repeat((n * 40 / max).max(1));
-        println!("{level:>5}  {nomos:<14} {n:>7}  {bar}");
+        println!("{level:>5}  {nomos:<14} {b:>9}  {n:>7}  {bar}");
     }
     if unknown > 0 {
         println!("{unknown} pre-census roots (format v1 — valid, not attributable)");

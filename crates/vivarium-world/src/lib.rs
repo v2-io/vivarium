@@ -30,3 +30,4 @@ pub mod sample;
 pub mod store;
 pub mod query;
 pub mod spec;
+pub mod nomotheke;

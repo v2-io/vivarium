@@ -18,6 +18,7 @@
 
 use crate::erosion::{Fluvial, FluvialParams};
 use crate::gen;
+use crate::nomotheke::{EROSION, SPINE};
 use crate::sphere::{CellId, Face};
 use crate::store::{Key, Store};
 
@@ -31,15 +32,11 @@ pub enum Source {
     Hit,
 }
 
-/// Nomos-version for the coarse spine. Constant for the MVP; bump on any change
-/// to [`World::compute_spine_tile`] (it graduates to a source-derived hash later
-/// — see `DESIGN-REDUX.md` §12). Under-keying is the one unsafe failure, so this
-/// is part of the key.
-const SPINE_VERSION: &str = "spine-2026-07-10b-sphere3d";
-
-/// Nomos-version for the fluvial-erosion tier (system #2). Bump on any change
-/// to the erosion nomos.
-const EROSION_VERSION: &str = "erosion-2026-07-10a";
+// Nomos identities (name, version, epistemic declaration, bequests,
+// assumptions) live in the NOMOTHEKE (`nomotheke.rs`) — the registry is the
+// only key-mint for world-law computations, so an undeclared nomos cannot
+// reach the store. Bump a version by re-declaring there (source-derived
+// versions remain the §12 target).
 
 /// One vivium, opened for querying: the store it persists in and the seed that
 /// (with the law) IS its identity (LEXICON §4; `vivium-operational-workflow.md`
@@ -62,7 +59,8 @@ impl<'s> World<'s> {
 
     /// The complete key for a spine tile: every input folded in (§12).
     fn spine_key(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> Key {
-        Key::new("spine-tile", SPINE_VERSION)
+        SPINE
+            .key()
             .field("seed", self.seed)
             .field("face", face.index())
             .field("level", level)
@@ -109,7 +107,8 @@ impl<'s> World<'s> {
     /// identity (the spine version, §12): if the spine changes, this key changes
     /// and the eroded tile recomputes.
     fn erosion_key(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize, epochs: u32) -> Key {
-        Key::new("erosion-tile", EROSION_VERSION)
+        EROSION
+            .key()
             .field("seed", self.seed)
             .field("face", face.index())
             .field("level", level)
@@ -117,7 +116,7 @@ impl<'s> World<'s> {
             .field("oj", oj)
             .field("nx", nx)
             .field("epochs", epochs)
-            .field("spine", SPINE_VERSION)
+            .field("spine", SPINE.version)
     }
 
     /// System #2 — the fluvial-erosion tier, *composed on the spine through the
