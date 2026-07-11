@@ -51,7 +51,7 @@ small and mostly about *naming the boundaries honestly* before building up.
 `World` holds one `rng: Rng` (`lib.rs:107`), and `World::step` draws from it *per agent,
 in iteration order* (`lib.rs:181-184`, `214`). Bit-identical replay is real and tested
 (`lib.rs:236-248`) — **but only because the loop is single-threaded and the draw order
-is fixed.** DESIGN.md pitches Bevy specifically because "ECS is the natural substrate …
+is fixed.** doc/design/DESIGN.md pitches Bevy specifically because "ECS is the natural substrate …
 determinism + headless runs come naturally" and the two-layer mind is "hundreds of
 agents cheap." The moment those agents step in parallel ECS systems and each pulls from
 a shared stream, the draw *order* becomes scheduler-dependent and the tether-to-truth

@@ -1,5 +1,5 @@
 //! Baseline worldgen — turn a [`CellId`] into a [`Column`] (the abstract→detail
-//! *easy* direction, `DESIGN-REDUX.md` §11, and a fidelity-ladder bottom rung §12).
+//! *easy* direction, `doc/design/DESIGN-REDUX.md` §11, and a fidelity-ladder bottom rung §12).
 //!
 //! [`column_from_surface`] is the **reusable assembler**: given a solid surface
 //! height it builds the stratigraphy. It is *not* throwaway — the ported erosion
@@ -15,7 +15,7 @@ use crate::quantity::{Quantity, Unit};
 use crate::sphere::CellId;
 
 /// Sea-level datum, metres above the bedrock datum (`y = 0`). Provisional — a
-/// coarse global reference (see the ~20 km shell, `DESIGN-MATERIAL.md` §8); a
+/// coarse global reference (see the ~20 km shell, `doc/design/DESIGN-MATERIAL.md` §8); a
 /// later tier may make it a proper planetary constant.
 pub const SEA_LEVEL_M: f64 = 4000.0;
 

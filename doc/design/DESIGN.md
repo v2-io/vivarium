@@ -4,12 +4,12 @@
 > project's *purpose, disposition, and founding commitments* — the parts that
 > change slowest. The elaborated technical thinking has grown into its own
 > documents and is summarized here with pointers: fidelity/LOD/runtime →
-> [`DESIGN-REDUX.md`](DESIGN-REDUX.md), the matter model →
-> [`DESIGN-MATERIAL.md`](DESIGN-MATERIAL.md), the phenomena/coupling map →
-> [`DESIGN-SYSTEMS.md`](DESIGN-SYSTEMS.md). Current implementation state →
-> [`ORIENTATION.md`](ORIENTATION.md). Where a claim is a guess it is marked —
+> [`doc/design/DESIGN-REDUX.md`](../../doc/design/DESIGN-REDUX.md), the matter model →
+> [`doc/design/DESIGN-MATERIAL.md`](../../doc/design/DESIGN-MATERIAL.md), the phenomena/coupling map →
+> [`doc/design/DESIGN-SYSTEMS.md`](../../doc/design/DESIGN-SYSTEMS.md). Current implementation state →
+> [`ORIENTATION.md`](../../ORIENTATION.md). Where a claim is a guess it is marked —
 > do not promote it to a decision without testing. Ethics of in-world agents:
-> [`ETHICS.md`](ETHICS.md).
+> [`ETHICS.md`](../../ETHICS.md).
 
 ## Purpose and disposition (read this first — it sets the priorities)
 
@@ -130,14 +130,14 @@ absorbing a fine-grained change (a dammed stream) back into the abstraction —
 and it remains the project's sharpest open problem.
 
 *(2026-07-03)* This section grew into its own document:
-[`DESIGN-REDUX.md`](DESIGN-REDUX.md) carries the developed form — the widened
+[`doc/design/DESIGN-REDUX.md`](../../doc/design/DESIGN-REDUX.md) carries the developed form — the widened
 invariant and its **co-fidelity corollary** (detail must be *earned*: the
 finest simulated tier is authoritative over painted detail), the two LOD axes
 and the four temporal regimes, multirate coupling, sufficient-statistic seams,
 regime probes as domain TDD, honest stochasticity, the lazy query graph, the
 fidelity ladder, and the save-store. The volumetric data model (columns,
 strata, voxels-as-views, bodies) likewise lives in
-[`DESIGN-MATERIAL.md`](DESIGN-MATERIAL.md). Both were validated in first
+[`doc/design/DESIGN-MATERIAL.md`](../../doc/design/DESIGN-MATERIAL.md). Both were validated in first
 live-fire use by the 2026-07-02 water system (see `ref/hydrology/` and the
 inline 2026-07-03 amendments there).
 
@@ -175,7 +175,7 @@ the calibration-lab use is pursued.)
 Resolved 2026-06-20; **empirically confirmed 2026-06-22** by building the same
 core world through both `bevy_voxel_world` and `godot_voxel` to feature parity
 (terrain, LOD, fog, fly + dig). Full comparison and the confounds in
-[`spikes/FINDINGS.md`](spikes/FINDINGS.md). Short version: Bevy held up on the
+[`spikes/FINDINGS.md`](../../spikes/FINDINGS.md). Short version: Bevy held up on the
 axis that could have overturned this (visual quality + UX) and, decisively for a
 Rust core, erases the FFI seam a non-Rust engine necessarily imposes — Godot
 needed a GDScript view + a gdext bridge + a codesign/build dance to reach the
@@ -199,13 +199,13 @@ Bevy (Rust), for reasons specific to *this* project's axes, not graphics:
 
 Status snapshots rot; this file no longer carries one. The durable decision
 records: engine → Bevy (above; spike comparison in
-[`spikes/FINDINGS.md`](spikes/FINDINGS.md)); real-scale anchor (0.5 m finest
+[`spikes/FINDINGS.md`](../../spikes/FINDINGS.md)); real-scale anchor (0.5 m finest
 voxel, ~20 km shell) and the geology tier →
-[`ref/geology/NOTES.md`](ref/geology/NOTES.md); the far-field/LOD rendering
-architecture → [`ref/rendering/NOTES.md`](ref/rendering/NOTES.md); worldgen
-water + erosion physics → [`ref/hydrology/NOTES.md`](ref/hydrology/NOTES.md)
-and [`ref/erosion-port/NOTES.md`](ref/erosion-port/NOTES.md). The clean-room
+[`ref/geology/NOTES.md`](../../ref/geology/NOTES.md); the far-field/LOD rendering
+architecture → [`ref/rendering/NOTES.md`](../../ref/rendering/NOTES.md); worldgen
+water + erosion physics → [`ref/hydrology/NOTES.md`](../../ref/hydrology/NOTES.md)
+and [`ref/erosion-port/NOTES.md`](../../ref/erosion-port/NOTES.md). The clean-room
 world frame (`crates/vivarium-world`: cube-sphere CellId, tiered erosion
 telescope, conserved water) and its explorer (`spikes/worldview`) are the
-active stack — **start at [`ORIENTATION.md`](ORIENTATION.md)**, which is
+active stack — **start at [`ORIENTATION.md`](../../ORIENTATION.md)**, which is
 maintained as the single current-state document.

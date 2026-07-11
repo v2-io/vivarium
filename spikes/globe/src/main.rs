@@ -1,6 +1,6 @@
 //! vivarium-globe — spin the planet, zoom in, see what the spine puts above water.
 //!
-//! The Phase-2 "smallest-first visible win" (`ref/research/abyssal-parity-plan.md`):
+//! The Phase-2 "smallest-first visible win" (`doc/plan/abyssal-parity-plan.md`):
 //! the coarse fBm spine rendered as a whole globe — continents and oceans, pre-
 //! erosion, pre-everything. Google-Earth verbs only: drag to spin, wheel to zoom.
 //!

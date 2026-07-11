@@ -1,5 +1,5 @@
 //! Time as a single canonical integer — the drift-free key dimension every
-//! memoized tier is indexed by (`DESIGN-REDUX.md` §11). One `i64` counting
+//! memoized tier is indexed by (`doc/design/DESIGN-REDUX.md` §11). One `i64` counting
 //! **deciseconds** (1/10 s): fine enough for day/night, and signed it spans
 //! ~±29 billion years — deeper than the age of the universe, so overflow is a
 //! non-issue at this granularity.

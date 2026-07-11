@@ -13,7 +13,7 @@ supporting project for ASF — see [`ASF.md`](ASF.md), read every session.
 The name is deliberate: a *vivarium* is an enclosed space for keeping living
 things **under observation**. The project is two things wearing one skin —
 
-1. a game world (recreational, fun-led — see [`DESIGN.md`](DESIGN.md)), and
+1. a game world (recreational, fun-led — see [`doc/design/DESIGN.md`](doc/design/DESIGN.md)), and
 2. a high-identifiability laboratory in which ASF/AAT agent dynamics can be
    *measured*, because every quantity the theory needs is authored, known,
    and dialable.
@@ -58,10 +58,10 @@ save *is* the memo store), a lazy memoized **pull-query** layer, and a
 **manifest** that individuates each world (its seed is its identity). Walk
 away and return: the world persists. Current build target: an **ethereal
 (observe-only) explorer in a Realized early-Abyssal world** —
-[`ref/research/abyssal-parity-plan.md`](ref/research/abyssal-parity-plan.md).
+[`doc/plan/abyssal-parity-plan.md`](doc/plan/abyssal-parity-plan.md).
 
 **Start reading at [`ORIENTATION.md`](ORIENTATION.md)** (the current-state
-map), then [`ARCHITECTURE.md`](ARCHITECTURE.md) (the consolidated frame).
+map), then [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) (the consolidated frame).
 Ethics of in-world agents: [`ETHICS.md`](ETHICS.md); the standing moratorium:
 [`ASF.md`](ASF.md) §0.
 

@@ -1,7 +1,7 @@
 # Foundation validation — prior-art + crate pass on the `vivarium-world` skeleton
 
 *Written 2026-07-01. A validation-and-prior-art pass over the five foundational
-decisions in `DESIGN-REDUX.md` and the just-written `crates/vivarium-world/`
+decisions in `doc/design/DESIGN-REDUX.md` and the just-written `crates/vivarium-world/`
 skeleton (`quantity.rs`, `time.rs`, `sphere.rs`, `planet.rs`). Web research, real
 citations. Epistemic markers inline: **confirmed** (checked against a primary or
 authoritative source), **likely** (consistent secondary sources, not primary-
@@ -238,7 +238,7 @@ scale tile precision).**
 
 ---
 
-## 5. Prior-art fact-check of `DESIGN-REDUX.md` — attributions are accurate; the "open frontier" is overstated
+## 5. Prior-art fact-check of `doc/design/DESIGN-REDUX.md` — attributions are accurate; the "open frontier" is overstated
 
 **All named authors/methods check out. One substantive correction to the novelty
 claim.**
@@ -313,7 +313,7 @@ the claim rather than leaving it inflated:
    a real gap, not reinventing one. Adopt **`inari`** as the engine for the
    future `Interval`/`Exactness` rung.
 
-3. **`DESIGN-REDUX.md`: narrow the "open frontier" claim (§6 / §7.4 / §11).**
+3. **`doc/design/DESIGN-REDUX.md`: narrow the "open frontier" claim (§6 / §7.4 / §11).**
    *(Medium — correctness/honesty.)* Upscaling of *dynamics* is mature
    (HMM / superparameterization / two-way nesting / data-assimilation-as-feedback,
    esp. **Vandenbulcke & Barth 2019**). Replace the broad "detail→abstract is

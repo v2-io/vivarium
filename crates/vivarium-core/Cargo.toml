@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 # Intentionally dependency-free. The simulation must be a closed, reproducible
-# formal system (DESIGN.md §"determinism as ontology") — every source of
+# formal system (doc/design/DESIGN.md §"determinism as ontology") — every source of
 # randomness lives inside this crate as a seeded PRNG, not pulled from the OS or
 # a third-party RNG whose internals we don't control. No deps is the simplest
 # guarantee of that. Add one only with a clear reason recorded here.

@@ -1,6 +1,6 @@
 //! `vivarium` — the world-lifecycle CLI: builder v0 + instruments.
 //!
-//! The operational front door of `ref/research/builder-explorer-decoupling.md`:
+//! The operational front door of `doc/plan/builder-explorer-decoupling.md`:
 //! a **builder** process that advances a vivium in the background while any
 //! number of read-only explorers watch through the store (the store is the bus
 //! — no IPC). Subcommands:

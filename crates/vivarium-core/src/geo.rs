@@ -7,7 +7,7 @@
 //!
 //! ## Where this sits in the design
 //!
-//! DESIGN.md (ratified 2026-06-22) treats the **planet as the abstraction tier**:
+//! doc/design/DESIGN.md (ratified 2026-06-22) treats the **planet as the abstraction tier**:
 //! a slow world-creation simulation emits global fields (elevation, later
 //! drainage / climate / strata) that the fast, Cartesian `seed + edits` voxel
 //! world is materialized *from*. This module is the first piece of that slow
@@ -65,7 +65,7 @@
 //!
 //!  - **Not wired into [`crate::voxel`].** It produces a heightfield; sampling
 //!    that into voxel columns (and asserting the column world replays
-//!    bit-identically) is the next increment — DESIGN.md / NOTES.md §8 step 4.
+//!    bit-identically) is the next increment — doc/design/DESIGN.md / NOTES.md §8 step 4.
 //!  - **Not conservative.** Depression filling adds mass, and detachment-limited
 //!    stream power has *no* deposition — sediment that erodes leaves the system.
 //!    Real conservation (the multigrid-style "fine detail sums back to the

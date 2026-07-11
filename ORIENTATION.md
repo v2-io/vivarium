@@ -19,28 +19,28 @@ carries the conceptual bridge, the reading gates, and the **standing moratorium
 
 ## Where the thinking lives (read in this order)
 
-1. `ARCHITECTURE.md` — the consolidated frame: **one principle (represent by
+1. `doc/ARCHITECTURE.md` — the consolidated frame: **one principle (represent by
    consequence) on three axes** — multiscale substrate machinery / phase-freeze
    developmental ladder / use-case-as-fidelity-contract.
-2. `DESIGN.md` — purpose, disposition, founding commitments (the three early
+2. `doc/design/DESIGN.md` — purpose, disposition, founding commitments (the three early
    decisions: core/view wall, determinism-as-ontology, the fidelity invariant).
-3. `DESIGN-REDUX.md` — fidelity philosophy + runtime: the lazy memoized
+3. `doc/design/DESIGN-REDUX.md` — fidelity philosophy + runtime: the lazy memoized
    query graph, the fidelity ladder, §12 pervasive memoization, §13
    storage-is-the-save.
-4. `DESIGN-MATERIAL.md` — the matter data model: strata / voxel / body, declared
+4. `doc/design/DESIGN-MATERIAL.md` — the matter data model: strata / voxel / body, declared
    cell semantics, the property set, the spatial-key plan (§8).
-5. `DESIGN-SYSTEMS.md` — the phenomena graph: systems × timescales, coupling
+5. `doc/design/DESIGN-SYSTEMS.md` — the phenomena graph: systems × timescales, coupling
    bands, build order, the fluvial inventory, the instruments.
-6. `PHASES.md` — the developmental ladder (Charge / Bequest / Record; the moral
+6. `doc/PHASES.md` — the developmental ladder (Charge / Bequest / Record; the moral
    line at Phase 7).
 7. `LEXICON.md` — canonical vocabulary; `SUPERSEDED.md` — the do-not-reuse
    ledger; `ASSUMPTIONS.md` — the magic-constant ledger (touch a constant,
    touch the ledger).
-8. `ref/research/` — the technical core and plans: `multiscale-seams.md`
+8. `ref/research/` — the technical core and plans: `doc/theory/multiscale-seams.md`
    (position AND time as one seam discipline; the resolution-light-cone /
-   dynamic-exponent-$z$ unification), `abyssal-parity-plan.md` (the build path),
-   `builder-explorer-decoupling.md` (operational design),
-   `regula-conformance-design.md` (world-level conformance, two chapters).
+   dynamic-exponent-$z$ unification), `doc/plan/abyssal-parity-plan.md` (the build path),
+   `doc/plan/builder-explorer-decoupling.md` (operational design),
+   `doc/plan/regula-conformance-design.md` (world-level conformance, two chapters).
 
 ## Decisions locked (rationale in the design docs)
 
@@ -83,7 +83,7 @@ All committed and tested — **62/62 green in `vivarium-world`** (verified
   pyramid with the declared/derived honesty column. Whole planet at L7:
   ~630 ms cold, ~1 ms warm.
 
-Operational design around it: `ref/research/builder-explorer-decoupling.md` —
+Operational design around it: `doc/plan/builder-explorer-decoupling.md` —
 builder daemon / read-only explorers / demand spool / **beacons** (settled,
 LEXICON §2) / watchpoints / the fidelity pyramid — and the one invariant that
 makes build order irrelevant to results: **depend by key, never "latest
@@ -95,7 +95,7 @@ the hard constraint that caching never interferes with algorithm iteration; the
 only lawful mechanism for that constraint is the complete content-addressed key
 (nomos versions auto-derived from kernel source where possible) — never
 caution, never manual cache-clearing. Full statement + named failure modes:
-`DESIGN-REDUX.md` §12.
+`doc/design/DESIGN-REDUX.md` §12.
 
 ## The code (map)
 
@@ -139,7 +139,7 @@ caution, never manual cache-clearing. Full statement + named failure modes:
 
 The first playable milestone: an **ethereal (observe-only, moratorium-clear)
 explorer in a Realized-not-Lawful early-Abyssal world** — the six-phase path in
-`ref/research/abyssal-parity-plan.md`, with conservation riding WITH the parity
+`doc/plan/abyssal-parity-plan.md`, with conservation riding WITH the parity
 track, not behind it. Next increments:
 
 - **#10 — fine-tier erosion nomoi**: L21/L24 seeded from coarser tiles;
@@ -163,7 +163,7 @@ any agent-seam work: the Level-C reading, `ASF.md` §5.
 ## The one hard research problem (open)
 
 **detail→abstract**: upscaling an irreducible agent edit back into a memoized
-macro with correct up-invalidation (`DESIGN-REDUX` §6, `multiscale-seams.md`
+macro with correct up-invalidation (`DESIGN-REDUX` §6, `doc/theory/multiscale-seams.md`
 §2.4). Not on the ethereal-explorer path (a read-only explorer makes no edits);
 plausibly the same shape as the open AAT identifiability bet. Everything else
 has prior art.

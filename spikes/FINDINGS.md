@@ -84,7 +84,7 @@ order-confounded.
 **Bevy.** It held up on the axis that could have overturned the prior plan
 (visual quality + UX), and on our load-bearing axis it collapses the FFI seam a
 non-Rust engine necessarily imposes on a Rust core. This *converges with what
-`DESIGN.md` hypothesized before any code was written* — Bevy for
+`doc/design/DESIGN.md` hypothesized before any code was written* — Bevy for
 ECS-as-cognitive-LOD and a Rust-native deterministic core — now with empirical
 backing rather than intuition.
 
@@ -101,7 +101,7 @@ Genuine costs accepted, eyes open:
   overcast/fog were Godot-side polish not yet ported back).
 - Mesh-insertion smoothing for the LOD-fill jumpiness is the first real
   Bevy-side perf task.
-- **The bigger point (per `DESIGN.md`'s own warning):** this was axis-1
+- **The bigger point (per `doc/design/DESIGN.md`'s own warning):** this was axis-1
   (graphics) work — the "infinitely expandable" budget trap. It settled the
   engine question empirically, which was worth doing. The actual bet is axis-3,
   the ASF agents and the cognitive-LOD seam. That's where the next high-value

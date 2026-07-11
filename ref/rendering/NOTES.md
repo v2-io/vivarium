@@ -40,14 +40,14 @@ it *could not* cheaply recompute, paying with staleness, no-replay, and
 the exact reduction the far band needs: **`surface_height(x,z)` is O(1) analytic**
 — a coarse far column is just that, sampled on a coarse lattice, with the surface
 voxel's material. That *is* a first instance of the fidelity/conservation
-invariant (DESIGN.md): the far representation is a defined statistical summary of
+invariant (doc/design/DESIGN.md): the far representation is a defined statistical summary of
 the near voxels it stands in for.
 
 ## Options (both sweeps), scored against the docs' criteria
 
 Criteria: core/view wall · determinism (bit-replay) · 3D-all-the-way-down +
 diggable near · cheap-far/detailed-near fidelity invariant · beauty · Rust/Bevy ·
-**must not become the sinkhole that starves the ASF agent layer** (DESIGN.md's
+**must not become the sinkhole that starves the ASF agent layer** (doc/design/DESIGN.md's
 central discipline — both agents independently flagged this).
 
 | Option | Horizon reach | Far field | Near diggable | Determinism | Effort / risk | Verdict |

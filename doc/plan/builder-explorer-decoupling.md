@@ -1,6 +1,6 @@
 # Builder–explorer decoupling — the operational companion to the parity plan
 
-*2026-07-10. Joseph's usage scenario (the "naive imagined scenario," given verbatim in-session) cleaned into an architecture, with the decisions it settled. This is the **operational/UX layer** over `abyssal-parity-plan.md` (which owns the build phases) and `ARCHITECTURE.md` (which owns the frame). Status inline: **settled** (decided this session) / **design** (reasoned, adopt-unless-contradicted) / **open**. Vocabulary: LEXICON-canonical (beacon, focus, memo, vivium, Realized).*
+*2026-07-10. Joseph's usage scenario (the "naive imagined scenario," given verbatim in-session) cleaned into an architecture, with the decisions it settled. This is the **operational/UX layer** over `doc/plan/abyssal-parity-plan.md` (which owns the build phases) and `doc/ARCHITECTURE.md` (which owns the frame). Status inline: **settled** (decided this session) / **design** (reasoned, adopt-unless-contradicted) / **open**. Vocabulary: LEXICON-canonical (beacon, focus, memo, vivium, Realized).*
 
 ---
 
@@ -17,7 +17,7 @@ Native-representation memos (LEXICON §2) fit unchanged: keys name **artifacts**
 No mediator daemon: **the store itself is the coordination medium.** Immutable content-addressed objects + atomic root swaps mean any number of readers are safe against a writer with zero protocol. (Two processes computing the same key write identical bytes — a benign race by construction.)
 
 1. **The vivium spec** (`spec.rs` manifest — landed, increment #5). Three field buckets, and the carve is load-bearing:
-   - **identity** — in every key; change = fork a new world (seed today; pinned law/generator versions at Realization later). Grounding: `vivium-operational-workflow.md` Stage 0 (`hash(seed, T-version, generator-versions)`), LEXICON §4/§7.2.
+   - **identity** — in every key; change = fork a new world (seed today; pinned law/generator versions at Realization later). Grounding: `doc/plan/vivium-operational-workflow.md` Stage 0 (`hash(seed, T-version, generator-versions)`), LEXICON §4/§7.2.
    - **label** — never keyed; rename freely (name).
    - **demand** — target phase, **beacons**, watchpoints: change build *order*, provably never the world (§0). Editable mid-build, always safe.
 
@@ -48,7 +48,7 @@ The BDD stress-test's sharpest gap — exo-by-governance splits into *access-ric
 The staged physics progression the builder's stage chains implement, each rung a keyed nomos composing on the one below:
 
 1. **Macro-erosion epochs** — coarse geological erosion (today's `erosion_tile`).
-2. **Macro water-cycle + alluvial coupling** — water at aggregated scale, sediment fluxed back into erosion; slow erosion reads water as *time-averaged discharge*, water sees terrain as quasi-static (`multiscale-seams.md` §2.3). The rung with the real open nuance.
+2. **Macro water-cycle + alluvial coupling** — water at aggregated scale, sediment fluxed back into erosion; slow erosion reads water as *time-averaged discharge*, water sees terrain as quasi-static (`doc/theory/multiscale-seams.md` §2.3). The rung with the real open nuance.
 3. **Human-scale live water, full precision, ~8× real-time** — the conserved shallow-water sim, *entered warm*: its settled fill is memoized (eventually the analytic year-zero morning), so entering a tile loads settled water instead of re-filling. Memoizing the fill is simultaneously what kills the old spike's ~2 h re-fill and what frees the budget for 8×.
 
 ## 5. The initial slice *(settled order; increments = commits)*

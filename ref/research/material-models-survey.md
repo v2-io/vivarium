@@ -2,7 +2,7 @@
 
 *Preserved from a `/deep-research` workflow: 106 agents, 5 search angles → fetch →
 3-vote adversarial verification (needs 2/3 refutes to kill a claim) → cited synthesis.
-Feeds `DESIGN-MATERIAL.md` and `DESIGN-REDUX.md` §15. Findings are the survivors;
+Feeds `doc/design/DESIGN-MATERIAL.md` and `doc/design/DESIGN-REDUX.md` §15. Findings are the survivors;
 the `Refuted` section lists what got voted down — do not trust those.*
 
 ## Question

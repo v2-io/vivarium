@@ -45,11 +45,11 @@ Joseph (2026-07-10, the session that ran out of context; landed here 2026-07-10 
 
 ## Regula Terrestris v0 + the Ordinum — the conformance layer (specs the reservoir/thermal work; drives today)
 
-Design: `ref/research/regula-conformance-design.md` **v2** (2026-07-11 — naming settled: regula ✅ / **Regula Terrestris** ✅ / **Ordinum** ✅; LEXICON §1/§4/§5). Build order, thin:
+Design: `doc/plan/regula-conformance-design.md` **v2** (2026-07-11 — naming settled: regula ✅ / **Regula Terrestris** ✅ / **Ordinum** ✅; LEXICON §1/§4/§5). Build order, thin:
 
 1. **`consumes` field on `NomosDecl`** — quantities in, as shared constants referenced by both bequests and consumes (typos fail the build; the permit-voiding prerequisite found 2026-07-11).
 2. **`regula.rs`** sibling to the nomotheke: `Slot` / `Permit { absent_slots, void_on, note }` / `Regula`; **`TERRESTRIS_V0`** — three slots filled; grandfathered dated permits: moon, magnetosphere×solar-wind, **atmosphere (retirement = the reservoir layer — the rain-without-a-sky specimen written down at last)**.
-3. **Ordinum v0** derived from PHASES.md for the target phase only (later phases = horizon, never failures); PHASES.md stays the prose source (its reportatio) until codification completes, then archives.
+3. **Ordinum v0** derived from doc/PHASES.md for the target phase only (later phases = horizon, never failures); doc/PHASES.md stays the prose source (its reportatio) until codification completes, then archives.
 4. Conformance report into `vivarium status` (conformance-to-pin + gap-to-head); voided-permit check in tests.
 5. Later, when it earns its keep: `vivarium audit --add <nomos>` — the requisite-closure dry-run (the anti-whim planner).
 
@@ -64,7 +64,7 @@ Design: `ref/research/regula-conformance-design.md` **v2** (2026-07-11 — namin
 
 ## Prior v3 — phase-correct it (Joseph, 2026-07-10)
 
-The next spine rung is the **Phase-2 Bequest**, not a mid-Abyssal snapshot: a *submerged* world — generous water over **~modern-depth-or-shallower basins** (corrected 2026-07-10: thick buoyant mafic seafloor; basins deepen over time; inventory ~1.3 OM contested) over seeded-asymmetry crust, ~0% land beyond transient volcanic specks ("meaningful non-volcanic land above sea level" is a #gate charge **Abyssal must deliver** via uplift/proto-tectonic nomoi, never an initial condition — PHASES.md). The early-continents survey's §6 table (land 2–15%, compressed bimodal, relief 3–5 km) is the **mid-Abyssal verification target** those processes must *produce* — a Record-style check partway through the phase. Sea level derived from a declared water inventory (ASSUMPTIONS entry), retiring `SEA_LEVEL_M`. Element/stable-chemical abundances belong to the same P0/P2 declaration work and get their own conservation ledger rows when reservoirs exist.
+The next spine rung is the **Phase-2 Bequest**, not a mid-Abyssal snapshot: a *submerged* world — generous water over **~modern-depth-or-shallower basins** (corrected 2026-07-10: thick buoyant mafic seafloor; basins deepen over time; inventory ~1.3 OM contested) over seeded-asymmetry crust, ~0% land beyond transient volcanic specks ("meaningful non-volcanic land above sea level" is a #gate charge **Abyssal must deliver** via uplift/proto-tectonic nomoi, never an initial condition — doc/PHASES.md). The early-continents survey's §6 table (land 2–15%, compressed bimodal, relief 3–5 km) is the **mid-Abyssal verification target** those processes must *produce* — a Record-style check partway through the phase. Sea level derived from a declared water inventory (ASSUMPTIONS entry), retiring `SEA_LEVEL_M`. Element/stable-chemical abundances belong to the same P0/P2 declaration work and get their own conservation ledger rows when reservoirs exist.
 
 ## Cross-member: nomos / regula / ordinum → concept-matrix rows
 
@@ -76,7 +76,7 @@ Phase 1's charges (tilt, spin, insolation rhythm) exist as exact code (`planet.r
 
 ## Component E — time-indexed stage chains (un-drop decision, then build)
 
-`framework-to-status-quo.md` §4's component **E** (the settle sequence as explicit chained nomoi with time-indices, each stage a memo with its recorded convergence-ε) did **not** carry into `abyssal-parity-plan.md`'s six phases, and no deliberate deferral is recorded — it fell through the consolidation crack (found 2026-07-10). It keeps resurfacing as load-bearing: it is what makes "the beginning of Phase 3.3" *addressable* (beacons need it), what makes intermediate stages monitorable by explorers, what the "watch erosion happen while floating downstream" experience plays back, and its recorded ε *is* the unLawfulness budget (LEXICON §7.2) as data. Recommendation: treat it as plan-Phase-2½ — build it when the builder daemon's stage progression first needs a second time-index.
+`doc/plan/framework-to-status-quo.md` §4's component **E** (the settle sequence as explicit chained nomoi with time-indices, each stage a memo with its recorded convergence-ε) did **not** carry into `doc/plan/abyssal-parity-plan.md`'s six phases, and no deliberate deferral is recorded — it fell through the consolidation crack (found 2026-07-10). It keeps resurfacing as load-bearing: it is what makes "the beginning of Phase 3.3" *addressable* (beacons need it), what makes intermediate stages monitorable by explorers, what the "watch erosion happen while floating downstream" experience plays back, and its recorded ε *is* the unLawfulness budget (LEXICON §7.2) as data. Recommendation: treat it as plan-Phase-2½ — build it when the builder daemon's stage progression first needs a second time-index.
 
 ## Small UX: unify default world dirs
 
@@ -90,7 +90,7 @@ The kernels are canonical even though the testbench architecture is donor-only; 
 - **Per-material erodibility** — the strata-honoring rung (DESIGN-SYSTEMS §Cordonnier/Braun: CCB\*18 is the published prior art; → Bryce hoodoos).
 - **Highest-leverage three** by visible-truth-per-effort: grain-size split + Stokes settling · bank mechanics (Mohr–Coulomb undercut → meandering) · Darcy lateral groundwater (springs). DESIGN-SYSTEMS §Sediment inventory.
 - **Analytic hydrological init** — solve the equilibrium instead of the ~2 h deluge fill (`ref/erosion-port/NOTES.md` §Next); also the principling path for the water-fill ASSUMPTIONS row (convergence-ε via component E).
-- **Water parallelism** — gather rewrite → rayon 5–8× → wgpu compute 20–40×, CPU-reference determinism policy (`ref/research/water-parallelism.md`).
+- **Water parallelism** — gather rewrite → rayon 5–8× → wgpu compute 20–40×, CPU-reference determinism policy (`doc/plan/water-parallelism.md`).
 - **⚖ Parked physics decision (Joseph):** Fischer-form eddy diffusivity (`ref/research/eddy-fischer-experiment.diff`) + whether armor should form under supply-rich transients at all (Dietrich 1989: armor expresses supply *deficit* — the `armor_regimes` probe's expectation may be the wrong part).
 
 ## Explorer intents (Joseph, 2026-07-02 — inherited by the FP explorer, #11)
@@ -99,6 +99,6 @@ Stated for the testbench, but they are intents about *experiencing the world* an
 
 ## Session housekeeping
 
-- `DESIGN-REDUX.md` still uses "checkpoint" in four runtime-durability sites —
+- `doc/design/DESIGN-REDUX.md` still uses "checkpoint" in four runtime-durability sites —
   decide *memo* vs a distinct persist-boundary name (LEXICON §5 collision ledger,
   `SUPERSEDED.md`). **Still open.**

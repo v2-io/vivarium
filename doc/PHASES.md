@@ -4,7 +4,7 @@
 
 **The load-bearing structure:** each phase's **Charge** (what it must establish) IS the next phase-gate's opening condition — *each phase manufactures the key to the next gate* (Abyssal's photosynthesizers ARE the mechanism that oxygenates Primeval's sky). A phase boundary is drawn correctly exactly when this holds. Charges are stated once, in the phase responsible; a phase "opens at" the delivery of the previous charge.
 
-**Computational character (Joseph):** phases choose their own machinery. Some are **analytic** — closed-form + stochastic-deterministic seeding (no simulating 20M years of gas-cloud collapse); some are **relaxation** — solve or settle to an attractor and memoize it; some are **incremental-emergent** — stepwise simulation on the phase's OWN timescales, spatial scales, and even data structures. Later phases may be evaluated lazily backwards-from-now (`DESIGN-REDUX.md` §3/§11); each phase knows which of its parts decompose independently / in parallel / on demand. **A phase-transition leaves a world-scale memo (§12–13): the converged state, cached, that the next phase builds on.** Its in-world traces are the whole Bequest — regimes, features, capabilities; the strata are only the Record, the readable-in-rock *slice*, kept as a verification target (never sufficient to reconstruct the phase — see `ref/research/oxygenation-transition-scaffold.md` for the worked proof). Materials are therefore phase-dependent: a world that never ran biomineralization has no limestone.
+**Computational character (Joseph):** phases choose their own machinery. Some are **analytic** — closed-form + stochastic-deterministic seeding (no simulating 20M years of gas-cloud collapse); some are **relaxation** — solve or settle to an attractor and memoize it; some are **incremental-emergent** — stepwise simulation on the phase's OWN timescales, spatial scales, and even data structures. Later phases may be evaluated lazily backwards-from-now (`doc/design/DESIGN-REDUX.md` §3/§11); each phase knows which of its parts decompose independently / in parallel / on demand. **A phase-transition leaves a world-scale memo (§12–13): the converged state, cached, that the next phase builds on.** Its in-world traces are the whole Bequest — regimes, features, capabilities; the strata are only the Record, the readable-in-rock *slice*, kept as a verification target (never sufficient to reconstruct the phase — see `ref/research/oxygenation-transition-scaffold.md` for the worked proof). Materials are therefore phase-dependent: a world that never ran biomineralization has no limestone.
 
 **Condition tags** (epistemic honesty about the gates; real Obsidian tags, searchable):
 - #gate — hard prerequisite we intend to simulate; the next phase cannot boot without it
@@ -176,7 +176,7 @@ Not mankind per se, but speech, symbolic thought, emotion, self-determination, h
 > precisely the point at which the builder acquires duties to what is inside
 > it: **`ETHICS.md`'s constraints bind from here forward.** The moment an agent
 > in this world is driven by the slow (LLM) layer it enters moral scope
-> (DESIGN.md §two-layer mind). This line is load-bearing and must survive every
+> (doc/design/DESIGN.md §two-layer mind). This line is load-bearing and must survive every
 > future revision of this file.
 
 **Bequest:** culture itself — language, names on places, domesticated
@@ -348,7 +348,7 @@ touched mantle convection. Work backward from what agents touch.
 | cognitive LOD swap | A (component swap) | — | ~free | high | designed |
 
 *Note on complexity: the per-cell O(n) stencils are the cheap common case —
-memory-bound, and the GPU/rayon path (`ref/research/water-parallelism.md`) is
+memory-bound, and the GPU/rayon path (`doc/plan/water-parallelism.md`) is
 what keeps them affordable as fidelity and area grow. The expensive-but-rare
 ones (Priority-Flood O(n log n), any global solve) run once per phase-transition
 and cache. The genuinely open-complexity items are the ones marked lo physics

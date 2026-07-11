@@ -1,5 +1,5 @@
 //! The lazy pull-query + the first nomoi — the runtime as a demand-driven,
-//! memoized query graph (`DESIGN-REDUX.md` §11).
+//! memoized query graph (`doc/design/DESIGN-REDUX.md` §11).
 //!
 //! Queries are methods on a [`World`]: the context that owns `(store, seed)`
 //! **together**, so the same field feeds both the key construction and the
@@ -39,7 +39,7 @@ pub enum Source {
 // versions remain the §12 target).
 
 /// One vivium, opened for querying: the store it persists in and the seed that
-/// (with the law) IS its identity (LEXICON §4; `vivium-operational-workflow.md`
+/// (with the law) IS its identity (LEXICON §4; `doc/plan/vivium-operational-workflow.md`
 /// Stage 0). Construct via [`World::new`] — normally from a loaded manifest
 /// (`spec::WorldSpec`), the one place a bare seed is handled.
 pub struct World<'s> {

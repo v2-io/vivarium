@@ -23,7 +23,7 @@
 //! This is a *seed* — a few wandering agents with a single scalar need, walking
 //! the surface of a volumetric world — chosen to be the smallest thing that
 //! visibly *lives* on screen. It is not the agent model; the ASF/AAT two-layer
-//! mind (DESIGN.md) replaces `Agent::step` when we get there. Treat everything
+//! mind (doc/design/DESIGN.md) replaces `Agent::step` when we get there. Treat everything
 //! here as scaffolding for motion, not as a commitment to mechanics.
 //!
 //! The world is 3D — see [`voxel`] for the volumetric substrate and the

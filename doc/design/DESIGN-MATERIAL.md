@@ -1,12 +1,12 @@
 # vivarium — the matter data model (columns · strata · voxels · bodies · properties)
 
 *Started 2026-07-01. This is the concrete **data-model** companion to
-`DESIGN-REDUX.md` (which carries the general fidelity/LOD/runtime philosophy).
+`doc/design/DESIGN-REDUX.md` (which carries the general fidelity/LOD/runtime philosophy).
 Where REDUX asks "how does representation follow consequence," this asks the
 narrow, load-bearing question: **what does a piece of the world actually store,
 and what does each stored value mean?** It is grounded in the adversarially-
-verified survey at [`ref/research/material-models-survey.md`](ref/research/material-models-survey.md)
-and in `DESIGN-REDUX.md` §§5, 8, 11–15.*
+verified survey at [`ref/research/material-models-survey.md`](../../ref/research/material-models-survey.md)
+and in `doc/design/DESIGN-REDUX.md` §§5, 8, 11–15.*
 
 *Epistemic status is marked inline: **settled** (a decision already made, often in
 code), **our stance** (reasoned, adopt-unless-contradicted), **research-backed**
@@ -18,7 +18,7 @@ proposal, not a fixed API.*
 
 ## 1. The one principle, applied to matter
 
-**Representation follows consequence** (`DESIGN-REDUX.md` §0). We do not pick "how
+**Representation follows consequence** (`doc/design/DESIGN-REDUX.md` §0). We do not pick "how
 to store elevation" in the abstract; we work backward from the *queries* a
 human-scale world must answer — climbability, slumping, foot-placement,
 reachability, lateral pressure, fluidity, cohesion — and the properties those
@@ -49,7 +49,7 @@ core: strata are the substrate; bodies (and user edits) override it in a region.
 **Key consequence:** a voxel is *not* the storage primitive — it is a query view.
 "10.5 m of sand" is **one** `Stratum{sand, 10.5 m}`, not 21 half-metre cubes;
 voxels are materialized from strata only where per-cell detail is asked for. This
-is the "view-resolution decoupled from intrinsic-resolution" idea from `DESIGN.md`,
+is the "view-resolution decoupled from intrinsic-resolution" idea from `doc/design/DESIGN.md`,
 applied to the vertical.
 
 ---
@@ -225,7 +225,7 @@ frontier (§6) is exactly "absorb a body's effect back into the macro."
 ## 8. Spatial and material binding *(settled / research-backed)*
 
 - **Address — the nailed-down plan** *(settled; rationale in
-  [`ref/research/spatial-key-bench.md`](ref/research/spatial-key-bench.md) and
+  [`ref/research/spatial-key-bench.md`](../../ref/research/spatial-key-bench.md) and
   `DESIGN-REDUX` §4/#4):*
   - **`CellId(u64)` — a Hilbert-ordered cube-sphere cell id, the S2-geometry
     scheme** (6 faces, quadtree per face, Hilbert-packed with a level sentinel;

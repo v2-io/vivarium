@@ -1,9 +1,9 @@
 # vivarium — design redux (elaboration in progress)
 
 *Started 2026-07-01. This is a **living elaboration** of the multi-fidelity
-thinking that `DESIGN.md` §"Multi-fidelity world" opens but does not develop. It
-is intended to **eventually supersede** `DESIGN.md`, but does not yet — until it
-is complete and adopted, `DESIGN.md` remains authoritative and this is the place
+thinking that `doc/design/DESIGN.md` §"Multi-fidelity world" opens but does not develop. It
+is intended to **eventually supersede** `doc/design/DESIGN.md`, but does not yet — until it
+is complete and adopted, `doc/design/DESIGN.md` remains authoritative and this is the place
 where the harder thinking is worked out. Epistemic status is marked inline:
 **established** (a real, mature field), **our stance** (a design commitment we've
 reasoned to), **open** (genuinely unsolved / research-flavored). Prior-art names
@@ -36,7 +36,7 @@ The rest of this document is that principle pushed through the practical lenses.
 
 ## 1. The fidelity invariant, restated and widened
 
-`DESIGN.md` states it once: **fidelity is lazily materialized, and any
+`doc/design/DESIGN.md` states it once: **fidelity is lazily materialized, and any
 materialization must be statistically consistent with the abstraction it
 replaces, with known, bounded deficiencies.** *(established as the project's core
 commitment.)*
@@ -531,7 +531,7 @@ a kernel is a swappable rung behind the same flux interface — with the CPU
 kernel kept forever as the *reference implementation* (canon for tests,
 replay, probes), backend identity in the nomos key (GPU bit-reproducibility
 is per-device, not universal), and agreement validated by probe within a
-written tolerance. Plan: `ref/research/water-parallelism.md`.
+written tolerance. Plan: `doc/plan/water-parallelism.md`.
 
 **Correctness discipline (this is where it's actually hard):**
 - **The key must capture every input that affects the output** — upstream data,
@@ -829,4 +829,4 @@ substrate per physics.**
   evaluation, so it stops being an eagerly-baked fixed patch (the audit's finding)
   and becomes the first rung of a swappable ladder. That single change exercises
   §5, §8, §11, and §12 at once on a system we already have.
-- **Not yet superseding `DESIGN.md`:** this is elaboration; adopt deliberately.
+- **Not yet superseding `doc/design/DESIGN.md`:** this is elaboration; adopt deliberately.

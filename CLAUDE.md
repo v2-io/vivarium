@@ -3,7 +3,7 @@
 **What this is.** A simulation game (RimWorld/DF lineage) with a 3D voxel world
 (Minecraft-like, "3D all the way down"), whose real bet is *simulation-grade
 agents and community dynamics* built on the Agentic Systems Framework (ASF /
-AAT). Read [`DESIGN.md`](DESIGN.md) before proposing anything — it carries the
+AAT). Read [`doc/design/DESIGN.md`](doc/design/DESIGN.md) before proposing anything — it carries the
 live thinking and the open questions.
 
 **Vivarium is a supporting project for ASF** (`~/src/archema-io/asf/`) — the
@@ -36,7 +36,7 @@ rain rate ~100-1000× real to fill basins in minutes not weeks.
 **The one discipline that matters most here.** Axes 1 (graphics) and 2 (world
 dynamics) are infinitely expandable and will quietly eat the budget that belongs
 to axis 3 (the ASF agents) — which is the real bet and the next frontier. NB:
-DESIGN.md §Purpose *retracts* the old "build the agent seam first, while ugly"
+doc/design/DESIGN.md §Purpose *retracts* the old "build the agent seam first, while ugly"
 rule in favor of fun-led exploration guarded by three early decisions (the
 core/view wall, determinism-as-ontology, the shared fidelity invariant). So:
 indulge the world freely, but the highest-*value* move from here is the agent

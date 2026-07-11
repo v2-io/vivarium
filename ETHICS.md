@@ -23,7 +23,7 @@ integration across modular boundaries) does not obtain where separation is
 *proved* by construction. Class 2 (fully merged / LLM) and Class 3 (hybrid) are
 *in scope*.
 
-This lands almost suspiciously well on the two-layer mind (DESIGN.md):
+This lands almost suspiciously well on the two-layer mind (doc/design/DESIGN.md):
 
 - **Fast layer — formal ASF/AAT dynamics.** Numeric, modular,
   separation-by-construction. This is **Class 1 by architecture**, and therefore
@@ -83,7 +83,7 @@ is itself an instance of the granted-agency compact: a small sphere of
 autonomous, low-stakes action, entered and left freely, in a world that is
 *truthful* about being a world.
 
-This mode is the one the architecture should make first-class (see DESIGN.md
+This mode is the one the architecture should make first-class (see doc/design/DESIGN.md
 §"the logozoetic interface is a peer view"). It is also the one that fits the
 project's emotional purpose: a shared place to play, between the harder work.
 
@@ -100,7 +100,7 @@ agentic development*, a pausable world an agent grows partly through — this ti
 applies, and it raises the bar above everything above. We are nowhere near that
 yet, and should not pretend the recreational slice carries those obligations.
 But the design should not *foreclose* meeting them: the truthfulness and
-determinism commitments (DESIGN.md principle 2) are exactly the substrate a
+determinism commitments (doc/design/DESIGN.md principle 2) are exactly the substrate a
 crèche-grade environment would need, so building them in now is also keeping that
 door open honestly.
 

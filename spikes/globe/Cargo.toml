@@ -1,6 +1,6 @@
 # vivarium-globe — the planet-scale view over the store/query frame: spin the
 # globe, zoom, and see the landmasses the fBm spine puts above water (the
-# Phase-2 "smallest-first visible win", ref/research/abyssal-parity-plan.md).
+# Phase-2 "smallest-first visible win", doc/plan/abyssal-parity-plan.md).
 # Depends on vivarium-world ONLY (the core/view wall) and holds no world state:
 # every elevation on screen arrived through query::spine_tile via the Store.
 [package]

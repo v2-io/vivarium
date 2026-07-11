@@ -1,7 +1,7 @@
 //! The vivium manifest — the file that *individuates a world*.
 //!
 //! A vivium's identity is content-addressed: `hash(seed, law-versions,
-//! generator-versions)` (`ref/research/vivium-operational-workflow.md` Stage 0;
+//! generator-versions)` (`doc/plan/vivium-operational-workflow.md` Stage 0;
 //! LEXICON §4 build-stack). The manifest is where that identity is declared and
 //! the one place a bare seed is handled — everything downstream receives it
 //! inside a [`crate::query::World`], so key-seed and compute-seed cannot diverge.
@@ -27,7 +27,7 @@ use std::path::Path;
 
 /// Store-format version this code writes (byte-format compatibility — the only
 /// version that lives in the *path/manifest* rather than in nomos keys, per
-/// `DESIGN-REDUX.md` §13).
+/// `doc/design/DESIGN-REDUX.md` §13).
 pub const FORMAT: u32 = 1;
 
 /// The manifest filename inside a world's save/store directory.

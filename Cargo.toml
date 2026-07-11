@@ -1,6 +1,6 @@
 # Workspace root.
 #
-# The split below is the load-bearing architectural decision (DESIGN.md §"core
+# The split below is the load-bearing architectural decision (doc/design/DESIGN.md §"core
 # knows nothing about rendering"): `vivarium-core` is the simulation and has NO
 # rendering dependency; `vivarium-app` is one *view* over it. Future views — a
 # headless trajectory logger, a logozoetic (language) interface an agent plays
@@ -9,7 +9,7 @@
 # wrong.
 [workspace]
 resolver = "2"
-# One core, many views (DESIGN.md): `vivarium-core` (the sim) + `vivarium-world`
+# One core, many views (doc/design/DESIGN.md): `vivarium-core` (the sim) + `vivarium-world`
 # (the clean-room frame it will migrate onto) + views. `spikes/slabs` is the
 # current state-of-the-art exploration view (2026-07-01) and the only live spike;
 # the rest were archived as superseded — see `spikes/FINDINGS.md` and `ORIENTATION.md`.

@@ -64,7 +64,7 @@ Ordered roughly by how much micro physics each keeps alive:
   fine→coarse). *(Corrected 2026-07-10 after the primary read: mean-pin is NOT
   refluxing — refluxing is the distinct conservative flux correction at the
   coarse–fine boundary (Berger–Colella 1989), which vivarium does not yet do;
-  that gap is why `seam_ridge` is red. See `multiscale-seams.md` §2.1.)*
+  that gap is why `seam_ridge` is red. See `doc/theory/multiscale-seams.md` §2.1.)*
 - **Multirate time integration** (Gear & Wells 1984 lineage). Split one system by
   timescale; fast components substep with interpolated slow forcings; slow
   components see time-averaged fast output. *Vivarium:* §4's stance verbatim;
@@ -103,7 +103,7 @@ Ordered roughly by how much micro physics each keeps alive:
   schedule. The coupler — regridding, averaging, lag conventions — is a
   first-class artifact, often the hardest one. *Vivarium:* the phase
   structure is this at world scale; **a phase-transition is a coupler
-  interface** (`PHASES.md` design notes say so); DESIGN-SYSTEMS' coupling bands are
+  interface** (`doc/PHASES.md` design notes say so); DESIGN-SYSTEMS' coupling bands are
   the schedule.
 - **Multigrid** (Brandt 1977). Not model reduction — solver acceleration:
   the same equation on a grid hierarchy, using coarse grids to kill

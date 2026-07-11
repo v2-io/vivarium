@@ -1,7 +1,7 @@
 # Erosion + hydrology port — plan (onto vivarium-world, as multirate-coupled tiers)
 
 *The first real physics port onto the clean-room frame, and deliberately the first
-real test of `DESIGN-REDUX.md` §4 **multirate coupling** / heterogeneous multiscale
+real test of `doc/design/DESIGN-REDUX.md` §4 **multirate coupling** / heterogeneous multiscale
 mixing — replacing the current ad-hoc phasing. Bridge decision (confirmed): **port
 the algorithm, not the data** (ORIENTATION §next-2).*
 
@@ -43,7 +43,7 @@ understand.
   `ref/research/spatial-key-bench.md`). The curve (`CellId`) only addresses the
   patch; the stencil is pure Cartesian.
 - Fields are the `(b, d, r)` trio (terrain height, water depth, regolith/sediment)
-  from `DESIGN-MATERIAL.md` §3 — separate `Patch<f32>` per field (SoA, cache-friendly).
+  from `doc/design/DESIGN-MATERIAL.md` §3 — separate `Patch<f32>` per field (SoA, cache-friendly).
 - **FBM prior** comes from the frame's own `noise` (§8), not core's noise.
 - Output feeds **`gen::column_from_surface`**: the eroded surface height + regolith
   → strata. So the eroded result becomes real `Column`s.
@@ -53,7 +53,7 @@ understand.
 - **Erosion + sediment ON during settling** (the main win above).
 - **Per-material erodibility** (`Material::erodibility` / `incision_threshold`,
   already in the property set) → *differential* erosion → layered relief
-  (Bryce-style, `DESIGN-SYSTEMS.md`). Core assumed a single hardness.
+  (Bryce-style, `doc/design/DESIGN-SYSTEMS.md`). Core assumed a single hardness.
 - Determinism: all stochasticity via coordinate hash (§8), so runs are replayable
   and memoizable (§11–12) — a precondition core's shared-RNG did not meet.
 

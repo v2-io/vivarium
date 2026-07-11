@@ -50,7 +50,7 @@ materials/items/agent-bodies have real extent; tractable near-field cost.
   sim, run per-region lazily and kept consistent with the tectonic uplift it
   sits in.
 - voxel→planet spans **~7.5 orders of magnitude** (0.5 m to 3.77 M m). That span
-  *is* the world-LOD problem DESIGN.md names; it is not optional polish.
+  *is* the world-LOD problem doc/design/DESIGN.md names; it is not optional polish.
 
 **How much of each tier to build (the mandate's real question):**
 - *Tectonics* — a coarse, plausible Euler-pole plate sim → uplift field. Cheap,
@@ -120,7 +120,7 @@ world-creation (plates → uplift → erosion → climate), emitting global fiel
 that the local Cartesian `seed + edits` voxel world is materialized from as a
 tangent patch. The voxel substrate never becomes spherical; the awkward sphere
 topology is quarantined in the slow tier where it costs nothing. This is
-DESIGN.md's abstract→detail invariant with **geology as the abstraction**, and
+doc/design/DESIGN.md's abstract→detail invariant with **geology as the abstraction**, and
 it matches Joseph's intuition that world-creation can take far longer than ticks.
 
 The research *confirms* this shape rather than challenging it: every shipped
@@ -137,7 +137,7 @@ materialized voxels.
 - **Tectonic/climate/agent overlay: Goldberg-hex (or spherical Voronoi) graph**
   over the fine substrate — clean 6-neighbor boundary-stress propagation
   (Gainey/Red Blob-proven). This is the two-layer fine-world/coarse-overlay
-  split DESIGN.md already gestures at.
+  split doc/design/DESIGN.md already gestures at.
 
 ---
 
@@ -337,14 +337,14 @@ passes = what writes the sparse edit overlay.** Not a compromise — it is the
 
 ## 7. Two genuine research gaps (open everywhere we looked — vivarium-shaped)
 
-1. **Conservative / statistical refinement.** DESIGN.md's shared-fidelity
+1. **Conservative / statistical refinement.** doc/design/DESIGN.md's shared-fidelity
    invariant ("any materialization must be statistically consistent with the
    abstraction it replaces") is, formally, a **multigrid/wavelet conservation
    property** — fine voxels in a coarse cell must sum back to the coarse cell's
    aggregate (mean elevation, material fractions, water volume). Standard in
    numerical PDEs; **absent from every voxel game found.** This is plausibly
    novel territory and maps directly onto the AAT fidelity-invariant concern.
-2. **Detail→abstract edit propagation** (already flagged in DESIGN.md/voxel.rs):
+2. **Detail→abstract edit propagation** (already flagged in doc/design/DESIGN.md/voxel.rs):
    when an agent reshapes a high-fidelity locus, the abstract model must absorb
    it. No prior art found. Both gaps are the *fun* kind of hard.
 
@@ -368,7 +368,7 @@ patch (defer the sphere; it's the abstraction tier and can wait):
 
 This exercises the determinism invariant, the two-resolutions split, and the
 mountain-first target in one coherent step — and produces something to *look at*,
-which DESIGN.md's recreational disposition wants.
+which doc/design/DESIGN.md's recreational disposition wants.
 
 ---
 
@@ -452,7 +452,7 @@ deterministic and tested:
   take; the unconditionally-stable fully-coupled form is implicit Davy-Lague
   (Yuan et al. 2019), the eventual upgrade (we don't have that PDF — fetch to do
   it rigorously).
-- **Detail noise is fidelity-respecting** (DESIGN.md invariant): scaled by a
+- **Detail noise is fidelity-respecting** (doc/design/DESIGN.md invariant): scaled by a
   per-node roughness from local slope, so flat valley floors stay smooth (no
   sub-grid pools) and steep flanks get texture.
 - Rendering: see `ref/rendering/NOTES.md` (near-voxel + far-terrain-mesh hybrid v1).

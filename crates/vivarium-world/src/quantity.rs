@@ -1,7 +1,7 @@
 //! The rich value type used **at seams** — flux/coupler interfaces, storage, and
 //! public API — where honesty about what a number *is* matters and the volume of
 //! values is low. Hot inner loops take raw `f64` under a boundary contract; this
-//! is the "rich at seams, raw in loops" decision (`DESIGN-REDUX.md` §12), forced
+//! is the "rich at seams, raw in loops" decision (`doc/design/DESIGN-REDUX.md` §12), forced
 //! by cost: a rich struct *per voxel per tick* is unaffordable in erosion/hydro.
 //!
 //! A [`Quantity`] carries what a bare `f64` cannot: its **unit** and whether it is
@@ -58,7 +58,7 @@ impl Unit {
 }
 
 /// Whether a value is known exactly or is an approximation. The unum "ubit" made
-/// concrete (`DESIGN-REDUX.md` §9): a value knows its own truth-status, which is
+/// concrete (`doc/design/DESIGN-REDUX.md` §9): a value knows its own truth-status, which is
 /// the mechanism the fidelity invariant's "known, bounded deficiencies" needs.
 /// Starts as a bit; an `Interval`/moments rung (via `inari`) comes when a consumer
 /// needs it.

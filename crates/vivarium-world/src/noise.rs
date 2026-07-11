@@ -1,4 +1,4 @@
-//! Coordinate-hashed stochasticity — the `DESIGN-REDUX.md` §8 primitive.
+//! Coordinate-hashed stochasticity — the `doc/design/DESIGN-REDUX.md` §8 primitive.
 //!
 //! **All randomness in the world is a stateless, well-mixed hash of a stable key**
 //! (never a shared mutable stream): deterministic, parallel-safe, and free of the

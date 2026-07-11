@@ -1,5 +1,5 @@
 //! The planet and its astronomy — the outermost, coarsest driver in the pull graph
-//! (`DESIGN-REDUX.md` §11), and the first tier built. Deliberately the **crude
+//! (`doc/design/DESIGN-REDUX.md` §11), and the first tier built. Deliberately the **crude
 //! bottom rung** of its fidelity ladder (§12): a perfect sphere, fixed 23.44°
 //! axial tilt, a circular 1 AU orbit, and constant solar output. Higher rungs
 //! (oblateness, elliptical orbit + Milankovitch cycles, solar variation) slot in

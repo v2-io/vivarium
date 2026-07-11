@@ -1,4 +1,4 @@
-//! The column — the primary storage unit (`DESIGN-MATERIAL.md` §3). A
+//! The column — the primary storage unit (`doc/design/DESIGN-MATERIAL.md` §3). A
 //! *stratigraphic column* at a [`CellId`]: an ordered stack of [`Stratum`]s
 //! (bedrock at index 0, surface last), plus any standing water. Real-valued
 //! stratum thickness means "10.5 m of sand" is one stratum, fractional for free;

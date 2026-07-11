@@ -25,7 +25,7 @@ migration list is short and the do-NOT-build list is longer.***
    - B: settle pipeline moves over (TierMsg/WaterMsg are sim vitals, they move);
      worldview shrinks to receivers.
    - C: telescope; then a headless `genesis run` bin — the first peer view
-     DESIGN.md promised (and warmers stop competing for the GPU with play).
+     doc/design/DESIGN.md promised (and warmers stop competing for the GPU with play).
    *Session note on sequencing: do A early (survives the rewrite); hold B/C
    loosely — the analytic-init builder should own the pipeline shape; moving the
    deluge machinery only to delete it is churn.*

@@ -76,7 +76,7 @@ side:
 
 | AAT (agent infers, from inside) | vivarium (we author, from outside) |
 |---|---|
-| law $\theta$ — transition/observation structure | the physics + constants; each phase's **Bequest** ("the constants themselves — the box every later computation happens inside," PHASES.md P0, is verbatim a $\theta$-slot declaration) |
+| law $\theta$ — transition/observation structure | the physics + constants; each phase's **Bequest** ("the constants themselves — the box every later computation happens inside," doc/PHASES.md P0, is verbatim a $\theta$-slot declaration) |
 | state $\Omega_t$ | the live world state (terrain, water, weather, populations) |
 | chance $\varepsilon$ | §8 **fated noise** — pure function of (seed, key) |
 | compute-shortfall | the **fidelity ladder** / lazy memoized evaluation — our entire runtime is a compute-shortfall manager |
@@ -90,10 +90,10 @@ Consequences worth holding (status: synthesis, verified against segments):
   what belongs in $\theta$ ("the cut is invariance, not slowness; the tower
   derives by self-similar application") is precisely our phase-transition
   semantics — and the transition is *incremental* (a few systems sunset,
-  several spin up, most carry forward; PHASES.md Design notes), so it revises
+  several spin up, most carry forward; doc/PHASES.md Design notes), so it revises
   the law-set rather than swapping it. The phase ladder implements AAT's
   timescale tower by construction.
-- **The phase ladder is a $\rho$-schedule.** PHASES.md Phase 6 ("the
+- **The phase ladder is a $\rho$-schedule.** doc/PHASES.md Phase 6 ("the
   substrate stabilizes beneath the agent seam") in AAT terms: successive
   phases deliver worlds of decreasing disturbance rate until
   Pleistocene-grade agents with achievable tempo satisfy the persistence
@@ -119,7 +119,7 @@ Consequences worth holding (status: synthesis, verified against segments):
 
 ## 3. What the agent layer inherits (design constraints, not suggestions)
 
-When the agent seam is built (Phase 6 / DESIGN.md's two-layer mind), it is an
+When the agent seam is built (Phase 6 / doc/design/DESIGN.md's two-layer mind), it is an
 implementation of specific ASF machinery, and should be developed against the
 segments, not from memory of them:
 

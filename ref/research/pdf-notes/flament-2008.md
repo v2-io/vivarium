@@ -339,7 +339,7 @@ Stated as reusable inputs. Tier as marked; all are **Earth-referenced** (survey
    should gate emergence on **lithospheric strength / h_max**, letting land
    emerge *during* cooling as h_max rises toward modern values through
    2.5–2.2 Ga — matching the "land emerges during the Abyssal phase via uplift"
-   framing in PHASES.md.
+   framing in doc/PHASES.md.
 9. **Ocean depth:** take deep basins (~5–6 km) from **Korenaga/Dong**, *not*
    Flament — Flament's constant-volume basins are ~2 km shallower than modern
    (Fig 6). If the vivarium water inventory is set larger (deeper oceans), that

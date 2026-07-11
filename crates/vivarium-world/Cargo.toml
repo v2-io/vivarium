@@ -1,6 +1,6 @@
 # vivarium-world — the clean-room world *frame*: a planet on a cube-sphere, deep
 # + fine time, and honest quantities. The foundation the proven worldgen physics
-# in `vivarium-core` will migrate onto as fidelity-ladder tiers (see DESIGN-REDUX.md).
+# in `vivarium-core` will migrate onto as fidelity-ladder tiers (see doc/design/DESIGN-REDUX.md).
 # No rendering dependency — the core/view wall holds (see the workspace Cargo.toml).
 [package]
 name = "vivarium-world"

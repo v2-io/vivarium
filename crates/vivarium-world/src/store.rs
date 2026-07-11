@@ -1,12 +1,12 @@
 //! Content-addressed, memoized store — the framework's persistence spine
-//! (`DESIGN-REDUX.md` §13: "the save-file *is* the memo store").
+//! (`doc/design/DESIGN-REDUX.md` §13: "the save-file *is* the memo store").
 //!
 //! **Domain-neutral by construction.** Keys and values here are opaque; the
 //! nomoi above (`query.rs`) give them meaning. Nothing in this module knows
 //! about terrain, columns, or `CellId`s — a spatial field, a geochemical
 //! reservoir, a food-web state-vector, or an agent population all persist
 //! through this *same* interface. That neutrality is the framework's invariant
-//! (`ARCHITECTURE.md` domain-fixation guard), not a courtesy.
+//! (`doc/ARCHITECTURE.md` domain-fixation guard), not a courtesy.
 //!
 //! Shape (git-repo-like, §13): `objects/<value-hash>` hold immutable bytes;
 //! `roots/<key-hash>` point at the object a complete key resolves to. Content-

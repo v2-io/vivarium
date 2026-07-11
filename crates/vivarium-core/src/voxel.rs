@@ -2,7 +2,7 @@
 //!
 //! ## Why this exists, and the shape of the commitment
 //!
-//! `DESIGN.md` settles two things this module embodies:
+//! `doc/design/DESIGN.md` settles two things this module embodies:
 //!
 //!  - **3D all the way down.** Physics needs the dimensions to not be
 //!    nonsensical, so the world is genuinely volumetric, even if early human
@@ -38,7 +38,7 @@
 //!     grows a chunk cache "for performance," that is the signal a view concern
 //!     has leaked inward — push it back out.
 //!  2. **It is honest about what is not yet solved.** The genuinely hard,
-//!     research-flavored direction in `DESIGN.md` is detail→abstract: when an
+//!     research-flavored direction in `doc/design/DESIGN.md` is detail→abstract: when an
 //!     agent reshapes a high-fidelity locus, the *abstract* model must absorb
 //!     the change so it survives the locus collapsing back down. The overlay is
 //!     the simplest thing that defers that question without lying about it:
@@ -81,7 +81,7 @@ impl Voxel {
     }
 }
 
-/// **The real-world anchor** (DESIGN.md / `ref/geology/NOTES.md` §0a). The finest
+/// **The real-world anchor** (doc/design/DESIGN.md / `ref/geology/NOTES.md` §0a). The finest
 /// voxel is half a metre on a side: a person is ~3–4 voxels, materials and items
 /// have real extent, and — crucially — *geology is simulated at its true scale*.
 /// Everything physical derives from this. One "world unit" below means **one
