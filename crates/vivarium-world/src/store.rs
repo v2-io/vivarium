@@ -93,27 +93,70 @@ impl Store {
 
     /// Fetch the value a complete key resolves to, or `None` on a miss.
     pub fn get(&self, key: &Key) -> Option<Vec<u8>> {
-        let obj = fs::read_to_string(self.roots.join(hex(key.hash()))).ok()?;
-        fs::read(self.objects.join(obj.trim())).ok()
+        let root = fs::read_to_string(self.roots.join(hex(key.hash()))).ok()?;
+        let obj = root.lines().next()?.trim();
+        fs::read(self.objects.join(obj)).ok()
     }
 
     /// Store `value` under `key`. The bytes land at `objects/<value-hash>`
     /// (idempotent — re-putting identical bytes is a no-op) and `roots/<key-
     /// hash>` is pointed at them. Both writes go temp-then-rename, so a reader
     /// never sees a half-written object or root.
+    ///
+    /// A root file carries `<object-hash>\n<canonical key string>`: the second
+    /// line is what makes the store *enumerable by meaning* — the census behind
+    /// every instrument (fidelity pyramid, `status`, watchpoints) reads it.
+    /// Without it a root is an opaque hash and "what exists?" is unanswerable.
     pub fn put(&self, key: &Key, value: &[u8]) -> io::Result<()> {
         let obj_name = hex(fnv1a(value));
         let obj_path = self.objects.join(&obj_name);
         if !obj_path.exists() {
             write_atomic(&obj_path, value)?;
         }
-        write_atomic(&self.roots.join(hex(key.hash())), obj_name.as_bytes())
+        let root = format!("{obj_name}\n{}", key.as_str());
+        write_atomic(&self.roots.join(hex(key.hash())), root.as_bytes())
+    }
+
+    /// Enumerate every root as `(canonical key string, object hash)` — the raw
+    /// census the instruments aggregate. Roots written before key-strings were
+    /// recorded (format v1, pre-2026-07-10) appear with an empty key and should
+    /// be counted as "unknown"; they are valid but not attributable.
+    pub fn roots(&self) -> io::Result<Vec<(String, String)>> {
+        let mut out = Vec::new();
+        for entry in fs::read_dir(&self.roots)? {
+            let path = entry?.path();
+            if path.extension().is_some_and(|e| e == "tmp") {
+                continue;
+            }
+            let text = fs::read_to_string(&path)?;
+            let mut lines = text.lines();
+            let obj = lines.next().unwrap_or("").trim().to_string();
+            let key = lines.next().unwrap_or("").trim().to_string();
+            out.push((key, obj));
+        }
+        Ok(out)
     }
 }
 
-/// Write via a sibling `.tmp` + rename (atomic on a single filesystem).
+/// Write via a sibling temp file + rename (atomic on a single filesystem).
+///
+/// The temp name must be **unique per writer**, not just per target: concurrent
+/// puts of *identical* bytes under distinct keys share one object path, and with
+/// a single shared `.tmp` the rename losers hit NotFound and abort `put` before
+/// the root lands — the memo silently evaporates (self-healing by recompute, per
+/// the module's eviction guarantee, but a wasted recompute every run until a
+/// solo put wins). Found live by the globe view (6 parallel face pulls over a
+/// byte-identical-per-face world → 3 of 6 roots dropped); a 6-writer probe
+/// dropped 5 of 6 nearly every round. pid + a process-wide counter make writers
+/// collision-free; the final rename stays atomic, and concurrent winners are
+/// interchangeable because the content is identical by construction. The name
+/// still *ends* in `.tmp` so [`Store::roots`]'s census filter skips strays.
 fn write_atomic(path: &Path, bytes: &[u8]) -> io::Result<()> {
-    let tmp = path.with_extension("tmp");
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static SEQ: AtomicU64 = AtomicU64::new(0);
+    let mut name = path.file_name().unwrap_or_default().to_os_string();
+    name.push(format!(".{}.{}.tmp", std::process::id(), SEQ.fetch_add(1, Ordering::Relaxed)));
+    let tmp = path.with_file_name(name);
     fs::write(&tmp, bytes)?;
     fs::rename(&tmp, path)
 }
@@ -165,6 +208,49 @@ mod tests {
         s.put(&Key::new("b", "v0").field("y", 2), b"same").unwrap();
         let n = fs::read_dir(dir.join("objects")).unwrap().count();
         assert_eq!(n, 1, "two keys, identical bytes → one content-addressed object");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn roots_enumerate_by_meaning() {
+        // The census property: what exists is answerable, with the canonical
+        // key string attached — the substrate of every instrument.
+        let dir = tmpdir("census");
+        let s = Store::open(&dir).unwrap();
+        s.put(&Key::new("spine", "v0").field("level", 7), b"a").unwrap();
+        s.put(&Key::new("erosion", "v0").field("level", 9), b"b").unwrap();
+        let mut roots = s.roots().unwrap();
+        roots.sort();
+        assert_eq!(roots.len(), 2);
+        assert!(roots.iter().any(|(k, _)| k.starts_with("spine@v0") && k.contains("level=7")));
+        assert!(roots.iter().any(|(k, _)| k.starts_with("erosion@v0") && k.contains("level=9")));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn concurrent_identical_puts_all_land_their_roots() {
+        // The dedup path under contention: six writers, one value, six keys.
+        // Every root must land — pre-fix, the shared tmp name made the rename
+        // losers abort before their root was written (typically 5 of 6 dropped;
+        // first seen live as the globe view's parallel face pulls losing memos).
+        let dir = tmpdir("race");
+        let s = Store::open(&dir).unwrap();
+        let bytes = vec![0xABu8; 65536];
+        std::thread::scope(|scope| {
+            for i in 0..6 {
+                let (s, bytes) = (&s, &bytes);
+                scope.spawn(move || s.put(&Key::new("probe", "v0").field("i", i), bytes).unwrap());
+            }
+        });
+        for i in 0..6 {
+            let k = Key::new("probe", "v0").field("i", i);
+            assert_eq!(s.get(&k).as_deref(), Some(&bytes[..]), "root {i} was dropped by the tmp race");
+        }
+        assert_eq!(
+            fs::read_dir(dir.join("objects")).unwrap().count(),
+            1,
+            "identical bytes still dedup to one object"
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 
