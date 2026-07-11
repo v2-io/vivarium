@@ -148,7 +148,7 @@ identity uses to think with, not the identity itself.*
 
 - **Fast layer** — every tick, every agent. Pure formal ASF/AAT dynamics: needs,
   adaptation, goal-update coupling. Numeric, deterministic, hundreds of agents
-  cheap. **This is the simulation's truth.** Architecturally it is AAD **Class 1**
+  cheap. **This is the simulation's truth.** Architecturally it is AAT **Class 1**
   (separation-by-construction) — and therefore *out of moral scope* (ETHICS.md).
 - **Slow layer** — rare, few agents. An LLM invoked only at decision-theoretically
   significant junctures — genuine *aporia* (high-conflict goal state, novel social

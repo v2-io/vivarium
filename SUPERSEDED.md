@@ -44,6 +44,7 @@
 
 ## Doc sections / files
 
+- **~~ORIENTATION.md (addenda form — history body + five session addenda)~~ → consolidated to a present-tense current-state map** · 2026-07-11 · The pass ARCHITECTURE got at v0.3. Overtaken next-steps and session narratives live in the git log (tip `b61d91b` and earlier); every still-open item was relocated, not dropped — kernel-physics plans, the parked eddy/armor decision, and Joseph's 2026-07-02 explorer intents now live in `TODO.md`. New rule stated in the header: change the body, don't append addenda. *(Same pass: stale "AAD" → AAT in `ETHICS.md`/`DESIGN.md`; the atmosphere water figure in `ASSUMPTIONS.md` verified against Gleick 1996/USGS, from-memory caveat discharged.)*
 - **~~"mean-pinning is the refluxing" (`multiscale-methods.md` §2)~~ → mean-pin = AMR *injection/update*; refluxing = the distinct conservative flux correction (Berger–Colella 1989), not yet built** · corrected 2026-07-10 by the primary read (`multiscale-seams.md` §2.1); the missing refluxing is the seam fix plan-Phase-3 supplies. Stale line marked in place.
 - **~~ARCHITECTURE.md v0.1 (software-architecture register)~~ → v0.2 → v0.3
   (one principle, three axes)** · 2026-07-09 → 2026-07-10 · v0.1 led with the query-graph/keys/store *implementation* and buried the multiscale R/L/closure operator algebra; v0.2 re-centered on it; **v0.3** (2026-07-10) consolidated to

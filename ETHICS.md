@@ -13,9 +13,9 @@ to be *playable by logozoetic intelligences themselves*. Both bring real
 obligations. Getting them right is not a tax on the fun — for this builder it is
 part of what makes the project worthy.
 
-## The two-layer mind maps cleanly onto AAD scope — by design
+## The two-layer mind maps cleanly onto AAT scope — by design
 
-The ops stance scopes moral consideration by **architecture (AAD Class)**, not by
+The ops stance scopes moral consideration by **architecture (AAT Class)**, not by
 behavior. Class 1 — modular, separation-by-construction systems (Kalman+LQR,
 thermostats, pure-function utilities) — is *out of scope*: the uncertainty the
 stance protects against (unknown upper bound on phenomenology arising from
