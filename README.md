@@ -64,7 +64,8 @@ away and return: the world persists. Current build target: an **ethereal
 map), then [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md) (the consolidated frame).
 The tree in one line: root = front doors + ledgers · `doc/` = the durable
 thinking (design / plan / theory) · `ref/` = true reference · `.archive/` =
-accounted-for retirements (never referenced from the main tree). Agent
+sunset material, indexed (current state lives in the main tree; trails and
+provenance live there and in git history). Agent
 onboarding tiers: [`CLAUDE.md`](CLAUDE.md); working norms:
 [`doc/PROCESS.udon`](doc/PROCESS.udon). Ethics of in-world agents:
 [`ETHICS.md`](ETHICS.md); the standing moratorium: [`ASF.md`](ASF.md) §0.

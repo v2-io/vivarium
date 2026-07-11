@@ -512,8 +512,8 @@ re-run on nomos change, feeding the surrogate's calibration. Insolation
 already lives at the bottom (closed-form); weather should end there; Abyssal
 geology never needs to descend because checkpoints amortize it to zero. Every
 system-in-a-phase declares its execution class (batch-deep / relaxation /
-procedural-tight) in its nomos — see
-`ref/research/architecture-migration-2026-07-03.md`.
+procedural-tight) in its nomos — see `doc/ARCHITECTURE.md` §2 (the carve's
+origin trail: `.archive/architecture-migration-2026-07-03.md`).
 
 ### The payoff: swap a model, rerun only what changed
 The requirement that makes the ladder practical: **memoize each aspect's progress

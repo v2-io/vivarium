@@ -35,13 +35,36 @@
       reflections; .archive/ = accounted-for retirements. A new doc that fits
       none of these is a taxonomy question to raise, not a root file to drop.
 
+    |norm[sunset-freely]
+      :kind prescription
+      :authority Joseph 2026-07-11 — "a program unwilling to sunset things becomes unable to attempt things"
+      Archive generously. The main tree is for current working state; a program
+      that keeps its whole reasoning trail and evolution in the main parts
+      becomes too difficult to maintain and navigate. Reasoning trails, dated
+      reviews, superseded framings, provenance — .archive/ (organized, indexed
+      in .archive/README.md) and git history are their proper home, and
+      rewinding for any reason is exactly what they serve.
+
     |norm[archive-accounting]
       :kind prescription
-      Before any git mv into .archive/: verify the retention-worthy content is
-      accounted for in the main tree, and name where (file + section) in the
-      commit message. The main tree must never need to reference .archive/ —
-      git history and commit messages carry archaeology, evolution, and
-      provenance. "Probably covered" is not accounted for.
+      The dependency-type rule (Joseph's correction, 2026-07-11): the main tree
+      must never depend on .archive/ for TACTICAL CURRENT needs — never "the
+      algorithm we need is described in .archive/..." — but historical,
+      archaeological, provenance, and reasoning-trail pointers into .archive/
+      are proper and encouraged: "assumptions and rationale for this are in
+      .archive/..." is exactly right. Before the git mv: verify anything
+      tactically load-bearing is accounted for in the main tree, and name where
+      (file + section) in the commit message. "Probably covered" is not
+      accounted for.
+
+    |norm[breadcrumbs]
+      :kind prescription
+      Breadcrumb pointers in live docs are a matter of taste, and Joseph's
+      taste governs: pull them back out where they clutter or dilute the most
+      load-bearing concepts; keep only those critical for understanding IN THE
+      PRESENT — plus the one-line "the trail exists, here is where" pointer
+      when a future agent would otherwise re-derive or re-litigate. Git history
+      and .archive/ carry the rest.
 
     |norm[present-tense-bodies]
       :kind prescription

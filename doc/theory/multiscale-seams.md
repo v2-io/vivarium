@@ -108,7 +108,7 @@ This is the practical payoff: how an arbitrary number of interdependent systems 
 
 1. **Its R / L / closure** — the macro summary it exposes (its restriction $R$), how it materializes detail (its lifting $L$), and its **fated-noise closure** (deterministic, so memoizable — resolving equation-free's lifting non-uniqueness by fating it).
 2. **Its fluxed quantities** — the per-quantity coupler interface it produces and consumes (`{sediment volume}`, `{discharge}`, `{temperature}`). These carry the sufficient statistics across *both* the space and time seams. Fine-grained, never a monolithic blob, or a model upgrade over-invalidates its consumers.
-3. **Its timescale band and execution class** — where it sits in the multirate bands (so coupling knows to treat it quasi-static or time-averaged), and its class (**batch-deep** / **relaxation** / **procedural-tight**, `architecture-migration-2026-07-03.md`). The class is the time-axis analog of the LOD rung.
+3. **Its timescale band and execution class** — where it sits in the multirate bands (so coupling knows to treat it quasi-static or time-averaged), and its class (**batch-deep** / **relaxation** / **procedural-tight**, `doc/ARCHITECTURE.md` §2). The class is the time-axis analog of the LOD rung.
 4. **Determinism in its keyed inputs**, with **nomos-version auto-derived from source**, so the complete content-addressed key (space-tile + time-index + nomos + seed) stays complete without human discipline.
 5. **Its regime probes, written first** (domain TDD) — including its **seam probes** (a space-seam continuity probe like `seam_ridge`; a time-seam near-stationarity probe like the analytic-init acceptance test).
 

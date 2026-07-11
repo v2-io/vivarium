@@ -2,7 +2,7 @@
 
 *2026-07-06. Turns the participation ontology + AAT grounding + moratorium into an operating pipeline:
 what you actually *do* to build, freeze, publish, participate-in, and fork a vivium; what each stage
-*forces*; and — the point — **where it breaks**. Supersedes the framing of `taxonomy-bdd-stress-test.md`,
+*forces*; and — the point — **where it breaks**. Supersedes the framing of `.archive/taxonomy-bdd-stress-test.md`,
 whose "core is robust" conclusion was a complacency smell (a stress-test that finds no breaks usually
 under-stressed). Terminology: phase boundary = **phase-transition / phase-gate**; cache/snapshot = **memo**
 (vivarium ceded "checkpoint" to ASF's agent-snapshot sense — ASF.md §7.1); Joseph's "checkpoints" below map to memo+tag.*
