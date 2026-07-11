@@ -155,6 +155,20 @@
       work is for — not prescriptions of method. Action-space is not
       deliberation-space.
 
+    |norm[flagged-file-routing]
+      :kind prescription
+      :files [ref/research/est-tiw-dossier.md .archive/universal-biological-rhythms.md]
+      Two reference files trip the current Fable model-family safeguard
+      (verified 2026-07-10 twice, again 2026-07-11). In Fable sessions: handle
+      them by NAME only — git mv, path greps with the files excluded — and
+      route any operation that would read or emit their CONTENT (opening,
+      editing innards, content greps, link-checking their insides) through an
+      Opus agent, under a report-paths-not-content contract (the agent reports
+      old/new path strings and line counts, never quotes surroundings). The
+      engineering distillation a Fable session actually needs is already in
+      LEXICON.md section 8, which is safe. Extend this list if another file
+      starts tripping; retire entries when the safeguard stops firing.
+
     |norm[whim-gate]
       :kind prescription
       Adding a target-aged world feature goes through the requisite-closure
