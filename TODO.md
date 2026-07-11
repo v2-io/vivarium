@@ -35,7 +35,7 @@ Joseph (2026-07-10, the session that ran out of context; landed here 2026-07-10 
 
 ## The water system, decomposed (Joseph's probe, 2026-07-10: "principled water without a cycle or global conservation?" — No)
 
-`water-tile` (increment #9) is only the **routing/settling rung**; its declaration says so. The principled water system is several nomoi, sequenced *after* parity (#10/#11):
+`water-tile` (increment #9) is only the **routing/settling rung**; its declaration says so. The principled water system is several nomoi, and it **rides WITH the parity track, not behind it** *(corrected 2026-07-10 — "post-parity" was the session's invention, not Joseph's: conservation is consistency law #2 of the operator algebra and DESIGN-REDUX §12's sufficient-statistics clause is the standing constraint; no pulling from nothing, no draining into nothing, even at the crudest rung. fBm remains the ONE acknowledged fundamental cheat, to be undone.)*:
 
 1. **Planetary water inventory** — conserved reservoir set (ocean/atmosphere/groundwater/ice), declared as law; global conservation lives here. Doubles as the framework's first **reservoir/box-model** system → the domain-fixation guard's generality proof (ARCHITECTURE §0 note; four representation kinds).
 2. **Sea level derived** from ocean reservoir + hypsometry (`SEA_LEVEL_M` ledger row's inversion).
