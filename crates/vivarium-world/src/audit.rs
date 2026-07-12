@@ -221,27 +221,32 @@ mod tests {
     }
 
     #[test]
-    fn precipitation_is_unmet_for_both_consumers() {
-        let unmet = unmet_across_registry();
-        let precip: Vec<_> = unmet.iter().filter(|(_, q)| *q == flux::PRECIPITATION).map(|(n, _)| n.name).collect();
-        assert_eq!(precip, vec!["erosion-tile", "water-tile"], "precipitation is the live unmet gap");
-        assert!(producer_of(flux::PRECIPITATION).is_none());
+    fn precipitation_is_met_and_the_chain_is_closed() {
+        // Was the live UNMET gap; the climate nomos now produces precipitation, so
+        // NOTHING in the registry is unmet — every consumed quantity has a
+        // producer, and the whole water chain closes back to the hydrosphere.
+        assert_eq!(producer_of(flux::PRECIPITATION).map(|n| n.name), Some("climate"));
+        assert!(unmet_across_registry().is_empty(), "the declared flux web is fully met — no dangling needs");
     }
 
     #[test]
-    fn water_chain_bottoms_out_at_precipitation() {
-        // The transitive closure of water: eroded-surface (→erosion) →
-        // surface-elevation (→spine) + precipitation (✗), and erosion's own
-        // precipitation (✗). The chain must reach an Unmet precipitation line.
+    fn water_chain_reaches_the_hydrosphere_all_met() {
+        // The transitive closure of water now closes: eroded-surface (→erosion) →
+        // surface-elevation (→spine) + rock-uplift (→uplift) + precipitation
+        // (→climate) → atmosphere-water (→hydrosphere, which consumes nothing).
+        // Every line is Met, and the chain reaches the atmosphere-water stock.
         let chain = requisite_chain(&WATER);
         assert!(
-            chain.iter().any(|l| l.quantity == flux::PRECIPITATION && matches!(l.supply, Supply::Unmet)),
-            "water's requisite chain must surface the unmet precipitation floor"
+            chain.iter().all(|l| matches!(l.supply, Supply::Met(_))),
+            "every requisite of water is met — the chain is closed"
         );
-        // And it must reach the spine's surface elevation via erosion (depth > 0).
         assert!(
-            chain.iter().any(|l| l.quantity == flux::SURFACE_ELEVATION && l.depth > 0),
-            "water's chain reaches the spine's surface elevation transitively"
+            chain.iter().any(|l| l.quantity == flux::PRECIPITATION && matches!(l.supply, Supply::Met(p) if p.name == "climate")),
+            "water's rain resolves to the climate nomos"
+        );
+        assert!(
+            chain.iter().any(|l| l.quantity == flux::ATMOSPHERE_WATER && l.depth > 0),
+            "the chain reaches the conserved atmosphere-water stock transitively"
         );
     }
 
@@ -251,10 +256,10 @@ mod tests {
     }
 
     #[test]
-    fn render_names_the_specimen() {
+    fn render_reports_the_closed_chain() {
         let text = render_flux_web();
-        assert!(text.contains("UNMET"), "the rendered web flags the unmet need");
-        assert!(text.contains("can we rain principled water?"), "the plain-language verdict is present");
-        assert!(text.contains("conserved"), "water's conservation stance is shown");
+        assert!(text.contains("unmet flux needs: none"), "the rendered web reports the chain fully met");
+        assert!(!text.contains("UNMET"), "no dangling need remains to flag");
+        assert!(text.contains("conserved"), "conservation stances are still shown");
     }
 }

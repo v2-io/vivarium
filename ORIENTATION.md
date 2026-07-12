@@ -62,8 +62,10 @@ stream.
 
 ## The principled frame (standing and growing — the live architecture)
 
-All committed and tested — **77/77 green in `vivarium-world`** (verified
-2026-07-12):
+All committed and tested — **81/81 green in `vivarium-world`** (verified
+2026-07-12). **The declared flux web is CLOSED**: every consumed quantity has a
+producer (`vivarium status` → "unmet flux needs: none"), and the water chain runs
+hydrosphere → climate → precipitation → erosion + water, conserved end to end:
 
 - **Store** (`store.rs`) — content-addressed objects/roots, atomic writes,
   domain-neutral (keys → bytes). The save-file IS the memo store, real.
@@ -96,6 +98,16 @@ All committed and tested — **77/77 green in `vivarium-world`** (verified
   order-checked (~1.37×10⁹ km³ total, ~25 mm atmosphere), conservation exact.
   `vivarium status` prints it in real units. Proves the store/nomotheke/flux-web
   contract is representation-agnostic (a box keys by identity alone, no coords).
+- **Climate** (`climate.rs`, 2026-07-12) — the **flow** that makes the hydrosphere
+  a *cycle*: precipitation = atmosphere stock ÷ residence time. Conserving (precip
+  = evaporation in steady state, so the inventory is untouched), causal (rain
+  scales with the stock), and order-correct by construction (~1 m/yr for Earth).
+  A **field** nomos fed by a **box** — the first cross-representation coupling.
+  Honest limit: v0 is globally UNIFORM (global mean only; no ITCZ, orography, or
+  latitude bands — a *pattern* claim from it would be false). Erosion consumes it
+  as a relative discharge weight; water rains it at the principled rate, with the
+  old ~9000× "rain rate" fudge decomposed into principled-rain × a declared
+  `bounded-fill acceleration` (the analytic init retires that).
 - **Flux web + requisite audit** (`flux.rs`, `audit.rs`, 2026-07-12) — the
   coupling contract as data: nomoi `consumes`/`produces` quantities drawn from
   one shared **flux vocabulary** (a typo'd quantity fails the build, same

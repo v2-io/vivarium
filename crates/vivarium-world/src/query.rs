@@ -18,7 +18,7 @@
 
 use crate::erosion::{Fluvial, FluvialParams};
 use crate::gen;
-use crate::nomotheke::{EROSION, HYDROSPHERE, SPINE, UPLIFT, WATER};
+use crate::nomotheke::{CLIMATE, EROSION, HYDROSPHERE, SPINE, UPLIFT, WATER};
 use crate::sphere::{CellId, Face};
 use crate::store::{Key, Store};
 
@@ -148,9 +148,42 @@ impl<'s> World<'s> {
         (tile, Source::Computed)
     }
 
+    /// The complete key for a climate tile. It depends on the hydrosphere box
+    /// (its atmosphere stock), so that version is folded in.
+    fn climate_key(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> Key {
+        CLIMATE
+            .key()
+            .field("seed", self.seed)
+            .field("face", face.index())
+            .field("level", level)
+            .field("oi", oi)
+            .field("oj", oj)
+            .field("nx", nx)
+            .field("hydro", HYDROSPHERE.version)
+    }
+
+    /// The climate nomos — a `nx × nx` precipitation field (m/yr). v0 is UNIFORM:
+    /// it pulls the hydrosphere **box** for the atmosphere stock and fills the tile
+    /// with the global-mean throughput (`stock / residence-time`). This is the
+    /// first **box → field** coupling: a reservoir feeds a field through the store,
+    /// each keeping its own representation. Geography (ITCZ/orography) is the next
+    /// rung; for now every cell shares the mean.
+    pub fn climate_tile(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> (Vec<f32>, Source) {
+        let key = self.climate_key(face, level, oi, oj, nx);
+        if let Some(bytes) = self.store.get(&key) {
+            return (decode_f32(&bytes), Source::Hit);
+        }
+        let (h, _) = self.hydrosphere();
+        let precip = crate::climate::mean_precip_m_per_yr(h.atmosphere_m_we(&crate::planet::Planet::EARTH)) as f32;
+        let tile = vec![precip; nx * nx]; // uniform v0
+        let _ = self.store.put(&key, &encode_f32(&tile));
+        (tile, Source::Computed)
+    }
+
     /// The complete key for an eroded tile — including its *upstream dependencies'*
-    /// identities (§12): the spine surface it carves AND the uplift field it
-    /// carves against. If either changes, this key changes and the tile recomputes.
+    /// identities (§12): the spine surface it carves, the uplift field it carves
+    /// against, and the climate precipitation that drives its discharge. If any
+    /// changes, this key changes and the tile recomputes.
     fn erosion_key(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize, epochs: u32) -> Key {
         EROSION
             .key()
@@ -163,6 +196,7 @@ impl<'s> World<'s> {
             .field("epochs", epochs)
             .field("spine", SPINE.version)
             .field("uplift", UPLIFT.version)
+            .field("climate", CLIMATE.version)
     }
 
     /// System #2 — the fluvial-erosion tier, *composed on the spine through the
@@ -185,10 +219,17 @@ impl<'s> World<'s> {
         if let Some(bytes) = self.store.get(&key) {
             return (decode_f32(&bytes), Source::Hit);
         }
-        // Dependencies, both pulled (memoized — recurse into their nomoi):
-        // the spine surface it carves, and the uplift field it carves against.
+        // Dependencies, all pulled (memoized — recurse into their nomoi): the
+        // spine surface it carves, the uplift field it carves against, and the
+        // climate precipitation that drives its discharge.
         let (spine, _) = self.spine_tile(face, level, oi, oj, nx);
         let (uplift, _) = self.uplift_tile(face, level, oi, oj, nx);
+        let (precip, _) = self.climate_tile(face, level, oi, oj, nx);
+        // Relative precipitation weight = precip / tile-mean (uniform climate → all
+        // 1.0 → discharge unchanged; spatial climate redistributes discharge).
+        let mean = precip.iter().sum::<f32>() / precip.len().max(1) as f32;
+        let precip_weight: Vec<f32> =
+            if mean > 0.0 { precip.iter().map(|p| p / mean).collect() } else { vec![1.0; precip.len()] };
         // Seed erosion from the pulled spine; any cell the kernel samples outside
         // the tile (edge/halo) falls back to the prior — identical values, since
         // the spine IS the prior at this rung.
@@ -204,6 +245,7 @@ impl<'s> World<'s> {
         };
         let mut f = Fluvial::from_surface(self.seed, face, level, oi, oj, nx, surf);
         f.set_uplift_rate(uplift); // erosion CONSUMES the uplift nomos's field
+        f.set_precip_weight(precip_weight); // ...and the climate nomos's rain
         f.erode(&FluvialParams { epochs, ..Default::default() });
         let eroded = f.h.clone();
         let _ = self.store.put(&key, &encode_f32(&eroded));
@@ -225,6 +267,7 @@ impl<'s> World<'s> {
             .field("steps", steps)
             .field("erosion", EROSION.version)
             .field("spine", SPINE.version)
+            .field("climate", CLIMATE.version)
     }
 
     /// System #3 — conserved shallow water settled on the eroded bed, *composed
@@ -252,13 +295,23 @@ impl<'s> World<'s> {
             return (decode_f32(&bytes), Source::Hit);
         }
         let (bed, _) = self.erosion_tile(face, level, oi, oj, nx, erosion_epochs);
+        let (precip, _) = self.climate_tile(face, level, oi, oj, nx);
         let cell_m = crate::sample::cell_size_m(level, crate::planet::Planet::EARTH.radius_m) as f32;
-        // 2.0 m atmosphere store (ASSUMPTIONS "atmosphere store") + 10× rain,
-        // matching the testbench's proven settle configuration.
+        // Rain is now the climate nomos's PRINCIPLED rate — the conserved
+        // reservoir's throughput (~1 m/yr for Earth), traceable to the ante-mundane
+        // water-mass fraction — not a conjured constant. It is then sped up by a
+        // declared **bounded-fill acceleration** so the fixed-step settle fills in a
+        // bounded number of steps. The acceleration (NOT the rain) is what remains
+        // unprincipled here, and the analytic hydrological init is what retires it.
+        // (`ASSUMPTIONS.md` "bounded-fill acceleration".)
+        const SEC_PER_YEAR: f64 = 365.25 * 86_400.0;
+        const FILL_ACCEL: f64 = 9_000.0;
+        let precip_m_yr = precip.first().copied().unwrap_or(0.0) as f64; // uniform v0
+        let precip_rate = (precip_m_yr / SEC_PER_YEAR * FILL_ACCEL) as f32;
         let mut sim = crate::water::WaterSim::new(face, level, (oi, oj), nx, cell_m, bed, 2.0);
         let p = crate::water::WaterParams {
-            precip: 3.0e-4,      // default × 10 — the documented fill fudge
-            evaporation: 2.0e-4, // scaled with rain (same cycle)
+            precip: precip_rate,
+            evaporation: 2.0e-4, // scaled with the accelerated cycle
             ocean_evap: 1.0e-4,
             ..Default::default()
         };

@@ -175,6 +175,12 @@ pub struct Fluvial {
     /// no tectonic driver. Erosion CONSUMES this each epoch; it does not compute
     /// it — "what lifts the land" is its own article of law.
     uplift_rate: Vec<f32>,
+    /// Per-cell precipitation weight (relative to the tile mean), from the climate
+    /// nomos (`crate::climate`) via [`Fluvial::set_precip_weight`]. Runoff seeded
+    /// into the drainage accumulation scales by it: discharge ∝ local precip ×
+    /// area. Ones (the default) = spatially-uniform rain = no change; when climate
+    /// gains geography, wetter ground gathers more discharge.
+    precip_weight: Vec<f32>,
     /// Mean |Δh| (m) of the LAST epoch — Joseph's convergence instrument: when
     /// this levels out, further epochs are polishing a steady state.
     pub last_delta_m: f32,
@@ -202,14 +208,14 @@ impl Fluvial {
                 h[y * nx + x] = surf(cell) as f32;
             }
         }
-        Self { nx, cell_m, h, drainage: vec![0.0; nx * nx], face, level, origin: (oi, oj), seed, uplift_rate: vec![0.0; nx * nx], last_delta_m: f32::INFINITY }
+        Self { nx, cell_m, h, drainage: vec![0.0; nx * nx], face, level, origin: (oi, oj), seed, uplift_rate: vec![0.0; nx * nx], precip_weight: vec![1.0; nx * nx], last_delta_m: f32::INFINITY }
     }
 
     /// Resume a simulation over an existing eroded field (e.g. the startup tier),
     /// so the live loop can keep running epochs without redoing the initial work.
     pub fn from_region(r: &ErodedRegion) -> Self {
         let cell_m = crate::sample::cell_size_m(r.level, crate::planet::Planet::EARTH.radius_m) as f32;
-        Self { nx: r.nx, cell_m, h: r.h.clone(), drainage: vec![0.0; r.nx * r.nx], face: r.face, level: r.level, origin: (r.oi, r.oj), seed: r.seed, uplift_rate: vec![0.0; r.nx * r.nx], last_delta_m: f32::INFINITY }
+        Self { nx: r.nx, cell_m, h: r.h.clone(), drainage: vec![0.0; r.nx * r.nx], face: r.face, level: r.level, origin: (r.oi, r.oj), seed: r.seed, uplift_rate: vec![0.0; r.nx * r.nx], precip_weight: vec![1.0; r.nx * r.nx], last_delta_m: f32::INFINITY }
     }
 
     /// Snapshot into a sampleable region.
@@ -231,6 +237,15 @@ impl Fluvial {
     /// nomos's differential field instead — this is a crude probe knob, not law.
     pub fn set_uniform_uplift(&mut self, rate_m_per_epoch: f32) {
         self.uplift_rate = vec![rate_m_per_epoch; self.nx * self.nx];
+    }
+
+    /// Supply the per-cell precipitation weight (relative to the tile mean) from
+    /// the climate nomos (`crate::climate`). Length must be `nx × nx`. Uniform rain
+    /// ⇒ all ones ⇒ discharge unchanged; spatial rain redistributes it (wetter
+    /// ground gathers more). Erosion CONSUMES this; it does not model rain.
+    pub fn set_precip_weight(&mut self, weight: Vec<f32>) {
+        debug_assert_eq!(weight.len(), self.nx * self.nx, "precip weight must be nx × nx");
+        self.precip_weight = weight;
     }
 
     #[inline]
@@ -354,8 +369,10 @@ impl Fluvial {
         const P: f32 = 1.1;
         let nx = self.nx;
         let cell_area = self.cell_m * self.cell_m;
-        for d in self.drainage.iter_mut() {
-            *d = cell_area;
+        // Local runoff = area × local precipitation (relative weight from the
+        // climate nomos; 1.0 = uniform rain). Discharge then accumulates downstream.
+        for i in 0..self.drainage.len() {
+            self.drainage[i] = cell_area * self.precip_weight[i];
         }
         for &i in order.iter().rev() {
             let (x, y) = (i % nx, i / nx);

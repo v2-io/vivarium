@@ -177,6 +177,25 @@ pub static HYDROSPHERE: NomosDecl = NomosDecl {
     assumptions: &["water mass fraction", "atmosphere fraction", "planet mass"],
 };
 
+/// The climate nomos — precipitation as the atmosphere reservoir's throughput
+/// (`crate::climate`): the FLOW that makes the hydrosphere a cycle. A **field**
+/// nomos fed by a **box** (hydrosphere) — the first cross-representation-kind
+/// coupling in the flux web. v0 is globally uniform (global-mean only).
+pub static CLIMATE: NomosDecl = NomosDecl {
+    name: "climate",
+    version: "climate-2026-07-12a-uniform",
+    system: "precipitation",
+    approach: Approach::Analytic, // one identity: stock / residence-time
+    earth_fidelity: Tier::Low,    // global mean order-correct (~1 m/yr); geography absent
+    physics: Tier::Low,           // conserving throughput (precip = evap steady-state); no circulation/EBM
+    relation: "conservation flow: precip = atmosphere stock / residence time (UNIFORM); steady-state = evaporation, so the inventory is untouched. Global mean only — NOT spatially resolved (no ITCZ/orography/latitude yet)",
+    status: "v0 uniform crude — earth-ref residence time (ASSUMPTIONS); mean ~1 m/yr order-checked; the spatial EBM/circulation rung (consuming insolation) is next",
+    deps: &[&HYDROSPHERE],
+    consumes: &[flux::ATMOSPHERE_WATER],
+    promises: &[Promise { quantity: flux::PRECIPITATION, conservation: Conservation::Conserved }],
+    assumptions: &["atmosphere residence time"],
+};
+
 /// System #1 — the fBm coarse spine (surface prior on the sphere).
 pub static SPINE: NomosDecl = NomosDecl {
     name: "spine-tile",
@@ -222,13 +241,13 @@ pub static EROSION: NomosDecl = NomosDecl {
     physics: Tier::Med,        // real process laws, uncalibrated rates, hardcoded edge policy
     relation: "mechanistic-causal (stream-power incision + deposition + talus + creep), on a stand-in substrate",
     status: "kernel probe-verified in the testbench (channel_profile, spike_probe, armor_regimes 1/3); tile form has fixed epochs (no convergence-ε — component E) and non-composable edges (plan Phase-3)",
-    deps: &[&SPINE, &UPLIFT],
-    // Three needs, each met or honestly flagged: the surface it carves (met →
-    // SPINE), the rock-uplift rate it carves AGAINST (met → UPLIFT — the tectonic
-    // driver, its own nomos now), and the rain that drives incision (UNMET — no
-    // nomos produces precipitation; erosion assumes uniform rain in its
-    // drainage-area discharge, so "principled incision" stays gloss until the
-    // atmosphere→water-cycle chain lands).
+    deps: &[&SPINE, &UPLIFT, &CLIMATE],
+    // Three needs, all now MET: the surface it carves (→ SPINE), the rock-uplift
+    // rate it carves AGAINST (→ UPLIFT), and the rain that drives incision
+    // (→ CLIMATE, the precipitation throughput of the conserved reservoir).
+    // At v0 climate is UNIFORM, so erosion consumes it as a discharge WEIGHT
+    // (precip/mean = 1 everywhere → no behaviour change); when climate gains
+    // geography the weight varies and incision follows the rain.
     consumes: &[flux::SURFACE_ELEVATION, flux::ROCK_UPLIFT_RATE, flux::PRECIPITATION],
     promises: &[Promise { quantity: flux::ERODED_SURFACE, conservation: Conservation::ExportsAtBoundary }],
     assumptions: &["stream-power `m`", "erosion `k_dt`", "erosion run length"],
@@ -244,18 +263,20 @@ pub static WATER: NomosDecl = NomosDecl {
     physics: Tier::Med,        // local-inertial shallow water + Manning/Jarrett friction, kernel probe-verified
     relation: "mechanistic-causal (virtual-pipes shallow water, conserved atmosphere/ocean stores), on a stand-in substrate; tiles are hydrologically ISOLATED until flux-BC (plan Phase-3) — no cross-tile rivers yet",
     status: "kernel probe-verified (conserves_total_water, rain_pools_in_the_bowl, channel_profile in testbench); tile form runs a FIXED step count (no near-stationarity gate — the analytic init / component E replace it)",
-    deps: &[&EROSION],
-    // Settles on the eroded bed (met → EROSION, in deps). Its rain is the
-    // documented ~10× fudge (ASSUMPTIONS "rain rate"): it consumes precipitation
-    // that no nomos produces — the same UNMET flag as erosion, and the reason
-    // the water cycle can't yet close.
+    deps: &[&EROSION, &CLIMATE],
+    // Settles on the eroded bed (→ EROSION) and rains the climate nomos's
+    // precipitation (→ CLIMATE) — a PRINCIPLED rate now (the conserved reservoir's
+    // throughput, ~1 m/yr), not a conjured fudge. The old ~1000× "rain rate" is
+    // decomposed: the physical rate comes from climate; a declared bounded-fill
+    // ACCELERATION (ASSUMPTIONS) still speeds the fixed-step fill pending the
+    // analytic hydrological init.
     consumes: &[flux::ERODED_SURFACE, flux::PRECIPITATION],
     promises: &[Promise { quantity: flux::STANDING_WATER_DEPTH, conservation: Conservation::Conserved }],
-    assumptions: &["rain rate", "atmosphere store", "water fill steps", "SEA_LEVEL_M"],
+    assumptions: &["bounded-fill acceleration", "atmosphere store", "water fill steps", "SEA_LEVEL_M"],
 };
 
 /// Every nomos there is. A store root whose name is not here is a bug.
-pub static NOMOTHEKE: &[&NomosDecl] = &[&HYDROSPHERE, &SPINE, &UPLIFT, &EROSION, &WATER];
+pub static NOMOTHEKE: &[&NomosDecl] = &[&HYDROSPHERE, &CLIMATE, &SPINE, &UPLIFT, &EROSION, &WATER];
 
 /// Look a nomos up by its key-stem name (the part before `@`).
 pub fn lookup(name: &str) -> Option<&'static NomosDecl> {
@@ -371,18 +392,18 @@ mod tests {
     }
 
     #[test]
-    fn precipitation_is_the_live_unmet_specimen() {
-        // "Rain without a sky", mechanized: erosion and water both consume
-        // precipitation, and no nomos produces it — so the audit's honest answer
-        // to "can we rain principled water?" bottoms out here until the
-        // atmosphere→water-cycle chain lands. If some future nomos produces
-        // precipitation, this test's failure is the reminder to delete the
-        // specimen (integration is replacement), not to loosen the assertion.
-        let consumes_precip: Vec<_> =
+    fn precipitation_is_now_produced_by_climate() {
+        // Was the live UNMET specimen ("rain without a sky"). The climate nomos —
+        // the conserved reservoir's throughput — now produces it, closing the
+        // water chain (hydrosphere → climate → precipitation → erosion + water).
+        // Integration is replacement: the specimen resolved, so the assertion
+        // flips from "no producer" to "produced by climate".
+        let producers: Vec<_> =
+            NOMOTHEKE.iter().filter(|n| n.promises.iter().any(|p| p.quantity == flux::PRECIPITATION)).map(|n| n.name).collect();
+        assert_eq!(producers, vec!["climate"], "precipitation is produced by the climate nomos");
+        let consumers: Vec<_> =
             NOMOTHEKE.iter().filter(|n| n.consumes.contains(&flux::PRECIPITATION)).map(|n| n.name).collect();
-        assert_eq!(consumes_precip, vec!["erosion-tile", "water-tile"], "the current precip consumers");
-        let produces_precip = NOMOTHEKE.iter().any(|n| n.promises.iter().any(|p| p.quantity == flux::PRECIPITATION));
-        assert!(!produces_precip, "no nomos should produce precipitation yet — the reservoir/water-cycle chain is unbuilt");
+        assert_eq!(consumers, vec!["erosion-tile", "water-tile"], "erosion and water drink it");
     }
 
     #[test]
