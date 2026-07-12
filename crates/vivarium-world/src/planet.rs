@@ -19,6 +19,10 @@ use std::f64::consts::TAU;
 #[derive(Clone, Copy, Debug)]
 pub struct Planet {
     pub radius_m: f64,
+    /// Total planetary mass (kg) — an ante-mundane charge. Load-bearing for the
+    /// hydrosphere: the conserved water inventory is a declared FRACTION of it
+    /// (`crate::hydrosphere`), so water can never be conjured from nothing.
+    pub mass_kg: f64,
     pub axial_tilt_rad: f64,
     /// Top-of-atmosphere solar irradiance at the mean orbital distance (W/m²).
     pub solar_constant: f64,
@@ -28,9 +32,16 @@ impl Planet {
     /// Earth, Holocene reference.
     pub const EARTH: Planet = Planet {
         radius_m: 6_371_000.0,
+        mass_kg: 5.972e24,
         axial_tilt_rad: 0.409_105_2, // 23.44°
         solar_constant: 1361.0,
     };
+
+    /// Total surface area (m²) — `4πr²`. The datum for global-equivalent depths
+    /// (a reservoir's volume spread evenly over the planet).
+    pub fn surface_area_m2(&self) -> f64 {
+        4.0 * std::f64::consts::PI * self.radius_m * self.radius_m
+    }
 
     /// Top-of-atmosphere solar irradiance on a horizontal surface at `geo`, at time
     /// `t`. The crude rung: a circular orbit with constant output means there is *no*

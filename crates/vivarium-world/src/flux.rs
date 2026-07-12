@@ -50,6 +50,12 @@ pub const ERODED_SURFACE: &str = "eroded surface elevation field (m)";
 /// The standing-water depth the water nomos produces (m). A terminal output today.
 pub const STANDING_WATER_DEPTH: &str = "standing water depth field (m)";
 
+/// Atmospheric water as a global-equivalent depth (m water-equivalent). Produced
+/// by the hydrosphere reservoir (`crate::hydrosphere`) — the conserved stock a
+/// climate/precipitation nomos will draw rain from. The honest root beneath
+/// precipitation: this stock traces to a declared fraction of planetary mass.
+pub const ATMOSPHERE_WATER: &str = "atmosphere water (m w.e.)";
+
 /// Precipitation reaching the surface (m/yr). **Consumed** by erosion and water;
 /// **produced by no nomos yet** — the live "rain without a sky" specimen the
 /// requisite audit surfaces (its principled producer is the future atmosphere
@@ -62,6 +68,7 @@ pub const PRECIPITATION: &str = "precipitation (m/yr)";
 pub const VOCABULARY: &[&str] = &[
     SURFACE_ELEVATION,
     ROCK_UPLIFT_RATE,
+    ATMOSPHERE_WATER,
     ERODED_SURFACE,
     STANDING_WATER_DEPTH,
     PRECIPITATION,

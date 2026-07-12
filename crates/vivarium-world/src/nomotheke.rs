@@ -157,6 +157,26 @@ impl NomosDecl {
 
 // --- The registry ----------------------------------------------------------
 
+/// The hydrosphere — the planet's conserved water budget, from an ante-mundane
+/// charge (the water-mass-fraction). The framework's first NON-FIELD nomos: a
+/// reservoir/box (global stocks, no spatial grid — the domain-fixation-guard
+/// generality probe, ARCHITECTURE §0). Produces the atmosphere-water stock a
+/// climate nomos will draw precipitation from — the honest root under "rain".
+pub static HYDROSPHERE: NomosDecl = NomosDecl {
+    name: "hydrosphere",
+    version: "hydrosphere-2026-07-12a",
+    system: "planetary-water-budget",
+    approach: Approach::Analytic, // closed-form derivation from declared constants
+    earth_fidelity: Tier::Low,    // earth-ref fractions; ocean lumps ice + groundwater
+    physics: Tier::Low,           // conservation is EXACT; the partition is earth-ref, not dynamically modeled
+    relation: "conservation law: inventory = ante-mundane water-mass-fraction × planet mass, partitioned across reservoirs (total = ocean + atmosphere, exact by construction)",
+    status: "v0 box/reservoir — earth-ref fractions (ASSUMPTIONS); conservation unit-tested (residual < 1e-6 km³, Earth budget order-checked); the precip/evap FLOW between reservoirs is the next rung",
+    deps: &[],
+    consumes: &[], // reads ante-mundane charges (planet mass, water-mass-fraction) — declared constants, not nomos outputs
+    promises: &[Promise { quantity: flux::ATMOSPHERE_WATER, conservation: Conservation::Conserved }],
+    assumptions: &["water mass fraction", "atmosphere fraction", "planet mass"],
+};
+
 /// System #1 — the fBm coarse spine (surface prior on the sphere).
 pub static SPINE: NomosDecl = NomosDecl {
     name: "spine-tile",
@@ -235,7 +255,7 @@ pub static WATER: NomosDecl = NomosDecl {
 };
 
 /// Every nomos there is. A store root whose name is not here is a bug.
-pub static NOMOTHEKE: &[&NomosDecl] = &[&SPINE, &UPLIFT, &EROSION, &WATER];
+pub static NOMOTHEKE: &[&NomosDecl] = &[&HYDROSPHERE, &SPINE, &UPLIFT, &EROSION, &WATER];
 
 /// Look a nomos up by its key-stem name (the part before `@`).
 pub fn lookup(name: &str) -> Option<&'static NomosDecl> {

@@ -18,7 +18,7 @@
 
 use crate::erosion::{Fluvial, FluvialParams};
 use crate::gen;
-use crate::nomotheke::{EROSION, SPINE, UPLIFT, WATER};
+use crate::nomotheke::{EROSION, HYDROSPHERE, SPINE, UPLIFT, WATER};
 use crate::sphere::{CellId, Face};
 use crate::store::{Key, Store};
 
@@ -55,6 +55,24 @@ impl<'s> World<'s> {
     /// The world-seed (read-only — identity is set at construction).
     pub fn seed(&self) -> u64 {
         self.seed
+    }
+
+    /// The hydrosphere nomos — the planet's conserved water budget (`crate::hydrosphere`).
+    /// A **reservoir/box**, not a field: no face/level/tile, just global stocks, so
+    /// its key carries only identity and its artifact is a handful of scalars. That
+    /// it pulls through the same store/memo path as the field nomoi is the proof the
+    /// contract is representation-agnostic. (Currently seed-invariant — pure declared
+    /// ante-mundane constants — but keyed by seed for uniformity and future variation.)
+    pub fn hydrosphere(&self) -> (crate::hydrosphere::Hydrosphere, Source) {
+        let key = HYDROSPHERE.key().field("seed", self.seed);
+        if let Some(bytes) = self.store.get(&key) {
+            if let Some(h) = crate::hydrosphere::Hydrosphere::from_bytes(&bytes) {
+                return (h, Source::Hit);
+            }
+        }
+        let h = crate::hydrosphere::Hydrosphere::of(&crate::planet::Planet::EARTH);
+        let _ = self.store.put(&key, &h.to_bytes());
+        (h, Source::Computed)
     }
 
     /// The complete key for a spine tile: every input folded in (§12).

@@ -263,14 +263,20 @@ extern "C" {
 
 fn cmd_status(rest: &[String]) -> i32 {
     let dir = world_dir(rest);
-    match WorldSpec::load(&dir) {
-        Ok(Some(spec)) => println!("vivium \"{}\" — seed {}", spec.name, spec.seed),
-        Ok(None) => println!("(no manifest — not yet a vivium; `vivarium new {}`)", dir.display()),
+    let seed = match WorldSpec::load(&dir) {
+        Ok(Some(spec)) => {
+            println!("vivium \"{}\" — seed {}", spec.name, spec.seed);
+            spec.seed
+        }
+        Ok(None) => {
+            println!("(no manifest — not yet a vivium; `vivarium new {}`)", dir.display());
+            0
+        }
         Err(e) => {
             eprintln!("manifest error: {e}");
             return 1;
         }
-    }
+    };
     if let Ok(s) = std::fs::read_to_string(dir.join("status.json")) {
         println!("builder: {}", s.lines().collect::<Vec<_>>().join(" ").replace("  ", ""));
     }
@@ -317,6 +323,34 @@ fn cmd_status(rest: &[String]) -> i32 {
     if unknown > 0 {
         println!("{unknown} pre-census roots (format v1 — valid, not attributable)");
     }
+
+    // The hydrosphere — the planet's conserved water budget (the first reservoir/box
+    // nomos). Reported in real units: what fraction of planetary mass is water, and
+    // how it partitions across reservoirs. The honest root under precipitation.
+    let world = World::new(&store, seed);
+    let (h, _) = world.hydrosphere();
+    let planet = vivarium_world::planet::Planet::EARTH;
+    println!("\nwater budget (hydrosphere — a CONSERVED inventory from the ante-mundane water-mass fraction):");
+    println!(
+        "  total inventory  {:>10.3e} km³   ({:.1e} of planet mass, as chemical H₂O — declared, not conjured)",
+        h.total_km3,
+        vivarium_world::hydrosphere::WATER_MASS_FRACTION
+    );
+    println!(
+        "  ├─ ocean+ice+gw  {:>10.3e} km³   (≈ {:.0} m global-equivalent depth)",
+        h.ocean_km3,
+        h.ocean_m_we(&planet)
+    );
+    println!(
+        "  └─ atmosphere    {:>10.3e} km³   (≈ {:.1} mm global-equiv) — the stock rain will draw from",
+        h.atmosphere_km3,
+        h.atmosphere_m_we(&planet) * 1000.0
+    );
+    println!(
+        "  conserved: {} (total − Σreservoirs = {:.0e} km³)",
+        if h.conservation_residual_km3().abs() < 1.0 { "✓" } else { "✗ LEAK" },
+        h.conservation_residual_km3()
+    );
     // The declarative flux web + unmet-needs — the pre-run requisite audit,
     // read off the nomotheke with nothing running (the fidelity pyramid says
     // what EXISTS; this says what each nomos NEEDS and whether it is supplied).

@@ -62,7 +62,7 @@ stream.
 
 ## The principled frame (standing and growing — the live architecture)
 
-All committed and tested — **74/74 green in `vivarium-world`** (verified
+All committed and tested — **77/77 green in `vivarium-world`** (verified
 2026-07-12):
 
 - **Store** (`store.rs`) — content-addressed objects/roots, atomic writes,
@@ -87,6 +87,15 @@ All committed and tested — **74/74 green in `vivarium-world`** (verified
   keys; the ledger compiles into tests; derived quality = weakest-link fold.
   README §"Epistemic honesty is enforced in code" is the front-door statement;
   ARCHITECTURE §9 items 5–6 are the workflow.
+- **Hydrosphere** (`hydrosphere.rs`, 2026-07-12) — the framework's **first
+  non-field nomos: a reservoir/box** (global stocks, no grid — the
+  domain-fixation-guard generality probe, ARCHITECTURE §0). It derives a
+  **conserved** water inventory from an *ante-mundane* charge (the water-mass
+  fraction of planetary mass), partitioned ocean/atmosphere — so precipitation's
+  eventual source traces to declared planetary mass, never conjured. Earth budget
+  order-checked (~1.37×10⁹ km³ total, ~25 mm atmosphere), conservation exact.
+  `vivarium status` prints it in real units. Proves the store/nomotheke/flux-web
+  contract is representation-agnostic (a box keys by identity alone, no coords).
 - **Flux web + requisite audit** (`flux.rs`, `audit.rs`, 2026-07-12) — the
   coupling contract as data: nomoi `consumes`/`produces` quantities drawn from
   one shared **flux vocabulary** (a typo'd quantity fails the build, same
