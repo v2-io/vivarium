@@ -2,6 +2,8 @@
 
 *Companion to `VIVARIA-DEFINITIONS.md`. That one mapped the scaffold; this one pushes on the real question — **how much of world-building and world-running can be settled from declarations, before (or entirely without) running the simulation** — and corrects a mistake I made in spike 1.*
 
+> **⚠ CORRECTION HEADER (2026-07-12, after an adversarial review).** Every mechanism in this doc is **— NOT BUILT**: `enum Check`, `Verdict`, `audit_tiers`, `audit_flux_match`, `assess_study`, `adjudicate`, the `assessed` rung — none exist in `crates/vivarium-world`. **Every `:verdict …` below is ILLUSTRATIVE, not a logged result** (the dated `:by` verifier ids were a presentation mistake — they make proposals look like records). And the flagship erosion example *originally fabricated a `supported/high` verdict the code refutes* (it attributed `water.rs`'s Kahan summation to `Fluvial::erode`, and claimed conservation on a nomos declared `ExportsAtBoundary` = unaccounted). That fabrication — plausibility narrated as verification, in a doc arguing against exactly that — was caught by an independent reviewer that **grepped the source**. The corrected example below keeps the error visible as the doc's sharpest lesson: **an agentic verdict is worth nothing unless grounded in verification, is same-model *correlated* error not independent conviction, and must never be a deterministic store citizen** (agentic output can't be keyed/replayed — it doesn't belong in the content-addressed store at all). Demote "agentic audit" from *establishes pre-run* to *a fallible flag that raises a probe*. Read the rest with that scope.
+
 **The correction that reframes everything.** In spike 1 I filed "does the predicate actually pass?" and "is the seam reconciliation sound?" under *inherently runtime*. That was too weak. A capable **agentic auditor** reading the kernel source against the declared claim can return a graded verdict — *supported / unlikely / refuted* with reasoning — **statically, without executing anything.** So verification is not a runtime monolith; it's a set of **declared check-modes**, most of which are static (agentic or formal), with numeric probes reserved for the residue an agent genuinely cannot judge from code (emergence, chaos-sensitive magnitudes, opaque model outputs). This widens the pre-run auditable surface enormously, and it's the spine of this pass.
 
 **The frame:** think of the whole world as a **queryable graph of declarations**. The measure of "how declarative" is then just *which questions you can answer from the graph* — with an agent auditor as one of the resolvers. Below: the questions, the udon that makes each answerable, the one gap I close, the residue that genuinely resists, and the attempts I tried and threw away.
@@ -18,10 +20,9 @@ A predicate no longer bottoms out at "run it and see." It declares **how** it's 
   :statistic conserved-total            ; <-- the spike-1 GAP, now closed (see below)
   :exactness approx :error-model "sub-ULP deadband at 6km datum, Kahan-compensated"
   |predicate mass out at tile outlets equals incision minus deposition
-    :check agentic                      ; an auditor reads the kernel vs this claim
-    :verdict supported :confidence high
-    :by "opus-auditor@2026-07-12"
-    :note "outlet ledger + Kahan accumulation are present in Fluvial::erode; the claim is structurally backed. No probe needed to reach 'likely'."
+    :check agentic                      ; an auditor GREPS the kernel vs this claim (illustrative)
+    :verdict refuted :confidence high    ; CORRECTED — see note
+    :note "The code REFUTES this: erosion's declared conservation is ExportsAtBoundary = boundary exports UNACCOUNTED (nomotheke.rs, Conservation enum); Kahan/compensated summation is in water.rs, NOT Fluvial::erode (grep: 0 hits in erosion.rs). An unaccounted boundary cannot substantiate 'mass out = incision - deposition'. To reach 'supported' this needs a real outlet ledger + a conservation probe — neither exists. (This example first read 'supported/high' by narrating plausibility without grepping; that is the failure the whole doc is about, and it is why the verdict is only trustworthy WHEN grounded in verification.)"
   |predicate no cell loses increments below ULP at the datum
     :check probe :probe conservation_test :verdict pass    ; numeric — an agent can't eyeball ULP behaviour
   |predicate the eroded field is drainage-coherent (no closed basins off-outlet)
