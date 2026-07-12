@@ -22,8 +22,8 @@ That duality is the point, not an accident.
 
 ## Epistemic honesty is enforced in code, not culture
 
-Every algorithm that shapes a world — a **nomos** (pl. *nomoi*): one keyed,
-versioned, executable article of world-law — must *declare itself* in the
+Every algorithm that shapes a world — a **nomos** (pl. *nomos*, invariant): one
+keyed, versioned, executable article of world-law — must *declare itself* in the
 **nomotheke** (`crates/vivarium-world/src/nomotheke.rs`): its epistemic tags
 (Earth-fidelity and physics tiers, relation, verification status), its
 dependencies, its **promises** (each with an explicit conservation claim —
@@ -75,3 +75,43 @@ Quick taste, no GPU needed:
 ```
 cargo run --release -p vivarium-world --example store_explore
 ```
+
+## The `vivarium` CLI
+
+One binary drives a world's lifecycle (builder + read-only instruments; the
+store is the only bus between them):
+
+```
+vivarium new    [dir] [name]                 individuate a world (writes manifest + seed)
+vivarium build  [dir] [--level L] [--epochs E]  sweep the nomos over the planet at level L
+vivarium status [dir]                        fidelity pyramid + water budget + flux/requisite audit
+vivarium info   [dir] [--width W] [--no-color]  from-space ASCII globe, coloured by build-state
+vivarium attach [dir]                        follow a running build's log
+```
+
+**Which world?** The `dir` is a world directory (`manifest` + store) and is
+**optional**. It resolves the same way `vivarium-globe` does, so a bare command
+and the globe agree by default:
+
+1. an explicit non-flag `dir` argument, else
+2. `$VIVARIUM_WORLD`, else
+3. the shared default `${XDG_CACHE_HOME:-~/.cache}/vivarium/globe-world`.
+
+It never scans for "the only world" — #3 is a fixed convention, overridable per
+run (`VIVARIUM_WORLD=/path vivarium status`) or per invocation (pass a `dir`).
+
+**Putting it on your PATH (and keeping it current).** The command is best run as
+a **symlink to the release build**, so it tracks your rebuilds with no reinstall
+step:
+
+```
+cargo build --release -p vivarium-world                 # produces target/release/vivarium
+ln -sf "$PWD/target/release/vivarium" ~/.local/bin/vivarium   # once; ~/.local/bin must be on PATH
+```
+
+After that, *any* `cargo build --release -p vivarium-world` (or running
+`vivarium-globe`, which builds it) "graduates" your changes to the global command
+in place — no `cargo install` snapshot to go stale. Two caveats: it tracks the
+**release** artifact specifically (a plain debug `cargo build` won't update it),
+and `cargo clean` deletes `target/` and leaves the symlink dangling — just re-run
+the `ln -sf …` line if that happens.
