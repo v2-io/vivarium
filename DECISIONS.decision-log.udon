@@ -241,3 +241,26 @@
     law; it was a rationalization. The kernel showed the real cause (uplift_m=0, no
     tectonic driver; L19-tuned params run at L9). The retraction + the uplift nomos
     followed. Already a standing project norm; logged because it bit this session.
+
+|decision[initial-topography-name-holds]
+  :date 2026-07-12
+  :by claude
+  :status decided
+  :topic naming
+  :supersedes spine-nomos-to-initial-topography
+  CONFIRMED: the `spine` nomos becomes `initial-topography`. Weighed Joseph's
+  phase-echo ideas — the ordinum's phase 0 is "ante-mundane", suggesting
+  `ante-topography`, or `mundane` (with eroded as `post-mundane`) — and held the
+  LEM term.
+  |why terminology-register-by-layer governs: a NOMOS is the science layer, so it
+    takes the term working geomorphologists read instantly (initial-topography),
+    not an ontological/Latin coinage that would need a lexicon entry
+    (ante-topography / mundane belong to the ORDINUM's register). The phase-echo is
+    real and kept — but at the ordinum layer: phase-0 ante-mundane's surface Promise
+    is :kept-by the initial-topography nomos. The ontological name names the PHASE,
+    the science name names the MECHANISM, and :kept-by is the honest bridge — no
+    register-bleed. Joseph deferred the call ("happy to defer to you"); we align on
+    the principle.
+  |does When the rename sweeps: wire ante-mundane -> :kept-by initial-topography in
+    tabularium/terrestris.ordinum.udon. Sweep still queued (see
+    spine-nomos-to-initial-topography |does).
