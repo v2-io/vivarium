@@ -32,6 +32,7 @@
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
 
+use vivarium_world::audit;
 use vivarium_world::nomotheke;
 use vivarium_world::query::{Source, World};
 use vivarium_world::spec::WorldSpec;
@@ -302,6 +303,10 @@ fn cmd_status(rest: &[String]) -> i32 {
     if unknown > 0 {
         println!("{unknown} pre-census roots (format v1 — valid, not attributable)");
     }
+    // The declarative flux web + unmet-needs — the pre-run requisite audit,
+    // read off the nomotheke with nothing running (the fidelity pyramid says
+    // what EXISTS; this says what each nomos NEEDS and whether it is supplied).
+    println!("\n{}", audit::render_flux_web().trim_end());
     0
 }
 

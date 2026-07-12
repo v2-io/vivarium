@@ -62,8 +62,8 @@ stream.
 
 ## The principled frame (standing and growing — the live architecture)
 
-All committed and tested — **62/62 green in `vivarium-world`** (verified
-2026-07-11):
+All committed and tested — **71/71 green in `vivarium-world`** (verified
+2026-07-12):
 
 - **Store** (`store.rs`) — content-addressed objects/roots, atomic writes,
   domain-neutral (keys → bytes). The save-file IS the memo store, real.
@@ -79,10 +79,26 @@ All committed and tested — **62/62 green in `vivarium-world`** (verified
   methods on `World { store, seed }` so key-seed ≡ compute-seed by
   construction; seed 0 = the legacy world, pinned by golden tests.
 - **Nomotheke** (`nomotheke.rs`) — every nomos declares its epistemics, deps,
-  promises-with-conservation-claims, and `ASSUMPTIONS.md` anchors as DATA;
-  declarations mint the store keys; the ledger compiles into tests; derived
-  quality = weakest-link fold. README §"Epistemic honesty is enforced in code"
-  is the front-door statement; ARCHITECTURE §9 items 5–6 are the workflow.
+  **consumes** (the fluxed quantities it needs), promises-with-conservation-
+  claims, and `ASSUMPTIONS.md` anchors as DATA; declarations mint the store
+  keys; the ledger compiles into tests; derived quality = weakest-link fold.
+  README §"Epistemic honesty is enforced in code" is the front-door statement;
+  ARCHITECTURE §9 items 5–6 are the workflow.
+- **Flux web + requisite audit** (`flux.rs`, `audit.rs`, 2026-07-12) — the
+  coupling contract as data: nomoi `consumes`/`produces` quantities drawn from
+  one shared **flux vocabulary** (a typo'd quantity fails the build, same
+  discipline as the ASSUMPTIONS anchors), and the audit resolves each consumed
+  quantity to its producer **before anything runs**. `vivarium status` prints
+  the coupling graph and the unmet-needs list beside the fidelity pyramid, so
+  the honest answer to *"can we rain principled water?"* is a printed **No** —
+  erosion and water both consume **precipitation** that no nomos produces ("rain
+  without a sky", now mechanical, not a comment). Built on the common ground of
+  the ratified conformance-spec (`doc/plan/regula-conformance-design.md` §3) and
+  the 2026-07-12 declarative-frontier spikes; a coherence test pins
+  consumed-and-met ⟹ in-deps (the complete key can't omit a producer). The
+  *world-level* profile that would **license** an unmet need via a dated permit
+  (regula-keep vs the spikes' regula-collapse) is Joseph's open call — the
+  registry-level audit here needs neither and lands ahead of it.
 - **CLI** (`crates/vivarium-world/src/bin/vivarium.rs`) — `new` / `build` /
   `status` / `attach`; builder v0 sweeps spine→erosion→water over all six faces
   under `builder.lock` (a second build ATTACHES); `status` renders the fidelity

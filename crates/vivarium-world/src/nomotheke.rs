@@ -6,10 +6,13 @@
 //! (LEXICON §5's four axes — declared on the version, once), its **deps**
 //! (from which *derived* state quality is computed by weakest-link fold — a
 //! hi-physics kernel fed a placeholder yields placeholder-grade state, and
-//! that is now a computation, not a discipline), its **promises** (what it
-//! hands forward, each with an explicit conservation claim — so "is mass
-//! conserved?" is answerable by lookup, never by archaeology), and its
-//! **assumptions** (entries in `ASSUMPTIONS.md`, the magic-constant ledger).
+//! that is now a computation, not a discipline), its **consumes** (the fluxed
+//! quantities it needs, from the shared [`crate::flux`] vocabulary — the
+//! quantity-level coupling contract the audit resolves to producers), its
+//! **promises** (what it hands forward, each with an explicit conservation
+//! claim — so "is mass conserved?" is answerable by lookup, never by
+//! archaeology), and its **assumptions** (entries in `ASSUMPTIONS.md`, the
+//! magic-constant ledger).
 //!
 //! Enforcement (structural, not hortatory):
 //! - A nomos's store [`Key`] is minted through [`NomosDecl::key`] — the
@@ -29,6 +32,7 @@
 //! per-artifact derivation over the store's dependency cone (with recorded
 //! convergence-ε) lands with component E.
 
+use crate::flux;
 use crate::store::Key;
 
 /// Physics-fidelity tier (LEXICON §5 axis B — the load-bearing propagated one).
@@ -75,6 +79,17 @@ pub enum Conservation {
     NotTracked,
 }
 
+impl Conservation {
+    /// Short human label for reports (the honesty column, the flux web).
+    pub fn label(self) -> &'static str {
+        match self {
+            Conservation::Conserved => "conserved",
+            Conservation::ExportsAtBoundary => "exports-at-boundary",
+            Conservation::NotTracked => "not-tracked",
+        }
+    }
+}
+
 /// One quantity a nomos hands forward (its slice of a phase Promise).
 pub struct Promise {
     pub quantity: &'static str,
@@ -101,6 +116,18 @@ pub struct NomosDecl {
     pub status: &'static str,
     /// Upstream nomoi whose outputs this one consumes.
     pub deps: &'static [&'static NomosDecl],
+    /// The fluxed quantities this nomos *needs* (in), drawn from the shared
+    /// [`crate::flux`] vocabulary. This is the quantity-level half of the
+    /// coupling contract: `deps` names the *nomoi* an occupant depends on;
+    /// `consumes` names the *quantities* the role depends on, independent of who
+    /// supplies them. The audit ([`crate::audit`]) matches each consumed
+    /// quantity to a producer (`Promise::quantity`) — a match is an edge, a
+    /// miss is the honest "rain without a sky" finding, and a permit may later
+    /// license a miss. A consumed quantity that *is* met by a nomos must have
+    /// that nomos in `deps` (else the complete key would omit its version) —
+    /// pinned by a test. (`doc/plan/regula-conformance-design.md` §3;
+    /// `VIVARIA-DEFINITIONS.md` §"the web".)
+    pub consumes: &'static [&'static str],
     /// What it hands forward.
     pub promises: &'static [Promise],
     /// Verbatim anchors into `ASSUMPTIONS.md` — every magic constant this
@@ -141,7 +168,8 @@ pub static SPINE: NomosDecl = NomosDecl {
     relation: "#mech stand-in: fBm-as-tectonics (ARCHITECTURE §2 — parameterization missing its error model); phase-structurally it impersonates Abyssal output rather than the Phase-2 submerged promise (Joseph, 2026-07-10)",
     status: "built; deterministic + cross-face continuity + golden probed; hypsometry probe scores it (land 41.5%, unimodal, oceans shallow — all flagged)",
     deps: &[],
-    promises: &[Promise { quantity: "surface elevation field (m)", conservation: Conservation::NotTracked }],
+    consumes: &[], // a prior conjured from (seed, coordinate) alone — the world's root input
+    promises: &[Promise { quantity: flux::SURFACE_ELEVATION, conservation: Conservation::NotTracked }],
     assumptions: &["SEA_LEVEL_M", "continental band", "mountain band", "fBm shape"],
 };
 
@@ -156,7 +184,13 @@ pub static EROSION: NomosDecl = NomosDecl {
     relation: "mechanistic-causal (stream-power incision + deposition + talus + creep), on a stand-in substrate",
     status: "kernel probe-verified in the testbench (channel_profile, spike_probe, armor_regimes 1/3); tile form has fixed epochs (no convergence-ε — component E) and non-composable edges (plan Phase-3)",
     deps: &[&SPINE],
-    promises: &[Promise { quantity: "eroded surface elevation field (m)", conservation: Conservation::ExportsAtBoundary }],
+    // The surface it carves is the spine's (met → SPINE, in deps). The rain that
+    // drives incision is NOT met by any nomos: erosion assumes uniform rain in
+    // its drainage-area discharge, so it *consumes* precipitation the audit
+    // reports UNMET — the honest flag that "principled incision" is gloss until
+    // the atmosphere→water-cycle chain produces a real precip field.
+    consumes: &[flux::SURFACE_ELEVATION, flux::PRECIPITATION],
+    promises: &[Promise { quantity: flux::ERODED_SURFACE, conservation: Conservation::ExportsAtBoundary }],
     assumptions: &["stream-power `m`", "erosion `k_dt`", "erosion run length"],
 };
 
@@ -171,7 +205,12 @@ pub static WATER: NomosDecl = NomosDecl {
     relation: "mechanistic-causal (virtual-pipes shallow water, conserved atmosphere/ocean stores), on a stand-in substrate; tiles are hydrologically ISOLATED until flux-BC (plan Phase-3) — no cross-tile rivers yet",
     status: "kernel probe-verified (conserves_total_water, rain_pools_in_the_bowl, channel_profile in testbench); tile form runs a FIXED step count (no near-stationarity gate — the analytic init / component E replace it)",
     deps: &[&EROSION],
-    promises: &[Promise { quantity: "standing water depth field (m)", conservation: Conservation::Conserved }],
+    // Settles on the eroded bed (met → EROSION, in deps). Its rain is the
+    // documented ~10× fudge (ASSUMPTIONS "rain rate"): it consumes precipitation
+    // that no nomos produces — the same UNMET flag as erosion, and the reason
+    // the water cycle can't yet close.
+    consumes: &[flux::ERODED_SURFACE, flux::PRECIPITATION],
+    promises: &[Promise { quantity: flux::STANDING_WATER_DEPTH, conservation: Conservation::Conserved }],
     assumptions: &["rain rate", "atmosphere store", "water fill steps", "SEA_LEVEL_M"],
 };
 
@@ -239,6 +278,71 @@ mod tests {
     fn declarations_mint_the_keys() {
         assert!(SPINE.key().as_str().starts_with("spine-tile@spine-2026-07-10b-sphere3d"));
         assert!(EROSION.key().as_str().starts_with("erosion-tile@erosion-2026-07-10a"));
+    }
+
+    #[test]
+    fn flux_vocabulary_is_closed() {
+        // Every produced and consumed quantity must be a known flux term — the
+        // typo-can't-hide discipline (a mistyped `consumes` string would else be
+        // a silently-broken coupling edge the audit reads as "unmet" when the
+        // human sees an obvious match). Same guarantee as the ASSUMPTIONS anchors.
+        for n in NOMOTHEKE {
+            for p in n.promises {
+                assert!(
+                    flux::is_in_vocabulary(p.quantity),
+                    "{}: produced quantity {:?} is not in flux::VOCABULARY",
+                    n.name,
+                    p.quantity
+                );
+            }
+            for q in n.consumes {
+                assert!(
+                    flux::is_in_vocabulary(q),
+                    "{}: consumed quantity {q:?} is not in flux::VOCABULARY",
+                    n.name
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn consumed_and_met_implies_in_deps() {
+        // The complete-key invariant (DESIGN-REDUX §12): if a nomos consumes a
+        // quantity that some registered nomos produces, that producer MUST be in
+        // its `deps` — otherwise the consumer's store key would omit the
+        // producer's version, and a producer change would not invalidate the
+        // consumer (a stale-memo lie). A consumed quantity NOT produced by anyone
+        // is legal here — that is the honest "unmet" case the audit reports, not
+        // a coherence error.
+        for n in NOMOTHEKE {
+            for q in n.consumes {
+                if let Some(producer) = NOMOTHEKE.iter().find(|m| m.promises.iter().any(|p| p.quantity == *q)) {
+                    assert!(
+                        n.deps.iter().any(|d| std::ptr::eq(*d, *producer)),
+                        "{}: consumes {q:?} (produced by {}), but {} is not in its deps — \
+                         the complete key would omit the producer's version",
+                        n.name,
+                        producer.name,
+                        producer.name
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn precipitation_is_the_live_unmet_specimen() {
+        // "Rain without a sky", mechanized: erosion and water both consume
+        // precipitation, and no nomos produces it — so the audit's honest answer
+        // to "can we rain principled water?" bottoms out here until the
+        // atmosphere→water-cycle chain lands. If some future nomos produces
+        // precipitation, this test's failure is the reminder to delete the
+        // specimen (integration is replacement), not to loosen the assertion.
+        let consumes_precip: Vec<_> =
+            NOMOTHEKE.iter().filter(|n| n.consumes.contains(&flux::PRECIPITATION)).map(|n| n.name).collect();
+        assert_eq!(consumes_precip, vec!["erosion-tile", "water-tile"], "the current precip consumers");
+        let produces_precip = NOMOTHEKE.iter().any(|n| n.promises.iter().any(|p| p.quantity == flux::PRECIPITATION));
+        assert!(!produces_precip, "no nomos should produce precipitation yet — the reservoir/water-cycle chain is unbuilt");
     }
 
     #[test]
