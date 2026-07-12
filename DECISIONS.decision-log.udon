@@ -1,0 +1,243 @@
+; DECISIONS.decision-log.udon
+; ─────────────────────────────────────────────────────────────────────────────
+; The append-only ledger of settled calls for vivarium — the PRIOR that TODO.md
+; leans on ("given these decisions, here is the work"; "here is work pending
+; decision X"). Started 2026-07-12 at Joseph's direction. This is a first-pass
+; schema; it will evolve. Readers must ignore fields they do not recognize.
+;
+; APPEND-ONLY, INTERLEAVE-FREE (the load-bearing property):
+;   • Each |decision is a SELF-CONTAINED, TOP-LEVEL block (starts at column 0).
+;     There is NO wrapping parent element — so a new entry is appended at EOF
+;     with no need to read, parse, or re-close anything above it.
+;   • Append the whole block in ONE write, preceded by a single blank line.
+;     O_APPEND makes a single write() atomic on POSIX, so concurrent agents
+;     cannot interleave entries. Keep a block small enough to be one write.
+;   • NEVER edit or delete an existing entry. To change a call, append a new
+;     |decision that :supersedes the old slug. The history is the point.
+;   • Slugs are unique and kebab-case. Later duplicate = a supersede, made explicit.
+;
+; SCHEMA (loose; add fields freely):
+;   |decision[kebab-slug]
+;     :date YYYY-MM-DD
+;     :by   joseph | us | claude          ; authority — see legend
+;     :status decided | proposed | superseded
+;     :topic naming | architecture | process | physics | tooling   ; loose tag
+;     <first body line = the decision, stated plainly>
+;     |why   ... optional reasoning / context (may be long)
+;     |does  ... optional: the work it implies (mirror into TODO if not immediate)
+;     |supersedes <slug>                  ; optional
+;     |ref   ... optional: files, commits, LEXICON entries
+;
+; AUTHORITY LEGEND (Joseph's taxonomy, kept honest — do not inflate):
+;   joseph — Joseph's call; Claude ABSTAINED: offered no strong position, or it
+;            is a matter of Joseph's intent / taste / faith to decide.
+;   us     — Joint: Joseph decided AND Claude SUSTAINS it on the merits.
+;   claude — Claude's own tactical call, logged so it does not fall through the
+;            cracks; Joseph may veto or promote it.
+; ─────────────────────────────────────────────────────────────────────────────
+
+
+|decision[nomos-plural-invariant]
+  :date 2026-07-12
+  :by joseph
+  :status decided
+  :topic naming
+  The plural of "nomos" is "nomos" (invariant), not "nomoi".
+  |why Pronunciation: "nomoi" (NOM-oy) is awkward to say aloud. Cost accepted with
+    open eyes — a mild break from the deliberately-Greek law-article register (the
+    etymological plural IS nomoi), and a singular/plural ambiguity that context
+    resolves (cf. "series", "sheep"). Honest because it is declared here and in the
+    LEXICON rather than left implicit.
+  |does Update LEXICON.udon #term[nomos] (":forms pl. nomos, invariant"); sweep the
+    prose "nomoi" -> "nomos" opportunistically. Verified 0 code identifiers named
+    "nomoi", so this is docs-only and cannot break a build. Family words unaffected
+    (nomothete / nomothetic / nomotheke).
+  |ref LEXICON.udon #term[nomos]
+
+|decision[regula-collapses-to-order-and-manifest]
+  :date 2026-07-12
+  :by us
+  :status decided
+  :topic architecture
+  No `regula` artifact for now. World-level conformance is carried by the ORDINUM
+  (descriptive kind-floor — what the kind requires) + the MANIFEST (per-world
+  prescription — what this world chose: :order, :target-phase, permits,
+  participation), tracked against the nomotheke / tabularium. Reach for an
+  in-between "something" (a regula, or whatever) only if it genuinely gets awkward.
+  |why "Don't coin the noun until it earns its keep." The 2026-07-12 declarative-
+    frontier spikes showed the conformance audit needs neither a Slot nor a Regula
+    object — a promise's fluxed-quantity + :kept-by carries what `slot` reached for,
+    and permits live naturally on the manifest.
+  |does regula.rs is NOT built. TODO's Regula-Terrestris Slot/Permit/Regula items
+    (2/4/5) are superseded — permits move onto the manifest. Keep the ordinum + the
+    audit; watch for the point where the two-artifact scheme actually strains.
+  |supersedes (the regula-keep build-spec in doc/plan/regula-conformance-design.md
+    §5 — that doc stays as the reasoning trail, no longer the plan)
+  |ref doc/plan/regula-conformance-design.md · VIVARIA-DEFINITIONS.md
+
+|decision[core-view-wall-observe-only]
+  :date 2026-07-12
+  :by us
+  :status decided
+  :topic architecture
+  A VIEW only observes; it never authors world-evolution parameters. The ethereal
+  explorer queries what the world autonomously did — it holds no knob that changes
+  what the world IS.
+  |why Founding core/view wall (DESIGN.md), re-asserted after a violation this
+    session: a `VIVARIUM_EROSION_EPOCHS` knob was added to the globe (the view
+    choosing how long the world erodes). "Erode for N epochs" is a world-evolution
+    decision. A view holding it makes the ethereal explorer NON-ethereal — and the
+    milestone is moratorium-clear precisely BECAUSE the observer has no causal
+    access. The knob was reverted.
+  |ref commit 7b65483 (revert)
+
+|decision[debug-poke-then-consolidate]
+  :date 2026-07-12
+  :by us
+  :status decided
+  :topic process
+  Unprincipled interventions WHILE coding/debugging a phenomenon are legitimate —
+  poke, hand-tune, probe to understand. The discipline is the SECOND half: back the
+  poke out and consolidate the gain into the principled framework. A poke left
+  standing (as the answer, or as a view/instrument knob) is the failure, not the
+  poke itself.
+  |why Joseph's methodology, stated 2026-07-12. Worked example this session: a
+    hand-passed `uplift 3` in erosion_preview and the globe epochs knob (the pokes)
+    -> both backed out -> uplift consolidated into its own declared nomos (the
+    gain). Instruments MAY poke the kernel; the world path and views may not keep
+    the poke.
+
+|decision[new-system-must-reach-the-goal-not-reimplement-poc]
+  :date 2026-07-12
+  :by joseph
+  :status decided
+  :topic process
+  The point of "get world-building up to the exploration phase" is to prove the NEW
+  declarative system (nomotheke -> pull-query -> store, composed by the flux web)
+  can reach an eroded/uplifted, explorable world PRINCIPLED-LY — not to re-implement
+  the worldview proof-of-concept (which already makes eroded worlds ad-hoc).
+  |why Guards against mistaking motion for progress: porting knobby PoC code into
+    the frame is not the deliverable; a legible, auditable, composed set of nomoi
+    the world evolves itself from — and a view merely observes — is.
+
+|decision[terminology-register-by-layer]
+  :date 2026-07-12
+  :by us
+  :status decided
+  :topic naming
+  Name by layer, honesty above all: (1) ONTOLOGICAL / theoretical terms for the
+  common architecture (the participation ontology, law/nomos, rung, kingdom/estate);
+  (2) SCIENTIFIC / phenomenal / literature terms for the science & algorithms — the
+  nomoi ESPECIALLY (stream-power, drainage, uplift, orography…), preferring the
+  widely-adopted term the subfield's literature uses; (3) standard CODE / tech terms
+  for genuinely fluid implementation concerns (buffers, tiles, GPU kernels). Every
+  word kept HONEST — it must not imply structure, mechanism, or fidelity it lacks.
+  |why Joseph's framing, 2026-07-12. This is the governing rule the specific naming
+    calls below (spine, tile, …) are instances of. Register signals layer; a term
+    that crosses registers should notice it is doing so (cf. the Greek-machinery /
+    Latin-governance / plain-English-lived convention already observed).
+
+|decision[spine-nomos-to-initial-topography]
+  :date 2026-07-12
+  :by claude
+  :status proposed
+  :topic naming
+  Rename the `spine` nomos to `initial-topography` — the standard landscape-
+  evolution-model (LEM) term, immediately legible to geomorphologists with no
+  lexicon entry needed. (First idea was `surface-prior` — its own `system` field —
+  but "prior" is statistical register; Joseph asked for the literature term if one
+  means the same thing, and it does.)
+  |why "Spine" is an invented world-backbone metaphor in a nomos (the science layer,
+    per terminology-register-by-layer) and misleads geologically — Joseph: "I don't
+    know what spine is referring to, geologically." The LEM literature is unambiguous:
+    landscape elevation evolves as tectonic-uplift U + diffusion + fluvial erosion
+    (K·A^m|∇h|) acting on an INITIAL TOPOGRAPHY / initial condition. With uplift now
+    its own nomos (uplift-is-its-own-nomos), the extraction clarifies that the spine
+    is precisely that initial-condition surface — not "tectonics". So the rename is
+    doubly honest post-extraction. Our three nomoi now map 1:1 onto the standard LEM:
+    uplift = U, erosion = the K·A^m + creep terms, spine = initial topography.
+  |does On confirm: rename the nomos spine-tile -> initial-topography (name + `system`
+    field + version + methods + docs). Re-keys its memos (name is in the store key) —
+    cheap recompute. DEFERRED off Joseph's play session; sweep deliberately. Does NOT
+    decide the "-tile suffix" question (see tile-as-honest-flat-artifact).
+  |ref LEM standard form (Wikipedia "Landscape evolution model"; stream-power +
+    diffusion + uplift U on an initial surface) — web-checked 2026-07-12.
+
+|decision[tile-as-honest-flat-artifact]
+  :date 2026-07-12
+  :by us
+  :status decided
+  :topic naming
+  "tile" is acceptable as an IMPLEMENTATION-register term for what it actually is
+  today: a flat, memoized, row-major nx×nx region of ONE scalar field at one level
+  (Vec<f32>). Keep the word where the artifact really is a tile; do NOT ban it.
+  |why The metaphor is clay-rectangle: flat, four-sided, baked (hard) earth, nominal
+    depth vs width/height, composing to mosaics — which fits a raster field-slice and
+    is standard in the literature. Two guardrails (Joseph, 2026-07-12): (a) a "tile"
+    that FLATTENS AWAY column richness — water-retention down the column, wetness,
+    slope, multiple materials, the precipitation surface — is the failure mode; if an
+    object could be "much more than a tile", it should not be called one. (b) A tile /
+    region / chunk is a legitimate CODED BRIDGE between two of the three primary
+    ontological areas (e.g. erosion-tile as the bridge artifact of the fluvial-erosion
+    nomos), and such bridges — especially performance/GPU-facing ones — will be needed;
+    the subfield's literature is the main clue for the right word, and widely-adopted
+    terms win.
+  |does DEFINE `tile` in LEXICON.udon with these explicit limits (one field, flat, at
+    a level; NOT a column/chunk/patch) — its being UNDEFINED is the actual sin, not
+    the word. Distinguish from `chunk` (Hilbert-aligned subdivision) and `patch`
+    (haloed compute array). Keep an antenna for the literature term when a nomos's
+    output grows past a flat field (columns, strata, multi-material). Revisit per nomos.
+
+|decision[uplift-is-its-own-nomos]
+  :date 2026-07-12
+  :by joseph
+  :status decided
+  :topic architecture
+  The tectonic driver (rock uplift) is its own declared nomos that erosion CONSUMES —
+  not a hidden term inside the erosion kernel. Even a crude 30-line stub (or a no-op)
+  is right, as long as it is separate, declared, and auditable.
+  |why Joseph, 2026-07-12: "uplift is a separate nomos that right now is 30 lines… or
+    even a no-op." The world grows macro relief only under a tectonic driver; making
+    it a nomos means the flux web shows "erosion consumes rock-uplift-rate <- uplift"
+    and the driver is swappable for the real mantle-thermal source later. LANDED.
+  |ref commit d8a2596 · crates/vivarium-world/src/uplift.rs · TODO §thermal-spine
+
+|decision[flux-web-substrate-on-common-ground]
+  :date 2026-07-12
+  :by claude
+  :status decided
+  :topic architecture
+  Built the flux-quantity vocabulary + `consumes` on NomosDecl + the pre-run
+  requisite/conservation audit ahead of, and independent of, the regula question —
+  because both the (then-open) regula options agreed on it. LANDED.
+  |why It is the declarative spine the milestone's honesty rests on ("rain without a
+    sky" / "mountains without tectonics" become mechanical audit findings) and it did
+    not require deciding the world-level profile's shape. Tactical, but load-bearing.
+  |ref commit 62ad351 · crates/vivarium-world/src/{flux,audit}.rs
+
+|decision[cli-world-dir-default-and-symlink-promotion]
+  :date 2026-07-12
+  :by claude
+  :status decided
+  :topic tooling
+  `vivarium <cmd> [dir]` — world dir optional, resolving as the globe does
+  (explicit -> $VIVARIUM_WORLD -> ~/.cache/vivarium/globe-world). Promote to
+  system-wide via a symlink into a PATH dir pointing at the release build
+  (~/.local/bin/vivarium -> target/release/vivarium), NOT a cargo-install snapshot.
+  |why So `vivarium status` and `vivarium-globe` agree by default, and the installed
+    command tracks rebuilds instead of going stale (~/.cargo/bin is not on Joseph's
+    mise PATH; ~/.local/bin is). Caveat logged: `cargo clean` breaks the symlink.
+  |ref commit (cli world-dir) · TODO §"unify default world dirs" (now addressed)
+
+|decision[probes-before-claims-no-plausibility-as-verification]
+  :date 2026-07-12
+  :by joseph
+  :status decided
+  :topic process
+  Reaffirmed (Joseph caught a live instance): no physics/behavior claim without its
+  probe. A structurally-plausible statement asserted with verification's authority is
+  the failure to guard against — verify against the actual kernel/run first.
+  |why This session: "erosion is invisible at macro scale" was asserted as physics-
+    law; it was a rationalization. The kernel showed the real cause (uplift_m=0, no
+    tectonic driver; L19-tuned params run at L9). The retraction + the uplift nomos
+    followed. Already a standing project norm; logged because it bit this session.

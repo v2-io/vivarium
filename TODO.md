@@ -4,6 +4,13 @@
 the `DESIGN-*` docs (design), and `SUPERSEDED.md` (what's been retired/replaced).
 This file is the actionable queue.*
 
+> **`DECISIONS.decision-log.udon` is the prior to this file** (2026-07-12): the
+> append-only ledger of settled calls (who decided, why). TODO is downstream of it —
+> "given these decisions, here is the work" and "here is work *pending* decision X".
+> Queued from it right now: rename `spine` nomos → **`initial-topography`** (LEM term)
+> + drop/settle the `-tile` suffix question; define `tile` in the LEXICON with its
+> flat-single-field limits; sweep prose `nomoi` → `nomos` (invariant plural, decided).
+
 ## Lexicon / terminology-system reconciliation (archema-wide) — deferred, tracked
 
 Vivarium's lexicon is now **`LEXICON.udon`** (2026-07-11): dictionary-grade `|term[slug]` entries — headword unmistakable, definition first, only-if-real fields (`|not` / `|confused` / `|rel` edges building the vocabulary graph / `|context` / `|carve` / `|source`) — one udon file, hand-authored, parse-validated. This replaced the ad-hoc markdown bullet form (and mooted its old format-pass items: LaTeX conversion, de-hard-wrapping, `lint-md`).
