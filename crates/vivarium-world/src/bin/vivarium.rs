@@ -49,20 +49,42 @@ fn main() {
         Some("status") => cmd_status(&args[1..]),
         Some("attach") => cmd_attach(&args[1..]),
         _ => {
-            eprintln!("usage: vivarium <new|build|status|attach> <world-dir> [options]");
-            eprintln!("  new <dir> [name]                    individuate a world (manifest + seed)");
-            eprintln!("  build <dir> [--level L] [--epochs E]  builder v0: whole-world spine sweep at L (default 7)");
-            eprintln!("                                       then erosion at E epochs/tile (default 40; 0 = skip)");
-            eprintln!("  status <dir>                        fidelity pyramid (census of the store)");
-            eprintln!("  attach <dir>                        follow a running build's log");
+            eprintln!("usage: vivarium <new|build|status|attach> [world-dir] [options]");
+            eprintln!("  (world-dir optional: defaults to $VIVARIUM_WORLD, else ~/.cache/vivarium/globe-world");
+            eprintln!("   — the same world vivarium-globe opens, so status/build/globe agree by default)");
+            eprintln!("  new [dir] [name]                    individuate a world (manifest + seed)");
+            eprintln!("  build [dir] [--level L] [--epochs E]  builder v0: whole-world sweep at L (default 7)");
+            eprintln!("                                       then erosion at E epochs (default 40; 0 = skip)");
+            eprintln!("  status [dir]                        fidelity pyramid + flux/requisite audit");
+            eprintln!("  attach [dir]                        follow a running build's log");
             2
         }
     };
     std::process::exit(code);
 }
 
-fn dir_arg(rest: &[String]) -> Option<PathBuf> {
-    rest.first().map(PathBuf::from)
+/// Resolve which world to act on, matching the globe's convention so
+/// `vivarium status` and `vivarium-globe` look at the SAME world by default:
+/// an explicit non-flag positional wins, else `$VIVARIUM_WORLD`, else the shared
+/// default `${XDG_CACHE_HOME:-~/.cache}/vivarium/globe-world`.
+fn world_dir(rest: &[String]) -> PathBuf {
+    if let Some(first) = rest.first() {
+        if !first.starts_with('-') {
+            return PathBuf::from(first);
+        }
+    }
+    if let Ok(p) = std::env::var("VIVARIUM_WORLD") {
+        return PathBuf::from(p);
+    }
+    let cache = std::env::var("XDG_CACHE_HOME").map(PathBuf::from).unwrap_or_else(|_| {
+        PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".into())).join(".cache")
+    });
+    cache.join("vivarium").join("globe-world")
+}
+
+/// True when the first token is an explicit world dir (a non-flag positional).
+fn dir_is_explicit(rest: &[String]) -> bool {
+    rest.first().map(|f| !f.starts_with('-')).unwrap_or(false)
 }
 
 fn flag(rest: &[String], name: &str) -> Option<u32> {
@@ -70,11 +92,9 @@ fn flag(rest: &[String], name: &str) -> Option<u32> {
 }
 
 fn cmd_new(rest: &[String]) -> i32 {
-    let Some(dir) = dir_arg(rest) else {
-        eprintln!("usage: vivarium new <dir> [name]");
-        return 2;
-    };
-    let name = rest.get(1).map(String::as_str).unwrap_or("unnamed");
+    let dir = world_dir(rest);
+    // Name is the positional AFTER an explicit dir; otherwise a label default.
+    let name = if dir_is_explicit(rest) { rest.get(1).map(String::as_str).unwrap_or("unnamed") } else { "unnamed" };
     match WorldSpec::load(&dir) {
         Ok(Some(spec)) => {
             println!("vivium already exists: \"{}\" seed {} — identity is never re-minted.", spec.name, spec.seed);
@@ -136,10 +156,7 @@ fn wallclock() -> String {
 }
 
 fn cmd_build(rest: &[String]) -> i32 {
-    let Some(dir) = dir_arg(rest) else {
-        eprintln!("usage: vivarium build <dir> [--level L] [--epochs E]");
-        return 2;
-    };
+    let dir = world_dir(rest);
     let level = flag(rest, "--level").unwrap_or(7).min(20) as u8;
     let epochs = flag(rest, "--epochs").unwrap_or(40);
 
@@ -245,10 +262,7 @@ extern "C" {
 // ---- instruments ------------------------------------------------------------
 
 fn cmd_status(rest: &[String]) -> i32 {
-    let Some(dir) = dir_arg(rest) else {
-        eprintln!("usage: vivarium status <dir>");
-        return 2;
-    };
+    let dir = world_dir(rest);
     match WorldSpec::load(&dir) {
         Ok(Some(spec)) => println!("vivium \"{}\" — seed {}", spec.name, spec.seed),
         Ok(None) => println!("(no manifest — not yet a vivium; `vivarium new {}`)", dir.display()),
@@ -311,10 +325,7 @@ fn cmd_status(rest: &[String]) -> i32 {
 }
 
 fn cmd_attach(rest: &[String]) -> i32 {
-    let Some(dir) = dir_arg(rest) else {
-        eprintln!("usage: vivarium attach <dir>");
-        return 2;
-    };
+    let dir = world_dir(rest);
     tail_log(&dir, true)
 }
 
