@@ -47,6 +47,7 @@ fn main() {
         Some("new") => cmd_new(&args[1..]),
         Some("build") => cmd_build(&args[1..]),
         Some("status") => cmd_status(&args[1..]),
+        Some("info") => cmd_info(&args[1..]),
         Some("attach") => cmd_attach(&args[1..]),
         _ => {
             eprintln!("usage: vivarium <new|build|status|attach> [world-dir] [options]");
@@ -56,6 +57,8 @@ fn main() {
             eprintln!("  build [dir] [--level L] [--epochs E]  builder v0: whole-world sweep at L (default 7)");
             eprintln!("                                       then erosion at E epochs (default 40; 0 = skip)");
             eprintln!("  status [dir]                        fidelity pyramid + flux/requisite audit");
+            eprintln!("  info [dir] [--width W] [--axis x,y,z] [--no-color]");
+            eprintln!("                                       from-space globe, coloured by build-state");
             eprintln!("  attach [dir]                        follow a running build's log");
             2
         }
@@ -355,6 +358,61 @@ fn cmd_status(rest: &[String]) -> i32 {
     // read off the nomotheke with nothing running (the fidelity pyramid says
     // what EXISTS; this says what each nomos NEEDS and whether it is supplied).
     println!("\n{}", audit::render_flux_web().trim_end());
+    0
+}
+
+/// `vivarium info` — a primitive from-space globe, coloured by build-state (the
+/// deepest nomos each region has reached in the store). Deliberately thin: the
+/// fuller register-separated, unit-bearing `info` report is separate future
+/// work; this call renders the globe + a minimal frame and nothing more.
+fn cmd_info(rest: &[String]) -> i32 {
+    let dir = world_dir(rest);
+    let seed = match WorldSpec::load(&dir) {
+        Ok(Some(spec)) => {
+            println!("vivium \"{}\" — seed {}   (from-space globe · build-state at a glance)", spec.name, spec.seed);
+            spec.seed
+        }
+        Ok(None) => {
+            println!("(no manifest — not yet a vivium; `vivarium new {}` then `build`)", dir.display());
+            return 0;
+        }
+        Err(e) => {
+            eprintln!("manifest error: {e}");
+            return 1;
+        }
+    };
+    let store = match Store::open(&dir) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("store error: {e}");
+            return 1;
+        }
+    };
+    let roots = match store.roots() {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("census error: {e}");
+            return 1;
+        }
+    };
+    if roots.is_empty() {
+        println!("(nothing built yet — `vivarium build {}` first)", dir.display());
+        return 0;
+    }
+    let width = flag(rest, "--width").unwrap_or(72).clamp(16, 240) as usize;
+    let axis = rest
+        .iter()
+        .position(|a| a == "--axis")
+        .and_then(|i| rest.get(i + 1))
+        .and_then(|s| {
+            let p: Vec<f64> = s.split(',').filter_map(|t| t.trim().parse().ok()).collect();
+            (p.len() == 3).then(|| [p[0], p[1], p[2]])
+        })
+        .unwrap_or([1.0, 0.6, 1.0]); // off the (1,1,1) corner: shows land + a seam
+    let color = !rest.iter().any(|a| a == "--no-color") && vivarium_world::globe::color_auto();
+
+    let world = World::new(&store, seed);
+    print!("\n{}", vivarium_world::globe::render(&world, &roots, width, axis, color));
     0
 }
 
