@@ -26,8 +26,15 @@ fn main() {
 
 fn run(fine_epochs: u32) {
     let face = Face::ZPos;
-    // Same massif neighbourhood worldview defaults to, scaled down for speed.
-    let (oi, oj, nx) = (165_800u32, 413_600u32, 128usize);
+    // SUBAERIAL footprint — load-bearing. This probe reported "SEAM RIDGE RATIO
+    // 22888" for months. That number was `0 ÷ 1e-9`: the old footprint
+    // (165_800, 413_600) sits at 3709-3715 m, entirely BELOW sea level (4000), so
+    // every cell was an outlet, erosion no-op'd, the interior curvature was exactly
+    // zero, and the ratio was a divide-by-zero against the epsilon floor. The tell
+    // was printed all along — the ratio was bit-identical across every age gap
+    // swept. THE SEAM HAD NEVER ACTUALLY BEEN MEASURED. This region is verified
+    // land (relief 5072-5216 m), where the fluvial kernel actually executes.
+    let (oi, oj, nx) = (108_500u32, 186_350u32, 128usize);
     let p = FluvialParams::default();
 
     // Macro tier (L19), fully eroded.

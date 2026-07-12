@@ -602,8 +602,40 @@ impl Fluvial {
 mod fluvial_tests {
     use super::*;
 
+    /// A SUBAERIAL test footprint — and the word is load-bearing.
+    ///
+    /// **These tests were vacuous until 2026-07-12.** The old footprint
+    /// (`165_800, 413_600`) sits at 3709–3715 m, entirely below `SEA_LEVEL_M`
+    /// (4000). Every cell is therefore an outlet → `recv[i] = i` → `incise()`
+    /// skips every cell → Priority-Flood, D8, MFD, stream-power and Davy–Lague
+    /// all no-op. Measured `max|Δh|` after 80 epochs: **0.000 m, bit-exactly.**
+    /// All three tests below passed anyway, because they were comparing no-ops
+    /// to no-ops. (`seam_ridge` shared the footprint, which is why its "ratio
+    /// 22888" was really `0 ÷ 1e-9` — a divide-by-zero against the epsilon
+    /// floor, not a seam measurement. The tell was printed all along: the ratio
+    /// was bit-identical across every age gap the probe swept.)
+    ///
+    /// This region is verified LAND (relief 5072–5216 m, well above sea level),
+    /// where erosion actually executes — 80 epochs takes max slope 24% → 81%.
+    /// **A fluvial test on submarine ground tests nothing. Check the water line
+    /// before trusting a green fluvial test.**
     fn small() -> Fluvial {
-        Fluvial::from_prior(0, Face::ZPos, 19, 165_800, 413_600, 96)
+        Fluvial::from_prior(0, Face::ZPos, 19, 108_500, 186_350, 96)
+    }
+
+    /// Guards the guard: if a future prior change drowns this footprint, every
+    /// fluvial test below silently becomes a no-op again. Fail loudly instead.
+    #[test]
+    fn test_footprint_is_actually_land() {
+        let f = small();
+        let sea = crate::gen::SEA_LEVEL_M as f32;
+        let above = f.h.iter().filter(|&&h| h > sea).count();
+        assert!(
+            above * 2 > f.h.len(),
+            "the fluvial test footprint must be mostly LAND (>{sea} m) or these tests test a no-op — \
+             only {above}/{} cells are subaerial",
+            f.h.len()
+        );
     }
 
     #[test]
