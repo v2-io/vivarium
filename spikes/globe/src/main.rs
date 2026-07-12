@@ -31,8 +31,6 @@
 //!      ~/.cache/vivarium/globe-world — a fresh seed is minted and *persisted*
 //!      on first run, deterministic ever after; point at another world dir to
 //!      view another world; the view never handles a bare seed) ·
-//!      VIVARIUM_EROSION_EPOCHS=N (render the *eroded* surface, N epochs/face,
-//!      instead of the raw spine — honest caveats in `erosion_epochs`) ·
 //!      VIVARIUM_AUTOSHOT=1 + VIVARIUM_SHOT=path (screenshot then exit — the
 //!      worldview verification idiom).
 
@@ -65,28 +63,6 @@ fn radius_km() -> f32 {
 /// per-region quadtree (the next rung), not a bigger monolith.
 const LEVEL_MIN: u8 = 5;
 const LEVEL_MAX: u8 = 9;
-
-/// Erosion toggle (`VIVARIUM_EROSION_EPOCHS=N`, cached). When set, each face is
-/// pulled through [`World::erosion_tile`] instead of the raw spine — the whole
-/// globe rendered from the *eroded* surface rather than the fBm prior.
-///
-/// Two honesty caveats this view makes you see rather than hides: (1) each face
-/// is eroded as one independent patch, so **face-edge seams appear** (the same
-/// non-composable-tile issue Phase 3 fixes — the S-key seam instrument lights up
-/// with it); (2) erosion is a *fine-scale* process, and at globe LOD cells are
-/// ~20 km (L9) — so how much the eroded surface visibly departs from the spine
-/// at this scale is an open question the toggle exists to answer, not a claim.
-/// The genuine "eroded world you zoom into" is the fidelity telescope (coarse
-/// far, fine near) — the Phase-5 explorer, not this monolithic whole-globe pull.
-fn erosion_epochs() -> Option<u32> {
-    static CACHE: std::sync::OnceLock<Option<u32>> = std::sync::OnceLock::new();
-    *CACHE.get_or_init(|| {
-        std::env::var("VIVARIUM_EROSION_EPOCHS")
-            .ok()
-            .and_then(|s| s.parse::<u32>().ok())
-            .filter(|&e| e > 0)
-    })
-}
 
 /// Relief exaggeration cycle for X. 1 = honest (billiard ball, truthfully).
 const EXAG_STEPS: [f32; 4] = [1.0, 10.0, 20.0, 50.0];
@@ -436,12 +412,7 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx
                     .map(|f| {
                         s.spawn(move || {
                             let face = Face::from_index(f);
-                            // Spine by default; the eroded surface when the
-                            // toggle is set (per-face patch — see erosion_epochs).
-                            let (tile, src) = match erosion_epochs() {
-                                Some(e) => world.erosion_tile(face, level, 0, 0, nx, e),
-                                None => world.spine_tile(face, level, 0, 0, nx),
-                            };
+                            let (tile, src) = world.spine_tile(face, level, 0, 0, nx);
                             let land = tile.iter().filter(|&&h| h as f64 > SEA_LEVEL_M).count();
                             let (mesh, fseam) = build_face(world, face, level, &tile, exag, audit);
                             (mesh, tile, src, land, fseam)
@@ -1010,22 +981,12 @@ fn hud_update(
                 (s.cross_sum / s.n.max(1) as f64) as f32,
                 (s.within_sum / s.n.max(1) as f64) as f32,
             );
-            let (aspect, honesty) = match erosion_epochs() {
-                Some(e) => (
-                    "eroded",
-                    format!("fluvial erosion ON ({e} epochs/face) over the fBm prior -- per-face patches, so face-edge seams are REAL (S to audit); erosion reads only at fine cell sizes"),
-                ),
-                None => (
-                    "spine",
-                    "fBm surface prior -- placeholder relief: conserves nothing, no tectonics/erosion yet".to_string(),
-                ),
-            };
             format!(
-                "world \"{}\" (seed {:016x}) | {aspect} L{} | cell ~{cell_km:.0} km | pull {} computed / {} hit, {:.2} s | land ~{:.0}%{}\n\
+                "world \"{}\" (seed {:016x}) | spine L{} | cell ~{cell_km:.0} km | pull {} computed / {} hit, {:.2} s | land ~{:.0}%{}\n\
                  alt {alt:.0} km | centre {:.1}{} {:.1}{} | relief x{:.0} (1 = honest) | level {}\n\
                  {pick_line}\n\
                  face-seam dh: cross {c_mean:.0} m mean, {:.0} m max | within-face {w_mean:.0} m mean, {:.0} m max{}\n\
-                 {honesty}\n\
+                 fBm surface prior -- placeholder relief: conserves nothing, no tectonics/erosion yet\n\
                  drag spin | wheel zoom | [ ] level | A auto | X relief | S seam audit | R reset | Esc quit",
                 ident.name,
                 ident.seed,
