@@ -411,7 +411,8 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
             let mut done = 0u32;
             while done < macro_extra {
                 let chunk = 5.min(macro_extra - done);
-                f19.erode(&FluvialParams { epochs: chunk, uplift_m: 0.05, ..Default::default() });
+                f19.set_uniform_uplift(0.05); // uplift moved out of FluvialParams into the kernel field
+                f19.erode(&FluvialParams { epochs: chunk, ..Default::default() });
                 done += chunk;
                 let region = f19.to_region();
                 tiers.retain(|r| r.level != 19);
@@ -687,13 +688,15 @@ fn spawn_telescope(
                     // Seed from the tiers COARSER than this one only.
                     let coarser: Vec<ErodedRegion> = tiers.iter().filter(|r| r.level < st.level).cloned().collect();
                     let mut f = Fluvial::from_surface(world_seed(), face, st.level, noi, noj, st.nx, |c| erosion::surface_at(world_seed(), c, &coarser));
-                    f.erode(&FluvialParams { epochs: st.init_epochs.max(1), uplift_m: st.uplift_m, ..Default::default() });
+                    f.set_uniform_uplift(st.uplift_m);
+                    f.erode(&FluvialParams { epochs: st.init_epochs.max(1), ..Default::default() });
                     st.sim = Some((f, noi, noj, st.init_epochs));
                     epochs_run = st.init_epochs;
                     epochs_this = st.init_epochs;
                 } else {
                     let (f, _, _, total) = st.sim.as_mut().unwrap();
-                    f.erode(&FluvialParams { epochs: st.inc_epochs, uplift_m: st.uplift_m, ..Default::default() });
+                    f.set_uniform_uplift(st.uplift_m);
+                    f.erode(&FluvialParams { epochs: st.inc_epochs, ..Default::default() });
                     *total += st.inc_epochs;
                     epochs_run = *total;
                     epochs_this = st.inc_epochs;

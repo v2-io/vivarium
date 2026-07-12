@@ -62,17 +62,20 @@ stream.
 
 ## The principled frame (standing and growing — the live architecture)
 
-All committed and tested — **71/71 green in `vivarium-world`** (verified
+All committed and tested — **74/74 green in `vivarium-world`** (verified
 2026-07-12):
 
 - **Store** (`store.rs`) — content-addressed objects/roots, atomic writes,
   domain-neutral (keys → bytes). The save-file IS the memo store, real.
 - **Pull-query** (`query.rs`) — lazy: nomoi check the store, compute on miss,
-  memoize. Three systems compose end-to-end purely through pulled/keyed
+  memoize. The systems compose end-to-end purely through pulled/keyed
   artifacts — **spine v2** (fbm3 prior sampled on the 3-D sphere; v1's measured
-  ~3 km face-edge cliffs dissolved) → **erosion** → **water** (bounded
-  deterministic fill; declared honest limits: tiles hydrologically isolated
-  pending flux-BC, per-tile rain stores pending the atmosphere reservoir).
+  ~3 km face-edge cliffs dissolved) + **uplift** (the tectonic driver, its own
+  nomos — `uplift.rs`, a crude constant×low-freq-fBm stub) → **erosion**
+  (consumes both the spine surface it carves and the uplift field it carves
+  against) → **water** (bounded deterministic fill; declared honest limits:
+  tiles hydrologically isolated pending flux-BC, precipitation UNMET pending the
+  atmosphere reservoir).
 - **Manifest** (`spec.rs`) — a vivium individuated by identity (seed, minted
   once) / label / demand buckets.
 - **World-seed threading** — seed-first KRNG convention (`noise.rs`); nomoi are

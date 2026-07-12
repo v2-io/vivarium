@@ -18,6 +18,7 @@
 | soil saturation | 1.0 below sea / 0.3 above | `gen.rs` | **arbitrary** | groundwater/Darcy tier |
 | stream-power `m` | 0.5 | `erosion.rs` defaults | **literature** (standard SPIM exponent) | per-material + threshold (Lague 2014 caveat already in survey) |
 | erosion `k_dt`, deposition G, talus slope, κ | 0.02, 1.0, 0.8, 2 m²/epoch | `erosion.rs` defaults | **tuned** (probe-checked behavior) | calibrate against real denudation rates when epoch↔years is pinned |
+| `uplift rate` (base × low-freq fBm) | 0.5 m/epoch, differential ~0.25×–1.75× | `uplift.rs` (`UPLIFT_RATE_M_PER_EPOCH`), the `uplift-tile` nomos | **arbitrary** | v0 crude stub — the "real uplift" the continental/mountain bands defer to. Real driver = mantle-thermal + plume-upwelling (thermal-spine work, TODO); calibrate once epoch↔years is pinned and against the uplift-vs-denudation balance |
 | epoch ↔ years | `EPOCH_YEARS=100` nominal | worldview HUD | **arbitrary** | component E (time-indexed stages) must pin it |
 | erosion run length | `epochs=40` (CLI/store_explore), 80 default | callers | **arbitrary** | convergence-ε gate (component E) replaces fixed counts |
 | axial tilt, radius, solar constant, year length | 23.44°, 6371 km, 1361 W/m², 365.25 d | `planet.rs` `Planet::EARTH` | **earth-ref** | fine as reference; needs *declaring* in the Phase-0 parameter block (TODO) rather than hardcoding |

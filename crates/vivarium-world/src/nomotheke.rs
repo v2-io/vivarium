@@ -173,23 +173,43 @@ pub static SPINE: NomosDecl = NomosDecl {
     assumptions: &["SEA_LEVEL_M", "continental band", "mountain band", "fBm shape"],
 };
 
+/// The tectonic driver — rock-uplift rate, its own article of law (Joseph,
+/// 2026-07-12: "uplift is a separate nomos that right now is 30 lines"). Erosion
+/// consumes its output; without it the world planes to a peneplain and grows no
+/// macro relief. v0 is a crude declared stub (`crate::uplift`).
+pub static UPLIFT: NomosDecl = NomosDecl {
+    name: "uplift-tile",
+    version: "uplift-2026-07-12a-fbm-stub",
+    system: "tectonic-uplift",
+    approach: Approach::Analytic, // a closed-form coordinate noise field, like the spine
+    earth_fidelity: Tier::None,   // no Earth tectonic history — a placeholder curve
+    physics: Tier::None,          // no mechanics; low-frequency fBm stand-in, uncalibrated rate
+    relation: "#mech stand-in: constant rate × low-frequency fBm (differential uplift); the real driver is the thermal-spine / plume-upwelling work (TODO)",
+    status: "v0 crude stub: deterministic differential uplift-rate field (band + determinism unit-tested in uplift.rs); rate is a declared placeholder, no calibration",
+    deps: &[],
+    consumes: &[], // conjured from (seed, coordinate); a real driver would consume mantle-thermal state
+    promises: &[Promise { quantity: flux::ROCK_UPLIFT_RATE, conservation: Conservation::NotTracked }],
+    assumptions: &["uplift rate"],
+};
+
 /// System #2 — fluvial erosion composed on the spine.
 pub static EROSION: NomosDecl = NomosDecl {
     name: "erosion-tile",
-    version: "erosion-2026-07-10a",
+    version: "erosion-2026-07-12b-uplift", // now consumes the uplift nomos's field
     system: "fluvial-erosion",
     approach: Approach::Procedural,
     earth_fidelity: Tier::Med, // stream-power/Davy–Lague are how real landscapes are modeled
     physics: Tier::Med,        // real process laws, uncalibrated rates, hardcoded edge policy
     relation: "mechanistic-causal (stream-power incision + deposition + talus + creep), on a stand-in substrate",
     status: "kernel probe-verified in the testbench (channel_profile, spike_probe, armor_regimes 1/3); tile form has fixed epochs (no convergence-ε — component E) and non-composable edges (plan Phase-3)",
-    deps: &[&SPINE],
-    // The surface it carves is the spine's (met → SPINE, in deps). The rain that
-    // drives incision is NOT met by any nomos: erosion assumes uniform rain in
-    // its drainage-area discharge, so it *consumes* precipitation the audit
-    // reports UNMET — the honest flag that "principled incision" is gloss until
-    // the atmosphere→water-cycle chain produces a real precip field.
-    consumes: &[flux::SURFACE_ELEVATION, flux::PRECIPITATION],
+    deps: &[&SPINE, &UPLIFT],
+    // Three needs, each met or honestly flagged: the surface it carves (met →
+    // SPINE), the rock-uplift rate it carves AGAINST (met → UPLIFT — the tectonic
+    // driver, its own nomos now), and the rain that drives incision (UNMET — no
+    // nomos produces precipitation; erosion assumes uniform rain in its
+    // drainage-area discharge, so "principled incision" stays gloss until the
+    // atmosphere→water-cycle chain lands).
+    consumes: &[flux::SURFACE_ELEVATION, flux::ROCK_UPLIFT_RATE, flux::PRECIPITATION],
     promises: &[Promise { quantity: flux::ERODED_SURFACE, conservation: Conservation::ExportsAtBoundary }],
     assumptions: &["stream-power `m`", "erosion `k_dt`", "erosion run length"],
 };
@@ -215,7 +235,7 @@ pub static WATER: NomosDecl = NomosDecl {
 };
 
 /// Every nomos there is. A store root whose name is not here is a bug.
-pub static NOMOTHEKE: &[&NomosDecl] = &[&SPINE, &EROSION, &WATER];
+pub static NOMOTHEKE: &[&NomosDecl] = &[&SPINE, &UPLIFT, &EROSION, &WATER];
 
 /// Look a nomos up by its key-stem name (the part before `@`).
 pub fn lookup(name: &str) -> Option<&'static NomosDecl> {
@@ -277,7 +297,7 @@ mod tests {
     #[test]
     fn declarations_mint_the_keys() {
         assert!(SPINE.key().as_str().starts_with("spine-tile@spine-2026-07-10b-sphere3d"));
-        assert!(EROSION.key().as_str().starts_with("erosion-tile@erosion-2026-07-10a"));
+        assert!(EROSION.key().as_str().starts_with("erosion-tile@erosion-2026-07-12b-uplift"));
     }
 
     #[test]

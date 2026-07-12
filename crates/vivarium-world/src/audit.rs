@@ -209,6 +209,18 @@ mod tests {
     }
 
     #[test]
+    fn uplift_is_met_by_its_own_nomos() {
+        // The consolidation's point: uplift is a SEPARATE nomos erosion consumes,
+        // not a hidden term. So rock-uplift-rate resolves to the uplift nomos, and
+        // erosion's requisites include it as Met.
+        assert_eq!(producer_of(flux::ROCK_UPLIFT_RATE).map(|n| n.name), Some("uplift-tile"));
+        let met_uplift = requisites(&EROSION).into_iter().any(|r| {
+            r.quantity == flux::ROCK_UPLIFT_RATE && matches!(r.supply, Supply::Met(p) if p.name == "uplift-tile")
+        });
+        assert!(met_uplift, "erosion consumes rock-uplift-rate, met by the uplift nomos");
+    }
+
+    #[test]
     fn precipitation_is_unmet_for_both_consumers() {
         let unmet = unmet_across_registry();
         let precip: Vec<_> = unmet.iter().filter(|(_, q)| *q == flux::PRECIPITATION).map(|(n, _)| n.name).collect();

@@ -38,6 +38,12 @@
 /// The surface-prior elevation field the spine produces (m). Consumed by erosion.
 pub const SURFACE_ELEVATION: &str = "surface elevation field (m)";
 
+/// The rock-uplift-rate field the uplift nomos produces (m/epoch) — the tectonic
+/// driver erosion carves against. Its own separate nomos (`crate::uplift`) so
+/// "what lifts the land?" is one legible, auditable, swappable article of law,
+/// not a hidden term inside erosion. Consumed by erosion.
+pub const ROCK_UPLIFT_RATE: &str = "rock uplift rate field (m/epoch)";
+
 /// The eroded bed the fluvial nomos produces (m). Consumed by water.
 pub const ERODED_SURFACE: &str = "eroded surface elevation field (m)";
 
@@ -55,6 +61,7 @@ pub const PRECIPITATION: &str = "precipitation (m/yr)";
 /// it, so a broken coupling edge cannot masquerade as an obvious one.
 pub const VOCABULARY: &[&str] = &[
     SURFACE_ELEVATION,
+    ROCK_UPLIFT_RATE,
     ERODED_SURFACE,
     STANDING_WATER_DEPTH,
     PRECIPITATION,

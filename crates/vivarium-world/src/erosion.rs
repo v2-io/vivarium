@@ -128,8 +128,6 @@ pub struct FluvialParams {
     pub k_dt: f32,
     /// Drainage-area exponent `m`.
     pub m: f32,
-    /// Uplift per epoch (m). Zero = decaying landscape (erode the prior as-is).
-    pub uplift_m: f32,
     /// Davy–Lague deposition efficiency `G` (0 = pure detachment).
     pub deposition: f32,
     /// Talus repose slope (rise/run). Slopes beyond this slump (half-excess/epoch).
@@ -152,7 +150,7 @@ impl Default for FluvialParams {
         // so per-epoch creep is large. Grid coefficient κ/cell²: L19 0.006 (gentle),
         // L21 0.09 (kills the observed 4.8 m sawteeth), L24 clamped 0.24 (dominant —
         // walk-scale interfluves are creep-smoothed, as in real landscapes).
-        Self { k_dt: 0.02, m: 0.5, uplift_m: 0.0, deposition: 1.0, max_slope: 0.8, diffusivity_m2: 2.0, epochs: 80 }
+        Self { k_dt: 0.02, m: 0.5, deposition: 1.0, max_slope: 0.8, diffusivity_m2: 2.0, epochs: 80 }
     }
 }
 
@@ -172,8 +170,11 @@ pub struct Fluvial {
     /// The world-seed — identity for every fated-noise draw this run makes
     /// (differential uplift today; anything stochastic later).
     pub seed: u64,
-    /// Cached per-cell uplift weights (built on first uplifting epoch).
-    uplift_w: Option<Vec<f32>>,
+    /// Per-cell rock-uplift rate (m/epoch), supplied by the uplift nomos
+    /// (`crate::uplift`) via [`Fluvial::set_uplift_rate`]. Zeros (the default) =
+    /// no tectonic driver. Erosion CONSUMES this each epoch; it does not compute
+    /// it — "what lifts the land" is its own article of law.
+    uplift_rate: Vec<f32>,
     /// Mean |Δh| (m) of the LAST epoch — Joseph's convergence instrument: when
     /// this levels out, further epochs are polishing a steady state.
     pub last_delta_m: f32,
@@ -201,19 +202,35 @@ impl Fluvial {
                 h[y * nx + x] = surf(cell) as f32;
             }
         }
-        Self { nx, cell_m, h, drainage: vec![0.0; nx * nx], face, level, origin: (oi, oj), seed, uplift_w: None, last_delta_m: f32::INFINITY }
+        Self { nx, cell_m, h, drainage: vec![0.0; nx * nx], face, level, origin: (oi, oj), seed, uplift_rate: vec![0.0; nx * nx], last_delta_m: f32::INFINITY }
     }
 
     /// Resume a simulation over an existing eroded field (e.g. the startup tier),
     /// so the live loop can keep running epochs without redoing the initial work.
     pub fn from_region(r: &ErodedRegion) -> Self {
         let cell_m = crate::sample::cell_size_m(r.level, crate::planet::Planet::EARTH.radius_m) as f32;
-        Self { nx: r.nx, cell_m, h: r.h.clone(), drainage: vec![0.0; r.nx * r.nx], face: r.face, level: r.level, origin: (r.oi, r.oj), seed: r.seed, uplift_w: None, last_delta_m: f32::INFINITY }
+        Self { nx: r.nx, cell_m, h: r.h.clone(), drainage: vec![0.0; r.nx * r.nx], face: r.face, level: r.level, origin: (r.oi, r.oj), seed: r.seed, uplift_rate: vec![0.0; r.nx * r.nx], last_delta_m: f32::INFINITY }
     }
 
     /// Snapshot into a sampleable region.
     pub fn to_region(&self) -> ErodedRegion {
         ErodedRegion { face: self.face, level: self.level, oi: self.origin.0, oj: self.origin.1, nx: self.nx, h: self.h.clone(), seed: self.seed }
+    }
+
+    /// Supply the per-cell rock-uplift rate (m/epoch) this run erodes against —
+    /// the field produced by the uplift nomos (`crate::uplift`). Length must be
+    /// `nx × nx`. This is how the WORLD path drives uplift: erosion consumes a
+    /// pulled, keyed uplift tile, never a hidden internal term.
+    pub fn set_uplift_rate(&mut self, field: Vec<f32>) {
+        debug_assert_eq!(field.len(), self.nx * self.nx, "uplift field must be nx × nx");
+        self.uplift_rate = field;
+    }
+
+    /// Convenience for INSTRUMENTS probing the kernel: a spatially-uniform uplift
+    /// rate (m/epoch). The world path uses [`Fluvial::set_uplift_rate`] with the
+    /// nomos's differential field instead — this is a crude probe knob, not law.
+    pub fn set_uniform_uplift(&mut self, rate_m_per_epoch: f32) {
+        self.uplift_rate = vec![rate_m_per_epoch; self.nx * self.nx];
     }
 
     #[inline]
@@ -506,36 +523,22 @@ impl Fluvial {
         for e in 0..p.epochs {
             let track_before = if e + 1 == p.epochs { Some(self.h.clone()) } else { None };
             let outlets = self.outlets();
-            // Uplift is TECTONIC: it applies to all interior ground, submarine
-            // included (a seamount may rise past the waterline — the seabed is
-            // not a special case, Joseph). Only the grid edge is pinned. The
-            // `outlets` set (incl. submerged cells) still bounds DRAINAGE —
-            // subaerial fluvial physics ends where standing water begins, which
-            // is a physical boundary, not an elevation convention.
-            if p.uplift_m > 0.0 {
-                // DIFFERENTIAL uplift (Joseph): weight the rate by low-frequency
-                // coordinate fBm (λ ≈ 5 km; its own domain), so blocks rise at
-                // different rates and features tilt as in real landscapes. Erosion
-                // vs. sustained uplift also gives base-level equilibrium: graded
-                // floodplains and flat coastal shelves (deposition near outlets).
-                if self.uplift_w.is_none() {
-                    let mut w = vec![0.0f32; self.nx * self.nx];
-                    for y in 0..self.nx {
-                        for x in 0..self.nx {
-                            let cell = CellId::from_face_ij(self.face, self.origin.0 + x as u32, self.origin.1 + y as u32, self.level);
-                            let c = cell.to_cube();
-                            let f = crate::noise::fbm(self.seed, 3, (c.u + 1.0) * 2000.0, (c.v + 1.0) * 2000.0, 3, 2.0, 0.5);
-                            w[y * self.nx + x] = (0.25 + 1.5 * f) as f32; // ~0.25×..1.75×
-                        }
-                    }
-                    self.uplift_w = Some(w);
-                }
-                let w = self.uplift_w.as_ref().unwrap();
-                let nx = self.nx;
-                for i in 0..nx * nx {
+            // Tectonic uplift, CONSUMED from the uplift nomos (`crate::uplift`)
+            // via set_uplift_rate — differential (per-cell) and pre-computed, so
+            // erosion carries no uplift model of its own. It applies to all
+            // interior ground, submarine included (a seamount may rise past the
+            // waterline — the seabed is not a special case, Joseph); only the grid
+            // edge is pinned. Sustained uplift vs. erosion is what gives base-level
+            // equilibrium — graded floodplains, flat coastal shelves — and macro
+            // relief at all (zero uplift → the landscape planes to a peneplain).
+            // Zeros (the default field) make this loop a no-op.
+            let nx = self.nx;
+            for i in 0..nx * nx {
+                let rate = self.uplift_rate[i];
+                if rate != 0.0 {
                     let (x, y) = (i % nx, i / nx);
                     if !Self::is_edge(nx, x, y) {
-                        self.h[i] += p.uplift_m * w[i];
+                        self.h[i] += rate;
                     }
                 }
             }

@@ -18,7 +18,7 @@
 
 use crate::erosion::{Fluvial, FluvialParams};
 use crate::gen;
-use crate::nomotheke::{EROSION, SPINE, WATER};
+use crate::nomotheke::{EROSION, SPINE, UPLIFT, WATER};
 use crate::sphere::{CellId, Face};
 use crate::store::{Key, Store};
 
@@ -103,9 +103,36 @@ impl<'s> World<'s> {
         (tile, Source::Computed)
     }
 
-    /// The complete key for an eroded tile — including the *upstream* dependency's
-    /// identity (the spine version, §12): if the spine changes, this key changes
-    /// and the eroded tile recomputes.
+    /// The complete key for an uplift tile (the tectonic-driver field). Pure
+    /// function of (seed, coordinates) — the uplift nomos consumes nothing.
+    fn uplift_key(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> Key {
+        UPLIFT
+            .key()
+            .field("seed", self.seed)
+            .field("face", face.index())
+            .field("level", level)
+            .field("oi", oi)
+            .field("oj", oj)
+            .field("nx", nx)
+    }
+
+    /// The uplift nomos — a `nx × nx` tile of rock-uplift rates (m/epoch), pulled
+    /// through the store like any other. Erosion consumes this; it is its own
+    /// article of law (`crate::uplift`), so "what lifts the land" is one legible,
+    /// swappable, memoized thing.
+    pub fn uplift_tile(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> (Vec<f32>, Source) {
+        let key = self.uplift_key(face, level, oi, oj, nx);
+        if let Some(bytes) = self.store.get(&key) {
+            return (decode_f32(&bytes), Source::Hit);
+        }
+        let tile = crate::uplift::uplift_rate_tile(self.seed, face, level, oi, oj, nx);
+        let _ = self.store.put(&key, &encode_f32(&tile));
+        (tile, Source::Computed)
+    }
+
+    /// The complete key for an eroded tile — including its *upstream dependencies'*
+    /// identities (§12): the spine surface it carves AND the uplift field it
+    /// carves against. If either changes, this key changes and the tile recomputes.
     fn erosion_key(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize, epochs: u32) -> Key {
         EROSION
             .key()
@@ -117,6 +144,7 @@ impl<'s> World<'s> {
             .field("nx", nx)
             .field("epochs", epochs)
             .field("spine", SPINE.version)
+            .field("uplift", UPLIFT.version)
     }
 
     /// System #2 — the fluvial-erosion tier, *composed on the spine through the
@@ -139,8 +167,10 @@ impl<'s> World<'s> {
         if let Some(bytes) = self.store.get(&key) {
             return (decode_f32(&bytes), Source::Hit);
         }
-        // Dependency: pull the spine surface (memoized — recurses into system #1).
+        // Dependencies, both pulled (memoized — recurse into their nomoi):
+        // the spine surface it carves, and the uplift field it carves against.
         let (spine, _) = self.spine_tile(face, level, oi, oj, nx);
+        let (uplift, _) = self.uplift_tile(face, level, oi, oj, nx);
         // Seed erosion from the pulled spine; any cell the kernel samples outside
         // the tile (edge/halo) falls back to the prior — identical values, since
         // the spine IS the prior at this rung.
@@ -155,6 +185,7 @@ impl<'s> World<'s> {
             gen::surface_prior_m(self.seed, cell, level)
         };
         let mut f = Fluvial::from_surface(self.seed, face, level, oi, oj, nx, surf);
+        f.set_uplift_rate(uplift); // erosion CONSUMES the uplift nomos's field
         f.erode(&FluvialParams { epochs, ..Default::default() });
         let eroded = f.h.clone();
         let _ = self.store.put(&key, &encode_f32(&eroded));
@@ -311,9 +342,12 @@ mod tests {
         assert_eq!(e1.len(), nx * nx);
         assert!(e1.iter().all(|x| x.is_finite()), "eroded field is finite");
 
-        // Erosion's pull memoized its spine dependency (the recursion):
+        // Erosion's pull memoized BOTH its dependencies (the recursion): the
+        // spine surface it carves and the uplift field it carves against.
         let (_sp, spine_src) = w.spine_tile(face, 19, 1000, 2000, nx);
         assert_eq!(spine_src, Source::Hit, "the spine dependency was memoized by erosion's pull");
+        let (_up, uplift_src) = w.uplift_tile(face, 19, 1000, 2000, nx);
+        assert_eq!(uplift_src, Source::Hit, "the uplift dependency was memoized by erosion's pull");
 
         // Re-pull erosion → hit, and deterministic:
         let (e2, src2) = w.erosion_tile(face, 19, 1000, 2000, nx, epochs);

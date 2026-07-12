@@ -24,6 +24,7 @@ pub mod column;
 pub mod noise;
 pub mod gen;
 pub mod chunk;
+pub mod uplift;
 pub mod erosion;
 pub mod water;
 pub mod sample;
