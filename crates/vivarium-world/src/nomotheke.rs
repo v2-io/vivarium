@@ -183,17 +183,17 @@ pub static HYDROSPHERE: NomosDecl = NomosDecl {
 /// coupling in the flux web. v0 is globally uniform (global-mean only).
 pub static CLIMATE: NomosDecl = NomosDecl {
     name: "climate",
-    version: "climate-2026-07-12a-uniform",
+    version: "climate-2026-07-12b-jitter",
     system: "precipitation",
-    approach: Approach::Analytic, // one identity: stock / residence-time
-    earth_fidelity: Tier::Low,    // global mean order-correct (~1 m/yr); geography absent
-    physics: Tier::Low,           // conserving throughput (precip = evap steady-state); no circulation/EBM
-    relation: "conservation flow: precip = atmosphere stock / residence time (UNIFORM); steady-state = evaporation, so the inventory is untouched. Global mean only — NOT spatially resolved (no ITCZ/orography/latitude yet)",
-    status: "v0 uniform crude — earth-ref residence time (ASSUMPTIONS); mean ~1 m/yr order-checked; the spatial EBM/circulation rung (consuming insolation) is next",
+    approach: Approach::Statistical, // an identity (stock/residence) + fated variance about it
+    earth_fidelity: Tier::Low,       // global mean order-correct (~1 m/yr); the PATTERN is noise, not Earth's
+    physics: Tier::Low,              // conserving throughput (precip = evap steady-state); no circulation/EBM
+    relation: "conservation flow: precip = atmosphere stock / residence time, with fated MEAN-PRESERVING low-frequency jitter about it. The MAGNITUDE of variance is meant (uniform rain is a physically impossible state); the PATTERN is fated noise, NOT meteorology — no ITCZ, orography, or latitude bands. Reading geography off this precipitation is FALSE",
+    status: "v0 — earth-ref residence time + declared jitter amplitude (ASSUMPTIONS); mean ~1 m/yr order-checked; jitter unit-tested as fated, mean-preserving (conservation intact) and spatially correlated (not white noise). NEXT RUNG: the real first-order structure is LATITUDINAL (ITCZ/Hadley from rotation + the insolation we already have)",
     deps: &[&HYDROSPHERE],
     consumes: &[flux::ATMOSPHERE_WATER],
     promises: &[Promise { quantity: flux::PRECIPITATION, conservation: Conservation::Conserved }],
-    assumptions: &["atmosphere residence time"],
+    assumptions: &["atmosphere residence time", "precip jitter"],
 };
 
 /// System #1 — the fBm coarse spine (surface prior on the sphere).

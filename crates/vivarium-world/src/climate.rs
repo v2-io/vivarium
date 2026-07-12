@@ -36,6 +36,40 @@ pub fn mean_precip_m_per_yr(atmosphere_m_we: f64) -> f64 {
     atmosphere_m_we / ATMOSPHERE_RESIDENCE_YR
 }
 
+/// Amplitude of the fated spatial jitter on precipitation (±fraction of the mean).
+/// `ASSUMPTIONS.md` "precip jitter". A *declared placeholder for variance*, not a
+/// weather model.
+pub const PRECIP_JITTER: f64 = 0.5;
+
+/// Fated, **mean-preserving** spatial jitter on precipitation (a multiplicative
+/// factor about 1.0). Joseph's principle, 2026-07-12: *where you cannot yet model
+/// a real stochastic process, unmodelled jitter is still closer to truth than
+/// none* — because perfectly uniform rain is a physically impossible state (zero
+/// spatial variance), while real precipitation varies by orders of magnitude.
+///
+/// Three things make this honest rather than decorative:
+/// - **Deterministic** (KRNG/fBm of `(seed, cell)`) — fated noise, replayable, and
+///   memoizable like everything else. No wall-clock, no stream.
+/// - **Low-frequency**, not white noise. Rain is spatially correlated at synoptic /
+///   continental scales (hundreds of km); per-cell white noise would be *less* true
+///   than uniform. Features here are ~1000+ km.
+/// - **Mean-preserving** (the fBm is zero-mean about 1.0), so the global integral
+///   still equals the reservoir's throughput — the conservation we just established
+///   is not broken by adding variance. (Preserved in *expectation*; exact global
+///   closure is a probe worth writing.)
+///
+/// **What it does NOT claim:** the *pattern* is noise, not meteorology. It buys
+/// "there are wet places and dry places" — it does not buy "*where*". The real
+/// first-order structure on an early Earth is LATITUDINAL (ITCZ / Hadley bands
+/// from rotation + insolation), which is a *modellable* pattern we have insolation
+/// for and have not built yet. Any claim reading geography off this jitter is false.
+pub fn precip_jitter_factor(seed: u64, cell: crate::sphere::CellId) -> f64 {
+    let c = cell.to_cube();
+    // Low-frequency fBm over the face (features ~1000+ km), own noise domain.
+    let f = crate::noise::fbm(seed, 11, (c.u + 1.0) * 4.0, (c.v + 1.0) * 4.0, 4, 2.0, 0.5);
+    (1.0 + PRECIP_JITTER * (2.0 * f - 1.0)).max(0.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -57,5 +91,37 @@ mod tests {
         // Causality made checkable: more atmospheric water ⇒ more rain, linearly.
         assert!(mean_precip_m_per_yr(0.05) > mean_precip_m_per_yr(0.025));
         assert_eq!(mean_precip_m_per_yr(0.0), 0.0, "no vapour, no rain");
+    }
+
+    #[test]
+    fn jitter_is_fated_mean_preserving_and_correlated() {
+        use crate::sphere::{CellId, Face};
+        let f = Face::from_index(2);
+        let at = |i: u32, j: u32| precip_jitter_factor(0, CellId::from_face_ij(f, i, j, 12));
+
+        // 1. FATED: same (seed, cell) ⇒ same factor. No stream, no wall-clock.
+        assert_eq!(at(1000, 1000), at(1000, 1000));
+
+        // 2. MEAN-PRESERVING: the factor averages ≈ 1.0 over a broad sample, so the
+        //    global precip integral still equals the reservoir throughput — adding
+        //    variance must not break the conservation the hydrosphere established.
+        let n = 64u32;
+        let mut sum = 0.0;
+        for j in 0..n {
+            for i in 0..n {
+                sum += at(i * 61, j * 61); // stride to span the face
+            }
+        }
+        let mean = sum / (n * n) as f64;
+        assert!((0.93..1.07).contains(&mean), "jitter mean {mean} must sit at ~1.0 (conservation)");
+
+        // 3. NON-NEGATIVE and bounded by the declared amplitude.
+        assert!(at(7, 9) >= 0.0 && at(7, 9) <= 1.0 + PRECIP_JITTER + 1e-9);
+
+        // 4. SPATIALLY CORRELATED, not white noise: adjacent cells differ far less
+        //    than distant ones. Rain doesn't decorrelate cell-to-cell at ~km scales.
+        let adjacent = (at(1000, 1000) - at(1001, 1000)).abs();
+        let distant = (at(1000, 1000) - at(1000 + 3000, 1000)).abs();
+        assert!(adjacent < distant.max(1e-6), "jitter must be low-frequency (correlated), not white noise");
     }
 }

@@ -174,8 +174,18 @@ impl<'s> World<'s> {
             return (decode_f32(&bytes), Source::Hit);
         }
         let (h, _) = self.hydrosphere();
-        let precip = crate::climate::mean_precip_m_per_yr(h.atmosphere_m_we(&crate::planet::Planet::EARTH)) as f32;
-        let tile = vec![precip; nx * nx]; // uniform v0
+        let mean = crate::climate::mean_precip_m_per_yr(h.atmosphere_m_we(&crate::planet::Planet::EARTH));
+        // Fated, mean-preserving, low-frequency jitter about the mean: uniform rain
+        // is a physically impossible state (zero variance), so unmodelled variance
+        // is closer to truth than none (Joseph). The PATTERN is noise, not
+        // meteorology — the real first-order structure is latitudinal, unbuilt.
+        let mut tile = Vec::with_capacity(nx * nx);
+        for j in 0..nx as u32 {
+            for i in 0..nx as u32 {
+                let cell = CellId::from_face_ij(face, oi + i, oj + j, level);
+                tile.push((mean * crate::climate::precip_jitter_factor(self.seed, cell)) as f32);
+            }
+        }
         let _ = self.store.put(&key, &encode_f32(&tile));
         (tile, Source::Computed)
     }
@@ -306,7 +316,14 @@ impl<'s> World<'s> {
         // (`ASSUMPTIONS.md` "bounded-fill acceleration".)
         const SEC_PER_YEAR: f64 = 365.25 * 86_400.0;
         const FILL_ACCEL: f64 = 9_000.0;
-        let precip_m_yr = precip.first().copied().unwrap_or(0.0) as f64; // uniform v0
+        // Precipitation is now spatially jittered, so take the tile MEAN — the water
+        // kernel rains one uniform rate per tile. (Per-cell rain in the settle is a
+        // further rung; erosion already consumes the full spatial field as a weight.)
+        let precip_m_yr = if precip.is_empty() {
+            0.0
+        } else {
+            precip.iter().map(|&p| p as f64).sum::<f64>() / precip.len() as f64
+        };
         let precip_rate = (precip_m_yr / SEC_PER_YEAR * FILL_ACCEL) as f32;
         let mut sim = crate::water::WaterSim::new(face, level, (oi, oj), nx, cell_m, bed, 2.0);
         let p = crate::water::WaterParams {
