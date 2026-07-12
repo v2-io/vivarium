@@ -152,15 +152,51 @@ The declarative surface is exactly the union of these. Spike 1 said "world-build
 
 ---
 
-## The honest residue — what genuinely resists even a good static auditor
+## Declared hypotheses + fitness — adjudicating emergence (Joseph, 2026-07-12)
 
-Not everything. After all the above, three things remain that need *running* (or are simply opaque), and I want them named sharply so we don't pretend otherwise:
+Emergence genuinely needs *running* — but that does not make it opaque. The **expectation** and the **numerical fitness test** are both declarable, so an emergent result is adjudicated against a stated prior rather than eyeballed. This is the scientific method as data, and it is exactly what "vivarium as a high-identifiability calibration lab" cashes out to: the fitness check is *how a run meets a theory's prediction*.
 
-1. **Emergence at scale.** "Does the food web stabilize?" / "Do gliders appear in the CA?" / "Does drainage self-organize into the right channel statistics?" — an auditor reading kernel source *cannot* determine the emergent macro-behaviour of a nonlinear system from the local rules. This is the deepest one, and it's the *point* of a simulation: you run it to discover what the rules do. Declaration + audit tells you the pieces are sound; only running tells you what they *become*.
-2. **Chaos-sensitive magnitudes.** An agent can say "this converges" (structure) but not "it converges to 3.47 km of relief" (a sensitive quantitative outcome). Exact values in sensitive regions need the run.
-3. **The opaque content — LLM agents, user edits.** The slow-layer's actual decision is not readable from anything. Structure declarable, wrapping auditable, decision opaque — recorded after, never predicted.
+```udon
+|hypothesis[drainage-self-organizes]
+  :about erosion-tile                 ; the system whose emergence we predict
+  :emergent "channel networks self-organize to Hack's law + fractal drainage density"
+  :grounds "Rigon 1996; Rodriguez-Iturbe & Rinaldo — observed on real DEMs"
+  ; the OUTCOME needs the run (residue below); the EXPECTATION + CHECK are declared:
+  |fitness[hacks-law]
+    :measure "fit L = a * A^h over the drainage graph; report h, R^2"
+    :expect "h in [0.55, 0.60]"       ; the declared prior, with a source
+    :pass "h in [0.55,0.60] and R^2 > 0.95"
+    :check probe :probe drainage_stats :verdict unrun
+    :on-fail "channels form but not Earth-like scaling -> erosion's B-fidelity-for-drainage is REFUTED (a real, declared falsification, not a vibe)"
+  |fitness[relief-distribution]        ; chaos-sensitive -> a DISTRIBUTIONAL expectation, not a point
+    :measure "hypsometric curve of the region"
+    :expect "within the early-Earth survey band (§6): land 2-15%, compressed bimodal"
+    :pass "KS-distance to the band's envelope < 0.1"
+    :check probe :probe hypsometry :verdict unrun
+```
 
-Everything else — the couplings, the conservation, the tiers, the requisite chains, the seam soundness, the study validity — I now believe is **statically settleable**, agent-in-the-loop, before the simulation runs. That's a much larger fraction than spike 1 conceded, and Joseph's correction is why.
+```
+--> The verification taxonomy is now COMPLETE — three modes, and every claim declares which:
+    1. static / agentic   — structure, tiers, coupling soundness, study validity   (PRE-run)
+    2. invariant probe     — what nature guarantees exactly: conservation, ULP, no-panic  (run, deterministic)
+    3. fitness vs hypothesis — emergent statistics vs a DECLARED, SOURCED prior          (run, adjudicated)
+    fn adjudicate(hypothesis, run) -> {measure_value, pass|fail, vs_expected}
+    // even pre-run, an agent audits the hypothesis's WELL-POSEDNESS: is the
+    //   measure valid? is `:expect` grounded in `:grounds`, or a guess dressed
+    //   as a prior? (an ungrounded :expect is itself an audit finding.)
+```
+
+The move that matters: an emergent outcome now falls into a **declared falsification frame** before it runs. You cannot predict *whether* Hack's exponent lands in range from the kernel — but you *can* declare that it must, cite why, state the measure, and let the run convict or acquit. Emergence stops being "the opaque residue" and becomes "the part we run *in order to* test a stated hypothesis" — which is the whole reason the lab exists.
+
+## The honest residue — what genuinely resists (now smaller)
+
+With fitness added, the residue shrinks. What is left is not "emergence" — it is narrower:
+
+1. **The bare emergent *event*, absent a prior.** If you have *no* declared expectation — pure open exploration ("let's see what this does") — there is nothing to adjudicate against; you're discovering, not testing. That's legitimate and irreducibly run-first. The moment you *have* a prior, fitness (above) catches it. So the true residue is **exploration without a hypothesis**, not emergence as such.
+2. **Point-exact chaos-sensitive magnitudes.** A *distributional* expectation is checkable by fitness (relief-distribution above); a demand for the exact value at an exact cell in a sensitive region is not — but we rarely need that, and when we think we do it's usually a distributional claim in disguise.
+3. **The opaque content — LLM agents, user edits.** The slow-layer's actual decision is readable from nothing. Structure declarable, wrapping auditable, *decision* opaque — recorded after, never predicted. This is the one hard floor.
+
+Everything else — the couplings, conservation, tiers, requisite chains, seam soundness, study validity, *and now emergent behaviour against a declared prior* — is settleable within the declarative frame: statically where an agent can read it, by invariant probe where nature guarantees it exactly, by declared fitness where only the run can adjudicate a stated hypothesis. That is a far larger fraction than spike 1 conceded — and the residue is honestly just three things, only one of which (opaque agent content) is a true floor rather than a choice.
 
 ---
 
