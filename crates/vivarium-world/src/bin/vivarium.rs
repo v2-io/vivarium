@@ -57,8 +57,8 @@ fn main() {
             eprintln!("  build [dir] [--level L] [--epochs E]  builder v0: whole-world sweep at L (default 7)");
             eprintln!("                                       then erosion at E epochs (default 40; 0 = skip)");
             eprintln!("  status [dir]                        fidelity pyramid + flux/requisite audit");
-            eprintln!("  info [dir] [--width W] [--axis x,y,z] [--no-color]");
-            eprintln!("                                       from-space globe, coloured by build-state");
+            eprintln!("  info [dir] [--width W] [--lon0 DEG] [--color|--no-color]");
+            eprintln!("                                       whole-sphere Hammer-oval globe, coloured by build-state");
             eprintln!("  attach [dir]                        follow a running build's log");
             2
         }
@@ -399,20 +399,20 @@ fn cmd_info(rest: &[String]) -> i32 {
         println!("(nothing built yet — `vivarium build {}` first)", dir.display());
         return 0;
     }
-    let width = flag(rest, "--width").unwrap_or(72).clamp(16, 240) as usize;
-    let axis = rest
+    let width = flag(rest, "--width").unwrap_or(100).clamp(16, 240) as usize;
+    let lon0 = rest
         .iter()
-        .position(|a| a == "--axis")
+        .position(|a| a == "--lon0")
         .and_then(|i| rest.get(i + 1))
-        .and_then(|s| {
-            let p: Vec<f64> = s.split(',').filter_map(|t| t.trim().parse().ok()).collect();
-            (p.len() == 3).then(|| [p[0], p[1], p[2]])
-        })
-        .unwrap_or([1.0, 0.6, 1.0]); // off the (1,1,1) corner: shows land + a seam
-    let color = !rest.iter().any(|a| a == "--no-color") && vivarium_world::globe::color_auto();
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(0.0); // central meridian in degrees
+    // Colour: forced on with --color (for piping into `less -R` / a file), off
+    // with --no-color, else auto (TTY and NO_COLOR unset).
+    let color = !rest.iter().any(|a| a == "--no-color")
+        && (rest.iter().any(|a| a == "--color") || vivarium_world::globe::color_auto());
 
     let world = World::new(&store, seed);
-    print!("\n{}", vivarium_world::globe::render(&world, &roots, width, axis, color));
+    print!("\n{}", vivarium_world::globe::render(&world, &roots, width, lon0, color));
     0
 }
 

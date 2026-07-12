@@ -20,6 +20,7 @@ pub mod time;
 pub mod sphere;
 pub mod planet;
 pub mod hydrosphere;
+pub mod climate;
 pub mod material;
 pub mod column;
 pub mod noise;

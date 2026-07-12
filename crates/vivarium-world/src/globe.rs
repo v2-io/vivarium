@@ -3,23 +3,28 @@
 //! (Joseph's nullable wish, DECISIONS `ascii-globe-in-info-colored-by-state`,
 //! 2026-07-12). A non-animated, non-controllable snapshot.
 //!
-//! ## Projection — orthographic, cube-sphere-native (documented choice)
+//! ## Projection — Hammer equal-area oval (the whole sphere in one view)
 //!
-//! Joseph votes HEALPix "unless a projection that fits our cube-sphere topology
-//! makes more sense." It does, for *this* job. The render's whole purpose is to
-//! answer **"which cells are materialised, and to what depth?"** — so every
-//! screen pixel must map to exactly ONE `CellId` with no interpolation. The
-//! orthographic from-space projection (the `globe_ascii` example already solves
-//! it) does precisely that: a ray → unit direction → `CubeCoord::from_unit` →
-//! `CellId`, native, no resampling layer. Reprojecting our native cube-sphere
-//! data onto a HEALPix grid would insert a resample that *fuzzes the very
-//! question* — a pixel could straddle two source cells at different build
-//! depths. An equal-area cube map would show the whole planet at once (better
-//! for a coverage census) but reads far less as "a planet at a glance," which is
-//! the ask. Tradeoff accepted: one hemisphere at a time (the far side is
-//! hidden), and mild shape distortion toward the cube corners (the known
-//! cube-sphere deficiency, `sphere.rs`). For a primitive that must stay honest
-//! about what is built, native-orthographic is the simplest faithful choice.
+//! `vivarium info` is a global overview: you want the WHOLE planet's build-state
+//! at once — the iconic CMB-style elongated oval — not a one-hemisphere disc.
+//! So this is the **Hammer** projection: **equal-area** (every region's on-screen
+//! size is honest — the property that lets you read a global state distribution
+//! without a projection lying about how much of the world reached each depth) and
+//! **whole-sphere** (both hemispheres, poles included, in a single 2:1 oval).
+//!
+//! Chosen over Mollweide — visually the same CMB oval, both equal-area — because
+//! Hammer has a **closed-form inverse** (Mollweide needs a per-pixel Newton
+//! solve). We walk the oval's output pixels, invert each to (lon, lat), convert
+//! to a unit direction, and read the `CellId` there via `CubeCoord::from_geo`.
+//!
+//! Tradeoff, accepted and named: this is a **light resample** — an oval pixel is
+//! sampled to the nearest cell, so it is NOT the per-cell-exact mapping an
+//! orthographic disc gives. That is the right call HERE: the question is the
+//! global state *distribution* at a glance, not per-cell precision, and
+//! whole-sphere-at-once is the priority (the native-orthographic instrument still
+//! lives in the `globe_ascii` example for per-cell seam work). Minor: a few
+//! pixels can land on a cube-face edge — the `from_unit` edge-tie (`sphere.rs`) —
+//! a cosmetic seam speckle at overview resolution, never a correctness issue.
 //!
 //! ## What the colour means (and what it does NOT)
 //!
@@ -35,7 +40,7 @@ use std::collections::HashMap;
 use crate::gen::{self, SEA_LEVEL_M};
 use crate::planet::Planet;
 use crate::query::World;
-use crate::sphere::CubeCoord;
+use crate::sphere::{CubeCoord, Geo};
 
 /// How far a tile has been carried in the build — the colour channel.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -163,12 +168,13 @@ fn pick(pal: &[u8], t: f64) -> u8 {
     pal[i.min(pal.len() - 1)]
 }
 
-/// Render the globe + legend as a printable block. `axis` is the view direction
-/// (the hemisphere centre); `w` is the character width (`h = w/2`, terminal
-/// cells being ~2:1).
-pub fn render(world: &World, roots: &[(String, String)], w: usize, axis: [f64; 3], color: bool) -> String {
+/// Render the whole-sphere Hammer oval + legend as a printable block. `lon0_deg`
+/// is the central meridian (degrees, default 0 — rotate to centre a region); `w`
+/// is the character width. The oval is 2:1, and terminal cells are ~2:1, so
+/// `h = w/4` makes it read as a true CMB-style oval.
+pub fn render(world: &World, roots: &[(String, String)], w: usize, lon0_deg: f64, color: bool) -> String {
     let cov = Coverage::parse(roots);
-    let h = w / 2;
+    let h = (w / 4).max(1);
     let level = cov.level;
     let nx = cov.nx;
     let sea = SEA_LEVEL_M;
@@ -177,11 +183,11 @@ pub fn render(world: &World, roots: &[(String, String)], w: usize, axis: [f64; 3
     // Ocean depth scale (m below sea level → deepest blue).
     let depth_scale = 4000.0;
 
-    // Orthonormal view frame (as in the globe_ascii instrument).
-    let n = normalize(axis);
-    let up = if n[0].abs() < 0.9 { [1.0, 0.0, 0.0] } else { [0.0, 1.0, 0.0] };
-    let rx = normalize(cross(up, n));
-    let ry = cross(n, rx);
+    // Hammer projection extents (R = 1): the oval spans x∈[−2√2,2√2], y∈[−√2,√2],
+    // i.e. x²/8 + y²/2 ≤ 1. We invert each output pixel back to (lon, lat).
+    let lon0 = lon0_deg.to_radians();
+    let xmax = 2.0 * std::f64::consts::SQRT_2;
+    let ymax = std::f64::consts::SQRT_2;
 
     // Per-tile field caches (pulled through the sanctioned query path, memoised
     // in the store — "depend by key", never re-derived from raw internals).
@@ -198,10 +204,10 @@ pub fn render(world: &World, roots: &[(String, String)], w: usize, axis: [f64; 3
         let mut cur: i32 = -1;
         let mut row = String::with_capacity(w * 2);
         for i in 0..w {
-            let x = (i as f64 + 0.5) / w as f64 * 2.0 - 1.0;
-            let y = (j as f64 + 0.5) / h as f64 * 2.0 - 1.0;
-            let r2 = x * x + y * y;
-            if r2 >= 1.0 {
+            // Pixel → Hammer plane (y up); outside the oval is empty space.
+            let px = ((i as f64 + 0.5) / w as f64 * 2.0 - 1.0) * xmax;
+            let py = (1.0 - (j as f64 + 0.5) / h as f64 * 2.0) * ymax;
+            if px * px / 8.0 + py * py / 2.0 > 1.0 {
                 if color && cur != -1 {
                     row.push_str("\x1b[0m");
                     cur = -1;
@@ -209,13 +215,12 @@ pub fn render(world: &World, roots: &[(String, String)], w: usize, axis: [f64; 3
                 row.push(' ');
                 continue;
             }
-            let z = (1.0 - r2).sqrt();
-            let d = [
-                rx[0] * x + ry[0] * y + n[0] * z,
-                rx[1] * x + ry[1] * y + n[1] * z,
-                rx[2] * x + ry[2] * y + n[2] * z,
-            ];
-            let cc = CubeCoord::from_unit(d);
+            // Closed-form Hammer inverse → (lon, lat), then a unit direction.
+            let z2 = 1.0 - (px / 4.0).powi(2) - (py / 2.0).powi(2);
+            let z = z2.sqrt();
+            let lat = (z * py).clamp(-1.0, 1.0).asin();
+            let lon = 2.0 * (z * px).atan2(2.0 * (2.0 * z2 - 1.0)) + lon0;
+            let cc = CubeCoord::from_geo(Geo { lat, lon });
             let cell = cc.cell(level);
             let (face, ci, cj, _) = cell.to_face_ij();
             let f = face.index();
@@ -301,8 +306,8 @@ pub fn render(world: &World, roots: &[(String, String)], w: usize, axis: [f64; 3
     let (n_spine_only, n_eroded, n_watered) = (tally[State::Spine as usize], tally[State::Eroded as usize], tally[State::Watered as usize]);
     let cell_km = crate::sample::cell_size_m(level, Planet::EARTH.radius_m) / 1000.0;
     out.push_str(&format!(
-        "\nprojection  orthographic, cube-sphere-native (one hemisphere; look-axis {:.2},{:.2},{:.2})\n",
-        n[0], n[1], n[2]
+        "\nprojection  Hammer equal-area oval (WHOLE sphere, area-honest; central meridian {:.0}°)\n",
+        lon0_deg
     ));
     out.push_str(&format!(
         "display     L{level} · {nx}×{nx}-cell tiles · ~{cell_km:.0} km/cell · {built} tiles built (of the visible + hidden planet)\n"
@@ -319,15 +324,6 @@ pub fn render(world: &World, roots: &[(String, String)], w: usize, axis: [f64; 3
     }
     out.push_str("            colour = deepest nomos MATERIALISED per region (a build-state fact from the store), NOT a geological-phase claim.\n");
     out
-}
-
-fn normalize(v: [f64; 3]) -> [f64; 3] {
-    let m = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
-    [v[0] / m, v[1] / m, v[2] / m]
-}
-
-fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
 }
 
 #[cfg(test)]
