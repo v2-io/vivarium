@@ -27,7 +27,7 @@ failure mode this project has been burned by, and it is one careless `curl` away
 
 ---
 
-## 0. The six findings, before the detail
+## 0. The eight findings, before the detail
 
 1. **The principle is real, mature, and named.** Its umbrella terms are **"compatible discretisation"**,
    **"mimetic"**, and **"structure-preserving"**; the ODE/time half is **"geometric numerical
@@ -176,12 +176,12 @@ it composes with AMR, and what it costs.**
 | **local conservation** | finite volume / flux form | **exact** (to round-off) | ✅ free | ✅ **Berger–Colella refluxing** | ~free |
 | **topological identity** (`∇×∇φ≡0`, `∇·∇×A≡0`) | DEC / FEEC / MFD | **exact, combinatorially** | ✅ **free, any mesh** | ✅ **free (it's a polygon)** | **zero** |
 | **the Hodge star / accuracy** of the above | DEC diagonal star; FEEC mass matrix | ⚠ **approximate**, and this is where the sphere bites | ⚠ wants well-centred / orthogonal dual | ⚠ | the real cost |
-| **vorticity / circulation** | C-grid + TRiSK Coriolis | stationary geostrophic modes; **energy exact**, **PV exact**, **enstrophy NOT** | ✅ but **needs orthogonality** | ✅ **WAVETRISK** | modest |
-| **energy + potential enstrophy jointly** | Arakawa & Lamb 1981 | both — see §4.2 caveats | ✅ (lat-lon origin) | ⊘ | modest |
-| **symplectic** (Hamiltonian) | symplectic integrators | **exponentially long** energy bound — **but only at FIXED step** | n/a | ⚠ **conflicts with adaptivity** | ~free at fixed h |
-| **the second law** | entropy-stable (Tadmor lineage) | a **discrete entropy inequality** — necessary, *not* sufficient for uniqueness | ✅ (on curved meshes: **needs the GCL**) | ⊘ | 2nd flux eval + dissipation |
-| **realizability** (`h ≥ 0`) | Zhang–Shu scaling limiter | **exact**, and **provably accuracy-preserving** | ✅ | ✅ | **a reduced CFL** |
-| **equilibria** (lake at rest) | well-balanced / hydrostatic reconstruction | exact for **lake-at-rest**; **moving equilibria are much harder** | ✅ (**needs GCL** on curved) | ✅ (done in practice) | small |
+| **vorticity / circulation** | C-grid + TRiSK Coriolis | stationary geostrophic modes; **energy exact**, **PV exact**, **enstrophy NOT** (§4.7) | ✅ but **needs orthogonality** | ✅ **WAVETRISK** | modest |
+| **energy + potential enstrophy JOINTLY** | **Arakawa & Lamb 1981** | **both, exactly, general divergent flow, variable *f*** — ⚠ but **SEMI-DISCRETE ONLY**: your time integrator breaks it (§4.7) | ✅ | ⊘ | wide PV stencil |
+| **symplectic** (Hamiltonian) | symplectic integrators | **exponentially long** energy bound — ⚠ **only at FIXED step**, only for **analytic** H, and it bounds **ENERGY, not the TRAJECTORY** | n/a | ❌ **conflicts with adaptivity** | ~free at fixed h |
+| **the second law** | entropy-stable (Tadmor lineage) | a **discrete entropy inequality** — ⚠ **a one-sided bound, NOT a selection principle**; **no convergence theory exists for systems** (§8.2) | ✅ **needs GCL** — *or* covariant form (§4.9) | ❌ **naive mortar CRASHES** (§3.4) | **~2.5× CPU, ~1× GPU** |
+| **realizability** (`h ≥ 0`) | Zhang–Shu scaling limiter | **exact**, **provably accuracy-preserving**, and **inert in wet regions** | ✅ | ✅ **proved on a quadtree** | **CFL 1/6 vs the 1/5 you already pay** |
+| **equilibria** (lake at rest) | well-balanced / hydrostatic reconstruction | exact for **lake-at-rest**; ⚠ **moving equilibria destroy positivity** ⇒ declare sacrificed | ✅ (**needs GCL** on curved) | ✅ **proved on a quadtree** (§8.3b) | small — ⚠ **but breaks when `Δz ≥ h`** (§8.3a) |
 | **rotational symmetry** | isotropic stencils; edge flux, not fans | — | — | — | — |
 | **timescale hierarchy** | multirate / AMR subcycling | — (already ours: `multiscale-seams.md`) | — | ✅ | — |
 | **⚠ MULTIRESOLUTION CONSISTENCY** | **the commutation relations (§3.3)** | **this row was MISSING from our table** | ✅ | ✅ | — |
@@ -1347,9 +1347,11 @@ precession/obliquity equations** (the route that actually produced every insolat
 | A3 | **Face-staggered flux store + area-weighted restriction + a Berger–Colella-shaped seam correction.** Our proposal, already built, 25 years old. | §3.1 |
 | A4 | **The hanging node is a polygon.** Coarse cells at a refinement boundary have 5–6 edges. Adopt the **2:1 balance** rule. | §3.2 |
 | A5 | **Area-weighted (unbalanced) Haar on the quadtree, then lifting.** Correctness first, compression second. | §6 |
-| A6 | **The Zhang–Shu positivity limiter.** Accuracy-free; costs a CFL. | §8.1 |
-| A7 | **Hydrostatic reconstruction** for well-balancedness. Reconstruct `h+z`, not `h`. | §8.3 |
-| A8 | **Fixed-step symplectic for the ante-mundane orbital nomos**, explicitly exempt from the CellId-Δt rule, **declared**. | §8.4 |
+| A6 | **The Zhang–Shu positivity limiter.** Accuracy-free, inert when wet; costs CFL 1/6 vs the 1/5 you already pay. **Use the flag-on-`(h+z,hu)` / act-on-`(h,hu)` split**, or the WB-TVB limiter will fight it and the timestep will collapse to zero. | §8.1 |
+| A7 | **Hydrostatic reconstruction** for well-balancedness — reconstruct `h+z`, and **do not omit the pressure-correction term**. **Declare moving-water equilibria SACRIFICED** (they destroy positivity). | §8.3 |
+| A8 | **Make the BATHYMETRY conforming across the seam even though the mesh is not.** This is what buys well-balancedness on a quadtree, and it is the general recipe for crossing a seam with a linear structure. | §8.3b |
+| A9 | **Fixed-step splitting for the ante-mundane orbital nomos**, **explicitly exempt** from the CellId-Δt rule, **declared**. Reach for **splitting**, not "symplectic" — once tides are on, symplecticity is formally gone but splitting still pays. **Diagnose with angular momentum, not energy.** | §8.4 |
+| A10 | **⚖ The ante-mundane phase delivers a FORCING SAMPLE, not a HISTORY.** Nobody defends a Gyr trajectory; everybody defends the forcing spectrum. **And this is what `determinism-is-ontology` already says.** | §8.4 |
 
 ### Probe before anything (each is cheap and each could convict us)
 
@@ -1360,14 +1362,17 @@ precession/obliquity equations** (the route that actually produced every insolat
 | P3 | **The discrete GCL probe** — do our cube-sphere metric terms satisfy the metric identities exactly? | §4.4. If not, well-balancedness and entropy stability are **unavailable as theorems**, not merely inaccurate. |
 | P4 | **The well-balanced probe.** | §8.3. Cheapest convicting probe we own. |
 | P5 | **The two-point-flux-at-a-hanging-node probe.** | §3.2 says it is **non-convergent** even on an orthogonal mesh. Our seam may have a second, independent disease. |
+| P6 | **The primal/dual crossing-offset probe under refinement.** | §4.6 — on naively-bisected grids the Laplacian *"does not even achieve first-order convergence."* **We already measure this quantity (we call it non-orthogonality). We have never measured how it behaves as the quadtree refines.** |
+| P7 | **The `Δz ≥ h` probe on `water.rs`.** | §8.3a — hydrostatic reconstruction has a *proved* failure mode in exactly our regime (thin films on steep ground), and it is a **level-dependent bias**, so it will show up as a coarse↔fine disagreement at the seam. |
 
 ### Derive / build (genuinely ours)
 
 | # | build | why it isn't adoptable |
 |---|---|---|
-| B1 | **A structure-preserving staggered scheme on a CUBE-SPHERE QUADTREE.** | §5.2 — the one empty cell. Path: **FEEC**, `RT0` on quads, primal-dual, per Cotter & Thuburn's own recommendation — **plus** the Bochev–Ridzal rehabilitation, **plus** the commutation relations for the quadtree. |
+| B1 | **A structure-preserving scheme on a CUBE-SPHERE QUADTREE.** | §5.2 — the empty cell. **Three named tools already exist and nobody has composed them:** **FEEC** (removes the orthogonality requirement; Cotter & Thuburn already name the target — `RT0` on quads, cubed sphere, primal-dual) + **Bochev–Ridzal** (rehabilitates `RT0` on non-affine quads) + the **grid-optimisation pass** (§4.6) + the **mortar projections** for the nonlinear seam (§3.4). |
+| B1′ | **⚖ Or the Z GRID.** | §4.4 — a genuinely different answer: stay **collocated**, carry ζ/δ/h, and pay an elliptic solve that our quadtree makes cheap. **Zero architectural cost.** Unmeasured. **This should be spiked before B1 is committed to, because if it works it is far cheaper.** |
 | B2 | **Fated-noise closure as the fluctuation half of the FD pair, inside a structure-preserving scheme.** | Nobody does this. It is ours and it is defensible. |
-| B3 | **Content-addressed memoised multiresolution store.** | The wavelet transform is adopted; the *store* is ours. |
+| B3 | **Content-addressed memoised multiresolution store.** | The transform is adopted (§6); the *store* is ours. |
 
 ### ⚠ Resolve before B1 — the two paper-checkable questions
 
@@ -1388,60 +1393,124 @@ precession/obliquity equations** (the route that actually produced every insolat
   oversight, and FEEC is the stated route.
 - **[⊘]** No implementation found of a multiresolution transform **on a cube-sphere quadtree**. The theory
   is complete (§6); the code does not exist. That is a build, and an easy one.
-- **[⊘]** Entropy stability's exact guarantee for *systems* (necessary vs sufficient) — I state the
-  standard position but did not verify it to primary-source standard.
-- **[⊘]** Arakawa & Lamb 1981's exact conservation claims and their hypotheses — metadata verified
-  (`arakawa-1981-enstrophy`, Mon. Wea. Rev. 109:18–36); **I did not read the paper.** Do not cite its
-  guarantees from this document.
-- **[⊘]** MPAS's own stated rationale (Ringler et al. 2010, `ringler-2010-unified`) — metadata verified,
-  **paper not read**. The "why hexagons" answer in §4.1 comes from Cotter & Thuburn's characterisation,
-  which is a *secondary* account of MPAS's reasoning, however authoritative the authors.
+- **[⊘] `audusse-2004-hydrostatic` was NOT obtained** (SIAM paywall; HAL/CiteSeerX mirrors 404). §8.3's
+  account of hydrostatic reconstruction is verified against **two independent primary restatements that
+  agree formula-for-formula** (Ranocha §7.7; Delestre et al. §2.1) — **but the words are theirs, not
+  Audusse's.** Do not attribute a verbatim quote to Audusse from this document.
+- **[⊘] `staniforth-2012-grids` (QJRMS 138:1–26) was NOT obtained** — genuinely closed access (Unpaywall
+  `is_oa: false`; not on CentAUR or Exeter ORE). It is the review everyone cites, and **we have not read
+  it.** Its two load-bearing claims reach us *quoted through* Weller 2012, which was read primary. **The
+  free substitute, same author, same material: Thuburn, *Computational Modes in Weather and Climate
+  Models*, ECMWF Seminar 2013** — read primary, and it is what §4.1–4.2 actually rests on.
+- **[⊘]** Zängl et al. 2015 (ICON) and Ringler et al. 2013 (MPAS-Ocean) — closed access, **not read**.
+  Nothing here depends on them.
+- **[⊘]** `ringler-2010-unified` — read only for the orthogonality requirement and the
+  spurious-KE-source sentence (§4.7). **The rest of the paper is unread.**
+- **[⊘]** The Girardi–Sweldens result is read-primary, but I did **not** verify that a *quadtree on a
+  cube-sphere* satisfies their "nested partitions" hypotheses in the measure-theoretic detail. It looks
+  obvious. Obvious is where this project gets caught.
+- **[⊘]** The Z-grid lead (§4.4) is **entirely unmeasured**. An elliptic solve per step inside a lazy
+  pull-query, content-addressed architecture may be a much worse fit than it looks on paper. **Do not let
+  its elegance substitute for a benchmark.**
 
 ---
 
 ## 11. Sources — with read status, honestly marked
 
-**All 25 seeded in `relata` with `bib-fields` verified against the Crossref DOI record.** ✅ = OA PDF
-obtained and registered in relata.
+**61 works seeded in `relata`, every one with `bib-fields` verified against its Crossref DOI record** (the
+three arXiv preprints against the PDF itself). ✅ = OA PDF obtained and registered in relata.
 
-### READ PRIMARY (I obtained the full text and read the cited sections)
+**The full seeded set, by topic:**
 
-| bibkey | work | ✅ |
-|---|---|---|
-| `balsara-2001-divfree` | Balsara, *Divergence-Free AMR for MHD*, JCP 174(2):614–648 (2001) | ✅ |
-| `lipnikov-2004-nonconformal` | Lipnikov, Morel & Shashkov, *MFD on non-orthogonal non-conformal meshes*, JCP 199(2):589–597 (2004) | ✅ |
-| `arnold-2005-quadhdiv` | Arnold, Boffi & Falk, *Quadrilateral H(div) finite elements*, SINUM 42(6):2429–2451 (2005) | ✅ |
-| `thuburn-2009-geostrophic` | Thuburn, Ringler, Skamarock & Klemp, *Geostrophic modes on arbitrarily structured C-grids*, JCP 228(22):8321–8335 (2009) | ✅ |
-| `cotter-2014-feec-swe` | Cotter & Thuburn, *A FEEC framework for the rotating shallow-water equations*, JCP 257:1506–1526 (2014) | ✅ |
-| `ferguson-2016-amr-cubed` | Ferguson, Jablonowski, Johansen, McCorquodale, Colella & Ullrich, *AMR characteristics of a high-order 2D cubed-sphere shallow-water model*, MWR 144(12):4641–4666 (2016) | ✅ |
-| `aechtner-2015-wavelet-sphere` | Aechtner, Kevlahan & Dubos, *Conservative adaptive wavelet method for SWE on the sphere*, QJRMS 141(690):1712–1726 (2015) | ✅ |
-| `kevlahan-2019-wavetrisk` | Kevlahan & Dubos, *WAVETRISK-1.0*, GMD 12:4901–4921 (2019) | ✅ |
-| `kevlahan-2022-wavetrisk-ocean` | Kevlahan & Lemarié, *wavetrisk-2.1: adaptive core for ocean modelling*, GMD 15:6521–6539 (2022) | ✅ |
-| `girardi-1997-unbalanced-haar` | Girardi & Sweldens, *Unbalanced Haar wavelets … general measure spaces*, J. Fourier Anal. Appl. 3(4):457–474 (1997) | ✅ |
-| `arnold-2010-feec-hodge` | Arnold, Falk & Winther, *FEEC: from Hodge theory to numerical stability*, Bull. AMS 47:281–354 (2010) | ✅ |
-| — | Desbrun, Hirani, Leok & Marsden, *Discrete Exterior Calculus*, arXiv:math/0508341 (2005) — **not yet in relata (no DOI)** | |
-| — | Shu, *Positivity-preserving high order schemes* (lecture notes, Brown) — **not a citable work; the citable ones are Zhang & Shu (JCP 2010) and Xing, Zhang & Shu (Adv. Water Resour. 2010), not yet seeded** | |
-| — | Wintermeyer, Winters, Gassner & Kopriva, *Entropy stable nodal DG for 2D SWE on unstructured curvilinear meshes*, arXiv:1509.07096 — **not yet seeded** | |
+- **Structure-preserving core** — `arnold-2006-feec` · `arnold-2010-feec-hodge` ✅ · `desbrun-2005-dec` ✅ ·
+  `arnold-2005-quadhdiv` ✅ · `bochev-2009-rehabilitation` · `lipnikov-2004-nonconformal` ✅ ·
+  `warming-1974-modified-equation` · `hairer-2003-geometric` · `hairer-2006-gni-book`
+- **The seam** — `balsara-2001-divfree` ✅ · `berger-1989-refluxing` ·
+  `friedrich-2018-entropy-nonconforming` · `chan-2021-mortar-entropy`
+- **Spherical grids / dycores** — `thuburn-2009-geostrophic` ✅ · `ringler-2010-unified` ·
+  `cotter-2014-feec-swe` ✅ · `staniforth-2012-grids` · `arakawa-1981-enstrophy` ·
+  `randall-1994-adjustment` · `weller-2012-modes` · `weller-2012-grid-imprinting` ·
+  `thuburn-2008-hexagonal-cgrid` · `skamarock-2012-mpas` · `lin-2004-vertically-lagrangian` ·
+  `putman-2007-cubed-sphere` · `ferguson-2016-amr-cubed` ✅ · `montoya-2026-covariant-sphere` ✅
+- **Multiresolution / wavelets** — `girardi-1997-unbalanced-haar` ✅ · `sweldens-1998-lifting` ✅ ·
+  `schroder-1995-spherical` ✅ · `dubos-2013-staggered-wavelet` · `aechtner-2015-wavelet-sphere` ✅ ·
+  `kevlahan-2019-wavetrisk` ✅ · `kevlahan-2022-wavetrisk-ocean` ✅
+- **WB / entropy / positivity** — `audusse-2004-hydrostatic` · `delestre-2012-hr-limitation` ·
+  `kurganov-2018-swe-review` · `xing-2010-positivity-wb-dg` · `zhang-2011-positivity-survey` ·
+  `tadmor-1987-numerical-viscosity` · `fjordholm-2011-wb-energy-stable` · `fjordholm-2017-measure-valued` ·
+  `wintermeyer-2016-entropy-swe` ✅ · `ranocha-2017-swe-allthree` · `ghazizadeh-2020-quadtree-wb-pos`
+- **Symplectic / geometric integration** — `wisdom-1991-symplectic` · `laskar-2001-saba` ·
+  `laskar-2004-la2004` · `laskar-2009-collisional` · `touma-1994-liepoisson` · `chambers-1999-hybrid` ·
+  `preto-1999-adaptive-symplectic` · `hairer-1997-reversible` · `hairer-2005-explicit` ·
+  `rauch-1999-dynamical` · `rein-2015-whfast` · `rein-2015-ias15` · `rein-2019-hybrid` ·
+  `tamayo-2020-reboundx` · `lissauer-2012-obliquity` · `zeebe-2017-numerical`
 
-### SEEDED + METADATA VERIFIED, NOT READ (do not cite their guarantees from this document)
+**⚠ Two citations I nearly got wrong, recorded because the mechanism matters more than the fix:**
+1. I downloaded **arXiv:1112.4767** believing it to be Thuburn & Cotter's mimetic-framework paper. It is a
+   **quantum-optics paper about nitrogen-vacancy centres in diamond.** Caught by checking the title line.
+2. I assumed **MWR 140:3220 was "Weller, Thuburn & Cotter."** It is **single-author Hilary Weller.** The
+   three-author paper is a *different* one (`weller-2012-grid-imprinting`, MWR 140(8):2734–2755).
+3. I assumed **Lin 2004 was the cubed-sphere FV3.** It is a **latitude–longitude** dycore; FV3-on-cubed-
+   sphere begins with `putman-2007-cubed-sphere`.
 
-`arnold-2006-feec` (Acta Numerica 15:1–155) · `bochev-2009-rehabilitation` (SINUM 47:487–507, **abstract
-read**) · `ringler-2010-unified` (JCP 229:3065–3090) · `staniforth-2012-grids` (QJRMS 138:1–26) ·
-`arakawa-1981-enstrophy` (MWR 109:18–36) · `randall-1994-adjustment` (MWR 122:1371–1377) ·
-`weller-2012-modes` (MWR 140:3220–3234, **abstract read** — note: **Hilary Weller, single author**, not
-Weller–Thuburn–Cotter as I first assumed) · `dubos-2013-staggered-wavelet` (QJRMS 139:1997–2020) ·
-`sweldens-1998-lifting` (SIMA 29(2):511–546) ✅ · `schroder-1995-spherical` (SIGGRAPH '95:161–172) ✅ ·
-`berger-1989-refluxing` (JCP 82(1):64–84) · `warming-1974-modified-equation` (JCP 14(2):159–179) ·
-`hairer-2003-geometric` (Acta Numerica 12:399–450) · `audusse-2004-hydrostatic` (SISC 25(6):2050–2065).
+**All three were caught by opening the actual document. None would have been caught by reasoning.**
+
+### READ-STATUS LEDGER — read this before quoting anything from this document
+
+**READ-PRIMARY** *(full text obtained and the cited sections read — every **[P]** quote above comes from one
+of these):*
+`balsara-2001-divfree` · `lipnikov-2004-nonconformal` · `arnold-2005-quadhdiv` · `arnold-2010-feec-hodge` ·
+`desbrun-2005-dec` · `thuburn-2009-geostrophic` · `cotter-2014-feec-swe` · `ferguson-2016-amr-cubed` ·
+`montoya-2026-covariant-sphere` · `wintermeyer-2016-entropy-swe` · `aechtner-2015-wavelet-sphere` ·
+`kevlahan-2019-wavetrisk` · `kevlahan-2022-wavetrisk-ocean` · `girardi-1997-unbalanced-haar` ·
+`sweldens-1998-lifting` · `schroder-1995-spherical` · `arakawa-1981-enstrophy` · `randall-1994-adjustment` ·
+`weller-2012-modes` · `thuburn-2008-hexagonal-cgrid` · `skamarock-2012-mpas` ·
+`lin-2004-vertically-lagrangian` · `putman-2007-cubed-sphere` · `ranocha-2017-swe-allthree` ·
+`ghazizadeh-2020-quadtree-wb-pos` · `friedrich-2018-entropy-nonconforming` · `xing-2010-positivity-wb-dg` ·
+`fjordholm-2011-wb-energy-stable` · `fjordholm-2017-measure-valued` · `delestre-2012-hr-limitation` ·
+`kurganov-2018-swe-review` · `laskar-2004-la2004` · `laskar-2009-collisional` · `wisdom-1991-symplectic` ·
+`touma-1994-liepoisson` · `chambers-1999-hybrid` · `preto-1999-adaptive-symplectic` ·
+`hairer-1997-reversible` · `hairer-2005-explicit` · `rein-2015-whfast` · `rein-2015-ias15` ·
+`rein-2019-hybrid` · `tamayo-2020-reboundx` · `lissauer-2012-obliquity` · `zeebe-2017-numerical` · plus
+**Thuburn, *Computational Modes in Weather and Climate Models*, ECMWF Seminar 2013** (free; **not a formally
+citable journal work — not seeded**; it is the substitute for the paywalled `staniforth-2012-grids`) and
+**Shu, *Positivity-preserving high order schemes*** (Brown lecture notes; the *citable* forms are
+`xing-2010-positivity-wb-dg` and `zhang-2011-positivity-survey`).
+
+**READ-ABSTRACT ONLY** *(do not cite their guarantees from this document):*
+`bochev-2009-rehabilitation` · `chan-2021-mortar-entropy` · `zhang-2011-positivity-survey` ·
+`tadmor-1987-numerical-viscosity` · `dubos-2013-staggered-wavelet`.
+
+**SEEDED, METADATA-VERIFIED, NOT READ** *(deliberately — the argument does not lean on them):*
+`arnold-2006-feec` · `ringler-2010-unified` *(read only for §4.5 and §4.7)* · `staniforth-2012-grids`
+**(paywalled — genuinely unread)** · `weller-2012-grid-imprinting` · `berger-1989-refluxing` *(its content
+reaches us through Balsara's and Ferguson's descriptions, both read-primary)* ·
+`warming-1974-modified-equation` · `hairer-2003-geometric` · `hairer-2006-gni-book` · `laskar-2001-saba` ·
+`rauch-1999-dynamical` · `audusse-2004-hydrostatic` **(paywalled — see §10)**.
 
 ---
 
-*Author's honesty note. The three claims I would most want attacked, in order:*
-***(1)*** *that the ABF non-affine-quadrilateral defect is the same object as our measured two-point-flux
-inconsistency, and that Bochev–Ridzal therefore exonerates an FV scheme — this is inference, it is
-load-bearing for §9/B1, and it is checkable;* ***(2)*** *that our exact-nesting quadtree makes the
-multiresolution problem strictly easier than the published hexagonal case — I believe this firmly and it
-follows from Aechtner §3, but it deserves a hostile read;* ***(3)*** *that the WAVETRISK cost economics
-transfer to us — their compression ratios are for turbulent GCM flow, ours would be for an observed,
-mostly-quiescent planet, and I have assumed that helps us without measuring it.*
-*Each has a cheap probe attached. Kill them before building on them.*
+*Author's honesty note. The four claims I would most want attacked, in order:*
+
+***(1)*** *That the ABF non-affine-quadrilateral defect is the same object as our measured two-point-flux
+inconsistency, and that Bochev–Ridzal therefore **exonerates an FV scheme** — this is **inference**, it is
+load-bearing for §9/B1, and it is checkable on paper. If it is wrong, B1 gets much more expensive.*
+
+***(2)*** *That our exact-nesting quadtree makes the multiresolution problem **strictly easier** than the
+published hexagonal case. I believe this firmly and it follows from Aechtner §3 (their hard part is that
+hexagons do not nest; ours do) — but it deserves a hostile read.*
+
+***(3)*** *The **Z-grid lead** (§4.4). It is the most exciting thing in the document and therefore the one
+most likely to be wrong. It is unmeasured; an elliptic solve inside a lazy, content-addressed pull-query
+may be a far worse fit than the elegance suggests. **Do not let it into a design doc before it is spiked.***
+
+***(4)*** *That the WAVETRISK cost economics transfer to us — their compression ratios are for turbulent GCM
+flow; ours would be for an observed, mostly-quiescent planet. **I asserted that this helps us. I did not
+measure it.***
+
+*And one methodological note that is not about the content. **This document reverses two things I was
+confident of at the start**: that the "empty intersection" would be the headline (it is not — WAVETRISK
+occupies it, and Montoya 2026 occupies the cube-sphere cell), and that our grid would come out looking
+worse (it does not — the DOF ratio is right, uniformity beats orthogonality by measurement, and on the
+energy+enstrophy row it is the privileged grid). **Both reversals came from reading the sources rather
+than reasoning about them.** That is the whole method, and it is the only reason this is worth anything.*

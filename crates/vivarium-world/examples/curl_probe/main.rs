@@ -329,26 +329,30 @@ fn main() {
             r.label(), ro.conservation, 100.0 * ro.cone_err_mean, 100.0 * ro.cone_err_at_defects, km
         );
     }
-    println!("\n   \x1b[1m⚠ CONSERVATION SURVIVES (exact to twelve figures, every router). ACCURACY DOES NOT");
-    println!("   FOLLOW. And I could not compose the two fixes — measured, twice:\x1b[0m\n");
-    println!("   • \x1b[1mmoment + edge flux is WORSE than either parent\x1b[0m — cone error 8.09% against plain");
-    println!("     edge flux's 4.68%. An edge router has 2–4 receivers, so `Σw=1` plus `Σwₖsₖ=0`");
-    println!("     nearly determines the weights: it collapses toward D-∞ and throws the");
-    println!("     slope-proportional magnitude away. Two correct ideas, composed, made it worse.");
-    println!("   • \x1b[1mtrue-width quadrature reaches κ≈0 and still drifts 371 km\x1b[0m, and its catchment");
-    println!("     error (17.7%) is nowhere near edge flux's 4.7%.\n");
-    println!("   \x1b[1m→ AND THAT LAST LINE IS THE MOST IMPORTANT NUMBER IN THIS SPIKE.\x1b[0m A router whose");
-    println!("     transport direction is exactly right at every cell (|Δ| = 0.02°, κ = 5e-6) still");
-    println!("     drifts a plume \x1b[1m371 km\x1b[0m off its meridian. \x1b[1mCirculation and drift are DIFFERENT");
-    println!("     DEFECTS.\x1b[0m Drift is carried by the CONVERGENT (attractor) part of the deformation and");
-    println!("     by asymmetric dispersion; κ is carried by the SOLENOIDAL part. Killing one leaves");
-    println!("     the other untouched — which is exactly what this probe was built on and is now");
-    println!("     independent evidence for. \x1b[1mThe fan probe and the curl probe do not subsume each");
-    println!("     other, and neither is sufficient alone.\x1b[0m\n");
-    println!("   \x1b[1mSo: the remedy for the IDENTITY is established and cheap. The full kernel is NOT");
-    println!("   designed, and this spike does not pretend to have designed it.\x1b[0m The moment constraint");
-    println!("   is a projection to compose INTO whatever routing scheme is chosen — it is not itself");
-    println!("   that scheme. \x1b[2m(:by claude :status proposed — the kernel choice is Joseph's.)\x1b[0m");
+    println!("\n   \x1b[1m⚠ CONSERVATION SURVIVES — exact to twelve figures, every router. ACCURACY DOES NOT");
+    println!("   FOLLOW, AND BOTH OF MY ATTEMPTS TO COMPOSE THE TWO FIXES UNDER-PERFORMED:\x1b[0m\n");
+    println!("   • \x1b[1mmoment + edge flux is worse than EITHER parent\x1b[0m on catchment error — 8.09%, against");
+    println!("     plain edge flux's 4.68%. An edge router has only 2–4 receivers, so `Σw = 1` plus");
+    println!("     `Σwₖsₖ = 0` nearly determines the weights on its own: it collapses toward D-∞ and");
+    println!("     throws the slope-proportional magnitude away. Two correct ideas, composed, got");
+    println!("     worse. And κ does not even reach the floor (1e-3 — the cells whose few receivers");
+    println!("     fail to bracket ψ).");
+    println!("   • \x1b[1mtrue-width quadrature reaches the κ floor and is still a mediocre router\x1b[0m — 19.59%");
+    println!("     catchment error against edge flux's 4.68%. Fixing the direction did not fix the");
+    println!("     magnitude, and nothing about the identity says it should.\n");
+    println!("   \x1b[1m→ AND THE ROW-PAIR THAT MATTERS MOST IN THIS TABLE:\x1b[0m gradient-projected edge flux");
+    println!("     carries \x1b[1m~900× the circulation\x1b[0m of moment-corrected MFD (4.5e-3 vs 5.0e-6) and yet");
+    println!("     drifts \x1b[1mless than half as far\x1b[0m (53 km vs 121 km). \x1b[1mCirculation and drift are");
+    println!("     DIFFERENT DEFECTS and they do not even rank the routers the same way.\x1b[0m Drift is");
+    println!("     carried by the CONVERGENT (attractor) part of the deformation; κ is carried by the");
+    println!("     SOLENOIDAL part. Kill one and the other is untouched. \x1b[1mThat is the assumption this");
+    println!("     probe was built on, and it now has independent evidence: the fan probe and the curl");
+    println!("     probe do not subsume each other, and neither alone is sufficient.\x1b[0m\n");
+    println!("   \x1b[1mSo: the remedy for the IDENTITY is established, exact and cheap. The full kernel is");
+    println!("   NOT designed, and this spike does not pretend to have designed it.\x1b[0m The moment");
+    println!("   constraint is a projection to compose INTO whatever routing scheme is chosen — it is");
+    println!("   not itself that scheme, and the scheme still has to win on accuracy separately.");
+    println!("   \x1b[2m(:by claude :status proposed — the kernel choice is Joseph's.)\x1b[0m");
 
     // provenance gate
     println!("\n   \x1b[2mPROVENANCE GATE — this file is a COPY of grid_lab/flow.rs (that tree is another");

@@ -486,18 +486,27 @@ pub fn weights(g: &Mesh, r: Router, h: &[f64], i: usize) -> Vec<(usize, f64)> {
 
             // 2. The quadrature NODES: every strictly-lower Moore neighbour in the downstream
             //    half-plane, at its TRUE bearing. Ask the grid; do not assume 45°.
+            //    ⚠ Bearings are stored RELATIVE TO ψ, wrapped to (−π, π]. Not cosmetic: the
+            //    width rule below SORTS them, and an absolute bearing has its branch cut at an
+            //    arbitrary place — set by the LSQ frame, which is set by `adj[i][0]`, which is
+            //    set by a HashMap iteration order. A downstream fan straddling that cut sorted
+            //    arbitrarily, and the widths came out arbitrary with it. It showed up as
+            //    run-to-run drift in the cone error (17.67–17.74%) while MFD-8 and edge flux
+            //    were bit-stable — i.e. it was MY bug, not the harness's. Relative bearings all
+            //    lie in (−90°, +90°) by the half-plane test, so they can never straddle the cut.
             let c = g.centers[i];
-            let mut nb: Vec<(usize, f64)> = Vec::new(); // (j, β)
+            let mut nb: Vec<(usize, f64)> = Vec::new(); // (j, β−ψ ∈ (−90°, 90°))
             for &j in &g.moore[i] {
                 if h[j] >= h[i] {
                     continue;
                 }
                 let t = tangent(c, g.centers[j]);
                 let beta = dot(t, e1).atan2(dot(t, e0));
-                if (beta - psi).cos() <= 0.0 {
+                let rel = (beta - psi).sin().atan2((beta - psi).cos()); // wrap to (−π, π]
+                if rel.cos() <= 0.0 {
                     continue; // not downstream: a transverse neighbour, not a receiver
                 }
-                nb.push((j, beta));
+                nb.push((j, rel));
             }
             if nb.is_empty() {
                 return Vec::new();
@@ -512,18 +521,18 @@ pub fn weights(g: &Mesh, r: Router, h: &[f64], i: usize) -> Vec<(usize, f64)> {
             let k = ord.len();
             let mut w: Vec<(usize, f64)> = Vec::with_capacity(k);
             for (t, &oi) in ord.iter().enumerate() {
-                let (j, beta) = nb[oi];
+                let (j, rel) = nb[oi];
                 let width = if k == 1 {
                     std::f64::consts::PI // a lone receiver carries the whole half-plane
                 } else if t == 0 {
-                    nb[ord[1]].1 - beta
+                    nb[ord[1]].1 - rel
                 } else if t == k - 1 {
-                    beta - nb[ord[k - 2]].1
+                    rel - nb[ord[k - 2]].1
                 } else {
                     0.5 * (nb[ord[t + 1]].1 - nb[ord[t - 1]].1)
                 };
                 // the integrand: outflow through this bearing ∝ the gradient's component on it
-                let x = (beta - psi).cos() * width.abs().max(1e-9);
+                let x = rel.cos() * width.abs().max(1e-9);
                 if x > 0.0 {
                     w.push((j, x));
                 }
