@@ -295,7 +295,7 @@ fn build_all() -> Vec<Mesh> {
         healpix::healpix(45, r()),                     // 12·45² = 24 300
         icosa::icosa_tri(35, r()),                     // 20·35² = 24 500
         icosa::icosa_hex(50, 0, r()),                  // 10·50²+2 = 25 002
-        icosa::icosa_hex(50, 12, r()),                 // the same, made centroidal (SCVT)
+        icosa::icosa_hex(50, 200, r()),                // the same, made centroidal (SCVT)
     ]
 }
 

@@ -157,7 +157,11 @@ caution, never manual cache-clearing. Full statement + named failure modes:
   `globe_ascii`, `erosion_preview`, and the regime probes `channel_profile`,
   `armor_regimes` (1/3 green, opens in its header), `seam_ridge` (**RED by
   design** — gates the flux-BC seam fix), `spike_probe`, `velocity_histogram`,
-  `budget_probe`, `float_probe`, `source_incision`.
+  `budget_probe`, `float_probe`, `source_incision`. **`grid_lab/`** — the sphere-grid
+  bench: nine grids (equiangular / Snyder-equal-area / gnomonic cube · rhombic
+  dodecahedron ×2 · HEALPix · icosahedral triangles · hexagonal Voronoi dual raw +
+  SCVT) on one `Mesh` with combinatorial adjacency and Euler asserted at construction.
+  Prints every number in [`ref/research/grid-comparison-report.md`](ref/research/grid-comparison-report.md).
 - `spikes/globe` — spin/zoom/pick Google-Earth view over the store; real sun
   ephemeris + ethereal time scrub (`,`/`.` hour · `N`/`M` day · `P` play ·
   `Y` headlight — verified against `spikes/globe/src/main.rs`).
@@ -232,6 +236,30 @@ step in parallel: the **RNG fix** — per-agent splittable seeds
 (`ref/architecture-audit.md` #1). The world-model foundation earns its keep
 because agents *live in* this coordinate/time/matter space. Hard gate before
 any agent-seam work: the Level-C reading, `ASF.md` §5.
+
+## The grid question is CLOSED (2026-07-12)
+
+**Keep the equiangular cube-sphere and `CellId`. Change the kernels.** Nine grids measured
+(`examples/grid_lab/` → [`ref/research/grid-comparison-report.md`](ref/research/grid-comparison-report.md);
+Snyder implemented from the paper and reproducing its own Table 1). The headline is *not* the one
+the earlier passes expected:
+
+- **Conservation is free.** Finite volume conserves exactly (~1e-15) on every grid, worst included.
+- **But conservation ≠ consistency.** A *two-point* flux — the naive meaning of "FV with the true
+  geometry" — is **inconsistent** on a non-orthogonal mesh: O(1) error that **grows** under
+  refinement (order −0.5 on every quad grid). This **supersedes** the "conservation is a scheme
+  property / isotropy is a grid property" decomposition.
+- **The fix is scheme-side and costs nothing architecturally.** Correct the face gradient (project
+  both centres onto the edge normal *through the mid-edge*) **and widen the gradient stencil**
+  (quadratic over the Moore neighbours — a linear fit over 4 edge-neighbours caps the scheme at
+  ~0.5 order). Our grid: **9.2e-1 → 3.6e-4, a 2500× gain**, against the best hexagonal mesh's
+  2.2e-4 — with no change to `CellId`, the quadtree, the store, or the KRNG.
+- **The 24 valence-3 cells are a bounded local wart, not a conservation failure** — every cell has
+  exactly 4 *edges*; the defect lives only in the diagonal fan.
+
+Open work is scheme-side, and the **ladder orders it**: erosion's routing fix is gated behind
+`emerged-land`; **`water.rs` is live now**. Biggest unprobed risk: the corrected scheme's hot-loop
+cost (nobody has benchmarked it).
 
 ## The one hard research problem (open)
 
