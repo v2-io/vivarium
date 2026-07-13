@@ -166,27 +166,36 @@ is a FIELD ON THE SEGMENT, not a section of the outline.**
 > guard against, committed inside the artifact meant to prevent it. Corrected in place; the reasoning
 > is kept below **as an argument**, which is all it ever was.)*
 
-**The argument, offered for adjudication.** ASF's ladder ends at `claims-verified`. **The case for ours
-ending in something like `MECHANIZED`** is that the single finding of the 2026-07-13 reading pass is that
-this project *specifies* beautifully and *mechanizes* almost nothing — and **every principle that stayed
-prose was violated by code that cited it.** So the stage that matters may be *"is there an executable
-that FAILS when this is violated?"*
+### ⛔ AND IT IS WORSE THAN "UNDECIDED": **`ASF.md` §7 ALREADY BINDS THIS, AND I HAD NOT READ IT.**
 
-| candidate stage | meaning |
-|---|---|
-| `draft` | written here; not yet traced to the corpus |
-| `sourced` | every claim points at where it already exists (`sources:` populated) |
-| `verified` | checked against **the code as it is**, not as the docs describe it |
-| `MECHANIZED`? | an executable **fails** when this is violated (`mechanism:` populated) |
+> **§7.1** — *"**One terminology, two teaching voices.** Where the two projects touch the same object,
+> vivarium's LEXICON **defers to ASF's term** and records the carve… **New vivarium coinages get an ASF
+> collision-check before settling.**"* Under a stated minimum bar: *"**no conflicting, contradictory, or
+> confusing terminology or conceptual differences between the projects.**"*
+>
+> **§7.2** — *"**Adopt AAT's epistemic machinery natively.** Vivarium docs adopt the AAT **tier vocabulary
+> — exact / robust-qualitative / heuristic / conditional** … the LEXICON §5 four-axis tagging is the
+> **domain-side extension of the same system** (**D ↔ stage/verification**). **Probe-verified is our
+> *claims-verified*.**"*
 
-**Two live questions Joseph flagged, and I have no standing to answer either:**
+**⇒ The mapping ALREADY EXISTS. ASF's ladder is `draft → deps-verified → claims-verified`, and vivarium's
+`probe-verified` IS `claims-verified`.** ⚠ **I proposed a fifth rung (`MECHANIZED`) with no collision-check
+— which §7.1 forbids.** *(Joseph was right to distrust it, for a reason neither of us had stated: **the
+vocabulary is not vivarium's to settle alone.**)*
 
-- **Is `MECHANIZED` the same word as the ordinum's `kept`?** If it is, the spec becomes *literally* an
-  ordinum and `mechanism:` is a `|predicate` — and a segment with `mechanism: ~` is a **gloss**, exactly
-  as the tabularium already defines one. **That is either elegant or a false unification; I cannot tell
-  from here.**
-- **Does a spec segment even HAVE a maturity, or does it only have a truth-value?** ASF's stages track
-  *proof*; ours might need to track *enforcement* — and those may not be the same axis at all.
+**⇒ The real question, and it is open:**
+1. **Start from ASF's ladder and tiers.** Not from a coinage.
+2. **Ask whether `mechanized` is a NEW rung or a RESTATEMENT.** *(Candidate, and it costs no coinage: for a
+   **spec** segment, `claims-verified` may simply MEAN "an executable fails when this is violated" — which
+   is what "verified" means for a spec rather than for a theorem. **That would be handshake-compatible.**)*
+3. ⚠ **Run the collision-check before anything settles.** `charter/concept-matrix.md` exists for exactly
+   this, and **I have not read it.**
+
+**⚠ Same for `type`.** I coined `principle / def / law / contract / mechanism / mode / constraint / der /
+discussion / failure / open` against ASF's `definition / scope / postulate / formulation / derived / result
+/ empirical / hypothesis / discussion` — **with no check.** Some may be genuinely new (*a spec has
+`contract`s and `mode`s a theory does not*); some are near-certain collisions (`der` vs `derived`; `law` vs
+`result`/`postulate`). **Unresolved, and not mine to resolve.**
 
 ---
 
@@ -352,6 +361,9 @@ one row; `relation: &'static str` is box ⑤ as prose); ③ is `ARCHITECTURE` §
 | discussion | [#multiscale-intro](src/multiscale-intro.md) | Part intro | draft |
 | def | [#def-operator-algebra](src/def-operator-algebra.md) | $U$/$u$/$R$ (restriction)/$L$ (lifting) — **and every $L$ smuggles in a CLOSURE** | draft |
 | law | [#law-seam-is-one-discipline](src/law-seam-is-one-discipline.md) | **Position AND time are ONE seam** on two axes. What crosses is a **flux**, never raw state; what is guaranteed is a **sufficient statistic** | draft |
+| law | [#law-scale-separation-is-directional](src/law-scale-separation-is-directional.md) | ⚠ **A FORMAL, CHECKABLE condition — and I found it only by re-reading the half I had skipped.** *(Gear–Wells §4 Prop 4.1, primary-read)*: the multirate method is absolutely stable **only when the FAST→SLOW coupling block of the Jacobian is small** ($h\lVert B\rVert < K$); otherwise *"any form of stability at infinity is lost."* ⇒ **It names WHICH direction must be weak: *"erosion may read water freely, but water must see terrain as QUASI-STATIC."*** ⇒ **A nomos must DECLARE the direction of its weak coupling.** Sits beside `z`; **nothing in `NomosDecl` holds either** | draft |
+| contract | [#con-backup-depth](src/con-backup-depth.md) | ⚠ **Component E's design, sitting in a 1984 primary.** Gear–Wells abandoned fastest-first for **SLOWEST-FIRST**, because a fast component advanced on *predicted* slow values must be **backed up** — *"reverse integration is unstable and costly; saving all fast values is space-prohibitive."* Slowest-first needs **ONE retained prior value per component**. ⇒ *"the precedent for **TIME-IN-THE-KEY**: the memo retains **exactly enough history to back up ONE coupling step — no more, no less**."* Stepsizes are **powers of two** | draft |
+| der | [#der-tile-planner-is-amr-clustering](src/der-tile-planner-is-amr-clustering.md) | **AMR does not refine cell-by-cell — it CLUSTERS**, fits an **oriented rectangle** (second-moment eigenvectors), and accepts only if the **efficiency ratio** (flagged ÷ enclosed) clears **½–¾**. ⇒ **That ratio IS the criterion for *"is this island of interdependence worth one tile or several."*** And: ***"good clusters change SLOWLY — once found they persist many steps and only re-orient"*** — **the prior-art precedent for the entire bet that drainage basins are stable enough to MEMOIZE** | draft |
 | law | [#law-conservation-is-structural](src/law-conservation-is-structural.md) | ⚠⚠ *"Refluxing did not get easier. **IT CEASED TO EXIST**"* — not because the flux is more accurate (**it is the SAME flux**) but because it is applied **ONCE**, to both cells, with opposite signs ⇒ **CONSERVATION IS A PROPERTY OF THE DATA STRUCTURE, NOT OF THE NUMERICS** | verified |
 | law | [#law-structures-cross-iff-linear](src/law-structures-cross-iff-linear.md) | A structure survives the seam **IFF the restriction operator COMMUTES** with the operator expressing it — **and that covers only the LINEAR ones** *(project-then-square ≠ square-then-project)* | draft |
 | law | [#law-coarse-tier-two-roles](src/law-coarse-tier-two-roles.md) | **GOVERNANCE** (a conserved prior — **free of its leaves**) vs **SUMMARY** (a restriction — **leaf-bound**) ⇒ *conserved ⇒ governance ⇒ independent.* **Design move: make as many macro facts CONSERVED as you can.** ⊘ **NOT VERIFIED** | draft |
