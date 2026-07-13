@@ -1,0 +1,1976 @@
+Earth Surf. Dynam., 12, 995–1026, 2024
+https://doi.org/10.5194/esurf-12-995-2024
+© Author(s) 2024. This work is distributed under
+the Creative Commons Attribution 4.0 License.
+
+
+
+
+                                  Large structure simulation for
+                                   landscape evolution models
+                                           Julien Coatléven and Benoit Chauveau
+                    IFP Énergies nouvelles, 1 et 4 avenue de Bois-Préau, 92852 Rueil-Malmaison, France
+                               Correspondence: Julien Coatléven (julien.coatleven@ifpen.fr)
+
+                                      Received: 7 April 2023 – Discussion started: 26 June 2023
+                            Revised: 5 June 2024 – Accepted: 1 July 2024 – Published: 13 September 2024
+
+       Abstract. The aim of this paper is to discuss the efficiency of a new methodology to maintain the accuracy
+       of numerical solutions obtained from our landscape evolution model (LEM). As in every LEM, the tricky part
+       is the coupling between water and sediment flows that drives the nonlinear self-amplification mechanisms. But
+       this coupling is also responsible for the emergence and amplification of numerical errors, as we illustrate here.
+       These numerical instabilities being strongly reminiscent of turbulence-induced instabilities in computational
+       fluid dynamics (CFD), we introduce a “large structure simulation” (LSS) approach for LEM, mimicking the
+       large eddy simulation (LESs) used for turbulent CFD. In practice, this treatment consists in a filtering strategy
+       that controls small-scale perturbations in the solution. We demonstrate the accuracy of the LSS approach in the
+       context of our LEM.
+
+
+
+1   Introduction                                                    solution to compare practical numerical results. It was there-
+                                                                    fore difficult to decipher if the obtained landform results only
+Since the pioneering work of Gilbert in the 19th century            from physical processes or from the self-amplification of ini-
+(Gilbert, 1880), the meaning of the term “landscape evolu-          tially small numerical errors. An alternative definition of the
+tion model” (LEM) has evolved until reaching its modern             specific catchment area often used to model water flow was
+definition in the late 20th century. It is now considered to        proposed in Gallant and Hutchinson (2011) and Bonetti et al.
+be a numerical application of a mathematical system that            (2018), consisting of solving an abstract uniform flow equa-
+seeks to simulate some of the physical processes controlling        tion in replacement of using one of the MFD algorithms. In-
+the landscape dynamic. The capability of LEMs to provide            dependently and following another path, in Coatléven (2020)
+an integrated simulation in which several processes are ad-         a first family of MFD algorithms (those for which water
+dressed makes them particularly relevant to tackle a large va-      is transferred from cell to cell) has been proven to coin-
+riety of contexts. The success of those numerical approaches        cide on Cartesian meshes with a classical discretization of
+depends on their ability to correctly handle the positive non-      the water mass conservation Gauckler–Manning–Strickler
+linear feedback between the water flow, sediment erosion,           model (GMS). The output of the MFD algorithms is exactly
+and deposition in a decent computational time. This non-            a mesh-dependent mean of the water flux associated with the
+linear coupling between water and sediments is indeed ex-           discrete GMS model. This result explains the mesh and nu-
+pected to potentially induce complex water flow networks            merical dependency since the output of the MFD does not
+even on initially small topographic variations, allowing in re-     fulfill the consistency criteria, but it also provides a way to
+turn the emergence of complex geomorphic landforms. Some            correct it in a post-processing step leading to a consistent
+algorithms, in particular the family of multiple flow direc-        discrete approximation of the GMS water flux, extended in
+tion (MFD) algorithms, have long been developed for solv-           Coatléven (2020) to general polygonal meshes. As the GMS
+ing surface water flow models in a low computational time.          model can be seen as a generalization of the model proposed
+Until very recently, these solvers were not really linked to        in Gallant and Hutchinson (2011) and Bonetti et al. (2018),
+any physical model, which ruled out the use of an analytic          this finally closes the loop between MFD algorithms and the
+
+
+Published by Copernicus Publications on behalf of the European Geosciences Union.
+996                              J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models
+
+specific catchment area defined in Gallant and Hutchinson          to abandon the idea of resolving all the scales involved in
+(2011) and Bonetti et al. (2018) (more details are given in        real physical processes, as there is no hope of using a mesh
+Sect. 2.1). For those reasons, in the present paper we will use    fine enough to resolve the smallest scales correctly. In prac-
+a general GMS model to compute our water flow.                     tice this is done by filtering the solution to distinguish the
+   This paper has two objectives: (1) to investigate the con-      flow behavior above and below α and obtaining local aver-
+ditions for which the geomorphic structures simulated from         ages that are smooth and as mesh-independent as possible.
+a landscape evolution model derive from numerical instabili-       To our knowledge, the first attempt at using an LES approach
+ties and (2) to introduce a methodology that improves the ac-      for simulating landscape evolution albeit without explicitly
+curacy of the numerical solution as well as to discuss its po-     mentioning LES is Perron et al. (2009), where a Laplacian
+tential importance for LEMs. The landscape evolution model         smoothing (equivalent to a mesh-related box filter in the LES
+used in this paper considers the GMS model for the surface         terminology) was applied to the topography. More recently,
+water flow coupled with a representative erosion and deposi-       Hooshyar and Porporato (2021a) and Porporato (2022) have
+tion sediment flux model detailed in Sect. 2.2 that has been       used an average in one direction (which is a limit case of
+previously used, for instance, in Granjeon (1996), Eymard          filtering) to obtain robust results on channelization statistics
+et al. (2004, 2005), and Peton et al. (2020) and which is a        and scaling signatures: in other words, they substitute the el-
+generalization of the models studied in Smith and Brether-         evation and the specific drainage area by their mean values in
+ton (1972) and Smith et al. (1997). The linear stability anal-     the axial direction of their rectangular simulated domain. In
+ysis of this model highlights the key parameters that con-         their conclusion they suggest that the use of LES approaches
+trol the self-amplification mechanisms of the various water–       seems a viable avenue for more complex landscape evolu-
+sediment flow regimes (see Sect. 2.3). To illustrate the related   tion simulations. In line with this observation, we also be-
+numerical issues, we test the convergence of numerical solu-       lieve that the success of the attempts of Perron et al. (2009),
+tions towards some prescribed analytic solutions for various       Hooshyar and Porporato (2021a), and Porporato (2022), as
+water-driven and gravity-driven transport coefficients. Com-       well the numerous analogies between the instabilities aris-
+parison between the analytic and numerical solutions leads us      ing in landscape evolution models and turbulence reported
+to the conclusion that numerical errors must be treated with       in Smith and Bretherton (1972), Scheingross et al. (2020),
+the greatest care to avoid any misinterpretation of LEM re-        Bonetti et al. (2020), and Hooshyar and Porporato (2021b),
+sults: the self-amplification processes at the core of the cou-    and the numerical experiments strongly advocate for the use
+pling between water flow and sediment evolution can am-            of some LES technology to overcome the numerical issues
+plify legitimate numerical round-off or solver errors. Thus,       arising in the nonlinear coupling of sediment evolution and
+estimating the relative impact of numerical errors on the fi-      water flow. Our main contribution is precisely to develop an
+nal geomorphologic structures is challenging, making the use       LES-type methodology for our LEM. We refer to this method
+of numerical approaches potentially hazardous, in particular       by the acronym LSS for “large structure simulation”. Notice
+those involving implicit time schemes to discuss and quantify      that contrary to Hooshyar and Porporato (2021a) and Porpo-
+the role of self-amplification mechanisms in realistic geody-      rato (2022) and more in line with what is done in the CFD
+namic contexts (e.g., valley formation and spacing; Schein-        community, we fix a length scale that corresponds to the size
+gross et al., 2020; Bonetti et al., 2020; Perron et al., 2009;     of the smallest structures we want to resolve in the problem,
+Hooshyar and Porporato, 2021b).                                    quite independently of the domain size. We also consider a
+   This self-amplification (“butterfly effect”) is very remi-      more advanced differential filter, namely the Leray-α filter
+niscent of the numerical issues arising in the field of com-       (Cheskidov et al., 2005; Guermond et al., 2003) that is not
+putational fluid dynamics (CFD) for turbulent flows, which         related to any specific geometric configuration. In this sense,
+prevents the use of direct numerical simulation for high           our work can be considered to be a generalization of Hoosh-
+Reynolds numbers unless high-order methods are used over           yar and Porporato (2021a) and Porporato (2022). We show
+small space scales and timescales (also notice that unman-         that when the filter size is correctly defined the results ob-
+aged turbulence can sometimes lead to blow-up problems).           tained from the LSS are actually free of the nonphysical het-
+This comparison with CFD and turbulent flows is not new            erogeneity.
+and was studied in detail, for instance, in Bonetti et al.             Obtaining a reproducible result that is as error-free and
+(2020) and Hooshyar et al. (2020). The modern solution             mesh-independent as possible is, of course, what every mod-
+found by the CFD community to achieve reproducible and             eler expects. On the other hand, the emergence of complex
+meaningful simulations is to replace direct numerical simu-        geomorphologic structures, which is an objective sought by
+lation (DNS) of the Navier–Stokes equations by large eddy          many LEM users, can require manually introducing relevant
+simulation (LES; Berselli et al., 2005). The objective of LES      physical heterogeneity after handling numerical errors. Sev-
+is to obtain a good approximation of local spatial averages        eral of our simulations are consequently performed using dif-
+of turbulent flows, recovering the correct dynamics only for       ferent types of heterogeneity carried by the initial topography
+the organized structures of the flow (the eddies) which are        or by other physical parameters, such as a variable roughness
+larger than a certain target length scale α. Thus, LES chooses     index or a variable rain map. The emergence of large geomor-
+
+
+Earth Surf. Dynam., 12, 995–1026, 2024                                              https://doi.org/10.5194/esurf-12-995-2024
+J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models                                           997
+
+phic structures is discussed by taking into consideration the
+understanding gained from this work.
+   The paper is organized as follows. We begin by introduc-
+ing the water flow and the sediment flow models of the LEM
+used to perform the simulations discussed in this paper. We
+then construct analytic solutions and proceed to a compari-
+son with numerical results in the relevant flow regimes. This
+leads to the first conclusion that for the studied landscape
+evolution model and the considered classical implicit finite-
+volume discretization, without any specific treatment, the ob-
+tained numerical solutions are potentially controlled by nu-
+merical errors. The second step of this work is to introduce
+and apply the filtering strategy to the water–sediment equa-
+tion system. The comparison between numerical and ana-
+lytic solutions clearly shows the crucial role played by this
+method. Finally, we illustrate the behavior of our LEM in
+more complex contexts and we test the impact of variable (in
+space and time) roughness coefficients and rain maps in the
+final solution.
+
+2    Model and notation                                             Figure 1. Representation of the two main surfaces considered in a
+                                                                    landscape evolution model in the (x, y, z) parameter space, where
+Following Smith and Bretherton (1972), we assume that a             z is the elevation and  the spatial domain for (x, y) with bound-
+sedimentary system can be idealized through the following           ary ∂. The basement b surface represents the bottom part of
+assumptions: (H1) the basin topography can be represented           the simulated block, on which sediments are deposited. The topo-
+as a mathematical surface, (H2) the principle of mass conser-       graphic surface is b + hs , where hs is the sediment thickness. The
+vation applies to this surface, and (H3) the sediment flux at       simulated sedimentary content is denoted as B.
+any point of the surface is a function of the local slope and the
+local discharge of water. In other words, using an Eulerian
+approach (H1) implies that we consider a fixed geographical         production (or erosion) and Bs boundary sediment supplies.
+region over the time period ]0, T [ mathematically modeled          The domain boundary ∂ is divided between ∂N where
+by means of a domain  ∈ R2 , a function b : ×]0, T [−→ R          flux (also called Neumann) boundary conditions are im-
+describing the basement, i.e., the lower part of the basin          posed and ∂D where we enforce fixed elevation (also called
+in the z direction, and a function hs : ×]0, T [−→ R de-           Dirichlet) boundary conditions. In the following the x–y co-
+scribing the thickness of the sediments (see Fig. 1). Thus,         ordinates corresponding to the computational domain  will
+our basin B :]0, T [−→ R3 can be described for almost ev-           be expressed in kilometers (km), while sediment height hs
+ery (a.e.) t ∈]0, T [ by                                            and basement b will be expressed in meters (m). Choos-
+        n                                                           ing a model corresponds to choosing a specific expression
+B(t) = (x, y, z) ∈ R3 |(x, y) ∈  and b(x, y, t) ≤ z                for the sediment flux and the source terms. A common fea-
+                                                                    ture of almost all LEMs is that the sediment flux model J s
+       ≤ b(x, y, t) + hs (x, y, t)} .                        (1)    and/or the source term Ss depend nonlinearly on the lo-
+The evolution of the basement b is governed by several pro-         cal discharge of water Qw , very often through a power law
+cesses, for instance thermal and structural tectonics. In the       like Qrws ||∇(hs +b)||ps +1 . Self-amplification mechanisms are
+present paper we assume that the evolution of b is prescribed       known to appear at least for rs > 1 (Smith and Bretherton,
+as input data, and we focus on computing the evolution of the       1972; Smith et al., 1997).
+function hs . For the sake of clarity, we give the expression
+of the mass conservation (H2) equations, neglecting porosity        2.1   The water flow model
+for simplicity:
+    ∂hs                                                             Landscape evolution models usually requires defining a “lo-
+     ∂t + div (J s ) = Ss   in ×]t0 , T [,
+                                                                    cal discharge of water” Qw to account for water-driven ero-
+    −J s · n = Bs           on ∂N ×]t0 , T [,
+                                                             (2)    sion and transport. The practical computation of Qw , when
+    hs = 0                  on ∂D ×]t0 , T [,
+                                                                    not carefully conducted, is the weak point of many models,
+    hs (t = t0 ) = hs,0     in ,
+                                                                    causing them to lose any hope of consistency in the math-
+where J s is the sediment flux, while Ss and Bs are sed-            ematical sense of the term. It is one of the main reasons
+iment source terms with Ss representing in situ sediment            why we observe mesh dependency is some LEMs. We re-
+
+
+https://doi.org/10.5194/esurf-12-995-2024                                              Earth Surf. Dynam., 12, 995–1026, 2024
+998                              J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models
+
+call in this section how to define a physically based local
+discharge of water that maintains consistency. More details
+can be found in Coatléven (2020), Gallant and Hutchinson
+(2011), and Bonetti et al. (2018).
+   Classically, Qw is computed directly from the so-called
+drainage or catchment area, CA (also referred to as the con-
+tributing area). For a given outlet of the topography (i.e., the
+top of B), it corresponds to the measure of the projection
+on  of the part of the topography from which the water con-
+tributing to this outlet is coming (Maxwell, 1870; Leopold
+et al., 1964; Bonetti et al., 2018). Despite being a very intu-
+itive notion, it has evaded a precise mathematical definition
+for a long time. Classical multiple flow direction (MFD) al-
+gorithms are intended to provide a practical way to compute a
+discrete approximation CA (K) of the catchment area, CA,
+for a mesh cell K (where  stands for the mesh precision)
+and in this way a discrete approximation QK of Qw for
+cell K. As is well-documented (Desmet and Govers, 1996;
+Pelletier, 2010, 2013; Porporato, 2022) the discrete catch-
+ment area CA (K) obtained from those algorithms strongly
+depends on the cell size, geometry, and orientation with re-
+spect to the flow. Several attempts can be found in the liter-
+ature to reduce this mesh dependency, defining the discrete        Figure 2. Basic principle of the simplest cell-to-cell MFD algo-
+water flow discharge QK associated with a mesh cell K as           rithm: water is distributed to lower neighboring cells proportionally
+                                                                   to the slope (reproduced from Coatléven, 2020).
+QK = (CA (K)/w(K)), where w(K) is a normalization fac-
+tor related to a geometric property of the cell (see Desmet and
+Govers, 1996) or to an estimate of the flow width (Pelletier,
+                                                                   instance, those of Freeman, 1989, 1991; Holmgren, 1994). It
+2010) defining the so-called (discrete approximation of the)
+                                                                   became clear that those MFD algorithms are a way of im-
+specific or unit catchment area (SCA or UCA). A more mod-
+                                                                   plementing a solver for the following stationary water mass
+ern mathematical definition of the specific catchment area a
+                                                                   conservation with Gauckler–Manning–Strickler (GMS) flux
+at the continuous level was proposed in Gallant and Hutchin-
+                                                                   modeling of surface runoff:
+son (2011) and Bonetti et al. (2018), consisting in solving an
+abstract uniform flow equation:
+                                                                     Qw = − km hws pηww (hw ) ||∇(hs + b)||pw ∇(hs + b),
+                                                                                  ref
+             ∇(hs +b)
+   −div a ||∇(h    +b)||    = 1 in ,
+                 s
+                                                             (3)     div (Qw ) = Sw in ,                                           (4)
+         ∇ (hs + b)
+   −a                    · n = 0 on ∂in ,
+       ||∇ (hs + b) ||
+                                                                     Qw · n = Bw on ∂in ,
+where ∂in = {x ∈ ∂|∇(hs + b) · n > 0} is the part of the
+boundary that is in going and n denotes the outward normal         where hw is the water height, sref =1 m km−1 the reference
+to . Setting Qw = a at the continuous level, this leads in        slope, pw a model parameter, and ηw the water mobility func-
+practice to computing a consistent discrete approximation aK       tion. For simplicity we assume here that the mobility function
+of a for a mesh cell K. This allows reducing the mesh depen-       has no dimension and is a function of hw only and that the
+dency to the usual consistency errors of numerical schemes.        domain source Sw is given in cubic meters per second per
+At first sight, the model in Eq. (3) could seem very different     kilometer (m3 s−1 km−2 ) such that its integral over a 2D area
+from MFD algorithms. However, considering, for instance,           measured in square kilometers (km2 ) coincides with a dis-
+the classical cell-to-cell algorithms of Freeman (1989, 1991)      charge in cubic meters per second (m3 s−1 ). The boundary
+and Holmgren (1994), one can see that those algorithms act         influx Bw is measured in cubic meters per second per kilo-
+as if we were distributing a fictitious water flow of a mesh       meter (m3 s−1 km−1 ). The coefficient km can be thought of
+cell to the neighboring cells with lower elevation proportion-     as the Strickler coefficient or the inverse of the Gauckler–
+ally to a function of the slope, as illustrated in Fig. 2.         Manning coefficient up to a change in unit (strictly speaking,
+   One could then legitimately suspect that those MFD algo-        this identification is truly valid for channels and if the mobil-
+rithms could be related to a discretization of a water flow        ity function ηw is equal to a dimensionless hydraulic radius).
+model. This has been recently demonstrated in Coatléven            For this choice of unit for Sw , km has the unit of a speed, i.e.,
+(2020) for the most classical cell-to-cell MFD algorithms (for     meters per second (m s−1 ). Comparing Eq. (4) with Eq. (3),
+
+
+Earth Surf. Dynam., 12, 995–1026, 2024                                                https://doi.org/10.5194/esurf-12-995-2024
+J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models                                                      999
+
+we see that Eq. (3) corresponds to the particular case where                      This continuous SCA scales as an approximation of the con-
+km = 1, pw = −1, and a = hw ηw (hw ). In this sense the GMS                       tinuous water flux magnitude,
+model in Eq. (4) is a generalization of Eq. (3) that allows in-
+                                                                                                          −p
+cluding the classical ingredients (nonlinear slope dependency                     qw = |km hw ηw (hw ) |sref w ||∇ (hs + b) ||pw +1 ,         (7)
+and some spatial heterogeneity) of the family of MFD algo-
+rithms.                                                                           (in m3 s−1 km−1 ) but is not equal to it. The SCA defined by
+   The analysis of Coatléven (2020) explains how the dis-                         Eq. (6) is in fact a mean of qw along the outflow portion
+crete catchment area CA(O) for the outlet of a region O that                      of ∂O and thus still retains some dependency in the geom-
+is computed by MFD algorithms coincides with an interme-                          etry of O and its orientation with respect to the flow. Mean-
+diate discrete quantity appearing in the most natural discrete                    while, notice that the specific catchment area a of the model
+solver for Eq. (4). It also allows giving a continuous inter-                     in Eq. (3) can be reinterpreted through Eq. (4) as comput-
+pretation and generalization CA(O) for any region O of the                        ing qw since
+discrete CA that is computed by MFD algorithms only for                                                  −p
+mesh cells:                                                                       qw = |km hw ηw (hw ) |sref w ||∇ (hs + b) ||pw +1
+          Z                                                                         = |a| ||∇ (hs + b) ||−1+1 = a,
+                                −p
+CA(O) = hw ηw (hw ) −km sref w ||∇ (hs + b) ||pw
+                                                                                  as we have set a = hw ηw (hw ) ≥ 0, pw = −1, km = 1, and
+          ∂O
+                                                                                  sref = 1 to merge Eq. (3) inside Eq. (4). Thus, in view of
+          ∇ (hs + b) · n)+ ,                                                (5)   the success of Bonetti et al. (2018) and within the context
+                                                                                  of Eq. (4) it seems very natural to choose to set Qw = qw .
+where hw is the solution of Eq. (4) with Sw = 1 and where we                      One could consider that the equivalence between classical
+have denoted v + the positive part of v (i.e., v + = max(0, v)).                  cell-to-cell MFD algorithms established and the consistency
+Since the model in Eq. (4) describes a water flow, thanks                         correction proposed in Coatléven (2020) that leads to using a
+to Coatléven (2020) we can reinterpret the discrete catch-                        discrete version of qw is another path to recover the conclu-
+ment area CA (K) computed through the classical cell-to-                         sions of Eq. (3) and in this sense that qw is a generalization
+cell MFD algorithms as the total flux leaving cell K of a                         of a to more complex water flow models.
+fictitious water flow with a uniform water source Sw = 1.                            The consistency correction proposed in Coatléven (2020)
+Unfortunately, we also see that even at the continuous level,                     for MFD algorithms precisely coincides with the replace-
+CA(O) strongly depends on the geometry of O and its ori-                          ment of the computation of CA (K) or SCA (K) for a mesh
+entation with respect to the flow. Since it is detailed in                        cell K by a consistent discrete reconstruction qK of qw in
+Coatléven (2020) that cell-to-cell MFD computations com-                          each cell K. Convergence of this discrete version qK to qw
+pute in practice the discrete catchment area CA (K) for each                     when the mesh size goes to zero was proven in Coatléven
+cell K of a mesh through a discretized version of Eq. (5), as                     (2020), along with error estimates. Thus, apart from the
+a result when MFD algorithms are used to estimate the dis-                        usual discretization error no anomalous mesh dependency
+crete local discharge of water QK , it produces cell and thus                     should remain in qK in practice, contrary to what is observed
+mesh dependency in the simulated surface water distribution.                      for SCA (K) given by MFD algorithms. In this sense, qK can
+In line with the attempts of Desmet and Govers (1996) and                         be seen as a consistency correction for SCA (K), as well as
+Pelletier (2010) to define a specific catchment area (SCA)                        a generalization of Eq. (3) to a richer family of flow models.
+by rescaling the CA, the correct scaling would be to set the                      The interpretation of the local water discharge Qw as being
+normalization factor w to the length of the portion of ∂O                         equal to the water flux magnitude qw given by Eq. (7) from
+along which the fictitious water flow is leaving O. A cor-                        the solution of Eq. (4) is therefore the default configuration
+rected definition of the specific catchment at the continuous                     chosen in the water flow model used to perform all the simu-
+level in the spirit of Desmet and Govers (1996) and Pelletier                     lations we introduce in this paper.
+(2010, 2013) area would thus be to use                                               To say that this model corresponds to the GMS model does
+                                                         Z                        not necessarily mean that its scope of application is limited
+                                1
+SCA(O) = R                                                    hw ηw (hw )         to channels: it depends on the specific choice made on the
+                χ−km s −pw ||∇(hs +b)||pw ∇(hs +b)·n>0
+           ∂O         ref                                ∂O                       model parameter values. Steady-state analysis (Graf and Al-
+                                                     +                          tinakar, 2000; Birnir et al., 2001) for channels suggests us-
+                −p
+           −km sref w ||∇ (hs + b) ||pw ∇ (hs + b) · n ,                    (6)   ing values ηw (hw ) = (hw /href )1/2 and pw = −1/2, while the
+                                                                                  classical Gauckler–Manning–Strickler formula would coin-
+where χ is the indicator function (i.e., the function with value                  cide with ηw (hw ) = (Rh (hw )/href )2/3 , with Rh (hw ) the hy-
+1 when the condition is satisfied and 0 otherwise). Depend-                       draulic radius and again pw = −1/2. When applied to large
+ing on the orientation of the flow, such a normalization will                     time- and space scales landscape evolution models, these cal-
+sometimes match the choices of Desmet and Govers (1996)                           ibrations are no longer valid and at this stage we suggest
+and Pelletier (2010, 2013), explaining their partial success.                     considering ηw and pw as modeling parameters that can be
+
+
+https://doi.org/10.5194/esurf-12-995-2024                                                             Earth Surf. Dynam., 12, 995–1026, 2024
+1000                                  J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models
+
+tuned for each considered problem. In the following numeri-         where rs > 0 and ps > 0 are model parameters, qw is the wa-
+cal experiments, since we only consider the water flux qw the       ter flux obtained from Eq. (4), qref and sref are dimensional
+choice of the water mobility function has no influence and          factors, and ηs is a dimensionless sediment mobility function
+we set ηw (hw ) = 1 for simplicity, as well as pw = 0. Notice       such that
+that the recommendations deduced from the work discussed
+in this paper would remain valid for more general choices of          0 ≤ ηs (hs ) ≤ 1       and ηs (0) = 0,                        (10)
+those parameters.
+   The application domain of the GMS model is, however,             whose main role is to ensure that the sediment height hs re-
+limited by some additional requirements for the topography          mains positive. In the following we use
+hs + b. From a purely mathematical point of view, systems in
+Eq. (3) and Eq. (4) are in fact stationary transport problems                    1 − hsh+h
+                                                                                         c
+                                                                                                  if hs ≥ 0,
+                                                                    ηs (hs ) =             c                                        (11)
+for a or hw . Well-posedness, i.e., existence and uniqueness                     0                otherwise,
+in a suitable function space and continuity with respect to
+data, can be rigorously established only under some condi-          with hc a parameter. The function with subscript “w” is in-
+tion on the topography. Many different conditions are possi-        tended to model the water-driven processes, while the func-
+ble, all introducing some positivity requirement in the zero-       tion with subscript “g” models gravity-related processes.
+order part of the differential operators applied to a or hw (see    We consider here the most common form for functions ψw
+Coatléven, 2020; Bardos, 1970; Veiga, 1987; DiPerna and             and ψg corresponding to
+Lions, 1989; Fernández-Cara et al., 2002; Girault and Tar-
+                                                                                    hZs +b                            hZs +b
+tar, 2010). In particular, among the possible conditions the
+simplest ones are undoubtedly                                       ψw (hs + b) =        kw (v)dv and ψg (hs + b) =        kg (v)dv, (12)
+                                                                                   0                                 0
+                                    −p
+−1 (hs + b) >0 or − div km sref w ||∇ (hs + b) ||pw                 where kw and kg are bounded diffusion coefficients depend-
+                  ∇ (hs + b)) > 0.                            (8)   ing solely on hs in such a way that
+
+                                                                    ∇ψw (hs + b) = kw (hs + b) ∇ (hs + b) and
+By enforcing a downflow direction to exist everywhere, they
+both ensure that the model in Eq. (4) is well-posed, at the         ∇ψg (hs + b) = kg (hs + b) ∇ (hs + b) ,                         (13)
+price of introducing quite stringent restrictions on the admis-
+                                                                    so the sediment flux follows the topographic slope ∇(hs +b).
+sible topographies. Notice that they are sufficient conditions
+                                                                       This sediment flux model is implemented in our model-
+and not necessary ones: this implies that solutions to Eqs. (3)
+                                                                    ing platform ArcaDES, and all the simulations shown in the
+and (4) can still exist for some topographies not fulfilling
+                                                                    following sections are performed using the ArcaDES plat-
+one of the sufficient conditions. In particular, saddle-point
+                                                                    form (although ArcaDES is mentioned for the first time in
+or valley-like topographies will not easily fulfill those condi-
+                                                                    a scientific paper, it has been used since 2015 in the strati-
+tions, while it seems reasonable to assume that a solution will
+                                                                    graphic numerical forward model DionisosFlowTM initially
+exist in such configurations since water can find a downflow
+                                                                    developed by Granjeon, 1996). Both soil erosion and sedi-
+direction. This being said, this mathematical requirement that
+                                                                    ment deposition are considered. As ArcaDES is designed for
+is probably too strong should act as a warning, as it clearly
+                                                                    large-scale simulations in time and space, we have chosen to
+reveals that not all topographies may be admissible for the
+                                                                    express the x–y coordinates in kilometers (km), time in mil-
+model in Eq. (3) and its generalization in Eq. (4). More de-
+                                                                    lions of years (Myr), and sediment height hs and basement b
+tails on the most stringent requirements (no accumulation or
+                                                                    in meters (m). Thus, the unit for sediment sources will be
+flat areas) are given in Sect. 5.2.
+                                                                    meters per million years (m Myr−1 ). Since we have chosen
+                                                                    to use Qw = qw with qw the water flux from Eq. (4), the unit
+2.2    The sediment flux model                                      for the water discharge qw is cubic meters per second per
+                                                                    kilometer (m3 s−1 km−1 ), and thus we naturally set qref =
+In the present paper we have chosen to focus on the strati-
+                                                                    1 m3 s−1 km−1 . The natural unit of coefficients kg and kw
+graphic model that has already been discussed in detail in
+                                                                    is square kilometer per million years (km2 Myr−1 ), with the
+Granjeon (1996), Eymard et al. (2004, 2005), and Peton et al.
+                                                                    reference slope again set to sref = 1 m km−1 .
+(2020) and which is a generalization of the models studied in
+Smith and Bretherton (1972) and Smith et al. (1997). The
+corresponding sediment flux J s takes the following form:           2.3   Some insights from perturbation theory
+                                                      rs         In this subsection, in order to give a feeling of the potential
+                  −p                             qw
+J s = − ηs (hs ) sref s ||∇ (hs + b) ||ps                           stability issues related to the model in Eqs. (2)–(9)–(4), we
+                                                 qref               will perform a brief analysis of the behavior of solutions un-
+                                  
+       ∇ψw (hs + b) + ∇ψg (hs + b) in ×]t0 , T [,            (9)   der perturbations. Details of the following computation are
+
+
+Earth Surf. Dynam., 12, 995–1026, 2024                                                   https://doi.org/10.5194/esurf-12-995-2024
+J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models                                                   1001
+
+relegated to Appendix A. We assume for simplicity that kg                   flux qw,δ on the topography perturbation hs,δ . We will say
+and kw are constant functions. Let us denote (hs,∗ , hw,∗ ) a ref-          that growing perturbations correspond to the physically un-
+erence solution of Eqs. (2)–(9)–(4) with sources (Ss,∗ , Sw,∗ ),            stable regime.
+whose stability is to be tested. We denote (hs,δ , hw,δ ) a per-               We can anticipate that the relative magnitude of the gravity
+turbation of magnitude δ of this reference solution associ-                 and water coefficients kg and kw will play a key role in the
+ated with the source perturbation (Ss,δ , Sw,δ ) and consider the           stability of solutions. Indeed denoting τ = (kw qwrs )/(kg qrefrs
+                                                                                                                                              ),
+evolution of (hs , hw ) = (hs,∗ + hs,δ , hw,∗ + hw,δ ) for the per-         if kg is much larger than kw and thus τ is very small we have,
+turbed source (Ss,∗ + Ss,δ , Sw,∗ + Sw,δ ). Since both the per-             assuming for simplicity that ηs = 1 (see Appendix A for de-
+turbed and unperturbed solutions have to satisfy the bound-                 tails),
+ary conditions, we deduce that the perturbation (hs,δ , hw,δ )                                                                            
+                                                                                       −p
+                                                                            Aδ ≈ −kg sref s ps ||∇ hs,∗ + b ||ps −2 |∇ hs,∗ + b · ∇hs,δ |2
+                                                                                                                              
+itself also satisfies the same boundary conditions. Then, in
+line with, for instance, the analysis of Smith et al. (1997), in-                            
+jecting (hs , hw ) into Eqs. (2)–(9), multiplying by hs,δ , and in-             +O(τ ) + O δ 3
+tegrating by parts we obtain the equation governing the evo-
+lution of the perturbation’s total energy (see Appendix A for               (where we recall that a function f is O(h), there exists a
+details):                                                                   constant C > 0 independent of h such that ||f || ≤ Ch for a
+                                                                          suitable norm ||.||). Then for large values of kg the term Aδ is
+d 1
+     Z          Z                                                           always negative and thus stabilizing. On the contrary, if kw is
+       hs,δ = − js (hs , hs + b, qw ) ||∇hs,δ ||2
+        2 
+                                                                            much larger than kg then τ is also very large and we have
+dt 2
+                                                                          (see Appendix A for details)
+              Z            Z
+                                                       
+             + Ss,δ hs,δ +    js hs,∗ , hs,∗ + b, qw,∗                                          rs −1
+                                                                                         −p   qw,∗                        p               
+                                                                          Aδ ≈ −kw sref s rs                               s
+                                                                                                  rs qw,δ ||∇ hs,∗ + b || ∇ hs,∗ + b
+                                                                                              qref
+                 −js (hs , hs + b, qw )) ∇ hs,∗ + b · ∇hs,δ ,        (14)                                 rs 
+                                                                                             −p qw,∗
+                                                                                                                 ps ||∇ hs,∗ + b ||ps −2 |∇
+                                                                                                                                
+                                                                               · ∇hs,δ − kw sref s
+where we have denoted                                                                                 qref
+                                                   rs                                                                  
+                                                                                 hs,∗ + b · ∇hs,δ | + O(1/τ ) + O δ 3 .
+                                                                                                    2
+                                                                                      
+                      −p                     w
+js (u, v, w) = ηs (u)sref s ||∇v||ps                     kw + kg .
+                                            qref
+                                                                            Regions for which ∇(hs,∗ + b) · ∇hs,δ < 0 will amplify the
+The first term of the right-hand side is always negative and                perturbation proportionally to kw and the power rs − 1 of the
+thus always contributes to the stability of the system. The                 water flux. We also see that the term Aδ will behave quite
+second term describes the contribution of potential pertur-                 differently if rs > 1 or rs < 1. Indeed, for rs > 1 the water
+bation sources Ss,δ (other than the initial conditions) to the              flux will reinforce the amplification term in a kind of positive
+evolution of the perturbation’s energy. The last term,                      feedback loop. On the contrary, for rs < 1 the water flux will
+     Z
+                                                                          temper the amplification term, and thus we can anticipate that
+Aδ =      js hs,∗ , hs,∗ + b, qw,∗ − js (hs , hs + b, qw )                  it will require much larger values of τ for instability to oc-
+                                                                           cur in this situation. For the general case incorporating ηs the
+                
+      ∇ hs,∗ + b · ∇hs,δ ,                                           (15)   behavior is roughly speaking the same, with the main differ-
+                                                                            ence that the additional term due to ηs can on rare occasions
+originates partially from the nonlinearity of the sediment                  also contribute with the wrong sign (see Appendix A for de-
+transport model but most importantly from the coupling be-                  tails). The main conclusion to draw from this brief study is
+tween the flow and the sediment transport. If Aδ is negative                that parameter τ will be the main criterion governing the ap-
+or sufficiently small and if the perturbation source is also                pearance of instabilities even for our most general model.
+small enough, then the sediment perturbation energy will                       For a subclass of model equations, Eqs. (2)–(9)–(4), with
+decrease with time. In this case, the solution (hs,∗ , hw,∗ ) is            ηs = 1, kg = 0 and pw = −1 and ps = 0, the stability of so-
+said to be stable under perturbation (hs,δ , hw,δ ). However, the           lutions have been theoretically studied in Smith and Brether-
+sign of Aδ is not always negative and will often take non-                  ton (1972) and Smith et al. (1997). This would correspond
+necessarily small positive values. If Aδ is large enough, in-               within our notations to the extreme case where τ = +∞, for
+stead of being diffused by the first term the sediment pertur-              which we expect instability to occur. It was, for instance, es-
+bation energy will grow with time and potentially become as                 tablished in Smith et al. (1997) that if the reference solution
+large as the unperturbed solution: the solution (hs,∗ , hw,∗ ) is           is stationary, the second term is negative only if some specific
+then unstable under perturbation (hs,δ , hw,δ ). This is a self-            condition on the gradient ∇(hs + b) is satisfied on the bound-
+amplification mechanism, as the magnitude of Aδ will grow                   ary of the region of interest, here . The linear stability of
+with the perturbation’s magnitude and cancel if the perturba-               analytic stationary solutions that are uniform in one direction
+tion is zero, and also because of the dependency of the water               has also been considered in Smith et al. (1997). Their conclu-
+
+
+https://doi.org/10.5194/esurf-12-995-2024                                                        Earth Surf. Dynam., 12, 995–1026, 2024
+1002                               J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models
+
+sion is that under periodic perturbations in the transverse di-      3.1   Instabilities for analytic solutions
+rection, for rs ≤ 1, the linear stability analysis does not reveal
+                                                                     In this subsection we consider stationary analytic functions
+any instability, while for rs > 1, the stationary solutions are
+                                                                     of the form
+linearly unstable if the frequency of the periodic perturbation
+is large enough. This is coherent with the above brief pertur-                                  N
+                                                                                                Pb         
+                                                                                                               x−xp y−yp
+                                                                                                                           
+bation study. Notice that the case pw = −1 greatly simplifies          hex
+                                                                        s (x, y) = hs,x (x) +         gb        δx , δy        ,
+                                                                                                p=1
+such studies: the linear stability analysis can be shown to be
+                                                                       hex
+                                                                        w (x, y) = hw,x (x),
+equivalent to solving a one-dimensional ordinary differential
+equation.                                                            incorporating Nb small smooth bumps randomly positioned
+   The studies mentioned above are focused on the stabil-            at points (xp , yp ) chosen such that they do interfere with the
+ity of physically meaningful solutions. Here, we want to             boundary conditions, with the smooth bump function given
+draw attention to the numerical consequences of this self-           by
+amplification phenomenon; in this way we focus on the sta-                            
+bility of numerical solutions. Let us explain the key idea: as-      gb (x, y) = gb r 2 =
+suming that all functions are regular enough, one could con-                             
+                                                                                     −γ
+sider (for instance in a finite-difference setting) that our nu-        Hpert exp 1−r    2 exp(γ )  for r 2 = x 2 + y 2 ≤ 1,
+merical solution is roughly speaking a perturbation of the ex-          0                           otherwise,
+act continuous solution, where the source terms Ss,δ and Sw,δ
+represent the unavoidable consistency and solver errors of           with in practice Nb = 5, Hpert = 0.03 m, γ = 10, and δx =
+our solving process. Then the numerical sediment perturba-           δy = 0.25 km. The numerical domain is rectangular and cen-
+tion energy will satisfy Eq. (14) and will self-amplify in the       tered at (0, 0) with the dimensions Lx = 1 km on the x axis
+same way that physical perturbations self-amplify. In the un-        and Ly = 5 km on the y axis, and the basement b is set to
+stable regime, this means that the numerical solution can po-        zero. We impose homogeneous Dirichlet boundary condi-
+tentially diverge from the exact solution from a large amount        tions (hs = 0) on the boundaries y = −Lx/2 and x = Lx/2
+up to the point that it cannot be considered a relevant ap-          and homogeneous Neumann boundary conditions (∂y hs = 0)
+proximation of the continuous solution, even if the numeri-          on the boundaries y = −Ly/2 and y = Ly/2 as illustrated in
+cal perturbation arises from initially small numerical errors.       Fig. 3.
+In other words, in the absence of any treatment, numerical              We use for the mono-dimensional functions (hs,x , hw,x )
+errors may dominate the geomorphological responses of the            the stationary solution of the model in Eqs. (2)–(9)–(4)
+systems. However, since these numerical errors are reworked          in the case ηs = 1 given in Appendix D that satisfies the
+by a system of physical equations, it is not impossible to ob-       boundary conditions. For all our simulations, the constant
+tain good-looking results. This is where the trap lies for the       source terms (Ss,x , Sw,x ) for the analytic the stationary so-
+modeler, who might be inclined to interpret a result induced         lution (hs,x , hw,x ) in the case ηs = 1 (see Appendix D for de-
+by uncontrolled numerical noise as a physically plausible so-        tails) are always equal to (10 m Myr−1 , 1 m3 s−1 km−2 ). In-
+lution.                                                              jecting (hs , hw ) into Eqs. (2)–(9)–(4), after some straightfor-
+                                                                     ward but tedious computations one can derive exact expres-
+3   Numerical instabilities arising from the nonlinear               sions for the corresponding source terms (Ssex , Swex ), making
+    coupling of overland flow and sediment dynamic                   the pair (hs , hw ) an analytic solution of our model for those
+                                                                     source terms.
+To illustrate the numerical issues linked to the self-                  Given those analytic source terms, initializing the sedi-
+amplification of initially small numerical errors, we consider       ment height to the analytic value hs (x, y, 0) = hex    s (x, y) and
+in this section several situations where we have either full         the water height to the analytic value hw (x, y, 0) = hex   w (x, y)
+knowledge of the exact solution or a criterion to distinguish        the exact solution of the model in Eqs. (2)–(9)–(4) is of
+it from incorrect solutions. Thanks to this information on the       course simply equal to (hex          ex
+                                                                                                     s , hw ) for all times. Thus, any
+exact solution, we can illustrate the stability issues of simula-    reasonable numerical solution should remain a correct ap-
+tions using the model in Eqs. (2)–(9)–(4) (discretized by the        proximation of (hex         ex
+                                                                                            s , hw ) for all times. Using the finite-
+finite-volume scheme detailed in Appendix C).                        volume discretization described in Appendix C on a Carte-
+                                                                     sian mesh with square cells for which we denote 1xy the
+                                                                     size of the edges of the Cartesian cells, we attempt to repro-
+                                                                     duce the stationary analytic solution by initializing the sys-
+                                                                     tem to (hs (x, y, 0), hw (x, y, 0)) = (hex            ex
+                                                                                                                s (x, y), hw (x, y)) and
+                                                                                                               ex  ex
+                                                                     using the analytic source terms (Ss , Sw ) for various val-
+                                                                     ues of the parameters kg , kw , rs , and ps . The simulation total
+                                                                     time is 0.25 Myr, and we use time steps of maximum length
+                                                                     1t = 0.002 Myr. The corresponding analytic solutions are
+
+
+Earth Surf. Dynam., 12, 995–1026, 2024                                                 https://doi.org/10.5194/esurf-12-995-2024
+J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models                                       1003
+
+
+
+
+Figure 3. Domain configuration for the analytic tests cases.
+
+
+presented in Figs. 4–8 for the different values of the parame-      overall “geologically realistic” look of the erroneous solution
+ters kg , kw , rs , and ps we have considered. All those simula-    comes from the fact that numerical noise is amplified not by
+tions have been performed in parallel on 108 processors us-         some numerical scheme deficiency but by the capacity of the
+ing the MPI library. In Fig. 9, we present the obtained conver-     continuous model to amplify perturbations that we describe
+gence curves for all the tested analytic solutions; i.e., we plot   in the previous section. In other words, the numerical noise is
+the standard L2 error measuring the difference between the          reworked by the system, giving a “realistic” look to it. This is
+simulated sediment height and the exact analytic sediment           the reason why we stress that when performing real-life sim-
+height. We see in Fig. 9 that for all configurations except the     ulations for which of course the correct solution is unknown
+case (kg = 1 km2 Myr−1 , kw = 50 km2 Myr−1 ), we obtain             (otherwise we would not need to simulate anything at all),
+clean convergences curves, assessing the correctness of our         it can become very hard to decide if the numerical results
+numerical scheme even for the nonlinear couplings. How-             are correct or blurred by realistic-looking amplified numeri-
+ever, for the case (kg = 1 km2 Myr−1 , kw = 50 km2 Myr−1 )          cal noise. The quality of the numerical scheme, although es-
+the two nonlinear couplings (rs = 3/2, ps = 1) and (rs = 2,         sential, is not in question: the issue is the self-amplification
+ps = 0) fail to converge. Looking at Table 1 where we re-           mechanisms of the continuous model. They are the reason
+group the value of τ for each test case using our knowledge of      for its physical interest but simultaneously its main issue for
+the exact solution, we see that convergence problems appear         performing reliable simulations.
+as expected when τ becomes large. Indeed, since the error in-
+creases when we refine the mesh, this error is not a discretiza-
+tion consistency error as all the other test cases validate both    3.2   Identifiable instabilities in a non-analytic case
+our implementation and discretization. On the contrary, it in-
+                                                                    As previously mentioned, having an analytical solution is
+creases with the size of the numerical system, which strongly
+                                                                    quite rare when it comes to applying the model in Eq. (2)
+suggests that it originates from solver (both linear and non-
+                                                                    to realistic cases, and it sometimes becomes difficult to de-
+linear) errors, and this perfectly illustrates the phenomenon
+                                                                    termine whether the numerical solution is correct or not. To
+of numerical error self-amplification that we have discussed
+                                                                    illustrate how one can sometimes partially circumvent this
+from a theoretical point of view in the Sect. 2.3. Problems
+                                                                    difficulty, we consider a simple synthetic topographic surface
+are potentially more severe in finer meshes because numeri-
+                                                                    defined by three constant slope planes. The numerical do-
+cal diffusion that can dissipate residual numerical errors de-
+                                                                    main is rectangular with the dimensions Lx = 400 km on the
+clines with grid spacing. Now, to illustrate how treacherous
+                                                                    x axis and Ly = 300 km on the y axis (see Fig. 12a and b).
+those numerical solutions are, we present in Figs. 10 and 11
+                                                                    We again use a Cartesian mesh with square cells, the edges
+a comparison between the analytic solution and its erroneous
+                                                                    of each cell being of length 1xy = 2 km. The gravity diffu-
+numerical counterpart. The erroneous solutions are danger-
+                                                                    sion coefficient kg is equal to 100 km2 Myr−1 in the whole
+ously “good-looking”: indeed, if only the initial topography
+                                                                    domain, while kw = 10 km2 Myr−1 for hs + b ≥ 0 and kw =
+and the rain and production data are shown, one could eas-
+                                                                    0.1 km2 Myr−1 for hs +b < 0, corresponding to a modulation
+ily be tempted to interpret the quite complex topographies
+                                                                    of the water-induced transport in a fictitious marine domain.
+obtained as the realistic self-amplification of the perturba-
+                                                                    Water is supplied by three constant water flux sources located
+tions due to the presence of the bumps. However, since we
+                                                                    at the domain boundary (black arrows in Fig. 12a), so we call
+know the exact solution, we are sure that this is not the case:
+                                                                    this the “three rivers” test case. Each water source is 12 km
+the appealing numerical solutions are completely wrong. The
+                                                                    large and supplies 1200 m3 s−1 of water.
+
+
+https://doi.org/10.5194/esurf-12-995-2024                                             Earth Surf. Dynam., 12, 995–1026, 2024
+1004                              J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models
+
+                                                                rs
+                                                             q
+Table 1. Approximate maximum analytic value of τ = kkw q w             for each convergence test.
+                                                     g  ref
+
+
+                                                         (rs = 1, ps = 0)        (rs = 3/2, ps = 1)   (rs = 2, ps = 0)
+                        (kg , kw ) = (50, 1) km2 Myr−1                   0.01              0.00353             0.0025
+                        (kg , kw ) = (5, 1) km2 Myr−1                     0.1               0.0353              0.025
+                        (kg , kw ) = (5, 5) km2 Myr−1                     0.5                0.353               0.25
+                        (kg , kw ) = (1, 5) km2 Myr−1                     2.5                1.767               1.25
+                        (kg , kw ) = (1, 50) km2 Myr−1                     25                 17.67               12.5
+
+
+
+
+Figure 4. Sediment height hex                                                2
+                           s of the analytic solution for the case kg = 50 km Myr
+                                                                                 −1 and k = 1 km2 Myr−1 .
+                                                                                         w
+
+
+
+   An essential remark is that the whole configuration is sym-              three very different results. The only difference between the
+metric with respect to the vertical plane x = Lx/2. In prin-                three cases being the numerical solvers, this indicates that it
+ciple, the equation system consisting of Eqs. (2) and (4),                  originates from numerical errors. As we are using a decou-
+here used with rs = 2, ps = 1, should maintain this symme-                  pled time scheme between water flow and sediment evolution
+try. Since we do not know the exact solution this time, at                  (see Appendix C), one may argue that those instabilities are
+least we can use symmetry to identify erroneous results that                arising from some violated coupling constraint on the time
+do not fulfill this elementary requirement. Using the finite-               step. Should this be the case, reducing the time step enough
+volume scheme depicted in Appendix C, we perform a set                      would ultimately lead to clean solutions. However, we have
+of three identical simulations in terms of physical parameters              observed the exact opposite: the smaller the time step, the
+but using different numerical settings in order to illustrate the           larger the obtained instabilities. The fact that reducing the
+impacts of numerical errors. We perform a sequential compu-                 time step makes things even worse is thus another clear sign
+tation using GMRES as our linear solver for all systems, its                that our problems are the result of amplified error accumula-
+parallel equivalent on four processors, and another sequen-                 tion up to the point that it influences flow branching.
+tial simulation using BiCGStab as our linear solver for all
+systems. The linear solvers are part of the well-known refer-               4   Large structure simulation (LSS): an attempt to
+ence PETSc library (Balay et al., 1998) to avoid any potential                  get rid of instabilities in LEMs
+mistake in their implementation, while the parallelism relies
+on the Arcane framework (Grospellier and Lelandais, 2009).                  In this section, we explain how to transpose the ideas un-
+Final topographies and water flux are shown in the bottom                   derlying the concept of large eddy simulation from the com-
+row of Fig. 12. Figure 12c corresponds to sequential GM-                    putational fluid dynamics community to our landscape evo-
+RES, Fig. 12d to parallel GMRES, and Fig. 12e to sequential                 lution model. The method consists in preventing any self-
+BiCGStab.                                                                   amplification phenomena that might emerge from the small
+   All the results from these simulations should be almost                  spatial scales where numerical errors develop. In our opin-
+identical and in any case symmetrical with respect to the ver-              ion, this is a key ingredient for achieving reproducible LEM
+tical plane x = Lx/2 in the absence of any spatial hetero-                  simulations.
+geneity in the input data. Clearly, symmetry is lost in the
+three cases, and what is even more striking is that we get
+
+
+Earth Surf. Dynam., 12, 995–1026, 2024                                                        https://doi.org/10.5194/esurf-12-995-2024
+J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models                                      1005
+
+
+
+
+Figure 5. Sediment height hex                                               2
+                           s of the analytic solution for the case kg = 5 km Myr
+                                                                                −1 and k = 1 km2 Myr−1 .
+                                                                                        w
+
+
+
+
+Figure 6. Sediment height hex                                               2
+                           s of the analytic solution for the case kg = 5 km Myr
+                                                                                −1 and k = 5 km2 Myr−1 .
+                                                                                        w
+
+
+
+4.1   Principles and physical interpretation of filtering          achieved by using a convolution operator F defined by
+                                                                              Z
+                                                                                                                   1 x 
+                                                                   F(u)(x) = u(y)gα (x − y)dy, where gα (x) = d g          ,
+                                                                                                                  α      α
+                                                                               Rd
+                                                                   where the filter kernel g satisfies
+Recall that the main idea of LES is to filter the solution to                                 Z
+distinguish between the behavior of the flow above and be-         0 ≤ g(x) ≤ 1, g(0) = 1, g(x)dx = 1.
+low a target length scale α to obtain local averages that are
+                                                                                              Rd
+smoother and as mesh-independent as possible. This target
+length scale controls the size of the smallest structures that     Several kernels are used in the literature, such as a low-
+we will be able to resolve in the problem, quite independently     pass filter, a box filter, or the very natural Gaussian filter
+                                                                                        2
+of the domain size. The main practical consequence is that         g(x) = π −d/2 e−|x| . In Fig. 13 we illustrate the smoothing
+our mesh will have to resolve this length scale; i.e., the mesh    effect of a Gaussian kernel on oscillating data: as expected, it
+size ε will have to be smaller than the chosen length scale.       preserves the high-amplitude and low-frequency oscillation
+   LES models are probably as numerous as the various au-          while filtering out the high-frequency and low-amplitude os-
+thors working on the subject (Berselli et al., 2005); thus, we     cillations. Such filters might therefore be ideal for our appli-
+will be very brief on the subject and refer the reader to the      cation to landscape evolution models: the small topographic
+recent review by Zhiyin (2015). The very first LES model           perturbations will be cleaned out such that the flow routing
+is called the Leray-α model. It was used by Leray in 1934          will not be affected by it. Although convolution operators
+to establish the existence of weak solutions to the Navier–        produce averages with the desired properties, they are im-
+Stokes equations (Leray, 1934). Originally, the filtering in       practical on bounded domains. The modern way of defin-
+Leray (1934) as well as in many classical LES models was           ing the Leray-α filter for bounded domains consists in using
+
+
+https://doi.org/10.5194/esurf-12-995-2024                                             Earth Surf. Dynam., 12, 995–1026, 2024
+1006                              J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models
+
+
+
+
+Figure 7. Sediment height hex                                               2
+                           s of the analytic solution for the case kg = 1 km Myr
+                                                                                −1 and k = 5 km2 Myr−1 .
+                                                                                        w
+
+
+
+
+Figure 8. Sediment height hex                                               2
+                           s of the analytic solution for the case kg = 1 km Myr
+                                                                                −1 and k = 50 km2 Myr−1 .
+                                                                                        w
+
+
+
+the differential filter Fα defined by (Cheskidov et al., 2005;      this can create boundary effects unless the chosen Dirich-
+Guermond et al., 2003)                                              let boundary condition is adapted to the filtered quantity.
+                                                                    The Neumann choice avoids those difficulties without cre-
+  −α 2 1Fα (u) + Fα (u) = u in ,                                   ating any practical issues, which has motivated our choice.
+  ∇Fα (u) · n = 0           on ∂N .                        (16)    For quantities such as the water flux for which Neumann ev-
+  Fα (u) = 0                on ∂D                                  erywhere is a more natural boundary condition, we introduce
+                                                                    the alternative filter FαN with only Neumann boundary con-
+The filtered result Fα (u) basically amounts to a convolution       ditions:
+of u by Green’s function underlying Eq. (16), i.e., the fil-
+ter applied to the Dirac distribution. Using a finite-volume          −α 2 1FαN (u) + FαN (u) = u    in ,
+                                                                                                              .             (17)
+scheme Fα , this time we can easily obtain a discrete ver-            ∇FαN (u) · n = 0                on ∂
+sion Fα,h , which is one of the main reasons why we have
+chosen to use this filter, along with its theoretical and practi-
+cal success for CFD. Notice that contrary to Cheskidov et al.
+                                                                    4.2   Leray filtering applied to our landscape evolution
+(2005) and Guermond et al. (2003), we use homogeneous
+                                                                          model
+Neumann and Dirichlet boundary conditions instead of pe-
+riodic boundary conditions to simplify the treatment of the         Our numerical observations suggest that for large values of τ
+boundary. The main drawback of this choice is that our filter       the model governing the simultaneous evolution of sediment
+does not commute with differential operators. Resorting to          and water is as intractable to solution as the Navier–Stokes
+only Dirichlet boundary conditions would have solved this           system is for large Reynolds numbers. Consequently, mim-
+issue, but from our numerical experiments we found that             icking the idea of large eddy simulation (LES) we will now
+
+
+Earth Surf. Dynam., 12, 995–1026, 2024                                               https://doi.org/10.5194/esurf-12-995-2024
+J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models                                         1007
+
+
+
+
+Figure 9. Convergence curves. (a) Case kg = 50 km2 Myr−1 and kw = 1 km2 Myr−1 . (b) Case kg = 5 km2 Myr−1 and kw = 1 km2 Myr−1 .
+(c) Case kg = 5 km2 Myr−1 and kw = 5 km2 Myr−1 . (d) Case kg = 1 km2 Myr−1 and kw = 5 km2 Myr−1 . (e) Case kg = 1 km2 Myr−1 and
+kw = 50 km2 Myr−1 .
+
+
+apply filtering to key parts of our model problem to obtain a        will now be given by
+more numerically stable approximate model. This means that
+the sediment flux used in the mass conservation equations,                                                                !rs
+                                                                                    −p                        FαN (qw )
+  ∂hs                                                             J s = − ηs (hs ) sref s ||∇ (hs + b) ||ps
+   ∂t + div (J s ) = Ss   in ×]t0 , T [,
+                                                                                                                qref
+  −J s · n = Bs           on ∂N ×]t0 , T [,                                                       
+  hs = 0                  on ∂D ×]t0 , T [,                            ∇ψw (hs + b) + ∇ψg (hs + b) in ×]t0 , T [,             (18)
+  hs (t = t0 ) = hs,0     in ,
+
+                                                                  where we use the filtered water flux magnitude FαN (qw ) in-
+                                                                  stead of directly using the water flux qw . In the same way, in
+                                                                  the water equations, we will now use the filtered topography
+
+
+https://doi.org/10.5194/esurf-12-995-2024                                              Earth Surf. Dynam., 12, 995–1026, 2024
+1008                               J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models
+
+
+
+
+Figure 10. Comparison between the sediment height hex                                                                         2   −1
+                                                   s of the analytic solution and numerical solution hs for the case kg = 1 km Myr ,
+kw = 50 km2 Myr−1 , rs = 3/2, and ps = 1. (a) Analytic solution hex
+                                                                 s and (b) numerical solution hs .
+
+
+
+
+Figure 11. Comparison between the sediment height hex                                                                         2   −1
+                                                   s of the analytic solution and numerical solution hs for the case kg = 1 km Myr ,
+kw = 50 km2 Myr−1 , rs = 2, and ps = 0. (a) Analytic solution hex
+                                                               s and (b) numerical solution hs .
+
+
+
+Fα (hs + b) instead of the topography hs + b, leading to               The name “large structures” originates from the fact that
+                                                                       since we use filtering in the coupling process, the water
+  Qw = − km hws pηww (hw ) ||∇(Fα (hs + b))||pw ∇(Fα (hs + b)),        model does not see anymore topographic details that are
+                ref
+                                                                       smaller than α, and in the same way the sediment evolution
+  div (Qw ) = Sw      in ,                                            is no longer influenced by water flow details smaller than α.
+                                                                       We have thus abandoned the idea of resolving all the scales
+                                                                       involved in the landscape evolution problem and will only try
+  Qw · n = Bw on ∂in ,
+                                                                       to simulate the large sedimentary and water structures, hence
+                                                              (19)     the name LSS: only structures several times larger than the
+with the associated water flux:                                        filter resolution α will appear in the final result.
+                       −p
+qw =||km hw ηw (hw ) sref w ||∇ (Fα (hs + b)) ||pw                     4.3   Numerical results with filtering
+     ∇ (Fα (hs + b)) ||.                                      (20)
+                                                                       Before turning to numerical experiments, one must choose
+Our so-called large structure simulation (LSS) for landscape           a value for the filter parameter α. Following LES principles,
+evolution thus consists in solving Eqs. (2)–(18)–(19)–(20).            we know that the filter scale α corresponds to the spatial res-
+
+
+Earth Surf. Dynam., 12, 995–1026, 2024                                                   https://doi.org/10.5194/esurf-12-995-2024
+J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models                                                1009
+
+
+
+
+Figure 12. The “three rivers” test case with 1xy = 2 km. (a, b) Initial topography; black arrows represent the position of the water inflows.
+(c–e) Topography and water flux after 6 Myr obtained under different numerical settings. (c) Sequential GMRES, (d) parallel GMRES, and
+(e) sequential BiCGStab.
+
+
+                                                                         sults previously obtained. We also see that for the test cases
+                                                                         with (kg = 1 km2 Myr−1 , kw = 50 km2 Myr−1 ) convergence
+                                                                         is now obtained for α = 81xy (γ = 8). This choice for the
+                                                                         ratio γ between the filter size α and the mesh size 1xy is
+                                                                         not random. Indeed, with α = γ 1xy when 1xy tends to zero
+                                                                         so does the filter size, and if γ is not large enough then the
+                                                                         filtering parameter α will no longer be large enough to com-
+                                                                         pensate for solver errors and numerical approximation errors.
+                                                                         We illustrate this in Fig. 15. Keeping in mind that we are
+                                                                         necessarily using a fixed Newton nonlinear solver tolerance
+                                                                         (1×10−6 in practice), what we observe on those curves is that
+                                                                         when the parameter α becomes smaller than some threshold
+                                                                         value that allows controlling the corresponding accumulated
+Figure 13. Illustration of the effect of the convolution by a Gaus-
+                                                                         solver (and numerical approximation) errors, the obtained so-
+sian function.
+                                                                         lution is no longer correct. Of course, with a larger value
+                                                                         of γ this threshold is reached for a smaller value of 1xy ,
+                                                                         which explains why once γ is large enough we can obtain
+olution of our continuous approximate model, which in prac-              the correct solution along the entire convergence curve. This
+tice one will want to be as small as possible. However, it               threshold is likely to depend on 1xy in the sense that for finer
+must naturally be resolved by the grid, meaning we should                meshes since the size of the system is larger, so is the solver
+have at the very least 1xy < α for Cartesian grids. More-                error. It is also very likely that since we expect larger values
+over, as we test our numerical solution against an analytic              of τ to imply an increase in both the numerical approxima-
+solution for the unfiltered case, we need to make the filter             tion and solver errors, modifying τ might also influence this
+size go to zero at the same speed as the mesh size in or-                threshold value. Results shown in Fig. 15 confirm this be-
+der to measure a convergence. For simplicity, we have cho-               havior. This also explains why we have reported results with
+sen to use filter parameters α = γ 1xy with γ > 1. In Fig. 14            γ = 8 in Fig. 14e: to maintain the convergence over the full
+we present the convergence results obtained for the analytic             range of 1xy values used for these simulations despite high
+test cases of Sect. 3.1 this time using filters. Convergence             τ values. We nevertheless see in Fig. 15 that for more realis-
+is recovered with α = 1.11xy (i.e., γ = 1.1) for every case              tic mesh sizes, smaller values of γ will be more than enough
+that was already working without a filter, suggesting that               to obtain the correct solution and that using filters is not pro-
+the LSS approach at least does not deteriorate correct re-
+
+
+https://doi.org/10.5194/esurf-12-995-2024                                                    Earth Surf. Dynam., 12, 995–1026, 2024
+1010                             J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models
+
+hibitively costly in realistic configurations. We also observe     controlled by the filter size. We will illustrate in the next sec-
+that for mesh sizes allowing all the values of the ratio γ to      tions that the calibration of this length must simply respect
+give a correct approximation, the error of course increases        an elementary principle: to be largely lower that the size of
+with γ , which is perfectly expected since α is our largest ap-    the geomorphic structures the LEM aims to reproduce. Based
+proximation parameter.                                             on this calibration, the mesh resolution must be chosen so
+    We finally reproduce the very same experiment that was         that the filter is correctly discretized. Thus, we have not de-
+performed on the “three rivers” test case with sequential GM-      teriorated the overall computational situation: we still have
+RES, parallel GMRES, and sequential BiCGStab but using a           a unique discretization parameter that governs the resolution
+filter α = 2.2 km for 1xy = 2 km. Contrary to Fig. 12, the         and computational cost of the model.
+symmetry is maintained and we obtain almost identical re-
+sults for the three configurations (Fig. 16). The expected im-     4.4   Impacts of filtering on the emergence of geomorphic
+pact of the filter on the simulated water flow and topogra-              structures
+phy is a smoothing effect, which is what is observed when
+comparing, for example, the width of the three valleys. How-       We now consider two synthetic case studies to observe the
+ever, the differences remain marginal in this case. Still on our   formation of geomorphic features. The idea underlying the
+“three rivers” test case, from our observations on the analytic    first test case is very simple: we re-use as our initial data
+cases and as we do not know the exact solution, to assess the      the analytic solution described in Sect. 3.1 in the case (rs =
+legitimacy of our choice of filter size we analyze the behav-      2, ps = 0) and (kg = 1 km2 Myr−1 , kw = 50 km2 Myr−1 ) as
+ior of the solution for various values of the filter parameter α   well as the rectangular domain described in Fig. 3. However,
+(fixing the grid size to 1xy = 2 km). Results are displayed in     instead of using the analytic source terms allowing the recov-
+Fig. 17. We clearly see that symmetric solutions are obtained      ery of the analytic solution for all times, we simply use a con-
+for α > 1xy , while further reducing the filter parameter leads    stant source term (Ss = 10 m Myr−1 , Sw = 1 m3 s−1 km−2 ),
+to behavior similar to the no-filter case. This is first coher-    corresponding to a uniform constant uplift supply and a uni-
+ent with the principle of LES that the filter should control       form constant rain.
+what happens below the grid scale, which can only be done             We fix the mesh size to 1xy = 0.005 km, and we again
+if α > 1xy , and also a clear sign that our initial choice for     perform the simulation over a time period of 0.25 Myr with
+the ratio γ = α/1xy belongs to the stable region.                  maximum time steps of length 1t = 0.002 Myr. In Fig. 18,
+    The above results obtained with a filtering strategy repre-    we recall the initial elevation corresponding to our analytic
+sent, in our opinion, a drastic improvement in the reliability     solution along with the final solution obtained for our now
+of these numerical solutions: the anomalous error amplifi-         constant source terms for various values of the filter size
+cation has disappeared, and the results are reproducible and       as well as without filters. Since our new source terms and
+unaffected by the choice of solver or the number of proces-        the analytic ones are of the same magnitude and since ev-
+sors used for simulation. In the absence of this treatment,        ery other property of the problem is kept the same, we can
+the error amplification phenomenon is most probably a great        guess, using the convergence curves in Fig. 15, which filter
+source of “anomalous mesh dependency” of the results as            sizes are giving a correct solution (up to the approximation
+each mesh induces different numerical errors. The positive         due to the filtering process itself). Since ln 1xy ≈ −5.298,
+impact of our filtering strategy can be seen in the conver-        we see in Fig. 15 that for our choice of 1xy we can be con-
+gence curves (Fig. 15): it allows getting rid of any anoma-        fident that the filter size α = 21xy will give us the correct
+lous mesh dependency and recovering the regular one – that         solution with a small numerical approximation error, and we
+is to say when refining the mesh the associated sequence of        use this case as a reference. Thus, the first observation for
+solutions converges to the correct continuous solution. No-        the result obtained with α = 21xy is that the correct solu-
+tice that this is the best kind of “mesh independence” that        tion this time allows some legitimate geomorphic structures
+one can hope for: in particular, quite large differences will      to appear and self-organize. Those structures originate from
+remain when comparing two simulations defined on two dif-          the bumps because if we perform the very same simula-
+ferent coarse meshes. Let us avoid any misunderstanding:           tion with constant source terms but without bumps, we ob-
+the strategy prevents the amplification of numerical errors,       tain a clean uniform final state deprived of any geomorphic
+but it does not clean the solution of legitimate numerical         complexity. With the larger filter size α = 41xy , we obtain
+errors. This being said, we believe that following our ap-         an averaged version with slightly less geomorphic complex-
+proach brings us closer to the best possible mesh indepen-         ity, illustrating the way the filter only keeps “large” struc-
+dence. When LEMs are designed without any filtering strat-         tures. However for the very large filter α = 81xy the ap-
+egy, it corresponds to implicitly considering the mesh size        proximation for 1xy = 0.005 km is too crude and we lose
+as a cut-off length scale. However, it lacks calibration and       all the geomorphic complexity. We have checked that if we
+leads to the error self-amplification problems illustrated in      refine the mesh we recover the correct solution with the ratio
+Sect. 3. In our case, we explicitly consider the filter size as    α = 81xy . This confirms that the uniform crude approxima-
+a cut-off length scale, the resolution of the model being then     tion obtained for α = 81xy and 1xy = 0.005 km in Fig. 18
+
+
+Earth Surf. Dynam., 12, 995–1026, 2024                                               https://doi.org/10.5194/esurf-12-995-2024
+J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models                                       1011
+
+
+
+
+Figure 14. Convergence curves with filters. (a) Case kg = 50 km2 Myr−1 and kw = 1 km2 Myr−1 . (b) Case kg = 5 km2 Myr−1 and kw =
+1 km2 Myr−1 . (c) Case kg = 5 km2 Myr−1 and kw = 5 km2 Myr−1 . (d) Case kg = 1 km2 Myr−1 and kw = 5 km2 Myr−1 . (e) Case kg =
+1 km2 Myr−1 and kw = 50 km2 Myr−1 .
+
+
+results, as expected, from an oversizing of α. Now, let us con-      We now switch to a second synthetic case study. The nu-
+sider the final solutions of Fig. 18 for the value α = 1.11xy     merical domain again corresponds to a rectangular grid but
+as well as without a filter. Both of those results present more   this time with dimensions Lx = 600 km on the x axis and
+complexity than the reference case α = 21xy . Using the con-      Ly = 80 km on the y axis containing a mesh of resolution
+vergence curves of Fig. 15, we expect the result obtained for     1xy = 0.25 km. The basement b is constant and equal to 0 m,
+α = 1.11xy to belong to the hazardous region where the er-        while the sediment thickness hs is initially given by a uni-
+ror level starts to increase and this solution, while not com-    form in x smooth bump:
+pletely erroneous, is becoming untrustworthy. However, for
+the solution without a filter strange small structures appear
+and the overall topography, despite being the most complex
+                                                                                                 
+of all, does not have any physical origin.                                    H exp        −1
+                                                                                          1−ry2
+                                                                                                      for ry = (y−y
+                                                                                                                 δy
+                                                                                                                    c)
+                                                                                                                       ≤ 1,
+                                                                  g(x, y) =
+                                                                              0                       otherwise,
+
+https://doi.org/10.5194/esurf-12-995-2024                                           Earth Surf. Dynam., 12, 995–1026, 2024
+1012                                 J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models
+
+
+
+
+Figure 15. Convergence curves for various values of the ratio α/1xy : (a) (rs , ps ) = (3/2, 1) and (b) (rs , ps ) = (2, 0).
+
+
+
+
+Figure 16. The “three rivers” test case with filter α = 2.2 km and 1xy = 2 km. Topography and water flux after 6 Myr. (a) Sequential
+GMRES, (b) parallel GMRES, and (c) sequential BiCGStab.
+
+
+with H = 20 m, yc = 40 km, and δy = 20 km. This symme-                      on the sides normal to the y axis. Model parameters control-
+try in the x direction of the initial topography is then per-               ling the nonlinearity in the water–sediment coupling are set
+turbed by Nb = 30 small smooth bumps randomly positioned                    as rs = 2 and ps = 0. Simulation takes place over the time
+at points (xp , yp ):                                                       period T = 6 Myr.
+                                                                               This second synthetic case study has similarities to the
+gpert (x, y) =                                                              previous one in terms of boundary conditions, but its larger
+              
+                −1
+                     
+                                (x−x )2 (y−y )2                             spatial scale makes it relatively close to the case studies
+  Hpert exp 1−r    2   for r 2 = δ 2 p + δ 2 p ≤ 1,                         published in Perron et al. (2008) and Armitage (2019). We
+  0                    otherwise,                                           display the initial topography (Fig. 19a) as well as the fi-
+                                                                            nal topography obtained with and without a filter for kw =
+with Hpert = 1 m and δ = 2 km. Rainfall is constant in time                 5 km2 Myr−1 and for three different kg values. The first case
+and space (3000 mm yr−1 ) and is the unique water supply for                considers kg = 50 km2 Myr−1 . The relatively high kg value
+this case. The sediment source (here we simulate a sediment                 compared to kw should not favor the emergence of geomor-
+production) goes from Ss = 0 m Myr−1 at y = 0 and y = Ly                    phic structures. This is, however, not what we observe in the
+to Ss = 100 m Myr−1 at y = Ly/2 = yc . The variation is con-                simulation performed without a filter (Fig. 19b). The filter,
+tinuous over the whole domain following                                     defined by α = 0.3 km, has a huge impact and no geomorphic
+                                                                          structure is produced (Fig. 19c). Refining both α and 1xy for
+             Smax exp 1−r−1
+                            2   for ry = (y−y
+                                           δy
+                                              c)
+                                                 ≤1                         this value of kg , we always obtain the same uniform solu-
+Ss (x, y) =                y
+                                                                            tion, which confirms that this is the correct one. An order of
+             0                  otherwise,
+                                                                            magnitude smaller kg coefficient is used for the second sim-
+with δy = 40 km. Model boundary conditions are fixed ele-                   ulation. By decreasing kg , the emergence of structure may be
+vations on the sides normal to the x axis and a zero gradient               considered a realistic result. In this case, complex structures
+
+
+Earth Surf. Dynam., 12, 995–1026, 2024                                                          https://doi.org/10.5194/esurf-12-995-2024
+J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models                                                  1013
+
+
+
+
+Figure 17. The “three rivers” test case with 1xy = 2 km. Final topography and water flux after 6 Myr obtained with different values of the
+filter parameter α. (a) No filter, (b) α = 0.2 km, (c) α = 1 km, (d) α = 2.2 km, (e) α = 2.5 km, and (f) α = 3 km.
+
+
+controlled by at least one wavelength appear in the simula-              5    Discussion
+tion performed without a filter (Fig. 19d). The effect of the
+filter, however, indicates the very likely artificial origin of          We consider this work to belong to the common effort of the
+these structures. A residual perturbation can still be observed          scientific community to harmonize landscape evolution mod-
+in the final topography (Fig. 19e), indicating that this kg and          els. It is our belief that most of our observations and practi-
+kw configuration is at the transition between two regimes, the           cal recommendations can also be applied to a wider range of
+gravity-driven and the water-driven erosion regimes. In our              sediment evolution models than the one we use in this study.
+last simulation, we have decreased kg by a factor of 5 and we            The implementation of the large structure simulation strat-
+indeed observe the emergence of structures even when the                 egy should be accessible to every LEM satisfying (H1), (H2),
+filter is active (Fig. 19g). Here again the impact of the filter         and (H3). In particular, we believe that filtering would also be
+is important and allows keeping only what we believe to be               very useful for the models of Perron et al. (2009), Hooshyar
+the correct structures.                                                  and Porporato (2021a), and Porporato (2022) that take the
+    This last set of simulations shows the major impact of kg            general form
+on the wavelength of the structures that can emerge from our                 ∂hs
+simulation. We have also performed additional simulations                     ∂t + div (J s ) = Ss   in ×]t0 , T [,
+                                                                             −J s · n = Bs           on ∂N ×]t0 , T [,
+(not shown here) using various kw values for a given kg . The                                                                            (21)
+                                                                             hs = 0                  on ∂D ×]t0 , T [,
+results show that kw must be high enough to make the struc-
+                                                                             hs (t = t0 ) = hs,0     in ,
+tures appear, but they also show that kg was more important
+than kw in the wavelength control. We believe that a dedi-               with a source given by
+cated study should be conducted with our model to quantify
+                                                                                                qw rs
+                                                                                                    
+these effects, but it is beyond the scope of this article. Such a                      −p
+                                                                         Ss = U − κw sref s,2          ||∇ (hs + b) ||ps,2 ,
+complete study can be found in Perron et al. (2008). Even if                                    qref
+it was performed using another LEM, similar conclusions to               with U a sediment source term (or an uplift depending on the
+those drawn from his study are also expected in our case.                interpretation of b) and a sediment flux given by
+                                                                                    −p
+                                                                         J s = −sref s kg ||∇ (hs + b) ||ps ∇ (hs + b) in ×]t0 , T [.
+                                                                         The behavior of those models is relatively close to the model
+                                                                         in Eqs. (2)–(9) that we have studied in detail here, with the
+
+
+https://doi.org/10.5194/esurf-12-995-2024                                                     Earth Surf. Dynam., 12, 995–1026, 2024
+1014                              J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models
+
+
+
+
+Figure 18. Results for a mesh size 1xy = 0.005 km. (a) Initial elevation. Final elevation: (b) no filter, (c) α = 1.11xy , (d) α = 21xy ,
+(e) α = 41xy , (f) α = 81xy .
+
+
+main difference that the nonlinear term qwrs ||∇(hs + b)|ps ap-        water flow model avoiding inverting a linear system. Nev-
+pears as a reaction term rather than a diffusive term. In partic-      ertheless, an immediate application of the LSS in this con-
+ular, for pw = −1 the observations of linear stability for the         text consists of course of replacing qw by its filtered version
+model in Eq. (21) match the conclusion of the linear stabil-           FαN (qw ) in the second member of Eq. (21) and can only im-
+ity analysis of Smith and Bretherton (1972) and Smith et al.           prove the numerical stability. We also believe that the ξ –q
+(1997). We can thus expect that the model in Eq. (21) will po-         model of Davy and Lague (2009) could benefit from a simi-
+tentially suffer from similar numerical stability issues to the        lar filtering strategy.
+ones we analyzed in detail for the model in Eqs. (2)–(9), al-             Correctly using filters requires some understanding of the
+though this certainly requires a dedicated study before draw-          scales involved in the model. Although this is not such an
+ing conclusions. In particular, several elements can help keep         easy task in general, from generic guidelines concerning the
+the numerical errors under control: high-order space and time          relation between the filter size α and the precision of the re-
+schemes, explicit time schemes, and specific solvers for the           sults it is clear that the chosen filtering parameter α should
+
+
+Earth Surf. Dynam., 12, 995–1026, 2024                                                   https://doi.org/10.5194/esurf-12-995-2024
+J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models                                                       1015
+
+
+
+
+Figure 19. Final topographies obtained for three different set of diffusive coefficients, systematically tested without filter and with a
+filter using α = 0.3 km. (a) Initial perturbed topography. (b) Solution without filter for (kg , kw ) = (50, 5) km2 Myr−1 , (c) solution with
+filter for (kg , kw ) = (50, 5) km2 Myr−1 , (d) solution without filter for (kg , kw ) = (5, 5) km2 Myr−1 , (e) solution with filter for (kg , kw ) =
+(5, 5) km2 Myr−1 , (f) solution without filter for (kg , kw ) = (1, 5) km2 Myr−1 , (g) solution with filter for (kg , kw ) = (1, 5) km2 Myr−1 .
+
+
+resolve the main sediment structures that one wants to cor-                  rectly clean errors that could otherwise have a destabilizing
+rectly represent in the flow, ideally fulfilling an equivalent               effect on the final configuration, higher values of α should
+of Nyquist’s rule. For instance, if an essential valley is 1 km              probably be used for increasing values of τ . Nevertheless,
+large, then α should be several times smaller (and ideally                   our experiments illustrate that even quite small values of α
+smaller than 100 m). A good practical test consists in com-                  allow cleaning the most relevant geomorphic features.
+paring the filtered topography Fα (hs + b) and the unfiltered                   Notice that in the present paper, we have for simplicity
+one hs + b. The structures of hs + b that one wants to simu-                 always used uniform meshes with a constant 1xy , hence ob-
+late accurately should be preserved in Fα (hs + b), of course                taining a constant ratio γ = α/1xy . As an immediate exten-
+in a smoother way. For instance, for a given value of α if a                 sion, one could resort to adaptive mesh refinement to refine
+small topographic depression in which water could in princi-                 the mesh in areas where τ becomes large and thus where nu-
+ple flow is observed on hs +b but is absent in Fα (hs +b), then              merical errors are more likely to be large, mitigating the in-
+if one really wants to capture water flow inside this “channel”              crease in the system’s size and thus the increase in the com-
+the value of α must be reduced and the mesh refined accord-                  putational cost. In practice for constant coefficients kg and kw
+ingly if needed. The filter should in any case be able to clean              this would be equivalent to refining the mesh where water
+numerical approximation and solver errors, implying that we                  flow occurs. In addition, one could replace the constant pa-
+should at the very least have γ = α/1xy > 1 to correctly re-                 rameter α by a space–time-variable coefficient α(x, y, t) in
+solve the targeted α spatial scale. To allow the filter to cor-              an adaptive filtering strategy, where the filter size could be
+
+
+https://doi.org/10.5194/esurf-12-995-2024                                                         Earth Surf. Dynam., 12, 995–1026, 2024
+1016                              J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models
+
+chosen in coherence with the local size of the structures one       time (Fig. 20). Figure 20b illustrates a typical distribution
+wants the model to be able to reproduce.                            in space of the km coefficients when using Perlin noise. The
+                                                                    range of values for the k coefficient (from km = 0.01 m s−1
+5.1    Recovering realistic landscapes
+                                                                    to km = 10 m s−1 ) is arbitrarily fixed while respecting real-
+                                                                    istic value ranges. Impacted by the heterogeneity in km , the
+In principle, the use of filters allows getting rid of the influ-   water flow is still distributed between neighboring cells ac-
+ence of numerical noise in the solution. An apparent draw-          cording to the gradient of the slope, but it also preferentially
+back is that for unperturbed data, complex topographies will        chooses to enter the cell with the highest km , especially when
+no longer appear by themselves through the perturbations            the slopes become gentle and relatively close between neigh-
+induced by either the numerical approximation or the nu-            bors. The flow then acquires a high degree of complexity de-
+merical solvers. Moreover, natural landscapes exhibit some          spite a filter which, set at α = 1.11xy , makes it possible to
+heterogeneity even under a low-τ regime. This suggests an           eliminate numerical errors.
+ingredient is missing, and this ingredient is well-known by            The same approach can be applied to the other synthetic
+geologists: the heterogeneity. Indeed heterogeneity is every-       test case used in Sect. 4.4 using α = 21xy : the simulations
+where in nature and could be injected in such a model to            are now performed with spatially and temporally varying
+make realistic-looking topographies emerge. This idea is of         km coefficients (the same range of km values is used). Fig-
+course not new but we propose investigating the effect of het-      ures 21a and b and 22 show the initial and the final state of the
+erogeneity in the context of the hydro-sedimentary model we         simulation with a special focus on the geomorphic structures
+use for this paper.                                                 produced, which are clearly more complex when comparing
+   We would also like to stress what is in our opinion an es-       to the result shown in Fig. 18d.
+sential methodological key point: since natural landscapes             Next, we introduce similar heterogeneity in the rain maps.
+are full of complex heterogeneities that are not contained          When we use solely rain heterogeneity incorporating the
+in our data, it might be tempting to consider the amplified         same spatial scales as in the km maps, the geomorphic struc-
+numerical noise as a way to recover the complexity lack-            tures produced are very similar to those obtained using only
+ing in our data. However, the statistical signature of numer-       the heterogeneous km coefficients. The most visually satisfy-
+ical noise will never coincide with physical observations: it       ing result is obtained for a simulation using both variable km
+would be like throwing up the pieces of a puzzle and hoping         and rain maps (Fig. 21c).
+that they will correctly reconstruct the puzzle while falling
+down. The key point is that a numerical simulation is not           5.2   Overcoming the topographic limitations of the GMS
+supposed to directly reproduce natural observations but only              model
+to compute a correct approximation of a model for a given
+dataset. This is the model and its data that should reproduce       The most obvious restriction for the GMS model in Eq. (4)
+nature, and in this case if solved correctly the numerical so-      to be well-posed is that the topography should not have any
+lution will be a useful approximation. If we do not willingly       flat area; i.e., ||∇(hs + b)|| should not be identically zero on
+add randomness in the data, the numerics should not intro-          any measurable subset of  (subsets with nonzero area). In-
+duce it out of nowhere and bypass our modeling: it is not           deed, if ||∇(hs + b)|| = 0 on O ⊂  for pw ≥ 0 model in
+reasonable to rely on numerical hazard to recover the miss-         Eq. (4) becomes identically 0 on O, while for pw < 0 model
+ing elements in a model or its dataset. Worst of all, numeri-       in Eq. (4) (and thus also the model in Eq. 3) we have an
+cal noise lacks two essential modeling requirements: repro-         under-determined form. In both situations, hw and a cannot
+ducibility and explainability. The first one is missing because     be computed on O. Arguably, true flat areas are rare for real-
+numerical noise depends on the software and algorithms used         istic topographies, however, a numerical algorithm can pro-
+and the number of processors, among other factors. The sec-         duce a few cells for which the topography is flat. A more
+ond one is missing because it is almost impossible to track         common although less immediately obvious problem arises
+how the numerical errors are generated.                             from accumulation areas. This is quite easy to understand:
+   The first heterogeneity we consider here is injected into        consider a bowl-shaped topography, with a flow of water
+the km coefficient, reflecting variable soil rugosity. Since ac-    coming from the boundary of only one half of the bowl.
+quiring a roughness map adapted to the spatial scales rele-         From the boundaries with inflow, all water will go straight
+vant to our approach is difficult and probably not relevant         down to the bottom of the bowl and stop there, since the flow
+for a synthetic case study, we resort to an artificial yet effi-    can only progress if it finds a downhill direction. Water will
+cient trick, namely the Perlin noise (Perlin, 1985) that is often   remain stuck at the bottom and will never flow in the sec-
+used in animated movies or video games to produce realistic-        ond half of the bowl. Since the models in Eqs. (4) and (3)
+looking mountains or river networks. This type of noise             correspond to steady-state water models this implies an infi-
+can easily be used to build isotropic heterogeneity maps            nite value for hw at the bottom of the bowl. To put this into
+with controlled spatial scales. We thus consider our “three         more mathematical terms with a very simple example, let us
+rivers” test case using variable coefficients km in space and       consider the model in Eq. (4) in the simplified setting where
+
+
+Earth Surf. Dynam., 12, 995–1026, 2024                                               https://doi.org/10.5194/esurf-12-995-2024
+J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models                                                1017
+
+
+
+
+Figure 20. The “three rivers” test case with Perlin-noise-based coefficient km . (a) Final (at T = 6 Myr) elevation and associated water flow
+with km coefficients variable in space and time. (b) km coefficients at T = 6 Myr.
+
+
+
+
+                                                                          Figure 22. Front view of the result of Fig. 21c.
+
+
+                                                                          kw = 1, pw = 0 Sw = 0, and hs (x, y, t) + b(x, y, t) = x 2 + y 2
+                                                                          on the unit disk  = {(x, y) ∈ R2 |x 2 +y 2 < 1}. The model in
+                                                                          Eq. (4) becomes
+
+                                                                          −div (hw ∇ (hs + b)) = −∇hw · ∇ (hs + b) − hw 1 (hs + b)
+Figure 21. Results with filters and Perlin-noise-based km coeffi-                                = −2x∂x hw − 2y∂y hw − 4hw = 0,
+cient. (a) Initial elevation, (b) final elevation with variable coeffi-
+cient km , and (c) final elevation with variable coefficient and addi-                                                      C
+                                                                          leading to solutions of the form hw (x, y, t) = (x+y) 2 . As-
+tional Perlin-noise-based perturbation of rainfall.
+                                                                          sume that the boundary influx is given by Bw = 1 for y ≥ 0
+                                                                          and Bw = 0 otherwise. Then, in the half-domain y ≥ 0 we
+                                                                          get hw > 0 with hw −→ +∞ when (x, y −→ (0, 0), which
+                                                                          is unphysical. In the half-domain y < 0, hw = 0 and qw = 0.
+
+
+https://doi.org/10.5194/esurf-12-995-2024                                                     Earth Surf. Dynam., 12, 995–1026, 2024
+1018                               J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models
+
+                                                                   tical workarounds. Thanks to our interpretation as the dis-
+                                                                   cretization of a continuous model, we can easily propose a
+                                                                   generalization of Eq. (4) that overcomes those limitations by
+                                                                   noticing that the model in Eq. (4) is in fact a simplification
+                                                                   of the shallow-water equations with friction. Indeed, appro-
+                                                                   priately choosing the friction model and assuming that the
+                                                                   mass conservation of water is at steady state, a quite general
+                                                                   model arising from applying the hydrostatic approximation
+                                                                   to the shallow-water equations would be to consider (see Ap-
+                                                                   pendix B)
+
+                                                                     Qw = − km hwpηww (hw ) ||∇(hw + hs + b)||pw ∇(hw + hs + b),
+                                                                                  sref
+Figure 23. Comparison of the models in Eqs. (4) and (22) on the
+“three rivers” test case for α = 2.2 km and 1xy = 2 km.              div (Qw ) = Sw in ,
+                                                                     Qw · n = Bw on ∂N ,
+                                                                     hw = 0 on ∂D ,
+This illustrates the two problems: infinite values for the water                                                                   (22)
+height and a water flux that abruptly stops on the line y = 0.
+   This is reflected at the discrete level by an abrupt stop       with the associated water flux strength:
+of the water flow at the bottom of accumulation areas.                                       −p
+                                                                   qw = |km hw ηw (hw ) |sref w ||∇ (hw + hs + b) ||pw +1 .        (23)
+Moreover, this prevents recomputing a correct approxima-
+tion of hw or a from the intermediate unknown used in MFD          This is almost Eq. (4) except that it uses the hydraulic gra-
+algorithms (the total outflow of a cell), since the coefficient    dient instead of the topographic one.The assumption ∇(hs +
+relating this intermediate unknown to hw or a will be zero         b) ≈ ∇(hw + hs + b), while valid on pronounced slopes, is
+(see Coatléven, 2020, or Appendix C for details). This co-         obviously not valid anymore in accumulation areas (at equi-
+efficient also cancels on flat areas. We can infer that this is    librium, the hydraulic gradient is almost zero, while the to-
+a discrete indicator of what could be the weakest theoretical      pographic gradient is large) and flat areas (where the topo-
+requirements on the topography for the models in Eqs. (3)          graphic gradient is zero and the hydraulic one is not). The
+and (4) to be well-posed: the absence of flat or accumulation      nonlinear model in Eq. (22) is thus a natural generalization
+areas.                                                             of the GMS model in Eq. (4) with a built-in handling of ac-
+   The model in Eq. (4) being in fact a simplification of the      cumulation and flat areas which no longer requires practi-
+shallow-water equation (see Sect. 5.2), this limitation can be     cal workarounds. However, the model in Eq. (22) does come
+seen as the price to pay to simulate the water flow mass con-      with some drawbacks. The first one is that now we must
+servation with a very low computational expense. At the cost       choose the water mobility function ηw , as we are solving for
+of a higher computational time alternative models also de-         the water height unknown. This will influence both the wa-
+rived from the shallow-water equation can be considered to         ter network and the strength of the water flow. In the same
+overcome this limitation (see Sect. 5.2). Notice that in the       way, the absolute value of the coefficient km will now im-
+following numerical experiments, we have been careful to           pact the strength of the water flux through hw , while only its
+only consider situations for which no well-posedness issues        contrasts were relevant for the GMS model in Eq. (4). Thus,
+occur.                                                             some fine tuning is required for Eq. (22) to produce mean-
+   In the general setting, there is no reason why the sediments    ingful results. The last and probably more important draw-
+should evolve in such a way that one of the sufficient condi-      back is that, Eq. (22) being nonlinear in its unknown hw , its
+tions in Eq. (8) is always fulfilled, which can lead to some       discretization will be more involved and computationally ex-
+nonphysical behavior of the GMS model in Eq. (4) and thus          pensive than for Eq. (4). Let us compare the results obtained
+also the pure MFD algorithms. This can occur in two obvious        with the original GMS model in Eq. (4) with the more in-
+situations: in an accumulation area (a topographic depres-         volved hydrologic model in Eq. (22) on the “three rivers”
+sion) or a flat area. In principle, water arriving at an accumu-   test case using filters in both cases. The water mobility func-
+lation area should create a “lake” whose bathymetry will be        tion ηw for Eq. (22) is simply chosen as equal to 1 if hw is
+determined by a water balance between incoming flow, infil-        positive and 0 otherwise.
+tration, and evaporation. If the surface reaches the threshold        As we can observe in Fig. 23, if the two models of course
+of the lake, then some water leaves the lake and the water         do not produce exactly the same results, their general behav-
+flow restarts from the lake threshold. In flat areas, water will   ior remains very similar. Even more close results could cer-
+spread, diminishing its height until the full area is covered.     tainly be obtained by finely tuning the mobility function. We
+To reproduce those effects that are not originally considered,     do not want to explore this any further in the present paper
+implementations of the MFD algorithms all incorporate prac-        and simply want to illustrate that while suffering from some
+
+
+Earth Surf. Dynam., 12, 995–1026, 2024                                                   https://doi.org/10.5194/esurf-12-995-2024
+J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models                                                 1019
+
+limitations, the GMS model in Eq. (4) and thus MFD algo-           Appendix A: Computational details related to
+rithms remain a very strong and attractive approximation on        perturbation theory
+suitable topographies.
+                                                                   Recall that we denote (hs,∗ , hw,∗ ) a reference solution of
+                                                                   Eqs. (2)–(9)–(4) with sources (Ss,∗ , Sw,∗ ) and (hs,δ , hw,δ ), a
+6   Conclusions
+                                                                   perturbation of magnitude δ of this reference solution associ-
+After illustrating the numerical instabilities arising from the    ated with the source perturbation (Ss,δ , Sw,δ ), leading to the
+self-amplification phenomenon at the core of coupling over-        overall solution (hs , hw ) = (hs,∗ + hs,δ , hw,∗ + hw,δ ) for the
+land flow and sediment evolution models, we have proposed          perturbed source (Ss,∗ +Ss,δ , Sw,∗ +Sw,δ ). Since both the per-
+mimicking the LES strategy for CFD computation in the              turbed and unperturbed solutions have to satisfy the bound-
+context of landscape evolution models, relying on the well-        ary conditions, we deduce that the perturbation (hs,δ , hw,δ )
+known Leray-α differential filter. Numerical experiments as-       itself also satisfies the same boundary conditions. Thus, in-
+sess whether filtering produces results robust to numerical        jecting (hs , hw ) into Eqs. (2)–(9), multiplying by hs,δ , and
+perturbations. It is our belief that this “large structure simu-   integrating by parts we get
+lation” (LSS) approach goes far beyond the specific model              
+                                                                           Z
+                                                                                    
+                                                                                          Z
+considered here and that any LEMs involving a coupling              d 1                            −p
+                                                                              h2s,δ  = − ηs (hs ) sref s ||∇ (hs + b) ||ps
+with surface water flow could benefit from it. Indeed, exper-      dt 2
+iments performed without any filtering strategy have shown                                      
+                                                                                r s                         Z
+that it can become extremely difficult to distinguish between              qw                             2
+                                                                                                                            −p
+                                                                                         kw + kg ||∇hs,δ || +       ηs hs,∗ sref s
+the imprint of numerical errors and physical processes. Pro-               qref
+vided suitable filter parameters and mesh sizes are used, only                                                  
+                                                                                             qw,∗ rs
+                                                                                                           
+the nonphysical heterogeneity will disappear. The size of the
+                                                                      ||∇ hs,∗ + b ||ps
+                                                                                                                          
+                                                                                                     kw + kg ∇ hs,∗ + b
+filter has a real modeling meaning and corresponds to the                                    qref
+minimum size of the physical heterogeneity that can be re-                       Z
+                                                                                           −ps
+                                                                                                                 
+                                                                                                                    qw rs
+                                                                                                                         
+                                                                                                              ps
+solved. The choice of its value depends mainly on the ac-              · ∇hs,δ − ηs (hs ) sref ||∇ (hs + b) ||
+                                                                                                                    qref
+curacy required, which of course also depends on the com-                        
+putational power. Deploying this technique in a geomorphic
+                                                                                                       Z
+                                                                                           
+model that has incorporated the correct water flux expression          kw + kg ∇ hs,∗ + b · ∇hs,δ + Ss,δ hs,δ .              (A1)
+will make it possible to correct the anomalous mesh depen-                                                    
+dency so often evoked in papers dealing with LEM behavior.
+                                                                   When denoting
+Indeed, if LEMs are designed to reproduce complex emer-
+gent phenomena arising from a set of simple physical pro-                                                           rs          
+                                                                                              −p                w
+cesses and data, they are in no way intended to give a physi-      js (u, v, w) = ηs (u)sref s ||∇v||ps                     kw + kg ,   (A2)
+                                                                                                               qref
+cal meaning to non-reproducible numerical noise, even if this
+noise once amplified by physical processes leads to “good-         we recover the claimed equation governing the evolution of
+looking” results. The apparently missing visual complexity         the perturbation’s total energy:
+that previously arose from numerical noise can be physically                      
+re-introduced when heterogeneous data are considered. Sim-          d 1
+                                                                           Z             Z
+ilarly to LES models, we believe that a mathematical anal-                   h2s,δ  = − js (hs , hs + b, qw ) ||∇hs,δ ||2
+                                                                   dt 2
+ysis and numerical analysis of the filtered model should be                             
+achievable. We hope to be able to publish such an analysis
+                                                                         Z             Z
+                                                                                                                    
+in a future paper. To complete this work, we also plan to              + Ss,δ hs,δ +       js hs,∗ , hs,∗ + b, qw,∗
+use in our next study the full model capacity in building a                                 
+                                                                                                         
+multi-lithology realistic test case. Finally, pursuing the anal-       −js (hs , hs + b, qw )) ∇ hs,∗ + b · ∇hs,δ .                     (A3)
+ogy with LES, an interesting perspective would be to analyze
+whether it is feasible to develop subfilter models to increase     Then, if kg is much larger than kw and thus τ is very small,
+the filtered model accuracy when α is quite large in order to      we have, assuming for simplicity that ηs = 1 from Taylor’s
+reduce the need for fine α and thus fine meshes and conse-         expansion,
+quently the overall cost of the approach.                                    −p
+                                                                   Aδ ≈ kg sref s ||∇ hs,∗ + b ||ps − ||∇ (hs + b) ||ps
+                                                                                                                       
+                                                                                                          −p
+                                                                     ∇ hs,∗ + b · ∇hs,δ + O(τ ) ≈ −kg sref s
+                                                                                                                     
+                                                                       ps ||∇ hs,∗ + b ||ps −2 |∇ hs,∗ + b · ∇hs,δ |2
+                                                                                                          
+                                                                                     
+                                                                      + O(τ ) + O δ 3 .                                   (A4)
+
+
+https://doi.org/10.5194/esurf-12-995-2024                                                   Earth Surf. Dynam., 12, 995–1026, 2024
+1020                                 J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models
+
+In the same way, if kw is much larger than kg then τ is also                                                                            (B1)
+very large and we have, again using Taylor’s expansion,
+            −p −rs
+                                                                         where uw denotes the water speed, g is the acceleration due
+                      rs
+                          ||∇ hs,∗ + b ||ps − qwrs ||
+                                      
+Aδ ≈ −kw sref s qref qw,∗                                                to gravity, and κw is the friction coefficient. Then, following
+    ∇ (hs + b) ||ps ∇ hs,∗ + b · ∇hs,δ + O(1/τ )                         Peton et al. (2020) and defining Hs,c to be the characteristic
+                             
+
+                     rs −1                                               sediment height, Hw,c the characteristic water height, Lc the
+            −p    qw,∗                       p               
+   ≈ −kw sref s rs                              s
+                      rs qw,δ ||∇ hs,∗ + b || ∇ hs,∗ + b                 characteristic domain length, and Tc the characteristic time,
+                   qref                                                  as well as defining the nondimensional variables,
+                              rs 
+                 −ps qw,∗
+                                    ps ||∇ hs,∗ + b ||ps −2 |
+                                                   
+   · ∇hs,δ − kw sref                                                               hs            b             hw          Tc u w
+                          qref                                           ĥs =        , b̂s =        , ĥw =       , ûw =        ,
+                                                                              Hs,c          Hs,c           Hw,c          Lc
+   ∇ hs,∗ + b · ∇hs,δ |2 + O(1/τ ) + O δ 3 .
+              
+                                                                (A5)                   x           y         t
+                                                                                 x̂ =     , ŷ =      , tˆ = ,
+Going back to the general case for ηs , we have for small val-                        Lc          Lc        Tc
+ues of τ
+                                                                         we see that Eq. (B1) is equivalent to
+          −p
+Aδ ≈ −kg sref s ηs0 hs,∗ ||∇ hs,∗ + b ||ps hs,δ
+                                     
+                                                                           ∂ ĥw
+   ∇ hs,∗ + b · ∇hs,δ + ps ηs hs,∗ ||∇ hs,∗ + b ||ps −2 |
+                                              
+                                                                            ∂ tˆ
+                                                                                 + ˆ
+                                                                                  div(ĥw ûw ) = 0,
+                                        
+   ∇ hs,∗ + b · ∇hs,δ |2 + O(τ ) + O δ 3 ,
+               
+                                                          (A6)             ∂
+                                                                                (ĥw ûw ) + ˆ
+                                                                                            div(ĥw ûw ⊗ ûw )
+while for large values of τ we have                                        ∂ tˆ
+                    rs −1                                                                                         2
+             −p    qw,∗                           p                         Hs,c Tc2     ˆ ĥs + b̂) + g Hw,c Tc ĥw ∇(
+                                                                                                                       ˆ ĥw ),
+Aδ ≈ −kw sref s rs   rs qw,δ ηs hs,∗ ||∇ hs,∗ + b ||
+                                                        s                  +g          ĥw ∇(
+                    qref                                                       L2c                          L2c
+                                        rs
+                              −ps qw,∗                                                                         Lc Lc rw −1
+                                                                                                                     
+                                             ηs0 hs,∗
+                                                     
+   ∇ hs,∗ + b · ∇hs,δ − kw sref                                            = −κw (hw , ||∇(hw + hs + b)||)                      |ûw |rw ûw .
+                                    qref                                                                      Hw,c Tc
+   ||∇ hs,∗ + b ||ps hs,δ ∇ hs,∗ + b · ∇hs,δ
+                                     
+                                                                         The “shallow” hypothesis corresponds to assuming that
+   +ps ηs hs,∗ ||∇ hs,∗ + b ||ps −2 |∇ hs,∗ + b
+                                                
+                                                                      Lc /Hw,c  1, while the two numbers
+   ·∇hs,δ |2 + O(1/τ ) + O δ 3 .                                (A7)
+                                                                                        Lc                           Lc
+                                                                         Fr,w = p                and Fr,s = p
+The behavior is roughly speaking the same, with the main                              gHw,c Tc                    gHs,c Tc
+difference that the additional term in ηs0 (hs,∗ ) can also con-
+tribute with the wrong sign. Since ηs0 (hs,∗ ) will be almost zero       are equivalent to Froude numbers for the water and sediment
+as soon as hs,∗ is large enough (see Eq. 11), this can only              flows. For long-term sediment evolution, it is reasonable to
+happen in regions where hs,∗ is close to zero (in particular             assume that Fr,w  1 and Fr,s  1, i.e., that gravity is the
+near Dirichlet boundaries). In this case, the potential contri-          dominant phenomenon. Combined with the shallow-water
+bution to the instabilities is controlled by the magnitude of            assumption this suggests neglecting the inertia terms in the
+|ηs0 (hs,∗ )hs,δ | ≤ |hs,δ |/hc . If the perturbation is not amplified   nondimensional momentum balance, leading to the hydro-
+by other engines, which will be the case if τ is small, and if           static assumption:
+the parameter hc is not chosen to be too small (a typical valid
+                                                                         ghw ∇ (hs + b + hw ) = − κw (hw , ||∇ (hw + hs + b) ||)
+value is 20 cm), then no severe instability can occur through
+this additional term. Thus, we can be confident that parame-                                          |uw |rw uw .                      (B2)
+ter τ will be the main criterion governing the appearance of
+instabilities even for our most general model.                           Inverting Eq. (B2) we obtain the following expression for the
+                                                                         water speed:
+Appendix B: From shallow-water model to the                              uw = −µw (hw , ||∇ (hw + hs + b) ||) ∇ (hs + b + hw ) , (B3)
+steady-state hydrologic model in Eq. (22)
+                                                                         where
+Recall that the shallow-water system is given by (see Birnir
+et al., 2001; Peton et al., 2020)                                        µw (hw , ||∇ (hw + hs + b) ||)
+                                                                                                  1       1
+  ∂hw
+   ∂t + div(hw uw ) = 0,
+                                                                                              g rw +1 hwrw +1
+                                                                             =                                        1
+  ∂                                                                                κw (hw , ||∇ (hw + hs + b) ||) rw +1
+     (hw uw ) + div(hw uw ⊗ uw ) + ghw ∇(hs + b + hw )+
+  ∂t                                                                                                     rw
+  = −κw (hw , ||∇(hw + hs + b)||) |uw |rw uw ,                              ||∇ (hs + b + hw ) ||− rw +1 .                              (B4)
+
+
+Earth Surf. Dynam., 12, 995–1026, 2024                                                        https://doi.org/10.5194/esurf-12-995-2024
+J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models                                      1021
+
+Thus, appropriately choosing the friction model, for instance      all face σ ∈ FK of cell K, we denote nK,σ the unit normal
+by setting rw = 0 and                                              vector to σ outward to K, and dK,σ = |x σ − x K |. The set
+                                                                   of boundary faces is denoted Fext , while interior faces are
+κw (hw , ||∇ (hw + hs + b) ||)                                     denoted Fint . Finally for any σ ∈ Fint , whenever the con-
+                         ghw                                       text is clear we will denote K and L the two cells forming
+   =                −pw                        ,           (B5)    Tσ = {K, L}, as well as dKL = |x K −x L |. This, for instance,
+       km ηw (hw ) sref ||∇ (hw + hs + b) ||pw
+                                                                   allows when looping over the faces σ of cell K denoting
+and assuming that the mass conservation of water is at steady      L the other face of σ without resorting to a notation that
+state, we obtain the following quite general hydrostatic ap-       is too heavy. To avoid any confusion with water and sedi-
+proximation to the shallow-water equations:                        ment heights,  = maxK∈T ρK will denote the mesh size. For
+                                                                   any continuous quantity u, its discrete counterpart will be de-
+  Qw = − km hws pηww (hw ) ||∇(hw + hs + b)||pw ∇(hw + hs + b),    noted uT = ((uK )K∈T , (uσ )σ ∈Fext ), where for any K ∈ T uK
+                ref
+                                                                   is the constant approximation of u in cell K, while for any
+  div (Qw ) = Sw in ,                                             σ ∈ Fext uσ is the constant approximation of u over face σ .
+                                                                      In the following we will assume that the mesh is orthog-
+  Qw · n = Bw on ∂N ,                                             onal, i.e., there exists a family of centroids (x K )K∈T such
+  hw = 0 on ∂D ,                                                  that
+
+with the associated water flux strength:
+                                                                   x K ∈ K̊ ∀K ∈ T and
+                        −p
+qw = |km hw ηw (hw ) |sref w ||∇ (hw + hs + b) ||pw +1 .                xL − xK
+                                                                                    = nK,σ for σ ∈ Fint , σ = {K, L},
+Remark B.1. The friction model in Eq. (B5) becomes singu-              |x L − x K |
+lar when ||∇(hw + hs + b)|| = 0. Thus, an alternative choice
+would be to use something like                                     and let us denote x σ as the orthogonal projection of x K to
+                                                                   the hyperplane containing σ for any σ ∈ FK and any K ∈ T
+κw (hw , ||∇ (hw + hs + b) ||)                                     with d K,σ = |x K − x σ |, as well as d KL = |x K − x L |. Then,
+                            ghw                                    one can use a two-point finite-volume scheme to discretize
+   =                                                             diffusion operators with scalar diffusion coefficients (no ten-
+                        −pw
+      km ηw (hw ) β + sref ||∇ (hw + hs + b) ||pw
+                                                                   sors).
+                                                                      We also assume that the mesh is compatible with the
+for some β > 0 (the same holds for function ηw such that                                                                         N
+                                                                   boundary decomposition, i.e., there exist subsets (Fext
+η(0) = 0). This alternative choice is probably more physical,             D
+                −p                                                 and Fext ) such that
+as the term in sref w ||∇(hw + hs + b)||pw can be interpreted as
+modeling some deceleration in accumulation areas. We have                    [                        [
+chosen to use Eq. (B5) to be as close as possible to the MFD       ∂N =              σ and ∂D =             σ.
+algorithms of the literature.                                                   N
+                                                                            σ ∈Fext                     D
+                                                                                                    σ ∈Fext
+
+
+Appendix C: Finite-volume discretization                           Notice that all our simulations without filters employ the
+                                                                   same numerical schemes but of course replacing the filtered
+In this section we describe the full finite-volume discretiza-     values by the original ones.
+tion of the system in Eqs. (2)–(18)–(19)–(20). Let  be a
+bounded polyhedral connected domain of R2 , whose bound-
+ary is denoted as ∂ =  r . We recall the usual finite-
+volume notations describing a mesh M = (T , F) of . The           C1   Leray-α filtering equation
+set of the cells of the mesh T is a finite family of con-
+nected open disjoint polygonal subsets of  such that  =          Using the two-point flux approximation (TPFA) the approxi-
+∪K∈T K. For any K ∈ T , we denote |K| the measure of K,            mate filter Fα,h is defined for
+∂K = K r K the boundary of K, ρK its diameter, and x K
+its barycenter. The set of faces of the mesh F is a finite                                        
+family of disjoint subsets of R2 included in  such that,          uT = (uK )K∈T , (uσ )σ ∈Fext
+for all σ ∈ F, its measure is denoted |σ |, its diameter hσ ,
+and its barycenter x σ . For any K ∈ T , the faces of cells K      by
+correspond to the subset FK of F such that ∂K = ∪σ ∈FK σ .
+Then, for any face σ ∈ F, we denote Tσ = {K ∈ T |σ ∈ FK }                                                           
+the cells of which σ is a face. Next, for all cell K ∈ T and       Fα,h (uT ) =       Fα,K (uT ) K∈T , Fα,σ (uT ) σ ∈F ,
+                                                                                                                      ext
+
+
+
+https://doi.org/10.5194/esurf-12-995-2024                                               Earth Surf. Dynam., 12, 995–1026, 2024
+1022                                             J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models
+
+where                                                                             where the mobility ηs,σ  n+1 taken upwind with respect to
+                                                                                       n,n+1
+                      |σ |                                                        19KL for σ ∈ Fint ,
+  α2
+           P                                             
+                             Fα,K (uT ) − Fα,L (uT )
+                     d KL                                                                              
+       σ ∈FK ∩Fint                                                                                  n+1         n,n+1
+                                                                                             η s   h      if 19KL     ≥ 0,
+                                                                                   n+1
+                                                                                  ηs,σ   =        s,K                                (C5)
+  +|K|Fα,K (uT ) = |K|uK for all K ∈ T ,                                                            n+1         n,n+1
+                                                                                             ηs hs,L      if 19KL < 0,
+                                                                           (C1)                 n,n+1           D,
+  Fα,σ (uT ) = Fα,K (uT ) for all K ∈ T                                           and using 19Kσ       for σ ∈ Fext
+                      N,
+  and all σ ∈ FK ∩ Fext
+                                                                                                    
+                                                                                                               n,n+1
+                                                                                   n+1      ηs hn+1
+                                                                                                 s,K     if 19Kσ     ≥ 0,
+                                                                                  ηs,σ =                       n,n+1
+                                                                                                                                              (C6)
+                                                                                                 n+1
+                                                                                                     
+                                                 D.
+  Fα,σ (uT ) = 0 for all K ∈ T and all σ ∈ FK ∩ Fext                                        ηs hs,σ      if 19Kσ < 0,
+                                                                                  where the filtered water flux magnitude is approximated by
+                             N of course satisfies Eq. (C1)
+The discrete Neumann filter Fα,h                                                  the harmonic mean whenever possible and the mean value
+but with Neumann boundary conditions on every σ ∈ Fext .                          otherwise:
+                                                                                               D:
+                                                                                     . if σ ∈ Fext
+C2      Sediment mass conservation equations                                              n+1    N
+                                                                                              = Fα,K   n+1
+                                                                                                     (qw,
+                                                                                         qw,σ            T)
+We now assume that the time interval ]0, T [ is subdivided
+                                                                                                        N (q n+1 ) > 0 and F N (q n+1 ) > 0
+                                                                                     . if σ ∈ Fint and Fα,K
+into NT subintervals ]tn , tn+1 [, where t0 = 0 and tNT +1 = T .                                            w,T             α,L w,T
+We denote 1t n = tn+1 −tn . The discrete quantities associated                                               N (q n+1 )F N (q n+1 )
+                                                                                                       d KL Fα,K w,T    α,L w,T
+with time tn will be denoted as usual with a superscript n.                               n+1
+                                                                                         qw,σ =      N (q n+1 )d
+                                                                                                    Fα,K               N     n+1
+The TPFA finite-volume scheme for the mass conservation                                                  w,T     Lσ + Fα,L (qw,T )d Kσ
+of sediments in Eq. (2) for the flux in Eq. (18) is given by
+                                                                                                        N (q n+1 ) = 0 or F N (q n+1 ) = 0
+                                                                                     . if σ ∈ Fint and Fα,K w,T            α,L w,T
+  |K| n+1       n                                   |σ |    n+1 19 n,n+1
+                                       P
+  1t n (hs,K − hs,K ) +                                 p η
+                                                 d KL srefw s,σ   KL                      n+1  1 N      n+1      N     n+1
+                                   σ ∈FK ∩Fint                                           qw,σ = (Fα,K
+                                                                                               2
+                                                                                                      (qw,T ) + Fα,L (qw,T ))
+
+          P              |σ |
+                           n+1   n,n+1                                            The discrete full topographic gradient is given for any cell
+  +                    pw ηs,σ 19Kσ
+              D d Kσ s
+      σ ∈FK ∩Fext     ref                                                         K ∈ T by
+                                                                                           1     X            |σ | n            n
+                                                                                  Gns,K =                                         − hns,K − bK
+                                                                                                                                             n
+          P               n+1 = |K|S n for all K ∈ T ,
+                                                                                                                                               
+  −                  |σ |Bs,σ                                                                                       h + bL
+              N
+      σ ∈FK ∩Fext
+                                    s,K                                                   |K| σ ∈F ∩F d KL s,L
+                                                                                                  K      int
+                                                                                                              1      X          |σ | n
+  hn+1    n+1 = hn+1 + bn+1 + Gn+1 · (x − x )
+   s,σ + bσ
+                                                                                          (x σ − x K ) +                              h + bσn
+                 s,K    K      s,K     σ   K
+                                                                                                             |K| σ ∈F ∩F d Kσ s,σ
+                                                                                                                     K      ext
+
+                                                                                          −hns,K − bK  n
+                                                                                                          
+                                  N,
+                                                                                                             (x σ − x K ) ,
+  for all K ∈ T and all σ ∈ FK ∩ Fext
+                                                                                  while its stabilized version G†,n              †,n    n
+                                                                                                                s,σ is given by Gs,σ = Gs,σ +
+                                                                                    n
+                                                                                  R s,σ with
+  hn+1                  D
+   s,σ = 0 for all σ ∈ Fext ,                                                                                
+                                                                                             1    n       n
+                                                                           (C2)     n            Gs,K + G s,L   if Tσ = {K, L},
+                                                                                  Gs,σ = 2 n                                             (C7)
+                                                                                             Gs,K               if Tσ = {K},
+where
+                                                                                  as well as
+                            rs
+  n,n+1              n+1
+                                   ||G†,n+1 ps
+                                                                    
+19KL    =           qw,σ              s,σ ||       ψw hs,K + bK                      . If Tσ = {K, L}
+
+             −ψw hs,L + bL + ||G†,n+1  ps                                                R ns,σ =
+                                       
+                                s,σ ||
+                                        
+             ψg hs,K + bK − ψg hs,L + bL                                   (C3)      1
+                                                                                            hns,L + bL
+                                                                                                     n
+                                                                                                       − hns,K − bK
+                                                                                                                  n
+                                                                                                                    − Gns,σ · (xL − xK ) (xL −xK )
+                                                                                                                                        
+                                                                                      2
+                                                                                    d KL
+and
+              r                                                                    . If Tσ = {K}
+  n,n+1    n+1 s
+                  ||G†,n+1 ps
+                                            
+19Kσ    = qw,σ       s,σ ||    ψw hs,K + bK                                              R ns,σ =
+        −ψw hs,σ + bσ + ||G†,n+1     ps
+                      
+                              s,σ ||                                                 1
+                                                                                            hns,σ + bσn − hns,K − bK
+                                                                                                                   n
+                                                                                                                     − Gns,σ · (xσ − xK ) (xσ −xK )
+                                                                                                                                         
+                                                                                      2
+                                      
+        ψg hs,K + bK − ψg hs,σ + bσ ,                                      (C4)     d Kσ
+
+Earth Surf. Dynam., 12, 995–1026, 2024                                                                 https://doi.org/10.5194/esurf-12-995-2024
+J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models                                                       1023
+
+C3     Water equations                                                       and the gradient of the filtered topography is of course given
+                                                                             by
+The finite-volume scheme for the water equations in
+                                                                                 n+1                       P
+Eqs. (19)–(20) is simply obtained by applying the corrected                    q
+                                                                               eK    −
+MFD algorithm of Coatléven (2020) to the filtered topog-                                 σ ∈FK ∩Fint ,Fα,K (hns,T +bT
+                                                                                                                    n )<F       n     n
+                                                                                                                          α,L (hs,T +bT )
+
+raphy and reconstructing a consistent water flux by setting
+  n+1
+      = ||Qn+1                                                                        eLn+1 
+                                                                                n,n+1 q
+                                                                                                                                        
+qK         K || with                                                           τKL            Fα,L (hns,T + bTn ) − Fα,K (hns,T + bTn )
+                                                                                      n,n+1
+                                                                                     sL
+                                       X
+Qn+1
+ K =
+                                                                                                      n+1 = |K|S n
+                                                                                       P
+                                                                               −                 |σ |Bw,σ       w,K for all K ∈ T ,
+                                                                                   σ ∈FK ∩Fext
+                                                              
+            σ ∈FK ∩Fint ,Fα,K hns,T +bT
+                                      n          >Fα,L hns,T +bT
+                                                               n
+
+
+         n,n+1 n+1                                                             n,n+1                              P
+        τKL   q                                                              sK     =
+                                       hns,T + bTn
+              eK
+               n,n+1
+                      Fα,K                               − Fα,L                            σ ∈FK ∩Fint ,Fα,K (hns,T +bT
+                                                                                                                      n )≥F       n     n
+                                                                                                                            α,L (hs,T +bT )
+        |K|sK
+                                                                                                                              
+                                                                                n,n+1
+          hns,T + bTn (x σ − x K )                                             τKL      Fα,K (hns,T + bTn ) − Fα,L (hns,T + bTn )
+                            X
+        −
+                                                                                            n+1
+                                                                                           |σ |km,σ
+            σ ∈FK ∩Fint , Fα,K hns,T +bT
+                                       n <F      n     n
+                                            α,L hs,T +bT                        n,n+1
+                                                                               τKL    =             p   ||GnF ,s,σ ||pw ,
+          n,n+1 n+1                                                                       d KL srefw
+        τKL    q                      
+                      Fα,L hns,T + bTn
+               eL
+              n,n+1
+         |K|sL                                                               Appendix D: Derivation of analytic solutions
+                          
+        −Fα,K hns,T + bTn (x σ − x K )
+               X                                                             For simplicity, we consider in this section the special case
+                               n+1                                           where b = 0, kw and kg are constants, and the water mobility
+        −                 |σ |Bw,σ                                    (C8)
+            σ ∈FK ∩Fext                                                      function and coefficient km are both equal to 1 (ηw (hw ) =
+                                                                             1 and km = 1). To ease the reading, we will not write the
+                                                                             dimension constants sref and qref , as they are both equal to 1
+and                                                                          in the chosen unit system. The sediment flux simplifies into
+
+   n+1
+                                       X                                     J s = −ηs (hs ) ||∇ (hs + b) ||ps qwrs kw ∇ (hs + b)
+ q
+ eK    −                                                                                        
+             σ ∈FK ∩Fint ,Fα,K (hns,T +bT
+                                        n )<F       n     n                      +kg ∇ (hs + b) in ×]t0 , T [.                               (D1)
+                                              α,L (hs,T +bT )
+
+
+         eLn+1                                                              We consider the simplified setting where ηs (hs ) = 1. This set-
+   n,n+1 q
+                                                           
+  τKL    n,n+1
+                  Fα,L (hns,T + bTn ) − Fα,K (hns,T + bTn )                  ting corresponds to the analytic steady-state solutions studied
+        sL                                                                   in Smith et al. (1997). Since ηs (hs ) ≈ 1 as soon as hs is large
+       X
+                   n+1          n
+                                                                             enough, we label those solutions as “quasi-steady state”. We
+  −           |σ |Bw,σ  = |K|Sw,K       for all K ∈ T ,                      seek quasi-steady-state solutions that are moreover uniform
+      σ ∈FK ∩Fext
+                                                                             in the y variable hs (x, y, t) = hs,x (x) and symmetric with re-
+   n,n+1
+                                         X                                   spect to the axis x = 0, and we consider only the interval
+  sK     =
+                                                                             ]0, Lx/2[. We finally assume that Ss and Sw are equal to two
+               σ ∈FK ∩Fint ,Fα,K (hns,T +bT
+                                          n )≥F       n     n
+                                                α,L (hs,T +bT )
+                                                                             constants Ss,x and Sw,x . We consequently have ∇(hs + b) =
+                                                                             ∂x hs,x ex , and the water equation reduces to
+                                                  
+   n,n+1
+  τKL     Fα,K (hns,T + bTn ) − Fα,L (hns,T + bTn )
+                                                                             −∂x hw,x |∂x hs,x |pw ∂x hs,x = Sw,x .
+                                                                                                           
+                                                                                                                                         (D2)
+                     n+1
+                |σ |km,σ
+   n,n+1
+  τKL    =            p     ||GnF ,s,σ ||pw ,                                Assuming −∂x hs,w > 0 (the solution is decreasing from
+               d KL srefw                                                    the center of the domain to its boundary) this leads to
+                                                                      (C9)   ∂x qw,x = Sw,x , qw,x = −hw,x |∂x hs,x |pw ∂x hs,x , and finally
+                                                                             qw,x = qw (0) + Sw,x x. In the same way, the conservation of
+                                                                             sediments after integrating x and again using our hypothesis
+where                                                                        on the sign of ∂x hs,x reduces to
+                                                                                                                   1
+                1    n        n
+                                                   if Tσ = {K, L},                                      Ss,x x + γ ps +1
+                2 (GF ,s,K + GF ,s,L )                                                                                                        (D3)
+GnF ,s,σ =                                                           (C10)   ∂x hs,x = −                                    rs  p 1+1 .
+                GnF ,s,K                           if Tσ = {K},                             kg + kw qw (0) + Sw,x x                s
+
+
+
+
+https://doi.org/10.5194/esurf-12-995-2024                                                           Earth Surf. Dynam., 12, 995–1026, 2024
+1024                                       J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models
+
+To ensure the continuity of the derivatives at x = 0, let us                 ps = 0 and rs = 1 for which we have
+assume that ∂x hs,x (0) = 0 and thus γ = 0, and consequently
+qw (0) = 0. The above relation simplifies into                                                       x      kg
+                                                                             hs,x = hs,x (0) − Ss,x      − 2 2 ln kg
+                   1                  r − 1                                                    kw Sw,x kw Sw,x
+∂x hs,x = − Ss,x x ps +1 kg + kw Sw,x x s ps +1 .                     (D4)                                !
+                                                                                                kg
+                                                                                  +kw Sw,x x + 2 2 ln kg .                                  (D11)
+Notice that this is coherent with our assumption −∂x hs,x > 0.                                kw Sw,x
+The water height hw,x can then be obtained by setting
+                                                                             It is then easy to choose the value for hs,x (0) such that
+             pw +1      Sw,x x                          −(pw +1)
+                                                           ps +1             hs,x (Lx/2) = 0.
+hw,x =(−1)           p +1
+                              = Sw,x x Ss,x x
+                 ∂x hs,xw
+                         r  pw +1
+         kg + kw Sw,x x s ps +1 ,                                     (D5)   Code availability. All the numerical schemes used in this paper
+                                                                             are fully described in Appendix C. Implementation was performed
+which is positive as expected. At this stage, integration                    in code ArcaDES, which is available through the commercial simu-
+for hs,x was simpler in Smith et al. (1997) because of the                   lator DionisosFlowTM .
+absence of kg . Indeed, for kg = 0 we immediately have
+
+                        1 + ps                  1                          Author contributions. JC: conceptualization, writing, software,
+                                         −1 −rs ps +1
+hs,x =hs,x (0) −                   Ss,x kw Sw,x                              simulations. BC: writing, software, simulations.
+                      2 + ps − r s
+       x 2+ps −rs .                                                   (D6)
+                                                                             Competing interests. Both the authors are core developers of
+Conversely, if kw = 0 (no coupling between water and sedi-                   the ArcaDES simulator supporting DionisosFlow™, a commercial
+ments), we get                                                               stratigraphic simulator.
+
+                      ps + 1  −1     1 ps +2
+                                      p +1
+hs,x = hs,x (0) −             kg Ss,x s x ps +1 .                     (D7)
+                      ps + 2                                                 Disclaimer. Publisher’s note: Copernicus Publications remains
+                                                                             neutral with regard to jurisdictional claims made in the text, pub-
+In the general case using the variable change v = urs , u =                  lished maps, institutional affiliations, or any other geographical rep-
+v 1/rs , and du = r1s v (1−rs )/rs dv we need to compute                     resentation in this paper. While Copernicus Publications makes ev-
+                                                                             ery effort to include appropriate place names, the final responsibility
+                                 Zx rs (1−r )(p +1)+1                        lies with the authors.
+                1 ps1+1                    s s
+hs,x =hs,x (0) − Ss,x                 v rs (ps +1)
+                rs
+                                 0                                           Acknowledgements. The authors would like to thank John J. Ar-
+                 rs
+                          − 1                                               mitage and Didier Granjeon for their careful reading of the present
+        kg + kw Sw,x v       ps +1   dv,                              (D8)
+                                                                             paper, as well as the referees for their numerous useful comments.
+which will lead to easily computable analytic solutions, in
+particular for the special combinations of values of rs and ps
+                                                                             Review statement. This paper was edited by Wolfgang Schwang-
+that satisfy (1 − rs )(ps + 1) + 1 = 0 and cancel the exponent               hart and reviewed by Stefan Hergarten and three anonymous refer-
+(1−rs )(ps +1)+1
+   rs (ps +1)    . In the special case ps = 0 and rs = 2, we have            ees.
+
+                      Ss,x               2     2
+                                                             
+hs,x = hs,x (0) −        2
+                             ln k g + kw S w,x x     − ln k g    . (D9)
+                    2kw Sw,x
+                                                                             References
+In the other cases for which (1−rs )(ps +1)+1 = 0, this leads
+to                                                                           Armitage, J. J.: Short communication: flow as distributed
+                                                                               lines within the landscape, Earth Surf. Dynam., 7, 67–75,
+                                     1
+                             ps +1                                             https://doi.org/10.5194/esurf-7-67-2019, 2019.
+                 ps + 1 Ss,x                                                 Balay, S., Gropp, W., McInnes, L. C., and Smith, B. F.: PETSc, the
+hs,x =hs,x (0) −                rs
+                  ps rs kw Sw,x                                                portable, extensible toolkit for scientific computation, Argonne
+      
+                  rs
+                           p /(p +1) p /(p +1)
+                                                                              National Laboratory, 1998.
+         kg + kw Sw,x  x rs s s − kg s s          .                  (D10)   Bardos, C.: Problèmes aux limites pour les équations aux dérivées
+                                                                               partielles du premier ordre à coefficients réels, Théorèmes
+Apart from those cases that cancel the exponent appearing in                   d’approximation, Application à l’équation de transport, Ann. Sci.
+the integral, another interesting special case is the linear case              Ec. Norm. Sup. Ser. 4, 3, 185–233, 1970.
+
+
+Earth Surf. Dynam., 12, 995–1026, 2024                                                          https://doi.org/10.5194/esurf-12-995-2024
+J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models                                               1025
+
+Berselli, L. C., Iliescu, T., and Layton, W. J.: Mathematics of Large   Granjeon, D.: Modélisation stratigraphique déterministe: Concep-
+  Eddy Simulation of Turbulent Flows, Springer, Berlin, Heidel-           tion et applications d’un modèle diffusif 3-d multilithologique,
+  berg, ISBN 10 3642065791„ 2005.                                         PhD thesis, Universit é de Rennes I, 1996.
+Birnir, B., Smith, T. R., and Merchant, G. E.: The scal-                Grospellier, G. and Lelandais, B.: The Arcane development
+  ing of fluvial landscapes, Comput. Geosci., 27, 1189–1216,              framework, POOSC 09: Proceedings of the 8th workshop on
+  https://doi.org/10.1016/S0098-3004(01)00022-X, 2001.                    Parallel/High-Performance Object-Oriented Scientific Comput-
+Bonetti, S., Bragg, A. D., and Porporato, A.: On the theory of            ing, 1–11, https://doi.org/10.1145/1595655.1595659, 2009.
+  drainage area for regular and non-regular points, P. Roy. Soc. A,     Guermond, J.-L., Oden, J., and Prudhomme, S.: An interpretation
+  474, 20170693, https://doi.org/10.1098/rspa.2017.0693, 2018.            of the Navier–Stokes–α model as a frame-indifferent Leray reg-
+Bonetti, S., Hooshyar, M., Camporeale, C., and Porporato, A.:             ularization, Physica D, 177, 23–30, 2003.
+  Channelization cascade in landscape evolution, P. Natl. Acad.         Holmgren, P.: Multiple flow direction algorithms for runoff mod-
+  Sci. USA, 117, 1375–1382, 2020.                                         elling in grid based elevation models: an empirical evaluation,
+Cheskidov, A., Olson, E., Holm, D., and Titi, E.: On a Leray-α            Hydrol. Process., 8, 327–334, 1994.
+  model of turbulence, P. Roy. Soc. Lond. A, 146, 1–21, 2005.           Hooshyar, M. and Porporato, A.: Mean dynamics and
+Coatléven, J.: Some multiple flow direction algorithms for overland       elevation-contributing area covariance in landscape evo-
+  flow on general meshes, ESAIM: Mathematical Modelling and               lution models, Water Resour. Res., 57, e2021WR029727,
+  Numerical Analysis, 54, 1917–1949, 2020.                                https://doi.org/10.1029/2021WR029727, 2021a.
+Davy, P. and Lague, D.: Fluvial erosion/transport equation of land-     Hooshyar, M. and Porporato, A.: Spectral signature of land-
+  scape evolution models revisited, J. Geophys. Res.-Earth, 114,          scape channelization, Geophys. Res. Lett., 48, e2020GL091015,
+  F03007, https://doi.org/10.1029/2008JF001146, 2009.                     https://doi.org/10.1029/2020GL091015, 2021b.
+Desmet, P. J. J. and Govers, G.: Comparison of routing algorithms       Hooshyar, M., Bonetti, S., Singh, A., Foufoula-Georgioui, E., and
+  for digital elevation models and their implication for predicting       Porporato, A.: From turbulence to landscapes: Logarithmic mean
+  ephemeral gullies, Int. J. Geo. Inf. Syst., 10, 311–331, 1996.          profiles in bounded complex systems, Phys. Rev. E, 102, 033107,
+DiPerna, R. and Lions, P.: Ordinary differential equations, transport     https://doi.org/10.1103/PhysRevE.102.033107, 2020.
+  theory and Sobolev spaces, Invent. Math. 98, 511–547, 1989.           Leopold, L. B., Wolman, M. G., and Miller, J. P.: Fluvial Processes
+Eymard, R., Gallouët, T., Gervais, V., and Masson, R.: Existence          in Geomorphology, W. H. Freeman, San Francisco, California,
+  and uniqueness of a weak solution to a stratigraphic model,             ISBN-10 0486845524„ 1964.
+  edited by: Feistauer, M., Dolejšì, V., Knobloch, P., and Na-          Leray, J.: Sur le mouvement d’un fluide visqueux emplissant
+  jzar, K., Springer, Berlin, 278–287, https://doi.org/10.1007/978-       l’espace, Acta Math., 63, 193–248, 1934.
+  3-642-18775-9 25, 2004.                                               Maxwell, J. C.: On hills and dales, Philos. Mag. J. Sci., 4/40, 421–
+Eymard, R., Gallouët, T., Gervais, V., and Masson, R.: Convergence        427, 1870.
+  of a numerical scheme for stratigraphic modeling, SIAM J. Nu-         Pelletier, J.: 2.3 Fundamental Principles and Techniques of Land-
+  mer. Anal., 43, 474–501, 2005.                                          scape Evolution Modeling, in: Treatise on Geomorphology,
+Fernández-Cara, E., Guillén, F., and Ortega, R.: Mathematical             edited by: Shroder, J. F., Academic Press, San Diego, 29–43,
+  modeling and analysis of visco-elastic fluids of the Oldroyd            https://doi.org/10.1016/B978-0-12-818234-5.01001-4, 2013.
+  kind, in: Numerical Methods for Fluids, Part 2, Handbook of           Pelletier, J. D.: Minimizing the grid-resolution dependence of flow-
+  Numerical Analysis, vol. VIII, edited by: Ciarlet, P. G. and            routing algorithms for geomorphic applications, Geomorphol-
+  Lions, J. L., North-Holland, Amsterdam, Elsevier, 543–661,              ogy, 122, 91–98, 2010.
+  https://doi.org/10.1016/S1570-8659(02)08005-5, 2002.                  Perlin, K.: An image synthesizer, ACM SIGGRAPH Comput.
+Freeman, T. G.: Drainage with divergent flow over a regular grid, in:     Graph., 19, 287–296, https://doi.org/10.1145/325165.325247,
+  Proc. 8th Biennial Conf. Simulation Society of Australia, Can-          1985.
+  berra, 160–165, 1989.                                                 Perron, J. T., Dietrich, W. E., and Kirchner, J. W.: Controls on the
+Freeman, T. G.: Calculating catchment area with divergent flow            spacing of first-order valleys, J. Geophys. Res., 113, F04016,
+  based on a regular grid, Comput. Geosci., 17, 413–422, 1991.            https://doi.org/10.1029/2007JF000977, 2008.
+Gallant, J. C. and Hutchinson, M. F.: A differential equation           Perron, J. T., Kirchner, J. W., and Dietrich, W. E.: Formation of
+  for specific catchment area, Water Resour. Res., 47, W05535,            evenly spaced ridges and valleys, Nature, 460, 502–505, 2009.
+  https://doi.org/10.1029/2009WR008540, 2011.                           Peton, N., Cancès, C., Granjeon, D., Tran, Q.-H., and Wolf, S.:
+Gilbert, G.: Geology of the Henry Mountains, US Ge-                       Numerical scheme for a water flow-driven forward stratigraphic
+  ographical and Geological Survey, Washington, D.C.,                     model, Comput. Geosci., 24, 37–60, 2020.
+  https://doi.org/10.3133/70038096, 1880.                               Porporato, A.: Hydrology without dimensions, Hydrol. Earth
+Girault, V. and Tartar, L.: Lp and W 1,p regularity of the solution       Syst. Sci., 26, 355–374, https://doi.org/10.5194/hess-26-355-
+  of a steady transport equation, C. R. Acad. Sci. Paris Ser. I, 348,     2022, 2022.
+  885–890, 2010.                                                        Scheingross, J. S., Limaye, A. B., McCoy, S. W., and Whittaker,
+Graf, W. H. and Altinakar, M. S.: Hydraulique fluviale: Ecoulement        A. C.: The shaping of erosional landscapes by internal dynamics,
+  et phénomènes de transport dans les canaux à géométrie simple,          Nat. Rev. Earth Environ., 1, 661–676, 2020.
+  Traité de génie civil, vol. 16, Presses polytechniques et universi-   Smith, T. R. and Bretherton, F. P.: Stability and the Conservation
+  taires romandes, ISBN-10 2880748127„ 2000.                              of Mass in Drainage Basin Evolution, Water Resour. Res., 8,
+                                                                          W03417, https://doi.org/10.1029/WR008i006p01506, 1972.
+
+
+
+
+https://doi.org/10.5194/esurf-12-995-2024                                                   Earth Surf. Dynam., 12, 995–1026, 2024
+1026                               J. Coatléven and B. Chauveau: Large structure simulation for landscape evolution models
+
+Smith, T. R., Birnir, B., and Merchant, G. E.: Towards an elemen-     Zhiyin, Y.: Large-eddy simulation: Past, present and the future, Chi-
+  tary theory of drainage basin evolution: I The theoretical basis,     nese J. Aeronaut., 28, 11–24, 2015.
+  Comput. Geosci., 23, 811–822, 1997.
+Veiga, H. B. D.: Existence results in Sobolev spaces for a station-
+  ary transport equation, Ricerche Mat. Suppl., XXXVI, 173–184,
+  1987.
+
+
+
+
+Earth Surf. Dynam., 12, 995–1026, 2024                                                  https://doi.org/10.5194/esurf-12-995-2024
+
