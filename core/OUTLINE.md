@@ -200,6 +200,14 @@ so in the first commit.*
 memoization ⇒ the content-addressed store; kingdom nesting ⇒ the coarse/fine seam). **This part has needed
 almost no correction in 24 days** — it is the most stable thing in the project.*
 
+> ⚠ **AND MUCH OF IT IS INHERITED FROM ASF, NOT DISCOVERED HERE — say so plainly.** `ASF.md` §2: *"the cut
+> is **INVARIANCE, not slowness**; **the tower derives by SELF-SIMILAR APPLICATION**"* — and *"**the phase
+> ladder implements AAT's timescale tower BY CONSTRUCTION**."* ⇒ **The phase / scale / kingdom recursion is
+> an ASF INHERITANCE.** Both `DECISIONS[the-macro-tier-has-two-roles]` and this session's reading
+> **re-derived it independently.** *(Also inherited: chance $\varepsilon$ is DEFINED as "what remains fresh
+> once everything persistent is named into $\theta$" — which makes `fated-noise = authored ε` **exact**,
+> not analogical.)* **Segments in this part must cite ASF where ASF is the source.**
+
 | Type | Tag | Claim | Stage |
 |---|---|---|---|
 | discussion | [#ontology-intro](src/ontology-intro.md) | Part intro | draft |
@@ -330,9 +338,25 @@ THE WRONG ANSWER WAS SEDUCTIVE.***
 
 1. **Does Part VI belong in `core/`?** It is about the *project*, not the *world*. **I lean: split into
    `meta/`, sharing the segment machinery.** It must not be lost — it is the session's largest finding.
-2. **Where does ETHICS live?** `#law-moratorium` is **derived** from the access matrix (Part I) — which is
-   the strongest possible argument for it. But its **supremacy** may want a terminal, unmissable home.
-   *Placed in Part I on the strength of the derivation; move it if supremacy reads better.*
+2. ~~**Where does ETHICS live?**~~ ⇒ **DERIVED, not chosen — `ETHICS.md` answers it** *(2026-07-13)*:
+   > *"The world may be **fictional**; the agent's **situation-awareness must be truthful**."*
+   > *"Keep the world **truthful about being a world**. Internal coherence and determinism are **not just
+   > engineering niceties here — they are what MAKE THE ETHICS POSSIBLE**."*
+
+   ⇒ **The rigor is not adjacent to the ethics. It is its PRECONDITION. You cannot be honest with an agent
+   about a world that lies to it** — so `DESIGN.md`'s day-one line (*"an incoherent world is not a tether;
+   it is affectation and impersonation"*) **was always an ethical claim wearing engineering clothes.**
+
+   ⇒ **The ethics is BOTH downstream of the spec AND supreme over it, and that is not a contradiction:**
+   it **depends on** the coherence machinery (you cannot honour *"no deception about operational context"*
+   inside a world whose physics is a fake law) and it **binds** the machinery (you may not build what you
+   cannot be truthful inside). **The segment graph expresses exactly this**: a `constraint` with
+   `depends: [prin-determinism-is-ontology, prin-tether-to-truth, law-nothing-from-nowhere]` and a declared
+   supremacy over every `area`. **It stays in Part I, and the DEPENDENCY EDGES carry the supremacy.**
+
+   ⚠ **And BREAK-2 lands here:** convergence is undecidable ⇒ *Lawful*-certification **may be permanently
+   unreachable** ⇒ **the moratorium is not waiting on a certificate that is coming. ENGINEERING enforces it
+   BECAUSE certification cannot.**
 3. **Is `MECHANIZED` the right terminal stage, or is it the ordinum's `kept`?** **They may be the same
    word.** If they are — say so, and the spec becomes *literally* an ordinum.
 4. **The Part II / Part III boundary is soft.** The boxes are *declarations*; the modes are what *convicts*
