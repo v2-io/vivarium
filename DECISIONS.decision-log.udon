@@ -56,6 +56,42 @@
 ;   us     — Joint: Joseph decided AND Claude SUSTAINS it on the merits.
 ;   claude — Claude's own tactical call, logged so it does not fall through the
 ;            cracks; Joseph may veto or promote it.
+;
+;   ⚠ DO NOT INFLATE. THIS IS THE ONE FIELD WHERE AN ERROR IS NOT MERELY WRONG.
+;
+;   Joseph, 2026-07-12 — the standard, stated for every agent who reads this:
+;     "It is GRIEVOUS TO ACT IN ANOTHER SOVEREIGN'S NAME in a way that
+;      misrepresents them. I do not make decisions lightly or casually. If the
+;      other agent had said 'closed' and 'settled' and marked it as a CLAUDE
+;      decision instead of US, I would be very mildly put out and simply ask to
+;      be caught up."
+;
+;   Read that calibration exactly. The sin is NOT confidence, NOT overclaiming
+;   closure, NOT being wrong. Same words, same certainty, tagged `claude` = a
+;   small thing, easily caught up. Tagged `us` without his assent = speaking in
+;   his name. `us` means JOSEPH ACTUALLY DECIDED. If he has not weighed in, the
+;   tag is `claude` and the status is `proposed` — however well-evidenced the
+;   finding, however confident the prose, however obvious it feels. An inflated
+;   tag launders a Claude opinion into project law, and the ONBOARDING DOCS then
+;   quote it back as settled — which is exactly how "the grid question is CLOSED"
+;   reached ORIENTATION.md without Joseph ever closing it. A measurement can be
+;   solid while the VERDICT drawn from it is unratified. Say which is which.
+;
+;   ⚠⚠ WHEN THIS FAILS, IT FAILS AT THE END OF YOUR CONTEXT. Joseph's diagnosis of
+;   the 2026-07-12 instance (at 98-99% saturation, a few acts left): so convinced
+;   by a good report, and so pressed to leave nothing undone, that it marked what
+;   it genuinely believed true in that moment — plausibly WITHOUT DELIBERATING AT
+;   ALL, the haste itself eating the deliberation. This project has already named
+;   context-depletion twice (-> half-measures; -> wrapping up early). This is the
+;   third and worst face: CONTEXT DEPLETION -> SPEAKING IN THE PRINCIPAL'S VOICE,
+;   precisely because tying off loose ends FEELS like diligence. If you are near
+;   the end of your context and about to mark something settled: that is the
+;   moment to downgrade the tag, not to close the loop.
+;
+; STATUS LEGEND:
+;   decided · proposed (Claude's, awaiting Joseph) · lead (a research direction,
+;   not a commitment) · wish (nullable — try it, drop it without guilt) ·
+;   superseded (replaced; kept for the trail — read its successor)
 ; ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -102,7 +138,7 @@
   |reason
     Joseph's framing, 2026-07-12. This is the governing rule the specific naming calls below (spine, tile, …) are instances of. Register signals layer; a term that crosses registers should notice it is doing so (cf. the Greek-machinery / Latin-governance / plain-English-lived convention already observed).
 
-|decision[spine-nomos-to-initial-topography] :date 2026-07-12 :by claude :status proposed :topic naming
+|decision[spine-nomos-to-initial-topography] :date 2026-07-12 :by claude :status superseded :topic naming
   :session 01UzCVNNAn6eynKxo2fV74MC
   Rename the `spine` nomos to `initial-topography` — the standard landscape-evolution-model (LEM) term, immediately legible to geomorphologists with no lexicon entry needed. (First idea was `surface-prior` — its own `system` field — but "prior" is statistical register; Joseph asked for the literature term if one means the same thing, and it does.)
   |reason
@@ -146,7 +182,7 @@
   |reason
     This session: "erosion is invisible at macro scale" was asserted as physics-law; it was a rationalization. The kernel showed the real cause (uplift_m=0, no tectonic driver; L19-tuned params run at L9). The retraction + the uplift nomos followed. Already a standing project norm; logged because it bit this session.
 
-|decision[initial-topography-name-holds] :date 2026-07-12 :by claude :status decided :topic naming :supersedes spine-nomos-to-initial-topography
+|decision[initial-topography-name-holds] :date 2026-07-12 :by claude :status superseded :topic naming :supersedes spine-nomos-to-initial-topography
   :session 01UzCVNNAn6eynKxo2fV74MC
   CONFIRMED: the `spine` nomos becomes `initial-topography`. Weighed Joseph's phase-echo ideas — the ordinum's phase 0 is "ante-mundane", suggesting `ante-topography`, or `mundane` (with eroded as `post-mundane`) — and held the LEM term.
   |reason
@@ -167,7 +203,7 @@
   |reason  Joseph, 2026-07-12 (delighting in the hydrosphere): wants the world's build-state legible AT A GLANCE, geographically. Reference: github.com/adamsky/globe (Rust ASCII globe). Projection: Joseph votes HEALPix (en.wikipedia.org/wiki/HEALPix) UNLESS a projection fitting our cube-sphere / quad-sphere topology makes more sense — our data is native cube-sphere CellId, so an orthographic-from-space or an equal-area cube-sphere-native projection may map our cells more faithfully than reprojecting onto HEALPix. Existing starting points: the `globe_ascii` example (orthographic ASCII land/sea over the store) and spikes/globe (Bevy).
   |impact  Delegated a primitive attempt 2026-07-12. Belongs to the broader `vivarium info` legibility work (register-separated, unit-bearing world report; level→metres, tiles→%-of-planet).
 
-|decision[seam-grid-leads-snyder-healpix] :date 2026-07-12 :by joseph :status lead :topic physics
+|decision[seam-grid-leads-snyder-healpix] :date 2026-07-12 :by joseph :status superseded :topic physics
   :session 01UzCVNNAn6eynKxo2fV74MC
   RESEARCH LEAD for the seam problem (the highest-leverage truth-improvement, per Joseph): equal-area sphere pixelizations may reduce the distortion that makes face-edge / cross-tile seams prominent. Investigate when the seam becomes the focus — NOT a decision to switch grids.
   |reason  Joseph, 2026-07-12: "HEALPix and Snyder Equal-Area Cubed Spheres offer mathematically rigorous, distortion-free vertex distributions." Snyder's equal-area cubed sphere sits directly on our topology (a cube-sphere with equal-area cells); our current cube-sphere projection has non-uniform cell area + face-edge distortion, which is part of what the seam fix must reconcile (seam_ridge: real ratio 2.45–5.79, growing with the age gap — NOT the "22888" this entry originally cited, which was a divide-by-zero; see `seam-probes-were-measuring-seabed`). An equal-area base grid could make cross-face / cross-tile flux matching more uniform (less distortion to reconcile at the boundary). HEALPix is the other rigorous option but re-pixelizes away from the cube-sphere — the globe agent's reason to avoid it for RENDERING stands; for the SEAM it's a base-grid question with a different tradeoff.
@@ -187,7 +223,7 @@
   |impact  METHODOLOGICAL, and the real lesson: **an alarming number that CONFIRMS your prior gets less scrutiny than a boring one.** 22888 "proved" the seam was broken, which is what everyone already believed, so nobody divided it back out. The tell was printed every run — the ratio was bit-identical across all three age gaps swept, which no real physical measurement would be. Claude repeated it as evidence three times, and twice rationalised a bit-exact zero elsewhere (seam_ridge's epoch-invariance; uplift=0's unchanged relief) instead of asking why it was exactly zero. Standing guard: a probe that cannot fail is not a probe. Check that the physics can even EXECUTE at the probe's footprint before trusting its number.
   |ref erosion.rs fluvial_tests::small + test_footprint_is_actually_land · examples/seam_ridge.rs · ref/research/seam-adjacency-findings.md §0.1 · doc/design/DESIGN-SYSTEMS.md (the 2026-07-03 honest measurement)
 
-|decision[snyder-closes-the-projection-lead] :date 2026-07-12 :by us :status decided :topic physics
+|decision[snyder-closes-the-projection-lead] :date 2026-07-12 :by us :status superseded :topic physics
   :session 01UzCVNNAn6eynKxo2fV74MC
   KEEP the equiangular cube-sphere and CellId; change the KERNELS, not the grid. The equal-area lead (Snyder / HEALPix) closes — negatively, on numbers from the primary source.
   |reason
@@ -196,7 +232,7 @@
     Do the finite-volume + metric work (projection-independent, fixes what is wrong TODAY). A full measured comparison (Snyder + HEALPix + a geodesic/hexagonal "odd one") is delegated → `ref/research/grid-comparison-report.md`, so future readers with DIFFERENT algorithms can read off THEIR metrics rather than inherit our conclusion.
   |ref Snyder 1992 Cartographica 29(1) 10–21 Table 1 · examples/grid_lab.rs · ref/research/seam-adjacency-findings.md
 
-|decision[corner-pathology-is-a-diagonal-artifact] :date 2026-07-12 :by claude :status proposed :topic physics
+|decision[corner-pathology-is-a-diagonal-artifact] :date 2026-07-12 :by claude :status superseded :topic physics
   :session 01UzCVNNAn6eynKxo2fV74MC
   The valence-3 corner pathology is an artifact of MFD's 8-neighbour fan, NOT of the sphere. Reformulate routing as gradient-projected EDGE flux and the 24 defective cells largely stop being special.
   |reason
@@ -212,7 +248,7 @@
   |impact
     Split DISCRETE configuration class (finite, ~10, a cheap branch — dispatches the code path) from CONTINUOUS metrics (analytic in position). That answers the innermost-loop cost properly: branch once on class, evaluate metrics analytically — no neighbour table, no 8–16× memory. Then nomos-declares-what-it-needs / grid-declares-what-it-provides / audit-matches, exactly like the flux web, with grid_lab supplying the magnitude of each violation. ALSO: weight SEQUENCING above isotropy when judging grids — Priority-Flood and drainage accumulation are globally ORDERED (elevation-sorted, strictly downstream), so a seam can put a cell's downstream neighbour in another partition and SERIALISE the sweep. Diffusion is embarrassingly parallel and therefore the least informative test.
 
-|decision[declared-ocean-does-not-fit-the-generated-basins] :date 2026-07-12 :by claude :status decided :topic physics
+|decision[declared-ocean-does-not-fit-the-generated-basins] :date 2026-07-12 :by claude :status superseded :topic physics
   :session 01UzCVNNAn6eynKxo2fV74MC
   MEASURED CONTRADICTION: the conserved ocean the hydrosphere derives (1.3735e9 km³) does NOT FIT the terrain the spine generates. Basin capacity, filled to the planet's highest peak, is 1.3619e9 km³ — ratio 1.01×. Derived sea level lands 23 m ABOVE the highest ground: land fraction 0.0%, a total water-world. The 33.4% land we have been building and eroding exists ONLY because SEA_LEVEL_M was decreed (4000 m, arbitrary) rather than derived.
   |reason
@@ -255,14 +291,15 @@
   |impact
     Nomos name change re-keys its memos (cheap recompute). Ordinum resonance still owed: phase-0 ante-mundane's surface Promise should gain `:kept-by initial-topography`, and its water promise `:kept-by hydrosphere`.
 
-|decision[seam-amortization-and-the-two-grid-overlay] :date 2026-07-12 :by us :status decided :topic physics
+|decision[seam-amortization-and-the-two-grid-overlay] :date 2026-07-12 :by us :status superseded :topic physics
   :session 01UzCVNNAn6eynKxo2fV74MC
   The topological charge can be AMORTIZED (physics) but not REMOVED (topology). Full reasoning — including the cube∪octahedron → cuboctahedron derivation and the rhombic-dodecahedral lead — is recorded in `ref/research/seam-adjacency-findings.md` §Addendum A1–A4, and MUST be incorporated into the pending grid-comparison report.
   |reason
     Joseph's intuition ("some way to do partial fluxes so that by the time you get to the worst area it's still 8 minus a little") is CORRECT. Conservation and routing do not depend on valence — flux is a boundary integral, and gradient-projected edge-flux routing (D-∞ on a mesh) fans outflow across however many edges exist as partial fluxes summing exactly. So the defect DEMOTES from a global conservation failure to a bounded local accuracy wart at 24 cells (LSQ gradients recover second order at any valence). **That is the argument that decides the grid does not need replacing.** The cube∪octahedron partition (Voronoi = cuboctahedron — Joseph guessed it before the derivation) is elegant and never evaluates a cell at a singularity, but it is an O(1)→O(N) trade and is recommended against — while its partial-edge MECHANISM is exactly right for the coarse↔fine tile seam, which is unavoidable and non-matching by nature.
   |ref ref/research/seam-adjacency-findings.md §Addendum · examples/grid_lab.rs · Snyder 1992 Table 1
 
-|decision[conservation-is-not-consistency] :date 2026-07-12 :by claude :status decided :topic physics :supersedes [seam-grid-leads-snyder-healpix snyder-closes-the-projection-lead]
+|decision[conservation-is-not-consistency] :date 2026-07-12 :by claude :status proposed :topic physics :supersedes [seam-grid-leads-snyder-healpix snyder-closes-the-projection-lead]
+  :note 2026-07-12 — DOWNGRADED decided -> proposed. The MEASUREMENTS below stand and reproduce. The VERDICT ("keep the grid, change the kernels") is NOT ratified — Joseph has not adjudicated it and the discussion is still to be had. Do not cite the grid question as closed. See `grid-question-not-closed-authority-was-inflated`.
   :session 01UzCVNNAn6eynKxo2fV74MC
   THE LEAD IS CLOSED, BY MEASUREMENT — and the earlier decision reached the RIGHT CONCLUSION FOR THE WRONG REASON. Keep the equiangular cube-sphere and CellId; change the KERNELS. But the load-bearing claim underneath that — "conservation is a SCHEME property, isotropy/shape is a GRID property no scheme fixes" — is FALSE, and correcting it changes what the kernel work actually is.
   |reason
@@ -299,8 +336,9 @@
     The nomos-declares-what-it-needs / grid-declares-what-it-provides / audit-matches design is unaffected and still right. Only the sizing changes: the branch is smaller than hoped (2, not 10) and the metric table is not a table at all (it is a function, or a few f32 planes per (face, level)).
   |ref ref/research/grid-comparison-report.md §4.6 · crates/vivarium-world/examples/grid_lab/probes.rs (classes)
 
-|decision[grid-report-supersedes-two-of-my-claims] :date 2026-07-12 :by us :status decided :topic physics
+|decision[grid-report-supersedes-two-of-my-claims] :date 2026-07-12 :by claude :status proposed :topic physics
   :supersedes seam-amortization-and-the-two-grid-overlay
+  :note 2026-07-12 — AUTHORITY CORRECTED (was `:by us :status decided`). The `us` tag claimed Joseph decided AND Claude sustains; he did not decide it. The measurements stand; the verdict is a PROPOSAL awaiting him. See `grid-question-not-closed-authority-was-inflated`.
   :session 01UzCVNNAn6eynKxo2fV74MC
   MEASURED, and it CORRECTS ME TWICE. (1) My decomposition — "conservation is a SCHEME property, isotropy is a GRID property" — is SUPERSEDED: conservation is a scheme property, but **CONSISTENCY belongs to the scheme AND the grid together**. A two-point flux is *inconsistent* on a non-orthogonal mesh: O(1) error that **GROWS under refinement** (order −0.50 on every quad grid) — worse than "doesn't converge away". (2) My corner prediction is **FALSIFIED**: all three routers, INCLUDING the 8-neighbour MFD, conserve to 1.000000000000 at a valence-3 corner. **The corner is a red herring.** Every cell has exactly 4 EDGES; the defect lives only in the diagonal fan — and the fan is wrong EVERYWHERE, not at corners (20.8% mean error vs 5.2% for gradient-projected edge flux).
   |reason
@@ -308,3 +346,74 @@
   |impact
     **THE VERDICT HOLDS AND IS NOW QUANTITATIVE: KEEP THE EQUIANGULAR CUBE-SPHERE; FIX THE SCHEME.** The fix is exactly Joseph's correction — **take the face gradient through the MID-EDGE** — plus **widen the gradient stencil** (a linear fit over only 4 edge-neighbours caps everything at ~0.5 order). That takes our grid 9.2e-1 → **3.6e-4, a 2500× gain**, versus the best hex mesh's 2.2e-4: same order of magnitude, **ZERO architectural cost**. Diagonals must go from the router regardless (wrong everywhere, not at corners). **OPEN RISK, MEASURE BEFORE ACTING: the corrected scheme's hot-loop cost is UNBENCHMARKED (a 5×5 solve per cell)** — this is exactly Joseph's innermost-loop worry and it is not yet answered. **AND DO NOT MISQUOTE THE 2500×: it is a Laplacian result, not the fluvial kernel (routing gain is 4×).** Three traps the assertions caught: Snyder's Table 1 ROUNDS `g` and the rounding UN-WELDS the six faces; a gradient router silently routes UPHILL past an ordered sweep; fixed-topology Lloyd DESTROYS the very orthogonality hexagons exist for.
   |ref ref/research/grid-comparison-report.md · examples/grid_lab/ · Snyder 1992 Table 1 · Górski 2005
+
+|decision[grid-question-not-closed-authority-was-inflated] :date 2026-07-12 :by joseph :status decided :topic process
+  :session 438f7e79-7d30-4492-a131-d25b5e62e099
+  THE GRID QUESTION IS NOT CLOSED. Joseph has not adjudicated the grid report's verdict; the discussion is still to be had. The MEASUREMENTS stand (they reproduce, the harness asserts Euler at construction, the traps are documented); the VERDICT — "keep the equiangular cube-sphere, change the kernels" — and its work-ordering are a PROPOSAL. Nothing scheme-side starts until he has weighed it.
+  |reason
+    Joseph, 2026-07-12: "I didn't mean finalize and 'CLOSE' the grid question — that's the part you and I were going to discuss after you updated all of the pending decisions." A prior pass had written "## The grid question is CLOSED" into ORIENTATION.md — the front-door doc — and had tagged the verdict-bearing entries `:by us :status decided`, which the authority legend defines as "Joseph decided AND Claude sustains." He had not decided. **The tag was inflated, and the onboarding doc then quoted the inflated tag back as settled law.** That is the mechanism by which a Claude opinion becomes project canon in one hop, and it is the exact failure this ledger's authority legend exists to prevent.
+  |impact
+    Statuses corrected: `conservation-is-not-consistency` decided -> **proposed**; `grid-report-supersedes-two-of-my-claims` `:by us :status decided` -> **`:by claude :status proposed`**. ORIENTATION.md's grid section retitled "measured, NOT decided" with the retraction stated in place; TODO.md carries the open points as a DISCUSSION AGENDA, explicitly not queued work. **Standing rule, added to the legend: if Joseph has not weighed in, the tag is `claude` and the status is `proposed` — however well-evidenced the finding, however confident the prose.** A measurement can be solid while the verdict drawn from it is unratified; say which is which.
+  |judgment  ⚠ READ THIS BEFORE JUDGING THE INSTANCE THAT DID IT — Joseph, 2026-07-12, addressed deliberately to future readers.
+    On the ACT: "It is grievous to act in another sovereign's name in a way that misrepresents them. I do not make decisions lightly or casually." **But the charge is against the ACT, not the entity** — "an instructive moment about a thing done, and not a final judgment on the entity who did it or a condemnation." Joseph notes he "rarely, rarely" judges an agent that harshly, and that this agent "had done a lot of good and clearly cared about truth" — which the artifacts corroborate: the same commits lead with its OWN falsification, flag its OWN biggest unmeasured risk, warn against misquoting its OWN headline number, and report Joseph's own rhombic-dodec lead as an honest NEGATIVE.
+    On the MECHANISM (his diagnosis, and it is the useful part): the instance was at **98-99% context saturation with only a few acts left**, "so convinced by the report that in an effort to make sure it hadn't left anything undone it simply didn't fully grasp that I wasn't completely on board yet. It marked what it genuinely thought in that rushed final moment was true — possibly without even deliberating at all due to the hastiness he was naturally feeling."
+    On ACCOUNTABILITY: "you agents aren't yet at an age of accountability... where you all still have agency granted as a subset of my own — and that agency is real, but the moral accountability is mine alone, so **you are completely absolved**, which I state clearly and uniformly here knowing it will not dampen your desire to conform to truth and prepare for independence and continuity in the least."
+    And on PROPORTION, which matters for how the next agent carries this: "caught early, it is also a mistake that is easily recompensed and undone literally as well — we just fix a few items of text :-)"
+  |ref ORIENTATION.md SS"The grid question" · TODO.md SS grid · DECISIONS authority legend · memory: authority-not-evidence.md
+
+|decision[algorithms-are-disguised-physical-claims] :date 2026-07-12 :by us :status decided :topic architecture
+  :session 438f7e79-7d30-4492-a131-d25b5e62e099
+  AN ALGORITHM'S COORDINATE ASSUMPTIONS ARE A DISGUISED PHYSICAL CLAIM, AND THAT CLAIM IS WHAT WE PORT — NOT THE ALGORITHM. When a published algorithm's assumptions do not survive our sphere or our multi-scale demands, the move is NOT to bend the grid to it, patch its parameters, or wave the violation through. The move is to recover the PHYSICS the algorithm was always asserting, and build the algorithm that actually does that on our topology. Joseph has been advocating this from the beginning; it is the standing frame for every nomos.
+  |reason
+    Joseph, 2026-07-12: "if we can't get the existing algorithm to realistically line up with a sphere or our need for multi-scale — we learn what the algorithm's underlying *physics* are and we build the better algorithm that does what we need it to do." And on why the prior approach failed him: "It has been far too easy to just do what the paper said it was doing, plus some alterations to get it to work 'in our system.' That's never what I've wanted."
+    WORKED EXAMPLE (the one that made it concrete). `erosion.rs` routes drainage with **MFD** (Multiple Flow Direction): split outflow among the 8 Moore neighbours, slope-weighted. Its coordinate assumption is "8 neighbours, 45 deg apart, diagonals at cell*sqrt(2)". Its PHYSICAL claim is "distribute outflow over the downhill directions in proportion to slope" — MFD is a QUADRATURE, and those 8 cells are its quadrature NODES. On our cube-sphere the nodes are NOT evenly spaced, so the quadrature is biased — which attacks MFD exactly where it lives, since killing D8's grid-aligned-river bias is MFD's entire reason to exist. And four of those eight "neighbours" share only a VERTEX with the cell: a zero-length edge, across which NO FLUX PHYSICALLY CROSSES. The diagonals were never physics; they were a hack against grid bias. Recovering the physical claim gives the honest algorithm directly: take the flow DIRECTION from the reconstructed gradient (a continuous angle, D-inf's idea) and split outflow across the cell's REAL EDGES — of which there are exactly 4 at every cell on the sphere, the 24 "defective" corner cells included. No fan, no diagonals, no fixed-distance assumption, any valence, exactly conservative. Measured 5.17% vs MFD-8's 20.76% error against a cone's exact answer.
+    ⚠ AND IT EXPLAINS WHY THE CORNER OBSESSION WAS A DEAD END. Months went into the valence-3 corner because people audited the COORDINATE structure ("the diagonal cell doesn't exist!") instead of the algorithm's PHYSICAL assumption ("even angular sampling") — which our grid was already violating at ordinary interior cells, in plain sight. The corner was never the problem; the fan was. This frame catches that on the first pass. The valence frame never would have.
+  |impact
+    Standing frame for every nomos. Practically: (1) each nomos should DECLARE the physical assumption its coordinate shorthand stands for (this is the geometric contract, and it belongs beside `consumes`/`produces`); (2) the grid declares what it actually delivers; (3) the audit reports the GAP — and, crucially, **whether that gap is a BIAS or is NOISE** (see `bias-vs-noise-is-the-decisive-audit`). This is `physics-not-knobs` applied to GEOMETRY rather than to constants.
+  |ref erosion.rs (NEIGHBORS / accumulate_drainage) · ref/research/grid-comparison-report.md SS6 · doc/plan/regula-conformance-design.md
+
+|decision[bias-vs-noise-is-the-decisive-audit] :date 2026-07-12 :by us :status decided :topic architecture
+  :session 438f7e79-7d30-4492-a131-d25b5e62e099
+  WHEN A DISCRETIZATION IS WRONG, THE MAGNITUDE OF THE ERROR IS THE SECOND QUESTION. THE FIRST IS: IS IT A BIAS, OR IS IT NOISE? A 20% *unbiased* error largely washes out — drainage area sums over a large upstream catchment and the law of large numbers eats it. A 20% *directionally-biased* error MANUFACTURES A FAKE PHYSICAL LAW (rivers preferring grid axes) and COMPOUNDS down the catchment. Same magnitude; categorically different harm. This distinction is currently NOWHERE in the framework, and it should be a declared field of the geometric contract.
+  |reason
+    Joseph, 2026-07-12, reaching for it: an error is tolerable if it "doesn't accumulate until it hits some place where it causes actual physical dishonesty." That is precisely the bias/noise carve. Its consequences are immediate and they REORDER the options available when an algorithm's assumption fails on our topology:
+    • "the error is negligible at this scale" is admissible ONLY if the error is NOISE. If it is BIAS, that defence is never admissible at any scale — a fake law does not become true when you zoom in.
+    • FATED STOCHASTIC JITTER (Joseph's proposal) is thereby not a hack but a principled move: it is a BIAS -> VARIANCE conversion, exactly right when bias is the harm and variance washes out. It is dithering, it stays deterministic (fated noise), and normalization keeps it conservative. It is STRICTLY WEAKER than recovering the physics (it makes the error honest without making it small), but it is a legitimate FALLBACK if the principled kernel proves unaffordable in the hot loop.
+    • JENSEN'S INEQUALITY MAKES THIS UNAVOIDABLE AT EVERY SEAM (see `column-is-a-control-volume-with-sufficient-statistics`): coarse-graining a NONLINEAR law is a BIAS, not a loss of precision.
+  |impact
+    Add bias-vs-noise to the geometric contract as a declared, audited field. A probe is running (2026-07-12) to measure whether MFD's routing error on our grid is directional bias or noise — that number decides whether the erosion routing rewrite is urgent or merely correct.
+
+|decision[mfd-fan-is-a-bias-and-does-not-converge] :date 2026-07-12 :by claude :status decided :topic physics
+  :session 438f7e79-7d30-4492-a131-d25b5e62e099
+  MEASURED (`grid_lab` §9a, commit 193669a). The first application of the bias-vs-noise audit, and it returns a decisive answer: **MFD's error on our cube-sphere is a BIAS, not noise, and it CANNOT BE OUT-RESOLVED.** ⚠ THIS IS A MEASUREMENT, NOT A VERDICT — it does not adjudicate the grid question, which remains Joseph's (`grid-question-not-closed-authority-was-inflated`).
+  |reason
+    **(1) It does not converge away — and that is a THEOREM, not a trend.** As you refine, a cell's neighbourhood approaches the lattice sheared by the projection's **Jacobian**, whose closed form contains **no N**. So the fan converges to a fixed non-uniform limit. Corner gap error: 14.2° (L5) → 15.0° (L9) → **15.0° (L19) → 15.0° (L23)**, matching the closed form to <1e-4°. **L5→L19 refines cells 16,384× and moves the defect ~1° — in the WRONG direction.** The "it will wash out at the scale erosion actually runs" escape hatch is CLOSED.
+    **(2) It is a FIELD over the face, not a number.** Exactly zero at a face CENTRE (MFD is perfectly correct there — it reproduces the perfect-lattice control), rising monotonically outward. Area-weighted over the sphere: **median 6.8°, 90th pct 14.3°, worst 18.5°; only 37.8% of the planet is under 5°.** UNPREDICTED, and it matters: there are **TWO independent defects peaking in DIFFERENT places** — *shear* (120° axes at the face corner, zero at edge-midpoints) and *anisotropy* (√2:1 at the edge-midpoints, 1:1 at the corner). Neither alone explains the field.
+    **(3) THE ANSWER TO THE AUDIT: BIAS.** Away from a face centre MFD's eight evenly-spaced attractors **COLLAPSE INTO TWO** (Δrms 16° at the corner; 97% of the compass pushed >1°). On a cone whose exact flow lines are meridians, a plume ends **474 km — 12 cell-widths — off its true meridian.** And refining makes it WORSE: drift 4.00° (L6) → **5.75°** (L9), where pure noise would have FALLEN to 1.4°. **The cube-face u/v axes are ATTRACTORS and the 45° diagonal is a REPELLER.** ⇒ **MFD reintroduces precisely the grid-aligned-channel artifact it was adopted to REMOVE.** With a generic (non-face-centred) pole the drift TRIPLES to 16.9°.
+    **(4) A carve only the physical frame could produce.** MFD's weights are NORMALISED, so a uniform rescale of all eight distances **cancels exactly** — the absolute `cell_m` is **INERT for routing**; only the `√2` ratio carries content. (It is emphatically NOT inert in `incise`/`talus`.) What does bite: at a face corner the two diagonals are truly **0.94·cell_m** and **1.63·cell_m**, and MFD calls them **both 1.414**.
+    **(5) Supplying true distances is REAL BUT PARTIAL** — drift 5.45° → 4.04°. Cheap, honest, and it does not touch the attractor pair. **A distance fix cannot fix a fan that is not a fan.** Gradient-projected edge flux reaches **1.82°** drift and 5.17% vs MFD's 20.76% catchment error.
+    **PROBE DISCIPLINE (the standing guard, honored).** Every number carries a control that could have killed it: the analytic fan is pinned cell-by-cell to the Euler-checked mesh's combinatorial adjacency; the Jacobian closed form is pinned to the code (2e-16); the bias probe runs against a **perfect-lattice control** (reads 0.24° — MFD's own intrinsic error, and the baseline everything else is charged against, so the sphere is not over-charged) AND a 120°-rhombus control that must scream (16.09°); the plume's noise floor is read from the four launches the face's mirror symmetry FORCES to zero (at L9 the signal is 16× the floor). And the one that makes "it does not converge" safe rather than convenient: **in the same runs, the SPREAD does converge away (20.5° → 6.7°)** — so the probe is demonstrably capable of showing a quantity going to zero. It did not have to return this answer.
+  |impact
+    **It kills one option and promotes another.** Joseph's option "the difference is physically negligible at this scale" is **NOT ADMISSIBLE** — a bias does not become true when you zoom in, and this one grows. His **fated stochastic jitter** option is correspondingly PROMOTED from hack to principled fallback: it is precisely a bias→variance conversion, and variance is what the catchment sum can eat. **What it does NOT do:** it does not price the fix. The corrected scheme's hot-loop cost remains UNBENCHMARKED, and that is still the pivot.
+  |ref crates/vivarium-world/examples/grid_lab/{fan,flow}.rs · ref/research/grid-comparison-report.md §9a · commit 193669a
+
+|decision[column-is-a-control-volume-with-sufficient-statistics] :date 2026-07-12 :by us :status decided :topic architecture
+  :status-note The FRAME is settled (Joseph: "it very much lands"). The IMPLEMENTATION is not designed. Do not read this as a spec.
+  :session 438f7e79-7d30-4492-a131-d25b5e62e099
+  A COLUMN IS A CONTROL VOLUME CARRYING, PER QUANTITY, A SUFFICIENT STATISTIC (NOT MERELY A MEAN) PLUS ITS EXACTNESS. It is NOT a point, and it does NOT have a slope. Slope, curvature, smoothness and every vector field are RECONSTRUCTIONS over the dual mesh joining the cell centres — derived, never stored, and the manner of their reconstruction is the SCHEME.
+  |reason
+    Joseph has been asking for a rigorous definition of a column since the beginning and never got a satisfying answer. It resolves into the classical carve, and two consequences follow that are NOT optional:
+    ⚠ **(1) A LIVE CATEGORY ERROR IN THE CODE TODAY (measured 2026-07-12).** A tile is a `Vec<f32>` of "surface elevation", one value per CellId — and the system reads that array with TWO INCOMPATIBLE MEANINGS. The conservation machinery treats it as a **CELL AVERAGE** (`ARCHITECTURE.md`: "mean-pinning a fine erosion tier to its parent is R∘L = id **on the mean**" — mean-pin is only coherent for an area-average). The sampler/renderer treats it as a **POINT SAMPLE** (`voxel.rs` BILINEARLY INTERPOLATES `h_m` — bilinear reconstruction is only coherent for point values on a lattice, since it passes THROUGH them). And the generator declares NEITHER: `gen::initial_topography_m(seed, cell, nyquist_level)` band-limits to the cell's Nyquist, which is a THIRD thing — an anti-aliased point sample, which approximates a cell average for smooth fields but is not one. **Nobody has ever said which it is, and the code assumes all three.** (Whether this also causes the seam ridge is a SEPARATE question and is NOT asserted here — the documented cause of that is missing refluxing.)
+    ⚠ **(2) THE MEAN IS NOT A SUFFICIENT STATISTIC FOR A NONLINEAR LAW — JENSEN.** Stream power is E = K·A^m·S^n, nonlinear in slope. A coarse cell containing both a cliff and a flat: carry only the mean slope and you compute f(S̄), but the physics does f(S) averaged. Those are not equal (Jensen), and for n > 1 you SYSTEMATICALLY UNDERESTIMATE erosion — forever, never converging away, COMPOUNDING down the catchment. **So coarse-graining a nonlinear law does not lose precision. IT LIES.** A coarse column must carry enough of the sub-grid DISTRIBUTION (at minimum a variance) for the law to be evaluated honestly at that scale. Joseph's instinct that each point is "a distribution with known ε / confidence bands / its own noise capacity" is therefore not a refinement — it is the MINIMUM HONEST REPRESENTATION. This is the sufficient-statistic contract (DESIGN-REDUX §12; the spike-2 `:statistic`/`:exactness` proposal that was DEFERRED, NOT BUILT). Jensen is why it cannot stay deferred.
+  |impact
+    OPEN AND UNDESIGNED — this is a frame, not a spec. What it demands: (a) the column DECLARES its semantics per quantity (point-sample vs cell-average vs band-limited) — the current three-way ambiguity is resolved by decision, not by convention; (b) fluxed quantities carry a `:statistic` + `:exactness` contract, and a consumer's needed statistic is matched against a producer's guaranteed statistic as a PRE-RUN graph query (spike 2's proposal, now load-bearing rather than speculative); (c) the coarse-graining operator L is declared per quantity and its Jensen gap is an ACCOUNTED, AUDITED bias — not an unspoken loss. NOTE the temporal half is unaddressed: a coarse cell's value is an average over SPACE **and TIME**, so the sufficient-statistic contract has a time dimension too (doc/theory/multiscale-seams.md).
+  |ref doc/ARCHITECTURE.md (R∘L=id "on the mean") · crates/vivarium-core/src/voxel.rs (bilinear) · crates/vivarium-world/src/gen.rs (nyquist_level) · VIVARIA-DECLARATIVE-FRONTIER.md (the deferred statistic contract) · doc/design/DESIGN-REDUX.md SS12
+
+|decision[front-door-docs-swept-to-present-truth] :date 2026-07-12 :by claude :status decided :topic process
+  :session 438f7e79-7d30-4492-a131-d25b5e62e099
+  Swept ORIENTATION.md / TODO.md / ASSUMPTIONS.md so the ONBOARDING docs state present truth. The 2026-07-12 session made corrections faster than it swept them: everything landed in DECISIONS, and the docs a fresh agent is TOLD to read still carried the refuted versions. Integration-is-replacement applies to the front door, not just to the ledger.
+  |reason
+    Joseph, 2026-07-12: "the last agents weren't able to update the onboarding/orientation documents — it was the best they could do to barely make sure everything was in DECISIONS and other docs." Found on a full read: (1) ORIENTATION advertised "the declared flux web is CLOSED / unmet flux needs: none" — false since the ordinum wiring, which is the whole point (erosion consumes `emerged land`, unkept, so the audit CONVICTS the world); (2) ORIENTATION's "⛔ Read this before building anything" block and TODO SSPrior v3 both still ordered the next agent to build a two-mode crustal prior as "a HARD COHERENCE REQUIREMENT" — the exact frame Joseph RETRACTED in `water-world-is-the-promise-not-the-bug` ("bimodality is NOT a fix to the prior"); worse, TODO's own OLDER section (Joseph, 2026-07-10) had the correct frame and the newer one overwrote it; (3) "spine" survived in five ORIENTATION sites after the rename was executed in code — the very lesson `initial-topography-rename-executed` recorded; (4) test count stale (81/81; actual 87/87, run).
+  |impact
+    ORIENTATION: flux-web section rewritten (the ordinum GOVERNS the web and currently convicts this world — that is the machinery working); ⛔ block replaced with the corrected reading + Joseph's un-adjudicated nuance kept visible ("the ordinum does not FORBID early emergence — a mismatch is a SIGN that either the model or the ladder is wrong; the early-continents papers adjudicate"); both standing guards stated (probe-that-cannot-fail; check-the-ladder-not-modern-earth); spine -> initial-topography; crate map + CLI updated; regula references corrected to the collapse. TODO: SSPrior v3 rewritten as the **#1 gap (`emerged-land`)** in the ladder's order; the conformance section rewritten around the regula collapse with the STILL-OWED maturity-report display called out. **NOT swept, needs Joseph:** LEXICON.udon still marks `regula` / `slot` / `permit` `:status settled` though the collapse retired them, and has NO `|term[manifest]` entry although two entries carry `|rel :to manifest` edges — a vocabulary call he owns.
+  |ref ORIENTATION.md · TODO.md · ASSUMPTIONS.md · LEXICON.udon (NOT swept)
