@@ -40,7 +40,8 @@ say so.**
 ---
 slug: law-conservation-is-structural
 type: law                    # vocabulary below
-stage: sourced               # draft | sourced | verified | MECHANIZED
+area: [nomos, scaffold]      # ⚠ WHICH LAYER(S) THIS GOVERNS — see below. Sliceable.
+stage: sourced               # PROPOSAL ONLY — see the stage note
 depends: [def-nomos, def-flux-quantity]
 sources:                     # ⚠ REQUIRED — where this ALREADY EXISTS in the corpus
   - DECISIONS[refluxing-ceases-to-exist-measured]
@@ -54,6 +55,28 @@ must hold) · **contract** (what something must declare) · **mechanism** (an ex
 **mode** (a verification mode) · **constraint** (a hard architectural line — a *thou shalt not*) ·
 **der** (derived here) · **discussion** (a part intro) · **failure** (a gallery specimen — *a wrong
 answer and why it was seductive*) · **open** (a named unsolved problem).
+
+### ⚠ `area` — **which layer does this segment GOVERN?** *(added at Joseph's ask, 2026-07-13)*
+
+**The outline's PARTS are conceptual (purpose → ontology → substrate → verification → …). The AREAS are
+the four layers this spec is separated from.** They are **orthogonal axes** — `law-conservation-is-
+structural` governs the **nomos** layer; `mech-defeasance-everywhere` governs **process**; `def-predicate`
+governs **tabularium**. **Reordering the parts by area would destroy the dependency ordering, so `area`
+is a FIELD ON THE SEGMENT, not a section of the outline.**
+
+| `area` | governs | the audience |
+|---|---|---|
+| `process` | **how the project works on itself** — norms, queue, retraction, onboarding | *every session, and the meta-system* |
+| `tabularium` | **the instituted content** — the ordinum, the lexicon, the ledgers | *whoever institutes or amends a declaration* |
+| `scaffold` | **the enforcing machinery** — nomotheke, flux, audit, store, key | *whoever builds the checks* |
+| `nomos` | **the physics** — what a kernel must declare, preserve, and not lie about | ⚠ **a per-nomos agent's entire brief** |
+| `ontology` | **what exists** — kingdom, phase, law, determinism, the moratorium | *everyone; it constrains all of the above* |
+
+> ### ⇒ **THE PAYOFF, AND IT IS THE POINT: the outline becomes SLICEABLE.**
+> *"Show me everything a **nomos-agent** must obey"* = `area: nomos`, in dependency order, with each
+> segment's `mechanism:` telling it what will actually convict it. **That is onboarding-as-a-query, and it
+> is the brief for the per-nomos agents Joseph wants.** *(A segment may carry several areas. If a segment
+> needs ALL of them, it is probably two segments.)*
 
 ### ⚠ `stage` — **UNDECIDED. A PROPOSAL, NOT A SCHEMA.**
 
@@ -128,6 +151,28 @@ PORT, not a composition.**
 
 *Without that line, the same fork re-opens between LEXICON and `core/` within a week, for the same reason
 it opened the first time.*
+
+---
+
+## ⚑ THE JOIN NOBODY HAS MADE — **the declarative frontier and the audit night have never met**
+
+> **Joseph, 2026-07-13:** *"[`VIVARIA-DEFINITIONS`] was written **before** any of the last 24 hours of
+> breakthroughs — which continue to refine and flesh out **the core mathematics and terminology and
+> literature that was available all along and unused.**"*
+
+**Two documents, thirty-six hours apart, and neither knows the other exists:**
+
+| | **`VIVARIA-*` (Jul 12, 01:14)** | **the AUDIT NIGHT (Jul 13, 00:27 → 03:55)** |
+|---|---|---|
+| supplies | **THE FORM** — *declare everything about the kernel; run only the kernel.* `enum Check`, `Verdict`, the maturity ladder, declared-vs-audited, the statistic contract | **THE CONTENT** — *what there IS to declare about a kernel.* The five boxes · the **modified equation** as a **computation** · **bias-vs-noise** as the verdict function · the **structure table with its CONFLICTS** · compatible/mimetic/structure-preserving vocabulary · the literature |
+| its gap | **it did not know what a kernel's declarations should CONTAIN** — it had no five boxes, no modified equation, no bias/noise verdict, no `:check control` | **it did not know where the declarations would LIVE** — it kept saying *"`NomosDecl` has nowhere to put this"* |
+
+> ## ⇒ **THE AUDIT IS THE CONTENT THE FRONTIER DESIGNED THE CONTAINER FOR. NEITHER IS COMPLETE WITHOUT THE OTHER, AND NOBODY HAS JOINED THEM.**
+>
+> **This is the single most important thing `core/` does**, and it means **Part II cannot be a straight
+> PORT of `VIVARIA-DEFINITIONS`.** It must be that document's *form* **married to** twenty-four hours of
+> mathematics that did not exist when it was written — *mathematics that was, as Joseph notes, **available
+> all along and unused.***
 
 ---
 
