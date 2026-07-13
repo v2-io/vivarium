@@ -65,7 +65,9 @@ seams (SI-exponent units + exactness), raw `f64` in loops · **storage**
 content-addressed, the save *is* the store (git-shaped) · **matter** strata
 (storage) / voxel (view) / body (overlay) · **determinism** all stochasticity
 is fated noise — a stateless KRNG of (seed, key), never a shared mutable
-stream.
+stream. · **staggering** (2026-07-13, *tentative*) scalars at centres, **fluxes on
+faces**, **metric carried per cell** — see §"The grid" below before designing any
+field nomos; the **router is NOT covered by it and is NOT decided**.
 
 ## The principled frame (standing and growing — the live architecture)
 
@@ -298,7 +300,7 @@ track, not behind it. Next increments:
 > **[`doc/design/NOMOS-CONTRACT.md`](doc/design/NOMOS-CONTRACT.md) — read it.** Every defect found on 2026-07-13 fell into **one of five boxes, and the flux web only has the first.** ② geometry · ③ semantics · ④ structure · ⑤ the modified equation. **`NomosDecl` has nowhere to put any of them** — that gap is the next build, and it is mechanical. **The five `doc/design/nomos-contract/*.md` files are specified in that document and NOT YET WRITTEN** (Joseph's design: each box gets a file with the math, the procedure, a worked specimen, **its probe**, and a **failure gallery** — *a procedure, not a taxonomy*).
 >
 > ### Open, and NOT Claude's to decide
-> - **The leaf-only-evolution price** on flux-on-the-face (it cuts against the memoised-independent-tier design — the lazy pull-query's whole premise).
+> - **The leaf-only-evolution price** on flux-on-the-face (it cuts against the memoised-independent-tier design — the lazy pull-query's whole premise). *A proposed resolution landed after this block was written* (`DECISIONS[the-macro-tier-has-two-roles-and-conservation-buys-its-freedom]`: the macro tier's **governance** role is conserved and therefore free of its leaves; only its **summary** role is leaf-bound) — **but it is a structural argument, explicitly NOT verified. Test it before building on it.**
 > - **LEXICON:** `regula` is a **13-edge hub node** still `:status settled` though retired; **`manifest` — the load-bearing noun — has NO entry**; and `:status` has **no value meaning *retired*** (a blocking sub-decision).
 > - **Three `:by us` tags flagged as possibly inflated** and deliberately NOT corrected (`snyder-closes-the-projection-lead`, `seam-amortization-and-the-two-grid-overlay`, `geometric-contract-metric-set`) — *correcting an authority tag is not Claude's authority.*
 >
@@ -332,13 +334,40 @@ step in parallel: the **RNG fix** — per-agent splittable seeds
 because agents *live in* this coordinate/time/matter space. Hard gate before
 any agent-seam work: the Level-C reading, `ASF.md` §5.
 
-## ⏸ The grid question — measured, NOT decided (2026-07-12)
+## ⚖ The grid — TENTATIVELY DECIDED (2026-07-13), and the word *tentative* is load-bearing
 
-> **This section states measurements, not a verdict.** The grid report's *recommendation* — "keep
-> the equiangular cube-sphere; change the kernels" — is **not ratified**. Joseph has not adjudicated
-> it, and the discussion is still to be had. A previous pass wrote it into this file as "CLOSED";
-> that was false authority and is retracted. Do not start scheme work off this section, and do not
-> cite the question as settled. Agenda + open points: `TODO.md` §grid.
+> **The decision (Joseph, `DECISIONS[the-grid-tentatively-decided-keep-the-cube-sphere-and-stagger-it]`):**
+> **(1) KEEP the equiangular cube-sphere and `CellId`.** **(2) GO STAGGERED (Arakawa-C)** — scalars at
+> cell centres, **fluxes stored ON FACES as first-class keyed objects**. **(3) CARRY THE METRIC PER CELL**,
+> precomputed per tile (**not** per `(face, level)` — that claim in the grid report is false; a face-level
+> plane at L19 would be ~23 TB).
+>
+> **It covers the coordinate system, the storage arrangement, and the metric machinery. Nothing else.**
+> ⚠ **The ROUTER is explicitly NOT part of it and is NOT decided** — see the router spike below.
+>
+> ⚠ **This reverses the earlier posture in two ways, and both matter.** First, an earlier pass wrote the
+> grid in as "CLOSED" on Claude's authority alone; that was retracted, and this section then said "NOT
+> decided" for a day *after* Joseph had in fact decided — the same failure with the sign flipped. **The
+> ledger is ground truth; this file tracks it.** Second, the *reasons* changed: the 2026-07-12 report
+> reached the same conclusion from an argument that was subsequently refuted, and the surviving reasons
+> make this a **positive case, not a least-bad option** (the quad C-grid's 2:1 DOF ratio admits no spurious
+> computational modes; uniformity beats orthogonality — Putman & Lin measured it; the square C-grid is
+> *privileged* for simultaneous energy + potential-enstrophy conservation, which a hexagonal TRiSK mesh
+> provably cannot do; and 1→4 subdivision is what the entire store/LOD/memo-key architecture rests on).
+
+**What would REOPEN it** (stated so a successor need not guess): (a) if the **leaf-only-evolution price**
+proves unpayable against the store's independent-tier premise — flux-on-the-face makes the seam an identity
+only if the coarse tier is *restricted from* the leaves rather than run alongside them; a **proposed
+resolution exists** (`DECISIONS[the-macro-tier-has-two-roles-and-conservation-buys-its-freedom]` — the macro
+tier's *governance* role is conserved and therefore free of its leaves, while only its *summary* role is
+leaf-bound) but it is a **structural argument, explicitly NOT verified**; (b) if the **router cannot be made
+principled on a quad mesh**; (c) if coarse-tier curvature needs a genuinely different treatment; (d) **Randall's
+Z-grid**, whose one cost (an elliptic solve) a `CellId` quadtree may dissolve — **unmeasured, and its elegance
+must not substitute for a benchmark.** Agenda + open points: `TODO.md` §grid.
+
+**Also NOT covered and open:** the router · the hydrostatic-reconstruction failure when `Δz ≥ h` (**proved**,
+and it is *thin films on steep ground* — our common case; it will masquerade as a seam defect) · the measured
+AMR-seam-crossing-a-cube-panel-seam artifact (convergence 4 → 2.5).
 
 **What was measured** (nine grids, `examples/grid_lab/` →
 [`ref/research/grid-comparison-report.md`](ref/research/grid-comparison-report.md); Snyder
@@ -349,8 +378,13 @@ that is solid:
 - **Conservation is free.** Finite volume conserves exactly (~1e-15) on every grid, worst included.
 - **Conservation ≠ consistency.** A *two-point* flux — the naive meaning of "FV with the true
   geometry" — is **inconsistent** on a non-orthogonal mesh: O(1) error that **grows** under
-  refinement (order −0.5 on every quad grid). If it holds up, this supersedes the "conservation is
-  a scheme property / isotropy is a grid property" decomposition.
+  refinement (order −0.5 on every quad grid). This supersedes the old "conservation is a scheme
+  property / isotropy is a grid property" decomposition. ⚠ **And it is not a separate finding from
+  the fan: MFD *is* the two-point flux** (Coatléven & Chauveau, read primary) — the two results are
+  one result seen through two kernels (`DECISIONS[mfd-is-the-two-point-flux-and-our-router-is-not-d-infinity]`).
+  Also measured, and it reframes the whole router question: **MFD's output is not a discharge at all
+  — it is a boundary integral, ill-posed *in the continuum*** (its value depends on the shape and
+  orientation of the cell boundary). *You cannot fix a scalar's direction.*
 - **Correcting the scheme** (face gradient through the **mid-edge**, plus a *wide* quadratic
   gradient stencil over the Moore neighbours) measured **9.2e-1 → 3.6e-4** on our own grid, against
   the best hexagonal mesh's 2.2e-4 — with no change to `CellId`, the quadtree, the store, or the KRNG.
@@ -369,14 +403,17 @@ that is solid:
   have fallen to 1.4°*) while the *spread* in the same runs converges away. The cube-face axes are
   attractors — **MFD reintroduces the grid-aligned-channel artifact it was adopted to remove.**
   ⇒ This *sharpens* the case for the kernel/scheme work and kills the "it washes out at fine
-  resolution" escape hatch. It **does not** decide the grid question — the hot-loop cost is still
-  unbenchmarked, and the call is still Joseph's.
+  resolution" escape hatch.
+- **The corrected scheme is affordable — Joseph's innermost-loop worry is ANSWERED** (2026-07-13,
+  `msc/spike-corrected-scheme-cost/`). It is an **exact algebraic refactor** (linear in `u`, static
+  geometry), so the per-cell 5×5 solve collapses to a **21-point static stencil** precomputed per tile
+  (verified 2.7e-13 against the solve): **+2.7% on an erosion epoch**, with 64² tiles sitting 50× below
+  the cache cliff. *This retires the standing objection; it does not retire the router question.*
 
-**Known weak points in the report, carried openly** (these are why it is not a verdict yet): the
-corrected scheme's **hot-loop cost is unbenchmarked** (a 5×5 solve per cell per step — Joseph's
-innermost-loop worry, unanswered); the **2500× is a Laplacian result, not the fluvial kernel** (the
-routing gain is 4×); and one of the report's own causal explanations does not match its harness (see
-`TODO.md` §grid, point 3).
+**Known weak points in the report, carried openly:** the **2500× is a Laplacian result, not the fluvial
+kernel** (the routing gain is 4×); and one of the report's own causal explanations does not match its
+harness (see `TODO.md` §grid, point 3). ⚠ **And its §4.2/§5 corner-anisotropy story is superseded** —
+the corner was a red herring; the fan is inaccurate *everywhere*.
 
 ## The one hard research problem (open)
 
