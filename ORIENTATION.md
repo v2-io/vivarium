@@ -181,6 +181,33 @@ caution, never manual cache-clearing. Full statement + named failure modes:
 - `archive/*` — superseded spikes (incl. the Godot head-to-head; findings in
   `spikes/FINDINGS.md`).
 
+## ⛔ Read this before building anything (2026-07-12)
+
+Two measured findings reorder the queue. Both were caught the same way — by making a
+*decreed* thing **derivable** and checking whether it cohered — and both had been
+invisible for months:
+
+1. **The declared ocean does not fit the generated basins.** `examples/sea_level_probe.rs`:
+   the hydrosphere's conserved 1.3735e9 km³ overflows the planet (basin capacity to the
+   highest peak = 1.3619e9 km³; **ratio 1.01×**). Derived sea level sits **23 m above the
+   highest ground** → land **0.0%**. The 33.4% land we build and erode exists **only**
+   because `SEA_LEVEL_M` is *decreed* (4000 m) rather than *derived*. Root cause: fBm is
+   **unimodal**, so there are no deep basins and no high platforms. Earth's **bimodality is
+   isostasy**, and it is the physical precondition for land existing at all. ⇒ **TODO
+   §Prior v3 (two-mode crustal prior) is now a HARD COHERENCE REQUIREMENT, not an upgrade.
+   Everything else is downstream of it.**
+
+2. **The fluvial probes had been measuring seabed.** The fluvial unit tests and `seam_ridge`
+   ran on a 100%-submarine footprint, so erosion no-op'd and the tests compared no-ops;
+   `seam_ridge`'s famous "ratio 22888" was `0 ÷ 1e-9`. **The seam had never been measured.**
+   Fixed (verified-land footprints + a `test_footprint_is_actually_land` guard). The real
+   seam is **2.45× → 5.79×**, growing with the differential age gap while the interior stays
+   flat — which corroborates the honest 2026-07-03 figure (4.3/5.3/7.1) that had been lost.
+
+**Standing guard, learned the hard way:** *a probe that cannot fail is not a probe.* Check
+that the physics can even **execute** at a probe's footprint before trusting its number —
+and be MORE suspicious, not less, of a number that confirms what you already believed.
+
 ## Current build target and queue
 
 The first playable milestone: an **ethereal (observe-only, moratorium-clear)
