@@ -847,6 +847,271 @@ Splitting the harmonic error by distance from the 24 defect cells, under the cor
 
 ---
 
+## 6a. The MFD fan — at the resolution erosion actually runs, as a **field**, and **bias vs noise**
+
+*Added 2026-07-12, second pass. §6's fan numbers were **two cells at L5** (~313 km). `erosion.rs`
+runs at **L19** (~19 m) — fourteen levels finer — so §6 could not answer the three questions that
+decide whether any of this matters. It also reported **|errors|**, and an absolute value has already
+thrown away the sign that carries the whole answer. Printed by `examples/grid_lab` §9a.*
+
+### What is actually assumed
+
+`erosion.rs::accumulate_drainage` is MFD (Quinn, p = 1.1): split discharge among the 8 Moore
+neighbours, weight `(drop/dist)^p`, with
+
+```
+dist = cell_m          axial          cell_m = sample::cell_size_m(level) = (π/2)·R / 2^level
+dist = cell_m · √2     diagonal
+```
+
+and — implicitly, by using eight fixed `(dx,dy)` offsets and nothing else — that those 8 neighbours
+**sample the compass evenly, 45° apart**. That even-sampling premise is *MFD's entire reason for
+existing*: it is the fix for D8's grid-aligned-channel artifact.
+
+> **One fact that shrinks Q3 before it is asked, and was not obvious [D, verified]:** MFD's weights
+> are **normalised**, so a *uniform* rescale of every neighbour distance multiplies every weight by
+> `s^−p` and **cancels exactly**. The absolute value of `cell_m` is therefore **inert for routing**.
+> The only content of the distance hardcode is the **ratio** `diag/axial = √2`. (`cell_m` is *not*
+> inert in `incise` and `talus`, where `dist` appears unnormalised — a separate question.)
+
+### 6a.1 Does the non-uniformity converge away under refinement? **No — it converges to a fixed non-uniform limit.** **[D + M]**
+
+The derivation first, because it makes the level sweep a *check* rather than the evidence. As
+`N = 2^L → ∞`, neighbour `(dx,dy)` sits at `c + (2/N)·(dx·∂p/∂u + dy·∂p/∂v) + O(1/N²)`. So the fan
+converges to the fan of the lattice **sheared by the Jacobian `J(u,v)`** — and **`J` has no `N` in
+it**. For the equiangular map (`x = tan(u·π/4)`, `a = tan(u·π/4)`, `b = tan(v·π/4)`):
+
+```
+D = 1 + a² + b²
+
+  ∂p/∂u  =  (π/4)(1+a²)·√(1+b²) / D          ∂p/∂v  =  (π/4)(1+b²)·√(1+a²) / D
+                                                                                   ⎧ SHEAR
+  cos ∠(∂u, ∂v)  =  − ab / √((1+a²)(1+b²))                                         ⎩
+                                                                                   ⎧ ANISOTROPY
+  |∂u| / |∂v|    =  √( (1+a²) / (1+b²) )                                           ⎩
+```
+
+Two independent defects, and they peak in *different places* — which is why the field in §6a.2 has
+the shape it does. **Shear** is zero on both face centre-lines and maximal at the corner (120°).
+**Anisotropy** is zero at the centre *and at the corner* and maximal at the edge-midpoints (√2 : 1).
+Neither is ever zero except at the exact face centre. This gives three named points:
+
+| position | limiting lattice | limiting fan |
+|---|---|---|
+| face **centre** (0,0) | orthogonal, isotropic | **exactly eight 45° gaps — MFD is EXACT here** |
+| face **edge-midpoint** (1,0) | orthogonal, **stretched √2 : 1** | gaps 35.3° / 54.7° |
+| face **corner** (1,1) | **120° rhombus**, isotropic | gaps **60/60/30/30/60/60/30/30** |
+
+Measured, `max |gap − 45°|` in degrees:
+
+| position | L5 | L9 | L13 | L17 | **L19** | L23 | **L→∞ (closed form)** |
+|---|---|---|---|---|---|---|---|
+| face centre | 0.1° | 0.0° | 0.0° | 0.0° | **0.0°** | 0.0° | **0.0°** |
+| mid-face (.5,.5) | 5.8° | 4.3° | 4.2° | 4.2° | **4.2°** | 4.2° | **4.2°** |
+| face edge-midpoint | 9.6° | 9.7° | 9.7° | 9.7° | **9.7°** | 9.7° | **9.7°** |
+| face **corner** | 14.2° | 14.9° | 15.0° | 15.0° | **15.0°** | 15.0° | **15.0°** |
+
+**[M]** — and the L23 fan agrees with the closed-form limit to **< 1e-4°**, which is simultaneously
+the numerical-hygiene gate and the proof that the limit is the right object.
+
+> **⇒ THE DEFECT IS A PROPERTY OF THE MAP, NOT THE RESOLUTION. YOU CANNOT OUT-RESOLVE IT.** Going
+> L5 → L19 makes cells **16 384× smaller** and moves the fan defect by **~1°** — *in the wrong
+> direction*. It is already within a degree of its limit by **L9**.
+
+*Gate:* the analytic fan is checked cell-by-cell against the **Euler-checked mesh's combinatorial
+Moore adjacency** at L5 and L6 — every interior cell, bearings and distances, agreeing to 0.0e0.
+The closed-form corner fan is independently checked against a synthetic 120° rhombus (agree to
+7e-15°). This is a shortcut, not a different quantity. **[M]**
+
+### 6a.2 How does it vary with position? It is a **field**, and the median cell is already 7° off **[M]**
+
+`max |gap − 45°|` over one face quadrant (the face is 8-fold symmetric, so this quadrant *is* the
+face). Level-free — this is the limit, and the real grid is within ~1° of it by L9.
+
+```
+ v=1.0    9.7  11.8  13.7  15.3  16.7  17.8  18.5  18.7  18.3  17.1  15.0   ← face corner
+ v=0.8    6.0   7.5   8.9  10.0  10.8  11.3  11.4  11.0  10.1  13.9  18.3
+ v=0.6    3.3   4.3   5.2   5.8   6.2   6.2   5.9   8.5  11.4  14.7  18.5
+ v=0.4    1.4   2.1   2.5   2.8   2.7   4.3   6.2   8.3  10.8  13.6  16.7
+ v=0.2    0.4   0.6   0.7   1.5   2.5   3.7   5.2   6.9   8.9  11.1  13.7
+ v=0.0    0.0   0.1   0.4   0.8   1.4   2.3   3.3   4.5   6.0   7.8   9.7   ← face edge-midpoint
+          u=0  0.1   0.2   0.3   0.4   0.5   0.6   0.7   0.8   0.9  u=1.0
+        (face centre)                                              (degrees of worst gap error)
+```
+
+**Area-weighted census** over a whole face (L9, 260 100 interior cells, weighted by true cell area
+— so this is *fraction of the planet's surface*):
+
+| median | 75th | 90th | 99th | worst | surface with error < 5° |
+|---|---|---|---|---|---|
+| **6.8°** | 11.0° | 14.3° | 17.6° | 18.5° | **37.8 %** |
+
+**[M]**
+
+> **⇒ This is not a corner defect and it is not a seam defect. It is a smooth, coherent field over
+> the entire face.** §6's "the fan is inaccurate *everywhere*" is confirmed and now has a shape: it
+> is **zero at the face centre** and rises monotonically outward. **62 % of the planet's surface has
+> a fan error above 5°.**
+
+### 6a.3 The distances **[M]**
+
+True distance ÷ what MFD assumes:
+
+| position | `+u` (×cell_m) | `+v` (×cell_m) | `(+u,+v)` (×cell_m√2) | `(−u,+v)` (×cell_m√2) | worst |
+|---|---|---|---|---|---|
+| face centre | 1.000 | 1.000 | 1.000 | 1.000 | 0 % |
+| mid-face | 0.944 | 0.944 | 0.872 | 1.011 | 13 % |
+| face edge-midpoint | 1.000 | **0.707** | 0.866 | 0.866 | 29 % |
+| face **corner** | 0.943 | 0.943 | **0.667** | **1.155** | **33 %** |
+
+Area-weighted census of `|true/assumed − 1|`: **median 15 %, 90th 26 %, worst 33 %.** **[M]**
+
+> **The load-bearing line is the last row.** At the face corner the `(+u,+v)` diagonal is really
+> **0.94·cell_m** and MFD calls it `1.414·cell_m`; the `(−u,+v)` diagonal is really **1.63·cell_m**
+> and MFD calls it **the same** `1.414·cell_m`. *The two diagonals are not the same length, and the
+> code has no way to see it.* At the face edge-midpoint the `+v` neighbour is **√2 closer** than the
+> `+u` neighbour and both are called `cell_m`.
+
+### 6a.4 **Is the error a BIAS or is it NOISE?** — the one that decides it. **It is a bias.** **[M]**
+
+A directionally-**biased** 20 % error manufactures a fake physical law and accumulates down a
+catchment. An unbiased 20 % error is **noise** and largely washes out once drainage area sums over a
+large upstream region. Same magnitude; opposite consequence — and every number in §6 is a `|error|`,
+which cannot tell them apart.
+
+**(a) Per-cell, with an exact answer.** Impose a field whose steepest descent is *exactly* azimuth φ;
+run the **status-quo MFD weights** on the **true** neighbour geometry; ask where the mass went:
+`Δ(φ) = arg(Σ wₖ·d̂ₖ) − φ`. Exact answer: 0, at every φ.
+
+| fan | Δ rms | Δ max | Δ mean | compass captured | **stable attractors** |
+|---|---|---|---|---|---|
+| **CONTROL: perfect square lattice** | **0.24°** | 0.33° | −0.00° | 0 % | **eight, evenly spaced** |
+| CONTROL: 120° rhombus (must be awful) | 16.09° | 22.64° | +0.00° | 97 % | 150° 330° |
+| ours @L19 · face centre | **0.24°** | 0.33° | +0.00° | 0 % | **eight, evenly spaced** |
+| ours @L19 · mid-face | 4.51° | 6.54° | +0.00° | 90 % | 139° 319° |
+| ours @L19 · face edge-midpoint | 10.42° | 14.76° | +0.00° | 96 % | 180° 360° |
+| ours @L19 · **face corner** | **16.09°** | 22.64° | −0.00° | **97 %** | **150° 330°** |
+| — with true distances · mid-face | 2.91° | 4.25° | +0.00° | 85 % | 49° 139° 229° 319° |
+| — with true distances · **face corner** | **9.93°** | 13.67° | −0.00° | 96 % | 150° 330° |
+
+**[M]** *"Captured" = fraction of the compass deflected by more than 1°.*
+
+**Read the control row first.** On a perfect square lattice MFD already has Δrms 0.24° with **eight
+evenly-spaced attractors** — that is MFD's *intrinsic* error, it is the price of admission, and it is
+**benign**: eight even attractors have no preferred axis, so they steer nothing. **Our face centre
+reproduces the control exactly.** Without this control every number here would be over-charged to the
+grid.
+
+> **What goes wrong away from the face centre is not that Δ gets bigger. It is that the eight
+> attractors COLLAPSE INTO TWO.** At the corner there are **two** stable directions on the entire
+> compass, Δrms is 16°, and **97 % of the compass is being pushed**. That is not "MFD is noisy here."
+> That is *"MFD has an opinion about which way rivers run here."*
+>
+> **Mechanism, and it falls straight out of §6a.3:** at the corner the `(−u,+v)` diagonal is really
+> 1.63·cell_m and MFD calls it 1.414 — so it **understates that distance, overstates its slope, and
+> over-weights it**. And **150°/330° IS that diagonal.** The attractor is the distance hardcode's
+> fingerprint.
+
+**(b) Does it ACCUMULATE?** A per-step deflection is a bias only if it is *coherent along the path*.
+The exact cone (`h = −θ` about a pole) makes every true flow line a **meridian**: water released at
+azimuth ψ must arrive at azimuth ψ, at every θ, exactly. Release unit mass at one cell; track the
+mass-weighted azimuthal **centroid**. MFD *disperses* by design, so the plume must spread — spread is
+not error — but **the centroid must not move**.
+
+**The test that separates bias from noise, and it can fail:** refine at *fixed physical path length*.
+Each level doubles the routing steps along the same path. **Noise → drift must fall like 1/√steps
+(halving every 2 levels). Bias → drift is level-independent.**
+
+| grid | routing steps | \|drift\| θ=0.9 | spread θ=0.9 | probe floor |
+|---|---|---|---|---|
+| L6 · 24.6 k cells | 32 | 4.00° | 20.5° | ±1.68° |
+| L7 · 98.3 k cells | 65 | 5.03° | 13.7° | ±1.16° |
+| L8 · 393 k cells | 130 | 5.45° | 9.6° | ±0.66° |
+| **L9 · 1.6 M cells** | **260** | **5.75°** | **6.7°** | **±0.35°** |
+
+**[M]** *(RMS over 24 launch azimuths. Exact answer: 0.00° at every level. "Probe floor" = the
+probe's own error, read off the four launches the face's **mirror symmetry forces to zero** — 0°,
+45°, 90°, 135° are mirror lines. Nothing below the floor is resolved; at L9 the signal is **16× the
+floor**.)*
+
+> ### ⇒ **BIAS.** 8× the routing steps and the drift does not fall — it **rises** and settles near
+> 5.5–5.8°. Noise would have gone 4.00° → 1.41°.
+>
+> **And the internal control that makes that reading safe:** the **spread** in the same runs, same
+> plumes, same annuli, same code, **does converge away** (20.5° → 13.7° → 9.6° → 6.7°). The probe is
+> demonstrably capable of showing a quantity going to zero. It shows dispersion doing exactly that —
+> and the centroid drift refusing to.
+
+**(c) Is it grid-locked?** Drift vs launch azimuth (L8, pole at a face centre):
+
+```
+launch    0°   15°   30°   45°   60°   75°   90°  105°  120°  135°  150°  165°
+drift   +0.7  -5.8  -7.4  +0.0  +7.4  +5.8  +0.7  -5.8  -7.4  -0.0  +7.4  +5.8
+```
+
+Zero at 0°/45°/90°/135° — the face's mirror lines, where symmetry forces it. In between, the **sign
+says which way**: launches at 15°/30° are pushed **toward 0°**; launches at 60°/75° are pushed
+**toward 90°**.
+
+> ### ⇒ **The cube-face `u` and `v` axes are ATTRACTORS; the 45° diagonal is a REPELLER.**
+> **Rivers are being steered onto the grid axes — which is precisely the grid-aligned-channel
+> artifact MFD EXISTS TO PREVENT.** On a uniform grid MFD does prevent it (the control: eight even
+> attractors, 0.24°). On ours it **reintroduces** it. Noise does not know where the face axes are,
+> and does not repeat with a 90° period.
+
+**(d) Falsification control.** If this were an artifact of the cone sitting on a face centre (a
+special, highly symmetric spot), moving the pole off it should make the drift vanish:
+
+| pole | \|drift\| θ=0.9 | spread |
+|---|---|---|
+| face centre (symmetric) | 5.45° | 9.6° |
+| **generic direction (aligned to nothing)** | **16.88°** | 10.6° |
+
+**[M]** It does not vanish — it **triples**. The face-centre cone was the *charitable* case: it
+spends most of its path near the face centre, where the fan is good. **16.88° is the more
+representative number for real terrain.**
+
+### 6a.5 What it costs, and what fixes it **[M]**
+
+Same plume, L8, all four routers:
+
+| router | \|drift\| | lateral error after ~5100 km | in cell widths | cone mean \|err\| (§6) |
+|---|---|---|---|---|
+| **8-nbr Moore MFD (status quo)** | **5.45°** | **474 km** | **12.1** | 20.76 % |
+| 8-nbr Moore MFD **+ true distances** | 4.04° | 352 km | 9.0 | 19.78 % |
+| edge MFD (no diagonals) | 3.23° | 282 km | 7.2 | 12.13 % |
+| **gradient-projected edge flux** | **1.82°** | **159 km** | **4.1** | **5.17 %** |
+
+*"Lateral error" = how far the plume's centre of mass ends up from the meridian it was released on,
+on a cone whose exact flow lines are meridians.*
+
+Two things worth separating, because they point different ways:
+
+1. **The true-distance fix is cheap and real but partial.** It cuts the per-cell Δrms at the corner
+   from 16.09° → 9.93° and the accumulated drift from 5.45° → 4.04° — but it barely touches the
+   catchment-area magnitude (20.76 % → 19.78 %), and **the attractor pair survives**. Fixing the
+   distances cannot fix a fan that is not a fan.
+2. **The routing gain is where §5's scheme fix already pointed.** Gradient-projected edge flux is
+   **3× better on directional bias** and **4× better on catchment area** — consistent with the 4×
+   routing figure already in §5, and now with the mechanism named.
+
+> ### The finding, stated plainly
+>
+> **MFD on our grid is not noisy — it is *wrong in a direction*, and the direction is the grid's.**
+> The 20.76 % error §6 reported is **not** the kind that washes out in a drainage sum. It is
+> coherent over an entire cube face, it does not converge away under refinement (it converges to a
+> **fixed** non-uniform limit), and it **accumulates** — 474 km of lateral displacement over a
+> 5100 km descent, on a test whose exact answer is *zero*.
+>
+> **MFD was adopted specifically to dissolve D8's grid-aligned rib artifact** (`erosion.rs`'s own
+> comment says so). On the equiangular cube-sphere, away from the face centres, **it reintroduces
+> the very artifact it was adopted to remove.**
+>
+> **⚠ This is a measurement, not a verdict.** It sharpens §9's *recommendation*; it does not ratify
+> it. The grid/scheme question remains Joseph's to adjudicate (`TODO.md` §grid).
+
+---
+
 ## 7. The two-grid overlay (cube ∪ dual octahedron) — right mechanism, wrong target
 
 The construction (Joseph's, worked out in `seam-adjacency-findings.md` §A2): a cube's 8 corners

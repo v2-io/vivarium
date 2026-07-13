@@ -228,6 +228,11 @@ pub enum Router {
     /// LENGTH, take the outgoing components. Needs no diagonals, works at any valence,
     /// conserves, and carries no grid-aligned bias.
     GradEdgeFlux,
+    /// The **one-line fix to the status quo**: the same 8-neighbour Moore fan, but with the
+    /// TRUE centre-to-centre distances instead of `cell_m` / `cell_m·√2`. Isolates how much
+    /// of MFD's error is the hardcoded distances and how much is the non-uniform *fan*,
+    /// which no distance can repair.
+    MooreMfdTrueDist,
 }
 
 impl Router {
@@ -236,12 +241,22 @@ impl Router {
             Router::MooreMfd => "8-nbr Moore MFD (status quo)",
             Router::EdgeMfd => "edge MFD (no diagonals)",
             Router::GradEdgeFlux => "gradient-projected edge flux",
+            Router::MooreMfdTrueDist => "8-nbr Moore MFD + true distances",
         }
     }
 }
 
 /// Outgoing routing weights for cell `i` (normalised, summing to 1 unless it is a sink).
-fn weights(g: &Mesh, r: Router, h: &[f64], i: usize) -> Vec<(usize, f64)> {
+///
+/// ⚠ **`MooreMfd` here IS `erosion.rs`, exactly** — not an approximation of it. `erosion.rs`
+/// uses one *global* `cell_m = sample::cell_size_m(level)`; this uses the cell's own mean
+/// edge distance. Those differ by up to ~6% on our grid, and it makes **no difference at
+/// all**: a *uniform* rescale `d → s·d` of every neighbour distance multiplies every weight
+/// by `s^−p` and cancels exactly in the normalisation. So the ONLY content of MFD's distance
+/// hardcode is the **ratio** `diag/axial = √2` — the absolute value of `cell_m` is inert
+/// here. (It is *not* inert in `incise`/`talus`, where `dist` appears unnormalised. Different
+/// question; not this probe's.)
+pub fn weights(g: &Mesh, r: Router, h: &[f64], i: usize) -> Vec<(usize, f64)> {
     const P: f64 = 1.1;
     match r {
         Router::MooreMfd => {
@@ -254,6 +269,23 @@ fn weights(g: &Mesh, r: Router, h: &[f64], i: usize) -> Vec<(usize, f64)> {
             for &j in &g.moore[i] {
                 let is_edge = g.adj[i].iter().any(|e| e.j == j);
                 let dist = if is_edge { cell_m } else { cell_m * std::f64::consts::SQRT_2 };
+                let drop = h[i] - h[j];
+                if drop > 0.0 {
+                    let x = (drop / dist).powf(P);
+                    w.push((j, x));
+                    tot += x;
+                }
+            }
+            for e in w.iter_mut() {
+                e.1 /= tot;
+            }
+            if tot <= 0.0 { Vec::new() } else { w }
+        }
+        Router::MooreMfdTrueDist => {
+            let mut w = Vec::new();
+            let mut tot = 0.0;
+            for &j in &g.moore[i] {
+                let dist = geodesic(g.centers[i], g.centers[j]) * g.radius_m;
                 let drop = h[i] - h[j];
                 if drop > 0.0 {
                     let x = (drop / dist).powf(P);
@@ -448,6 +480,119 @@ pub fn routing(g: &Mesh, r: Router) -> Routing {
         cone_err_at_defects: mean(&errs_def),
         defect_cells: ndef,
     }
+}
+
+// ===========================================================================
+// THE PLUME — bias or noise? The question that actually decides it.
+// ===========================================================================
+//
+// A directionally-BIASED 20% routing error manufactures a fake physical law (rivers
+// preferring grid axes) and ACCUMULATES down a catchment. An unbiased 20% error is noise
+// and largely washes out once drainage area sums over a large upstream region. Same
+// magnitude; opposite consequence. The `cone_err` columns in `Routing` cannot tell them
+// apart — they are |errors|, and an |error| has thrown away the sign that carries the whole
+// answer.
+//
+// So: the cone again, but now with the EXACT answer used as a *trajectory* rather than a
+// magnitude. `h = −θ` about a pole is radially symmetric, so every flow line is a MERIDIAN:
+// water released at azimuth ψ must arrive at azimuth ψ, at every θ, exactly. Release unit
+// mass at ONE cell and track the mass-weighted azimuthal CENTROID as it descends.
+//
+//   * MFD *disperses* — that is its job — so the plume must SPREAD. Spread is not error.
+//   * The CENTROID, though, has an exact answer: it must not move.
+//
+// centroid drift  = BIAS. It is signed, it is a function of the launch azimuth, and if it
+//                   grows ∝ path length it accumulates.
+// spread          = dispersion. Grows ∝ √path if it is incoherent — i.e. noise.
+//
+// This separates the two cleanly, which is the whole point, and it can fail: on a grid whose
+// fan is honest the drift is zero and only the spread grows.
+
+pub struct Plume {
+    /// Launch azimuth about the pole (degrees).
+    pub launch_deg: f64,
+    /// Sampled at the end of the path: (θ, drift°, spread°, path_m, lateral_m, cells_of_path).
+    pub theta: Vec<f64>,
+    /// Signed azimuthal drift of the mass centroid, degrees. EXACT ANSWER: 0 at every θ.
+    pub drift_deg: Vec<f64>,
+    /// Mass-weighted circular spread of the plume, degrees. Growth here is dispersion, not error.
+    pub spread_deg: Vec<f64>,
+}
+
+/// Release unit mass at the cell nearest `(θ0, launch)` about `pole`, route it with `r`, and
+/// report the centroid drift and spread as it descends. `frame` is a tangent vector at the
+/// pole defining azimuth 0.
+pub fn plume(g: &Mesh, r: Router, pole: V3, frame: V3, theta0: f64, launch_deg: f64, rings: &[f64]) -> Plume {
+    let h: Vec<f64> = g.centers.iter().map(|&p| -geodesic(p, pole)).collect();
+    let e0 = tangent(pole, frame);
+    let e1 = cross(pole, e0);
+    // azimuth of a point about the pole, in the (e0,e1) frame
+    let az = |p: V3| -> f64 {
+        let t = tangent(pole, p);
+        dot(t, e1).atan2(dot(t, e0))
+    };
+    // the launch cell: nearest centre to the target (θ0, launch)
+    let lr = launch_deg.to_radians();
+    let target = unit(add(
+        scale(pole, theta0.cos()),
+        scale(add(scale(e0, lr.cos()), scale(e1, lr.sin())), theta0.sin()),
+    ));
+    let src = (0..g.cells())
+        .min_by(|&a, &b| geodesic(g.centers[a], target).total_cmp(&geodesic(g.centers[b], target)))
+        .unwrap();
+
+    let mut order: Vec<usize> = (0..g.cells()).collect();
+    order.sort_by(|&a, &b| h[a].total_cmp(&h[b]).then_with(|| a.cmp(&b)));
+
+    let mut acc = vec![0.0f64; g.cells()];
+    acc[src] = 1.0;
+    for &i in order.iter().rev() {
+        if acc[i] <= 0.0 {
+            continue;
+        }
+        let a = acc[i];
+        for (j, x) in weights(g, r, &h, i) {
+            acc[j] += a * x;
+        }
+    }
+
+    // The launch azimuth is the SOURCE CELL's azimuth, not the requested one — the cell
+    // centre is where the mass actually starts, and using the request would charge the
+    // router for our rounding.
+    let a0 = az(g.centers[src]);
+    let mut theta = Vec::new();
+    let mut drift_deg = Vec::new();
+    let mut spread_deg = Vec::new();
+    for &th in rings {
+        // a thin annulus, one ring of cells wide, at angular distance th
+        let band = 1.5 * (std::f64::consts::FRAC_PI_2 / (g.cells() as f64 / 6.0).sqrt());
+        let (mut sx, mut sy, mut m) = (0.0, 0.0, 0.0);
+        for i in 0..g.cells() {
+            if acc[i] <= 0.0 {
+                continue;
+            }
+            let t = geodesic(g.centers[i], pole);
+            if (t - th).abs() > band {
+                continue;
+            }
+            // measure azimuth RELATIVE to the launch, so the wrap is never near ±π
+            let d = az(g.centers[i]) - a0;
+            let d = (d.sin()).atan2(d.cos());
+            sx += acc[i] * d.cos();
+            sy += acc[i] * d.sin();
+            m += acc[i];
+        }
+        if m <= 0.0 {
+            continue;
+        }
+        let (cx, cy) = (sx / m, sy / m);
+        let rlen = (cx * cx + cy * cy).sqrt().min(1.0);
+        theta.push(th);
+        drift_deg.push(cy.atan2(cx).to_degrees());
+        // circular standard deviation: √(−2 ln R)
+        spread_deg.push((-2.0 * rlen.max(1e-12).ln()).sqrt().to_degrees());
+    }
+    Plume { launch_deg: a0.to_degrees(), theta, drift_deg, spread_deg }
 }
 
 /// The fan geometry AT a defect: where the 8-neighbour stencil's assumption actually

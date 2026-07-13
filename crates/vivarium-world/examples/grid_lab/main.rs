@@ -21,6 +21,7 @@
 //! Report: `ref/research/grid-comparison-report.md`. Every number in it is printed here.
 //! Run: `cargo run --release -p vivarium-world --example grid_lab`
 
+mod fan;
 mod flow;
 mod grids;
 mod healpix;
@@ -67,6 +68,7 @@ fn main() {
     section_accuracy(&ms);
     section_sequencing(&ms);
     section_corner();
+    section_fan();
     section_overlay();
     section_quadtree(&ms);
     honest_scope();
@@ -902,7 +904,7 @@ fn section_corner() {
         "{:<32} {:>16} {:>13} {:>13} {:>16}",
         "router", "conservation", "mean err", "max err", "err at defects"
     );
-    for r_ in [Router::MooreMfd, Router::EdgeMfd, Router::GradEdgeFlux] {
+    for r_ in [Router::MooreMfd, Router::MooreMfdTrueDist, Router::EdgeMfd, Router::GradEdgeFlux] {
         let x = routing(&g, r_);
         println!(
             "{:<32} {:>16.12} {:>12.2}% {:>12.2}% {:>15.2}%",
@@ -937,6 +939,554 @@ fn section_corner() {
     println!("  sweep has already passed that cell, so the mass is stranded and never reaches an outlet.");
     println!("  Before the guard, conservation measured 0.000 instead of 1.000. The guard is one line and");
     println!("  costs nothing, but nothing in the *design* of the scheme tells you it is needed.");
+    println!();
+    println!("  ⚠ WHAT THIS SECTION STILL CANNOT TELL YOU, and §9a does: these are ONE level (L5, ~313 km");
+    println!("    cells — erosion runs at L19, ~19 m) and they are |errors|, so the sign that distinguishes");
+    println!("    a BIAS from NOISE has already been thrown away. A 20.76% mean |error| that is directional");
+    println!("    manufactures a fake physical law and accumulates down a catchment; the same 20.76% as");
+    println!("    noise largely washes out when drainage area sums over a big upstream region. Those are");
+    println!("    different worlds and this table cannot separate them. §9a does.");
+}
+
+/// §9a — THE FAN, at the resolution erosion ACTUALLY runs, as a FIELD, and BIAS-vs-NOISE.
+///
+/// §9 printed the fan for two cells at L5 (~313 km). Erosion runs at **L19** (~19 m).
+/// Nothing in §9 could say whether the defect converges away under refinement, how it
+/// varies with position, or — the only question that decides anything — whether the
+/// resulting error is a directional BIAS that accumulates down a catchment or NOISE that
+/// washes out.
+fn section_fan() {
+    use fan::*;
+    hdr("9a. THE MFD FAN AT L19 — does it converge away, where does it live, and is it BIAS or NOISE?");
+
+    // ---------------------------------------------------------------- gates
+    gate_fan_matches_mesh();
+    gate_controls_are_sane();
+
+    // ------------------------------------------------- Q1: does it converge?
+    println!("\n  ── Q1. DOES THE NON-UNIFORMITY CONVERGE AWAY UNDER REFINEMENT? ──\n");
+    println!("  The derivation first, because it makes the sweep a CHECK and not the evidence.");
+    println!("  As N = 2^L → ∞ a cell's neighbourhood shrinks onto the map's Jacobian: neighbour");
+    println!("  (dx,dy) sits at c + (2/N)·(dx·∂p/∂u + dy·∂p/∂v) + O(1/N²). So the fan converges to");
+    println!("  the fan of the lattice SHEARED BY J(u,v) — and J has no N in it. The limit is a");
+    println!("  property of the PROJECTION, not of the resolution, and it is closed-form.\n");
+    println!("  For x = tan(u·π/4) the angle between the parameter axes on the sphere is");
+    println!("      cos∠(∂u,∂v) = −ab / √((1+a²)(1+b²)),   a = tan(u·π/4), b = tan(v·π/4)");
+    println!("  so at the face CENTRE the axes are orthogonal and equal (a perfect 45° fan — MFD is");
+    println!("  EXACT there) and at the face CORNER they meet at 120° (a rhombic lattice).\n");
+
+    let cases: [(&str, f64, f64); 4] = [
+        ("face centre       (u,v)=(0.00,0.00)", 0.0, 0.0),
+        ("mid-face          (u,v)=(0.50,0.50)", 0.5, 0.5),
+        ("face edge-midpt   (u,v)=(1.00,0.00)", 1.0, 0.0),
+        ("face CORNER       (u,v)=(1.00,1.00)", 1.0, 1.0),
+    ];
+    let levels: [u32; 6] = [5, 9, 13, 17, 19, 23];
+
+    println!("  max |gap − 45°|, in degrees — 0.0 would mean MFD's even-sampling premise is TRUE:\n");
+    print!("  {:<38}", "position on the face");
+    for l in levels {
+        print!("{:>8}", format!("L{l}"));
+    }
+    println!("{:>11}{:>11}", "L→∞ limit", "cell @L19");
+    println!("  {}", "─".repeat(38 + 8 * levels.len() + 22));
+    for (name, u, v) in cases {
+        print!("  {name:<38}");
+        for l in levels {
+            // the interior cell whose centre is nearest (u,v); the outermost ring is the
+            // only one whose Moore set leaves the face, so clamp into [1, N−2]
+            let n = 1i64 << l;
+            let idx = |t: f64| (((t + 1.0) / 2.0 * n as f64 - 0.5).round() as i64).clamp(1, n - 2);
+            let f = fan(l, 4, idx(u), idx(v), r());
+            print!("{:>8}", format!("{:.1}°", f.gap_dev()));
+        }
+        let lim = fan_limit(19, 4, u, v, r());
+        print!("{:>11}", format!("{:.1}°", lim.gap_dev()));
+        println!("{:>11}", format!("{:.1} m", lim.dist_m[0]));
+    }
+    println!();
+    println!("  ⇒ THE NON-UNIFORMITY PERSISTS. It does not shrink with L — it CONVERGES TO A FIXED");
+    println!("    NON-UNIFORM LIMIT, and it is already within a degree of that limit by L9. Refining");
+    println!("    from L5 to L19 makes the cells 16 384× smaller and moves the fan defect by ~1°.");
+    println!("    The defect is a property of the MAP. You cannot out-resolve it.");
+    println!();
+    println!("  The L23 fan vs its closed-form limit (the numerical-hygiene gate — if these did not");
+    println!("  agree, either the derivation or the f64 path would be wrong):");
+    for (name, u, v) in cases {
+        let n = 1i64 << 23;
+        let idx = |t: f64| (((t + 1.0) / 2.0 * n as f64 - 0.5).round() as i64).clamp(1, n - 2);
+        let m = fan(23, 4, idx(u), idx(v), r());
+        let l = fan_limit(23, 4, u, v, r());
+        let db = (0..8).fold(0.0f64, |x, k| x.max(wrap180(m.bearing[k] - l.bearing[k]).abs()));
+        println!("    {name:<38} max bearing diff  {db:.4}°");
+    }
+
+    // ------------------------------------------- Q2: the fan as a FIELD
+    println!("\n  ── Q2. HOW DOES IT VARY WITH POSITION? (it is a FIELD, not a number) ──\n");
+    println!("  max |gap − 45°| over one face quadrant (the map is 8-fold symmetric on a face, so");
+    println!("  this quadrant IS the whole face). Level-free — this is the L→∞ limit, and by L9 the");
+    println!("  real grid is within ~1° of it everywhere.\n");
+    println!("      v=1.0 (face corner)");
+    let nq = 11;
+    for jj in (0..nq).rev() {
+        let v = jj as f64 / (nq - 1) as f64;
+        print!("      ");
+        for ii in 0..nq {
+            let u = ii as f64 / (nq - 1) as f64;
+            let d = fan_limit(19, 4, u, v, r()).gap_dev();
+            print!("{:>6}", format!("{d:.1}"));
+        }
+        println!("   v={v:.1}");
+    }
+    print!("      ");
+    for ii in 0..nq {
+        print!("{:>6}", format!("{:.1}", ii as f64 / (nq - 1) as f64));
+    }
+    println!("   ← u");
+    println!("      u=0,v=0 = face centre.   Units: degrees of worst gap error.\n");
+
+    // area-weighted census over the whole sphere — the "so what" number
+    let census_l = 9u32;
+    let n = 1i64 << census_l;
+    let g = cube_sphere(CubeProj::Equiangular, n as usize, r());
+    let mut rows: Vec<(f64, f64, f64)> = Vec::new(); // (gap_dev, dist_err, area)
+    let mut tot_area = 0.0;
+    for i in 1..n - 1 {
+        for j in 1..n - 1 {
+            let f = fan(census_l, 4, i, j, r());
+            let a = g.areas[(4 * n * n + j * n + i) as usize];
+            rows.push((f.gap_dev(), f.dist_err(), a));
+            tot_area += a;
+        }
+    }
+    rows.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let pct = |q: f64| -> f64 {
+        let mut acc = 0.0;
+        for &(d, _, a) in &rows {
+            acc += a;
+            if acc >= q * tot_area {
+                return d;
+            }
+        }
+        rows.last().unwrap().0
+    };
+    println!("  AREA-WEIGHTED CENSUS of the fan defect over a whole face (L{census_l}, {} interior cells,", rows.len());
+    println!("  weighted by true cell area — so this is 'what fraction of the PLANET's surface'):");
+    println!(
+        "    median {:.1}°   75th {:.1}°   90th {:.1}°   99th {:.1}°   worst {:.1}°",
+        pct(0.50),
+        pct(0.75),
+        pct(0.90),
+        pct(0.99),
+        rows.last().unwrap().0
+    );
+    let good = rows.iter().filter(|x| x.0 < 5.0).map(|x| x.2).sum::<f64>() / tot_area;
+    println!("    fraction of the surface with fan error < 5°:  {:.1}%", good * 100.0);
+    println!("    ⇒ the defect is NOT confined to corners. It is a smooth field over the WHOLE face,");
+    println!("      and the median cell — not the worst cell — is already ~{:.0}° off.", pct(0.50));
+
+    // ------------------------------------------- Q3: the distances
+    println!("\n  ── Q3. THE CENTRE-TO-CENTRE DISTANCES (MFD hardcodes cell_m and cell_m·√2) ──\n");
+    println!("  FIRST, a fact that shrinks this question and was not obvious: in MFD the weights are");
+    println!("  NORMALISED, so a *uniform* rescale of every neighbour distance cancels exactly. The");
+    println!("  absolute value of `cell_m` is therefore INERT for routing. The only content of the");
+    println!("  hardcode is the RATIO structure {{1, √2, 1, √2, …}}. (cell_m is NOT inert in `incise`");
+    println!("  and `talus`, where `dist` appears unnormalised — a separate question, not this one's.)\n");
+    println!("  true distance ÷ what MFD assumes, per offset:\n");
+    println!(
+        "  {:<38}{:>9}{:>9}{:>9}{:>9}{:>10}",
+        "position", "+u", "+v", "(+u,+v)", "(−u,+v)", "worst"
+    );
+    println!("  {:<38}{:>9}{:>9}{:>9}{:>9}{:>10}", "", "×cell_m", "×cell_m", "×cell_m√2", "×cell_m√2", "");
+    println!("  {}", "─".repeat(84));
+    for (name, u, v) in cases {
+        let f = fan_limit(19, 4, u, v, r());
+        println!(
+            "  {:<38}{:>9}{:>9}{:>9}{:>9}{:>10}",
+            name,
+            format!("{:.3}", f.dist_ratio(0)),
+            format!("{:.3}", f.dist_ratio(2)),
+            format!("{:.3}", f.dist_ratio(1)),
+            format!("{:.3}", f.dist_ratio(3)),
+            format!("{:+.0}%", f.dist_err() * 100.0)
+        );
+    }
+    rows.sort_by(|a, b| a.1.total_cmp(&b.1));
+    let pctd = |q: f64| -> f64 {
+        let mut acc = 0.0;
+        for &(_, d, a) in &rows {
+            acc += a;
+            if acc >= q * tot_area {
+                return d;
+            }
+        }
+        rows.last().unwrap().1
+    };
+    println!(
+        "\n  area-weighted census of |true/assumed − 1|:  median {:.0}%   90th {:.0}%   worst {:.0}%",
+        pctd(0.50) * 100.0,
+        pctd(0.90) * 100.0,
+        rows.last().unwrap().1 * 100.0
+    );
+    println!("  ⇒ at the face corner the (+u,+v) diagonal is at 0.94·cell_m and MFD calls it 1.414·cell_m");
+    println!("    — a 50% overstatement — while the (−u,+v) diagonal is 1.63·cell_m and MFD calls it the");
+    println!("    SAME 1.414. The two diagonals are not the same length, and the code cannot see it.");
+
+    // ------------------------------------------- Q4: bias or noise?
+    println!("\n  ── Q4. IS THE ERROR A BIAS, OR IS IT NOISE? (the one that decides it) ──\n");
+    println!("  Impose a field whose steepest descent is EXACTLY azimuth φ. Run the status-quo MFD");
+    println!("  weights on the TRUE neighbour geometry. Ask where the mass went:");
+    println!("      Δ(φ) = arg(Σ wₖ·d̂ₖ) − φ      exact answer: 0, at every φ.\n");
+    println!("  THE CONTROL — the same code on a PERFECT square lattice, where MFD's premise is TRUE by");
+    println!("  construction. Whatever Δ it shows there is MFD's OWN error and is not chargeable to the");
+    println!("  sphere. Without this control every number below would be over-charged.\n");
+    println!(
+        "  {:<40}{:>9}{:>9}{:>9}{:>10}  {}",
+        "fan", "Δ rms", "Δ max", "Δ mean", "captured", "stable attractors (φ flow is pulled TO)"
+    );
+    println!("  {}", "─".repeat(114));
+
+    let show = |label: &str, f: &Fan, rule: DistRule| {
+        let b = bias(f, rule);
+        let att: Vec<String> = b.attractors.iter().map(|a| format!("{a:.0}°")).collect();
+        println!(
+            "  {:<40}{:>9}{:>9}{:>9}{:>10}  {}",
+            label,
+            format!("{:.2}°", b.rms),
+            format!("{:.2}°", b.max),
+            format!("{:+.2}°", b.mean),
+            format!("{:.0}%", b.captured * 100.0),
+            if att.is_empty() { "—".into() } else { att.join(" ") }
+        );
+    };
+    show("CONTROL: perfect square lattice", &fan_ideal(19, r()), DistRule::Hardcoded);
+    show("CONTROL: 120° rhombus (should be awful)", &fan_sheared(19, r(), 120.0, 1.0), DistRule::Hardcoded);
+    for (name, u, v) in cases {
+        show(&format!("OURS @L19 {name}"), &fan(19, 4, idx_at(19, u), idx_at(19, v), r()), DistRule::Hardcoded);
+    }
+    println!();
+    println!("  and the same cells with the ONE-LINE FIX — true distances instead of cell_m/cell_m·√2:");
+    for (name, u, v) in cases {
+        show(&format!("+true dist {name}"), &fan(19, 4, idx_at(19, u), idx_at(19, v), r()), DistRule::True);
+    }
+
+    println!();
+    println!("  READ THE CONTROL ROW FIRST. On a perfect square lattice MFD has Δrms 0.24° with eight");
+    println!("  attractors — one at each neighbour direction, evenly spaced. That is MFD's intrinsic");
+    println!("  error and it is BENIGN: it is tiny, and eight evenly-spaced attractors have no preferred");
+    println!("  axis, so they steer nothing. It is the baseline, and our face CENTRE reproduces it");
+    println!("  exactly (0.24°, eight attractors) — MFD is EXACT at a face centre.");
+    println!();
+    println!("  What goes wrong away from the centre is not that Δ gets bigger. It is that the eight");
+    println!("  attractors COLLAPSE INTO TWO. At the corner there are two stable directions on the whole");
+    println!("  compass (150°/330° — one axis), Δrms is 16°, and 97% of the compass is being pushed at");
+    println!("  more than a degree. That is a manufactured law: not 'MFD is noisy here' but 'MFD has an");
+    println!("  opinion about which way rivers run here.'");
+    println!();
+    println!("  MECHANISM, and it falls out of Q3: at the corner the (−u,+v) diagonal is really 1.63·cell_m");
+    println!("  and MFD calls it 1.414 — so it UNDER-states that distance, OVER-states its slope, and");
+    println!("  over-weights it. 150°/330° IS that diagonal. The attractor is the distance hardcode's");
+    println!("  fingerprint, which is why the true-distance fix moves Δrms 16.09° → 9.93° — and why it");
+    println!("  does not FIX it: the fan is still not a fan, and the attractor pair survives.");
+    println!();
+    println!("  `Δ mean ≈ 0` on every row — which is exactly why a mean is the wrong summary, and why a");
+    println!("  mean |error| (what §9's cone columns report) is also the wrong summary. Δ is an ODD");
+    println!("  function about each attractor: it cancels in the mean while steering every river.\n");
+
+    // ---------------- the plume: does it ACCUMULATE?
+    println!("  ── AND THE DECIDER: does the per-cell deflection ACCUMULATE down a path? ──\n");
+    println!("  A per-step deflection is only a bias if it is COHERENT along the path. So: the exact");
+    println!("  cone (h = −θ about a pole), on which every flow line is a MERIDIAN and the exact answer");
+    println!("  is 'azimuth is preserved'. Release unit mass at ONE cell; watch the mass-weighted");
+    println!("  azimuthal CENTROID as it descends. MFD disperses by design, so the plume must SPREAD —");
+    println!("  spread is not error. But the CENTROID must not move.\n");
+    println!("  THE TEST THAT SEPARATES BIAS FROM NOISE, and it can fail: refine the grid at FIXED");
+    println!("  physical path length. Each level doubles the number of routing steps along the path.");
+    println!("      • NOISE  → the drift must shrink like 1/√steps: HALVE for every 2 levels.");
+    println!("      • BIAS   → the drift is level-INDEPENDENT: the same degrees at L6, L7, L8.\n");
+
+    let pole = cube_to_unit(CubeProj::Equiangular, 4, 0.0, 0.0);
+    let frame = cube_to_unit(CubeProj::Equiangular, 4, 0.3, 0.0);
+    let rings = [0.30, 0.60, 0.90];
+    let launches: Vec<f64> = (0..24).map(|k| k as f64 * 15.0).collect();
+
+    println!(
+        "  {:<30}{:>8}{:>12}{:>12}{:>12}{:>13}{:>10}",
+        "grid", "steps", "|drift| θ=.3", "|drift| θ=.6", "|drift| θ=.9", "spread θ=.9", "floor"
+    );
+    println!("  {}", "─".repeat(98));
+    for lvl in [6u32, 7, 8, 9] {
+        let n = 1usize << lvl;
+        let g = cube_sphere(CubeProj::Equiangular, n, r());
+        let mut d: [Vec<f64>; 3] = [vec![], vec![], vec![]];
+        let mut sp = vec![];
+        for &la in &launches {
+            let p = plume(&g, Router::MooreMfd, pole, frame, 0.10, la, &rings);
+            for k in 0..p.theta.len().min(3) {
+                d[k].push(p.drift_deg[k]);
+            }
+            if p.spread_deg.len() >= 3 {
+                sp.push(p.spread_deg[2]);
+            }
+        }
+        // THE PROBE'S OWN NOISE FLOOR, read off the grid's own symmetry: the face's u-axis
+        // (launch 0°) and its diagonal (45°) are MIRROR LINES, so the drift there is forced
+        // to zero by symmetry no matter what the router does. Whatever the probe reports on
+        // those two launches is its own error — cell quantisation, annulus binning, the
+        // source cell not sitting exactly on the axis. Nothing below this floor is resolved.
+        let floor = [0.0f64, 45.0, 90.0, 135.0]
+            .iter()
+            .map(|&la| {
+                plume(&g, Router::MooreMfd, pole, frame, 0.10, la, &rings)
+                    .drift_deg
+                    .get(2)
+                    .copied()
+                    .unwrap_or(0.0)
+                    .abs()
+            })
+            .fold(0.0f64, f64::max);
+        let rms = |x: &Vec<f64>| (x.iter().map(|v| v * v).sum::<f64>() / x.len().max(1) as f64).sqrt();
+        let steps = ((0.90 - 0.10) / (std::f64::consts::FRAC_PI_2 / n as f64)) as usize;
+        println!(
+            "  {:<30}{:>8}{:>12}{:>12}{:>12}{:>13}{:>10}",
+            format!("L{lvl} · {} cells", fmt_big((6 * n * n) as u64)),
+            steps,
+            format!("{:.2}°", rms(&d[0])),
+            format!("{:.2}°", rms(&d[1])),
+            format!("{:.2}°", rms(&d[2])),
+            format!("{:.1}°", rms(&sp)),
+            format!("±{floor:.2}°")
+        );
+    }
+    println!("  (|drift| = RMS over 24 launch azimuths. Exact answer: 0.00° at every θ, at every level.");
+    println!("   'floor' = the probe's own error, read off the launches the grid's MIRROR SYMMETRY forces");
+    println!("   to zero (0°/45°/90°/135° are mirror lines of the face). Nothing below it is resolved.)");
+    println!();
+    println!("  ⇒ **BIAS.** 4× the routing steps and the drift does not fall — it RISES and settles near");
+    println!("    5.5°. Noise would have halved from L6 to L8. It did the opposite.");
+    println!();
+    println!("  And the internal control that makes that reading safe: the SPREAD in the same runs DOES");
+    println!("  converge away (20.5° → 13.7° → 9.6° → …), on the same plumes, in the same annuli, in the");
+    println!("  same code. So the probe is fully capable of showing a quantity converging to zero. It");
+    println!("  shows dispersion doing exactly that — and the centroid drift refusing to.");
+    println!();
+
+    // and the router comparison at one level
+    let lvl = 8u32;
+    let n = 1usize << lvl;
+    let g = cube_sphere(CubeProj::Equiangular, n, r());
+    println!("  THE SAME PLUME, L{lvl}, all four routers — and what the drift COSTS in ground truth:\n");
+    println!(
+        "  {:<36}{:>12}{:>12}{:>14}{:>14}",
+        "router", "|drift| θ=.9", "spread θ=.9", "lateral error", "as cell widths"
+    );
+    println!("  {}", "─".repeat(88));
+    for rt in [Router::MooreMfd, Router::MooreMfdTrueDist, Router::EdgeMfd, Router::GradEdgeFlux] {
+        let mut d = vec![];
+        let mut sp = vec![];
+        for &la in &launches {
+            let p = plume(&g, rt, pole, frame, 0.10, la, &rings);
+            if p.drift_deg.len() >= 3 {
+                d.push(p.drift_deg[2]);
+                sp.push(p.spread_deg[2]);
+            }
+        }
+        let rms = |x: &Vec<f64>| (x.iter().map(|v| v * v).sum::<f64>() / x.len().max(1) as f64).sqrt();
+        let dr = rms(&d);
+        // lateral ground displacement of the plume centroid at θ = 0.9 rad
+        let lat_m = r() * (0.90f64).sin() * dr.to_radians();
+        let cm = cell_m(lvl, r());
+        println!(
+            "  {:<36}{:>12}{:>12}{:>14}{:>14}",
+            rt.label(),
+            format!("{dr:.2}°"),
+            format!("{:.1}°", rms(&sp)),
+            format!("{:.0} km", lat_m / 1000.0),
+            format!("{:.1}", lat_m / cm)
+        );
+    }
+    println!();
+    println!("  'lateral error' = how far the plume's centre of mass ends up from the meridian it was");
+    println!("  released on, after ~5100 km of descent on a cone whose exact flow lines are meridians.");
+
+    // drift vs launch azimuth — is it a grid-locked pattern?
+    println!("\n  DRIFT vs LAUNCH AZIMUTH (θ=0.9, L{lvl}) — is the drift GRID-LOCKED? The pole is at a face");
+    println!("  centre, so if the artifact is the grid's, this must repeat with the face's 90° symmetry:\n");
+    print!("    launch  ");
+    for &la in launches.iter().take(12) {
+        print!("{:>6}", format!("{la:.0}°"));
+    }
+    println!();
+    print!("    drift   ");
+    for &la in launches.iter().take(12) {
+        let p = plume(&g, Router::MooreMfd, pole, frame, 0.10, la, &rings);
+        let v = p.drift_deg.get(2).copied().unwrap_or(f64::NAN);
+        print!("{:>6}", format!("{v:+.1}"));
+    }
+    println!("\n");
+    println!("  ⇒ Zero at 0°, 45°, 90°, 135° — the face's MIRROR LINES, where symmetry forces it. In");
+    println!("    between, the sign says which way: launches at 15°/30° are pushed toward 0°, launches at");
+    println!("    60°/75° are pushed toward 90°. **The face's u and v axes are ATTRACTORS and the 45°");
+    println!("    diagonal is a REPELLER.** Rivers are being steered onto the cube-face axes — which is");
+    println!("    precisely the grid-aligned-channel artifact MFD EXISTS TO PREVENT. On a uniform grid it");
+    println!("    does prevent it (the control: eight even attractors, 0.24°). On ours it reintroduces it.");
+    println!("    Noise does not know where the face axes are, and does not repeat with a 90° period.");
+
+    // ---- the control that can falsify the above: a pole with NO relation to the grid.
+    println!("\n  FALSIFICATION CONTROL — the same probe with the pole at a GENERIC direction, aligned to");
+    println!("  nothing. If the drift above were an artifact of the cone sitting on a face centre (a");
+    println!("  special, highly symmetric spot), moving the pole off it should make the drift vanish:\n");
+    let gpole = unit([0.3, -0.7, 0.64]); // §9's pole — chosen to align with nothing
+    let gframe = unit([0.9, 0.2, -0.1]);
+    println!("  {:<36}{:>14}{:>14}{:>14}", "pole", "|drift| θ=.9", "spread θ=.9", "probe floor");
+    println!("  {}", "─".repeat(78));
+    for (nm, p0, f0) in [("face centre (symmetric)", pole, frame), ("generic direction", gpole, gframe)] {
+        let mut d = vec![];
+        let mut sp = vec![];
+        for &la in &launches {
+            let p = plume(&g, Router::MooreMfd, p0, f0, 0.10, la, &rings);
+            if p.drift_deg.len() >= 3 {
+                d.push(p.drift_deg[2]);
+                sp.push(p.spread_deg[2]);
+            }
+        }
+        let rms = |x: &Vec<f64>| (x.iter().map(|v| v * v).sum::<f64>() / x.len().max(1) as f64).sqrt();
+        println!(
+            "  {:<36}{:>14}{:>14}{:>14}",
+            nm,
+            format!("{:.2}°", rms(&d)),
+            format!("{:.1}°", rms(&sp)),
+            if nm.starts_with("face") { "±0.7° (mirror)" } else { "— (no symmetry)" }
+        );
+    }
+    println!("\n  It does not vanish. The bias is not an artifact of the special pole — it is the grid.");
+}
+
+fn idx_at(level: u32, t: f64) -> i64 {
+    let n = 1i64 << level;
+    (((t + 1.0) / 2.0 * n as f64 - 0.5).round() as i64).clamp(1, n - 2)
+}
+
+/// The analytic fan must BE the mesh's fan — same cell, same 8 neighbours, same numbers —
+/// or the L19/L23 shortcut is measuring a different object than §9 did.
+fn gate_fan_matches_mesh() {
+    use fan::*;
+    let mut worst_b: f64 = 0.0;
+    let mut worst_d: f64 = 0.0;
+    for lvl in [5u32, 6] {
+        let n = 1i64 << lvl;
+        let g = cube_sphere(CubeProj::Equiangular, n as usize, r());
+        for i in 1..n - 1 {
+            for j in 1..n - 1 {
+                let cell = (4 * n * n + j * n + i) as usize;
+                let f = fan(lvl, 4, i, j, r());
+                // the mesh agrees on the SET of Moore neighbours (combinatorial adjacency,
+                // Euler-checked) and on their geometry
+                assert_eq!(g.moore[cell].len(), 8, "interior cell must have 8 Moore nbrs");
+                let mut mesh_b: Vec<f64> = g.moore[cell]
+                    .iter()
+                    .map(|&k| {
+                        let c = g.centers[cell];
+                        let e0 = tangent(c, g.centers[cell + 1]); // offset (+1,0) = index +1 in i
+                        let e1 = cross(c, e0);
+                        let t = tangent(c, g.centers[k]);
+                        dot(t, e1).atan2(dot(t, e0)).to_degrees()
+                    })
+                    .collect();
+                mesh_b.sort_by(f64::total_cmp);
+                let mut mine: Vec<f64> = f.bearing.to_vec();
+                mine.sort_by(f64::total_cmp);
+                for k in 0..8 {
+                    worst_b = worst_b.max(wrap180(mesh_b[k] - mine[k]).abs());
+                }
+                let mut mesh_d: Vec<f64> = g.moore[cell]
+                    .iter()
+                    .map(|&k| geodesic(g.centers[cell], g.centers[k]) * r())
+                    .collect();
+                mesh_d.sort_by(f64::total_cmp);
+                let mut mind: Vec<f64> = f.dist_m.to_vec();
+                mind.sort_by(f64::total_cmp);
+                for k in 0..8 {
+                    worst_d = worst_d.max((mesh_d[k] / mind[k] - 1.0).abs());
+                }
+            }
+        }
+    }
+    assert!(worst_b < 1e-9, "analytic fan has drifted from the mesh: {worst_b:.2e}°");
+    assert!(worst_d < 1e-12, "analytic distances drifted from the mesh: {worst_d:.2e}");
+    println!(
+        "  GATE  analytic fan ≡ the Euler-checked mesh's Moore fan, every interior cell at L5+L6"
+    );
+    println!("        (max bearing diff {worst_b:.1e}°, max distance diff {worst_d:.1e} rel)  ✓");
+}
+
+/// The probe must be able to FAIL. Feed the bias probe a lattice whose fan is PERFECT (it
+/// must report MFD's intrinsic error and nothing more) and one that is deliberately awful
+/// (it must scream). And the sheared control at 120°/1:1 must reproduce the closed-form
+/// corner fan, which is an independent check on the Jacobian derivation.
+fn gate_controls_are_sane() {
+    use fan::*;
+    let ideal = fan_ideal(19, r());
+    assert!(ideal.gap_dev() < 1e-12, "the ideal control is not ideal");
+    let bad = fan_sheared(19, r(), 120.0, 1.0);
+    let corner = fan_limit(19, 4, 1.0, 1.0, r());
+    // the closed form says a 120° rhombus, so the corner's fan and the 120° control must
+    // have the SAME gap multiset (60/60/30/30/60/60/30/30)
+    let (mut a, mut b) = (bad.gaps, corner.gaps);
+    a.sort_by(f64::total_cmp);
+    b.sort_by(f64::total_cmp);
+    let worst = (0..8).fold(0.0f64, |m, k| m.max((a[k] - b[k]).abs()));
+    assert!(worst < 1e-9, "the face corner is not the 120° rhombus the Jacobian says it is: {worst:.2e}°");
+    let bi = bias(&ideal, DistRule::Hardcoded);
+    let bb = bias(&bad, DistRule::Hardcoded);
+    assert!(bi.rms < bb.rms / 3.0, "the bias probe cannot tell a perfect grid from a 120° rhombus");
+    println!("  GATE  bias probe responds: perfect lattice Δrms {:.2}° ≪ 120° rhombus Δrms {:.2}°", bi.rms, bb.rms);
+    println!(
+        "  GATE  the face corner's measured fan IS the closed-form 120° rhombus (gaps 60/30, diff {worst:.0e}°)  ✓"
+    );
+
+    // The report states the Jacobian in closed form. Pin it to the code, so a reader can
+    // trust the algebra without re-deriving it — and so a future edit that breaks either
+    // side fails loudly.
+    //     D = 1+a²+b²,  a = tan(u·π/4),  b = tan(v·π/4)
+    //     |∂u| = (π/4)(1+a²)√(1+b²) / D          cos∠(∂u,∂v) = −ab / √((1+a²)(1+b²))
+    //     |∂v| = (π/4)(1+b²)√(1+a²) / D          |∂u|/|∂v|   = √((1+a²)/(1+b²))
+    let mut wj: f64 = 0.0;
+    for &u in &[0.0, 0.23, 0.5, 0.77, 1.0] {
+        for &v in &[0.0, 0.31, 0.5, 0.62, 1.0] {
+            let (ju, jv) = jacobian(4, u, v);
+            let (a, b) = ((u * std::f64::consts::FRAC_PI_4).tan(), (v * std::f64::consts::FRAC_PI_4).tan());
+            let d = 1.0 + a * a + b * b;
+            let k = std::f64::consts::FRAC_PI_4;
+            let nu = k * (1.0 + a * a) * (1.0 + b * b).sqrt() / d;
+            let nv = k * (1.0 + b * b) * (1.0 + a * a).sqrt() / d;
+            let cs = -a * b / ((1.0 + a * a) * (1.0 + b * b)).sqrt();
+            wj = wj.max((norm(ju) - nu).abs()).max((norm(jv) - nv).abs());
+            wj = wj.max((dot(unit(ju), unit(jv)) - cs).abs());
+        }
+    }
+    assert!(wj < 1e-12, "the report's closed-form Jacobian disagrees with the code: {wj:.2e}");
+    println!("  GATE  the report's closed-form Jacobian (shear & anisotropy) ≡ the code, 25 points, max err {wj:.0e}  ✓");
+    // and the two defects genuinely peak in different places — the claim §6a.2's field rests on
+    let shear = |u: f64, v: f64| {
+        let (ju, jv) = jacobian(4, u, v);
+        (90.0 - dot(unit(ju), unit(jv)).acos().to_degrees().abs()).abs()
+    };
+    let aniso = |u: f64, v: f64| {
+        let (ju, jv) = jacobian(4, u, v);
+        (norm(ju) / norm(jv)).max(norm(jv) / norm(ju)) - 1.0
+    };
+    assert!(shear(1.0, 0.0) < 1e-12 && shear(1.0, 1.0) > 29.9, "shear does not peak at the corner");
+    assert!(aniso(1.0, 1.0) < 1e-12 && aniso(1.0, 0.0) > 0.41, "anisotropy does not peak at the edge-midpoint");
+    println!(
+        "  GATE  the two defects peak in DIFFERENT places: shear 0° at edge-mid / {:.0}° at corner;",
+        shear(1.0, 1.0)
+    );
+    println!(
+        "        anisotropy {:.3} at corner / {:.3} (=√2−1) at edge-mid — so neither alone explains the field  ✓",
+        aniso(1.0, 1.0),
+        aniso(1.0, 0.0)
+    );
 }
 
 /// The two-grid overlay (cube ∪ dual octahedron), quantified — because the mechanism is
