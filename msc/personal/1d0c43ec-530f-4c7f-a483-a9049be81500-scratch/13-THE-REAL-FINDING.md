@@ -82,6 +82,59 @@ Set the two side by side. It is not a close call.
 
 ---
 
+## ⚠ CORRECTION — I asserted an absence without reading the file. `doc/PROCESS.udon` EXISTS.
+
+**And it makes the finding SHARPER, not weaker — because it already knows.**
+
+`doc/PROCESS.udon` (Jul 11) is the project's norms document: **prescriptions, proscriptions, and a
+self-governance valve.** It is good. It is small on purpose. And its header states the exact principle
+I spent the day re-deriving:
+
+> ### *"Kept deliberately small: **A NORM THAT IS NOT REAL IS WORSE THAN NO NORM.**"*
+
+**And its self-governance rule tells you precisely what to do with what I found:**
+
+> *"**A norm observed to be routinely violated is a finding about the NORM, not only about the
+> violators** — bring it back through the valve."*
+
+**So let us bring them back through the valve. Here are its own norms, measured against the last
+48 hours:**
+
+| norm | its rule | observed |
+|---|---|---|
+| **`probes-first`** | *"A known issue gets its probe written first… **a declared epistemic tier is a falsifiable claim and the probe is what would convict it.**"* | ⛔ **22 probes in `examples/`; `src/` mentions them 3× in prose.** *(This is the FIFTH statement of the probe binding — I had counted four.)* |
+| **`land-vs-count`** | *"Every small-flux-into-large-f32 site **explicitly chooses**: land or count. **(Paid for twice, 2026-07-04.)**"* | ⛔ **The `η` site chose NEITHER.** **Paid for a THIRD time**, 9 days later. |
+| **`no-top-billing-rot`** | *"An outdated document **must not sit above a live one** in any reading path. If a front door is discovered stale, **fixing it joins the current task's scope**."* | ⛔ ORIENTATION was stale (I fixed it this morning). **`TODO.md` still is** — 5 void items. |
+| **`ledger-duty`** | *"Touch a constant — touch ASSUMPTIONS. Add or change a nomos — **declare it in the nomotheke.** These are **part of the change, not follow-up work.**"* | ⚠ **Half-observed.** The six audit constants reached `ASSUMPTIONS` and **none reached a nomos declaration.** |
+| **`present-tense-bodies`** | *"Current-state documents change their bodies; **they do not grow by addenda.**"* | ⚠ ORIENTATION grew a HANDOFF block. |
+| **`whim-gate`** | *"…run the check by hand against `regula-conformance-design.md` §3."* | ⛔ **Points at an artifact the project DECIDED NOT TO BUILD** (the regula collapsed, `:by us`, Jul 12). **A stale norm.** |
+
+> ## ⇒ **SIX NORMS. FOUR ROUTINELY VIOLATED, ONE HALF-OBSERVED, ONE POINTING AT A DEAD ARTIFACT.**
+>
+> **By PROCESS.udon's own rule, that is a finding about the norms.** And the finding is the one this
+> whole file is about — **and the document ALREADY KNOWS IT**, and says so in the only norm that *is*
+> reliably kept:
+>
+> > **`|norm[determinism-proscriptions]`:** *"The clippy disallowed-lists **that MECHANIZE this** are
+> > queued in `doc/toolchain.md`; **the norm binds now, AHEAD OF THE TOOLING.**"*
+>
+> **That sentence is the whole project in miniature.** It distinguishes a **mechanized** norm from an
+> **honor-system** one; it admits which kind it is writing; it says the tooling is what would make it
+> real — **and the tooling never came.**
+>
+> **`udon-safe-subset` says it too:** *"**UNTIL the udon reboot lands its decision valve + udon-cli
+> (fmt/lint)**, author within the verified safe subset."* **The norms are explicitly, self-consciously
+> WAITING ON A TOOLCHAIN.**
+
+**⇒ So the corrected finding is not "the project has no norms." It is:**
+
+> # **THE PROJECT HAS EXCELLENT NORMS, KNOWS THAT AN UNMECHANIZED NORM IS WORSE THAN NONE, SAID SO IN WRITING, AND HAS BEEN WAITING NINE DAYS FOR THE TOOLCHAIN THAT WOULD MAKE THEM REAL.**
+>
+> **Everything waits on udon-core — including the project's ability to notice that everything waits on
+> udon-core.** *(Which lands today.)*
+
+---
+
 ## ⇒ The corollary, and it is the one that hurts: **an onboarding DOCUMENT is the wrong artifact class.**
 
 `ORIENTATION.md` is excellent. It is the best onboarding doc I have read in a codebase. **I had to
