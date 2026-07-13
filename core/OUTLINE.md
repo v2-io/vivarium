@@ -119,11 +119,17 @@ published as the terrain.)*
 **And it compounds exactly the way this project cannot afford:** a future session inherits *one agent's
 surprise ordering* as a ranking, with no way to check it and no reason to doubt it.
 
-> **⇒ In a segment: STATE THE CLAIM, DROP THE RANKING.** *"Load-bearing for Parts II, III and VI"* is
-> checkable. *"The load-bearing law of the whole spec"* is not. **Superlatives belong in personal
-> reflections — where they are honest phenomenology — and nowhere else.**
-> *(Exception, narrow: a genuine, triple-checked epistemological finding. Those are rare and they will
-> know it.)*
+> ### ⇒ **THE FIX IS PRECISION, NOT SILENCE.** *(Joseph: "it is often easy to make the superlative honest simply by being more precise.")*
+>
+> **The honest form keeps the signal, marks it phenomenal, and names the CAUSE:**
+> > *"When I encountered this it **felt like** the deepest thing here — **because it unified** the seam, the
+> > store and the ordinum, which I had been holding separately."*
+>
+> **That is more informative than the bare superlative OR a sanitized claim**: it says **where a mind found
+> load**, **why** (the unification — *which a reader can go check*), and that it is **a report, not a
+> measurement.** ⇒ **Failing that: state the claim, drop the ranking.** *"Load-bearing for Parts II, III and
+> VI"* is checkable; *"the load-bearing law of the whole spec"* is not. **A bare, unqualified superlative
+> warps the output and belongs only in personal reflections.**
 
 ### ⚠ `area` — **which layer does this segment GOVERN?** *(added at Joseph's ask, 2026-07-13)*
 
