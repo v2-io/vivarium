@@ -1,0 +1,376 @@
+SPIKE — the multiresolution (wavelet) store
+footprint: face ZPos L19 (108544, 186368) 128×128   radius 6371000 m
+
+
+╔══════════════════════════════════════════════════════════════════════════════
+║ PROBE 0  —  the land guard (a probe that cannot fail is not a probe)
+╚══════════════════════════════════════════════════════════════════════════════
+prior relief      : 5016 .. 5188 m   (sea level 4000 m)
+subaerial cells   : 16384 / 16384 = 100.0%
+erosion Δh (80e)  : max 45.96 m,  mean 7.22 m
+✓ the kernel executes on this footprint. Numbers below are about real physics.
+
+
+╔══════════════════════════════════════════════════════════════════════════════
+║ PROBE 1  —  AREA-ADDITIVITY — the geometric fact the whole design rests on
+╚══════════════════════════════════════════════════════════════════════════════
+The stated objection: "our cells are NOT equal-area (1.4× spread); Haar assumes equal weights."
+
+1. THE PREMISE IS TRUE.  cell-area spread over a whole face (L8): max/min = 1.4099×
+
+2. THE OBJECTION NAMES THE WRONG PROPERTY. What a conservative MRA needs is not equal areas.
+   It needs the children to PARTITION the parent, so the area-weighted mean telescopes.
+   That is a fact about the index algebra, and it is checkable BIT-EXACTLY, not statistically:
+   ✓ the four children's outer corners equal the parent's corners BIT FOR BIT, at every level
+     tested (L4..L25), face centre / face corner / generic. ⇒ they tile it. ⇒ ΣA(child) = A(parent)
+     for ANY exact area measure — which is a TAUTOLOGY, not a discovery, and that is the point.
+
+   ⚠ MY FIRST CONTROL FOR THIS WAS VACUOUS AND I ALMOST SHIPPED IT. I 'falsified' by cutting the
+     parent at 0.45 of its span instead of the midpoint, expecting a big residual. It returned
+     ~1e-13 — the size of the signal — because an exact area measure is additive over ANY
+     partition. The control could not fail, so it validated nothing. (Standing guard, honoured.)
+
+3. THE CONTROL THAT CAN FAIL — the weighting the codebase uses TODAY.
+   `sample::cell_size_m(level, R)` returns ONE cell size per level: a UNIFORM-area assumption.
+   Under uniform weights the transform still telescopes (4 equal children sum to a 4× parent),
+   so it is self-consistent — AND IT COMPUTES THE WRONG INTEGRAL. By how much?
+
+   region                              ∫h dA (exact areas)   ∫h dA (uniform)    rel. error
+   our 128² tile (L19, near face ctr)    2.693320e10     3.038779e10       12.83%
+   a 256² block at the FACE CORNER      1.139967e15     1.477656e15       29.62%
+   a whole face, L7 (128²)              3.320517e17     3.914082e17       17.88%
+   a whole face, L9 (512²)              3.319599e17     3.912773e17       17.87%
+
+   ⇒ THE CONTROL SCREAMS. Over a whole face the uniform-area weighting the code uses today is
+     wrong by TENS OF PERCENT on the conserved integral. That is not the wavelet store's problem
+     — it is a problem the wavelet store's update step FIXES, because it forces you to name the
+     weight. (And note: it is a BIAS, not noise — the distortion is a smooth function of position.)
+
+⇒ VERDICT ON THE UNEQUAL-AREA OBJECTION: REFUTED, and it was pointing the wrong way.
+  Areas enter the transform ONLY through the update step — a weighted mean — and a weighted mean
+  does not care that its weights differ. It cares that they SUM correctly, and on a quadtree of
+  spherical quads they do, exactly. The unequal areas are not an obstacle to the wavelet store:
+  the wavelet store is what makes us finally ACCOUNT for them.
+
+
+╔══════════════════════════════════════════════════════════════════════════════
+║ PROBE 2  —  EXACTNESS — perfect reconstruction + integral telescoping, on real eroded ground
+╚══════════════════════════════════════════════════════════════════════════════
+
+predictor: haar (order 0: child := parent)
+  stored floats     : 16384 (leaves = 16384)  ⇒ CRITICALLY SAMPLED — no redundancy
+  round-trip max |Δh| : 1.364e-11 m   (relief ≈ 170 m)
+  integral (∫h dA) telescoping, level by level:
+    L12     1×1     ∫h dA = 2.6895290706e10   rel drift 4.96e-15
+    L13     2×2     ∫h dA = 2.6895290706e10   rel drift 4.96e-15
+    L14     4×4     ∫h dA = 2.6895290706e10   rel drift 4.82e-15
+    L15     8×8     ∫h dA = 2.6895290706e10   rel drift 4.96e-15
+    L16    16×16    ∫h dA = 2.6895290706e10   rel drift 4.82e-15
+    L17    32×32    ∫h dA = 2.6895290706e10   rel drift 4.26e-15
+    L18    64×64    ∫h dA = 2.6895290706e10   rel drift 7.66e-15
+    L19   128×128   ∫h dA = 2.6895290706e10   rel drift 1.42e-16
+  ⇒ worst relative drift across ALL 8 levels: 7.66e-15   (f64 epsilon ≈ 2.2e-16)
+
+predictor: bilinear (order 1: linear-reproducing)
+  stored floats     : 16384 (leaves = 16384)  ⇒ CRITICALLY SAMPLED — no redundancy
+  round-trip max |Δh| : 1.910e-11 m   (relief ≈ 170 m)
+  integral (∫h dA) telescoping, level by level:
+    L12     1×1     ∫h dA = 2.6895290706e10   rel drift 4.96e-15
+    L13     2×2     ∫h dA = 2.6895290706e10   rel drift 4.96e-15
+    L14     4×4     ∫h dA = 2.6895290706e10   rel drift 4.82e-15
+    L15     8×8     ∫h dA = 2.6895290706e10   rel drift 4.96e-15
+    L16    16×16    ∫h dA = 2.6895290706e10   rel drift 4.82e-15
+    L17    32×32    ∫h dA = 2.6895290706e10   rel drift 4.26e-15
+    L18    64×64    ∫h dA = 2.6895290706e10   rel drift 7.38e-15
+    L19   128×128   ∫h dA = 2.6895290706e10   rel drift 4.26e-16
+  ⇒ worst relative drift across ALL 8 levels: 7.38e-15   (f64 epsilon ≈ 2.2e-16)
+
+⇒ Perfect reconstruction and exact integral telescoping hold FOR BOTH PREDICTORS —
+  which is the structural point: they are properties of the LIFTING STEPS, not of the predictor.
+
+
+╔══════════════════════════════════════════════════════════════════════════════
+║ PROBE 3  —  COMPRESSION — and does conservation survive lossy compression?
+╚══════════════════════════════════════════════════════════════════════════════
+
+── ERODED land, 80 epochs — the ADVERSARIAL case (erosion MANUFACTURES sharp detail)   (relief 170 m)
+
+  predictor: haar (order 0: child := parent)
+    τ (m)   detail cells kept    L∞ err (m)   RMS err (m)   ∫h dA rel drift
+      0.0    5461/5461  = 100.0%       0.000       0.0000       1.42e-16
+      0.1    5427/5461  =  99.4%       0.172       0.0043       5.67e-16
+      0.5    5260/5461  =  96.3%       1.098       0.0610       7.09e-16
+      1.0    4696/5461  =  86.0%       2.997       0.2756       2.13e-15
+      2.0    3084/5461  =  56.5%       5.805       0.9845       2.98e-15
+      5.0    1002/5461  =  18.3%      16.068       3.5458       7.09e-15
+     10.0     154/5461  =   2.8%      29.994       8.3470       9.22e-15
+     25.0       3/5461  =   0.1%      62.151      20.1117       2.55e-15
+
+  predictor: bilinear (order 1: linear-reproducing)
+    τ (m)   detail cells kept    L∞ err (m)   RMS err (m)   ∫h dA rel drift
+      0.0    5461/5461  = 100.0%       0.000       0.0000       4.26e-16
+      0.1    5288/5461  =  96.8%       0.259       0.0127       2.84e-16
+      0.5    3764/5461  =  68.9%       1.194       0.1674       8.94e-15
+      1.0    2564/5461  =  47.0%       2.754       0.4454       2.55e-15
+      2.0    1505/5461  =  27.6%       5.672       1.1146       8.51e-15
+      5.0     470/5461  =   8.6%      19.820       4.3046       9.22e-15
+     10.0      65/5461  =   1.2%      33.464       7.6644       4.68e-15
+     25.0       2/5461  =   0.0%      59.344      14.8415       2.27e-15
+
+  detail energy by level (RMS of tₖ, m) — where the information actually is:
+    L12  → L13    RMS   27.910   max    31.098   100.0% of coeffs > 1 m
+    L13  → L14    RMS   14.330   max    26.301    83.3% of coeffs > 1 m
+    L14  → L15    RMS    6.707   max    16.910    91.7% of coeffs > 1 m
+    L15  → L16    RMS    4.304   max    14.074    79.2% of coeffs > 1 m
+    L16  → L17    RMS    3.760   max    15.257    74.5% of coeffs > 1 m
+    L17  → L18    RMS    2.744   max    15.742    53.7% of coeffs > 1 m
+    L18  → L19    RMS    1.479   max    11.360    24.2% of coeffs > 1 m
+
+── the RAW PRIOR (fBm) — scale-free by construction, the theoretically WORST case for compression   (relief 172 m)
+
+  predictor: haar (order 0: child := parent)
+    τ (m)   detail cells kept    L∞ err (m)   RMS err (m)   ∫h dA rel drift
+      0.0    5461/5461  = 100.0%       0.000       0.0000       2.83e-16
+      0.1    5445/5461  =  99.7%       0.183       0.0042         0.00e0
+      0.5    4720/5461  =  86.4%       1.246       0.1324       2.27e-15
+      1.0    3017/5461  =  55.2%       2.640       0.4928       1.56e-15
+      2.0     875/5461  =  16.0%       6.048       1.2654       6.52e-15
+      5.0     118/5461  =   2.2%      14.232       3.4326       5.67e-16
+     10.0      25/5461  =   0.5%      26.198       6.8583       8.92e-15
+     25.0       3/5461  =   0.1%      56.002      19.3537       2.12e-15
+
+  predictor: bilinear (order 1: linear-reproducing)
+    τ (m)   detail cells kept    L∞ err (m)   RMS err (m)   ∫h dA rel drift
+      0.0    5461/5461  = 100.0%       0.000       0.0000       1.42e-16
+      0.1    5011/5461  =  91.8%       0.250       0.0207       2.12e-15
+      0.5    1267/5461  =  23.2%       1.982       0.2903       2.83e-16
+      1.0     482/5461  =   8.8%       3.173       0.6412         0.00e0
+      2.0     125/5461  =   2.3%       6.578       1.5588       1.42e-16
+      5.0      21/5461  =   0.4%      15.245       3.3634       3.97e-15
+     10.0       6/5461  =   0.1%      22.832       5.4801       6.37e-15
+     25.0       2/5461  =   0.0%      50.798      13.1839       2.27e-15
+
+  detail energy by level (RMS of tₖ, m) — where the information actually is:
+    L12  → L13    RMS   28.861   max    32.391   100.0% of coeffs > 1 m
+    L13  → L14    RMS   14.304   max    25.470    91.7% of coeffs > 1 m
+    L14  → L15    RMS    4.949   max    14.610    79.2% of coeffs > 1 m
+    L15  → L16    RMS    2.546   max     6.982    64.6% of coeffs > 1 m
+    L16  → L17    RMS    1.257   max     4.084    42.2% of coeffs > 1 m
+    L17  → L18    RMS    0.589   max     2.896     9.9% of coeffs > 1 m
+    L18  → L19    RMS    0.226   max     1.223     0.0% of coeffs > 1 m
+
+⇒ Read the ∫h dA column: it is ~1e-16 AT EVERY THRESHOLD, including τ = 25 m where most
+  detail is thrown away. **CONSERVATION SURVIVES ARBITRARY LOSSY COMPRESSION, EXACTLY.**
+  That is structural: the (c_P − ĉ) update term carries the mean and the tₖ carry zero
+  area-weighted mean by construction, so discarding tₖ costs SHAPE and never MASS.
+
+
+╔══════════════════════════════════════════════════════════════════════════════
+║ PROBE 4  —  THE EDIT — O(log N) up-propagation, exact? And is it 'just the path to the root'?
+╚══════════════════════════════════════════════════════════════════════════════
+the edit: agent raises cell (37, 91) by 10 m — an irreducible discrete edit,
+exactly the `detail→abstract` object ORIENTATION calls "the one hard research problem".
+
+  predictor: haar (order 0: child := parent)
+    coefficients touched      : 29   vs 16384 for a full re-transform  ⇒ 565× less work
+    log₂(N) reference         : depth 7, so an O(log N) path is ~7 levels
+    max |incremental − full|  : 0.000e0   ⇒ EXACT
+    round-trip to edited field: 1.364e-11 m
+    Δ∫h dA at the ROOT        : 3.229176e3 m³   vs a·δ = 3.229175e3 m³   (rel 4.15e-8)
+    ⇒ up-propagation is a LINEAR FUNCTIONAL: the root's integral moved by exactly area×δ.
+    ⇒ invalidation cone       : JUST THE PATH TO THE ROOT (the predictor reads only its own parent)
+
+  predictor: bilinear (order 1: linear-reproducing)
+    coefficients touched      : 158   vs 16384 for a full re-transform  ⇒ 104× less work
+    log₂(N) reference         : depth 7, so an O(log N) path is ~7 levels
+    max |incremental − full|  : 0.000e0   ⇒ EXACT
+    round-trip to edited field: 1.546e-11 m
+    Δ∫h dA at the ROOT        : 3.229176e3 m³   vs a·δ = 3.229175e3 m³   (rel 4.15e-8)
+    ⇒ up-propagation is a LINEAR FUNCTIONAL: the root's integral moved by exactly area×δ.
+    ⇒ invalidation cone       : the path PLUS the predictor's 3×3 stencil at each level — still O(log N), constant ≈ 9, NOT 'just the path'
+
+⇒ Both are exact and both are O(log N). But note the tension the doc did not see:
+  claim 3 (compression) WANTS a high-order predictor; claim 4's "just the path to the root"
+  is only literally true for the order-0 (Haar) predictor. You can have both — the cone is
+  still logarithmic — but the sentence needs correcting.
+
+
+╔══════════════════════════════════════════════════════════════════════════════
+║ PROBE 5  —  NONLINEARITY — the Jensen commutator: does the LAW upscale, or only the STATE?
+╚══════════════════════════════════════════════════════════════════════════════
+The STATE upscales exactly (probe 2). The question here is whether the LAW does.
+  R = restrict (the MRA's area-weighted low-pass).   E = the real fluvial kernel.
+  Test:  R(E(h₀))   vs   E(R(h₀))     — L19 128² eroded then restricted,
+                                        vs restricted to L17 32² then eroded.
+
+  ‖R∘E − E∘R‖ :  mean (SIGNED) +5.340 m     RMS 9.441 m     max 40.143 m
+  for scale    :  mean |Δh| erosion itself carved at L19 = 7.223 m
+  bias / noise :  |mean| / sd = 0.686  ⇒ a BIAS (a systematic, signed offset — the harmful kind)
+
+  corr( sub-grid detail RMS of h₀ ,  |commutator| ) = -0.027
+  ⇒ the sub-grid variance does NOT predict the gap — storing details does not hand you a closure.
+
+⇒ VERDICT ON THE NONLINEAR RESIDUE — say it exactly:
+  • the STATE upscales EXACTLY and LINEARLY (probe 2). R is a linear functional. No caveat.
+  • the LAW does NOT upscale. E∘R ≠ R∘E, and the gap is the size of the physics itself.
+  • so the MRA store makes the REPRESENTATION exact and leaves the CLOSURE PROBLEM untouched.
+    A multiresolution store is not a subgrid model, and it never claimed to be — but §3.7's
+    "the coarse coefficient is a linear functional of the fine ones" is a statement about R,
+    and R is not the dynamics.
+
+
+╔══════════════════════════════════════════════════════════════════════════════
+║ PROBE 6  —  THE SEAM — decomposed. Does storing the details make it vanish?
+╚══════════════════════════════════════════════════════════════════════════════
+This probe reproduces `examples/seam_ridge.rs` independently, then DECOMPOSES it.
+Sanity first: it must reproduce the canonical 2.45 / 3.76 / 5.79 or it is measuring
+something else. (It does: 2.47 / 3.78 / 5.77 — the small delta is the three-band
+split below, which pools the two sides differently from the original.)
+
+  [today's composition: pin ON, no up-propagation, outside = prior octaves]
+  macro 80e / fine 18e                         curv(m): outside  0.100  SEAM   0.193  inside  0.061   seam/√(out·in) =    2.47  [@@@@@@@@@@@@@@@@@@@@@#*+=:                      ]
+  macro 80e / fine 60e                         curv(m): outside  0.100  SEAM   0.301  inside  0.063   seam/√(out·in) =    3.78  [@@@@@@@@@@@@@@@@@@@@@#*+*:                      ]
+  macro 80e / fine 80e                         curv(m): outside  0.100  SEAM   0.335  inside  0.068   seam/√(out·in) =    4.05  [@@@@@@@@@@@@@@@@@@@@@#*+*-                      ]
+  macro 80e / fine 150e                        curv(m): outside  0.100  SEAM   0.594  inside  0.105   seam/√(out·in) =    5.77  [@@@@@@@@@@@@@@@@@@@@@#*+@-                      ]
+  macro 18e / fine 150e                        curv(m): outside  0.091  SEAM   0.328  inside  0.064   seam/√(out·in) =    4.29  [@@@@@@@@@@@@@@@@@@@@#*+==:                      ]
+  macro 150e / fine 150e                       curv(m): outside  0.128  SEAM   1.089  inside  0.126   seam/√(out·in) =    8.56  [@@@@@@@@@@@@@@@@@@@@#+-:@.                      ]
+  macro 150e / fine 18e                        curv(m): outside  0.128  SEAM   0.273  inside  0.125   seam/√(out·in) =    2.16  [@@@@@@@@@@@@@@@@@@@@#+-::                       ]
+
+  ⇒ ON "GROWING WITH THE DIFFERENTIAL AGE GAP" — ORIENTATION IS RIGHT, AND I WAS WRONG.
+    I first read the gap as |fine − macro| and triumphantly reported it non-monotone. But the
+    fine tier is SEEDED FROM the macro's already-eroded surface and then runs `fine_epochs`
+    MORE. So the fine region's total age is macro + fine, the exterior's is macro, and
+    **the differential gap IS `fine_epochs`** — exactly what the ratio is monotone in.
+    (Noted because it is the failure the standing guard names: I was more suspicious of the
+    result that confirmed the doc than of the one that flattered my own contrarian reading.)
+    The sweep DOES add something the original did not have: at a FIXED gap of 150, going from
+    macro 18e → 80e → 150e takes the seam 4.29 → 5.77 → 8.56. **So there is a SECOND driver:
+    the absolute roughness of both tiers, not only the gap between them.**
+
+
+THE ZERO-PHYSICS CONTROL — the one that isolates the REPRESENTATION from the PHYSICS.
+Both tiers run ZERO epochs. There is no differential aging, no erosion, no detail carved at all:
+the fine tier is the prior, the macro tier is the prior. **Any ridge here is manufactured by the
+TILE MACHINERY ALONE.** If the ratio is ~1, the seam is physics; if it is >1, it is representation.
+
+  0e / 0e, pin ON, today's compose             curv(m): outside  0.091  SEAM   0.170  inside  0.086   seam/√(out·in) =    1.93  [@@@@@@@@@@@@@@@@@@@@#*+=:..                     ]
+  0e / 0e, pin OFF                             curv(m): outside  0.091  SEAM   0.094  inside  0.080   seam/√(out·in) =    1.10  [@@@@@@@@@@@@@@@@@@@@#*+=-:.                     ]
+
+
+THE DECOMPOSITION — one variable at a time, at the worst case (macro 80e / fine 150e):
+
+  A. TODAY (pin ON, stale coarse, prior octaves) curv(m): outside  0.100  SEAM   0.594  inside  0.105   seam/√(out·in) =    5.77  [@@@@@@@@@@@@@@@@@@@@@#*+@-                      ]
+  B. pin OFF (the coercion removed)            curv(m): outside  0.100  SEAM   0.194  inside  0.091   seam/√(out·in) =    2.03  [@@@@@@@@@@@@@@@@@@@@@@@@@*.                     ]
+  C. + UP-PROPAGATE (injection, not pinning)   curv(m): outside  0.100  SEAM   0.373  inside  0.091   seam/√(out·in) =    3.90  [@@@@@@@@@@@@@@@@@@@@@@@@@*.                     ]
+  D. + outside detail ≡ 0 (naive wavelet store) curv(m): outside  0.003  SEAM   0.351  inside  0.091   seam/√(out·in) =   21.99  [@@@@@@@@@@@@@@@@@@@@@@@@@*.                     ]
+  E. pin ON, outside detail ≡ 0                curv(m): outside  0.003  SEAM   0.574  inside  0.105   seam/√(out·in) =   33.39  [@@@@@@@@@@@@@@@@@@@@@#*+@-                      ]
+
+
+AND: does `pin_block_means` even do what its docstring says?
+
+  after pin_block_means, |block mean − coarse target|:  median 0.271 m   max 1.986 m
+  ⇒ mean-pin does NOT pin the mean. It computes a per-block delta and then BILINEARLY
+    UPSAMPLES it — and a bilinear upsample of a piecewise-constant field does not preserve
+    block means. So `R∘L = id on the mean` is FALSE IN THE CODE, not merely lossy.
+    (It is also comparing a fine BLOCK MEAN against a coarse POINT SAMPLE at the block
+    centre — the cell-average/point-sample fork, live, inside the conservation operator.)
+
+
+╔══════════════════════════════════════════════════════════════════════════════
+║ PROBE 7  —  THE REFLUXING INVARIANT — is flux-on-the-face the same design, and does it hold?
+╚══════════════════════════════════════════════════════════════════════════════
+A CLOSED BOX. Composite grid: coarse left half (L19), fine right half (L20), a real
+hanging-node interface between them. Exact spherical areas, exact geodesic edge lengths,
+exact great-circle centre distances. Conservative diffusion, no sources, NO OUTLETS.
+**Total mass MUST be conserved exactly by any correct scheme. Any drift is manufactured
+at the interface, and nowhere else.**
+
+  steps   TwoSided (each tile computes its own boundary flux — VIVARIUM TODAY)   SingleValued (flux ON the face)
+      1   rel mass drift    1.4074e-8                              rel mass drift   4.2068e-16
+     10   rel mass drift    1.4978e-7                              rel mass drift   5.6091e-16
+    100   rel mass drift    1.8840e-6                              rel mass drift   5.6091e-16
+   1000   rel mass drift    2.5781e-5                              rel mass drift   5.6091e-16
+
+  ⇒ TwoSided LEAKS, and the leak GROWS with time — it is a BIAS, not noise.
+    SingleValued is EXACT TO MACHINE PRECISION, at every step count, and it is exact
+    **without a flux-correction pass**. Refluxing did not get easier. IT CEASED TO EXIST.
+    And note WHY: not because the flux is accurate (it is the same flux!) but because it
+    is applied ONCE, to both its cells, with opposite signs. Conservation is a property of
+    the DATA STRUCTURE, not of the numerics.
+
+  Is the coarse face flux the LOW-PASS of the fine sub-face fluxes, and is the
+  DISAGREEMENT the detail coefficient? Six interface faces, real terrain, real geometry:
+
+     j    F_sub0      F_sub1     F_coarse (=Σ FᵢLᵢ / L_c)   detail t₀      detail t₁
+     0     4.7083   -21.3509             -8.3213        13.0296      -13.0296
+     5    51.1540    33.7834             42.4687         8.6853       -8.6853
+    11    -9.6802     6.2849             -1.6977        -7.9825        7.9825
+    17    31.1072    25.4132             28.2602         2.8470       -2.8470
+    23    19.3172    25.3700             22.3436        -3.0264        3.0264
+    29    21.5435    16.6705             19.1070         2.4365       -2.4365
+
+  ⇒ The DECISIONS entry is RIGHT, and it is the SAME construction as the cell store —
+    applied to a different geometric object. The cell MRA's low-pass is the AREA-weighted
+    mean over a cell's children (so ∫h dA telescopes). The face MRA's low-pass is the
+    LENGTH-weighted mean over a face's children (so ∫F dl telescopes). Cells are 2-chains,
+    faces are 1-chains, and **the divergence theorem is what relates them**:
+      d/dt ∫_cell h dA = Σ_faces ∫ F dl.
+    Restrict BOTH integral-preservingly and the interior sub-faces of a coarse cell cancel
+    in equal-and-opposite pairs, leaving exactly the coarse cell's own faces. That is
+      R_cell ∘ div = div ∘ R_face,
+    and THAT commutation IS "refluxing is an invariant." **They are one design.**
+
+
+  AND THE PRICE OF WHAT WE DO INSTEAD — is `pin_block_means` conservative?
+
+  fine  18e:  ∫h dA before pin 1.694688e9 m³ → after 1.694944e9 m³   Δ = +2.5545e5 m³  (+0.0151%)
+  fine  80e:  ∫h dA before pin 1.693677e9 m³ → after 1.694944e9 m³   Δ = +1.2663e6 m³  (+0.0748%)
+  fine 150e:  ∫h dA before pin 1.692641e9 m³ → after 1.694944e9 m³   Δ = +2.3022e6 m³  (+0.1360%)
+
+  ⇒ **`pin_block_means` IS A MASS SOURCE.** It reaches into the fine tier and RE-CREATES the
+    rock that erosion carved away, because the coarse tier it pins to has not eroded as much.
+    It is not a conservation operator that loses some accuracy. It is an operator that
+    MANUFACTURES MASS, in the name of conservation, and it is the single largest contributor
+    to the seam ridge it was written to prevent (PROBE 6: removing it takes 5.77 → 2.03).
+
+
+╔══════════════════════════════════════════════════════════════════════════════
+║ PROBE 8  —  THE INCIDENTAL CATCH — cell_size_m is a uniform area, and erosion eats it
+╚══════════════════════════════════════════════════════════════════════════════
+`sample::cell_size_m(level, R) = (π/2·R)/2^level` — ONE length per level, no position in it.
+`erosion.rs:371` squares it to get the cell AREA that drainage accumulates in, and
+`E = K·Aᵐ·Sⁿ` (m = 0.5) consumes that A. So: how wrong is it, and WHERE?
+
+  position on the face      true area / (cell_m)²    ⇒ A overstated by   ⇒ Aᵐ (m=0.5) biased by
+  face CENTRE                 1.0000                0.00%              0.00%
+  ¼ out toward an edge        0.9811                1.93%              0.96%
+  edge MIDPOINT (worst)       0.7082               41.20%             18.83%
+  face CORNER                 0.7698               29.90%             13.98%
+  our L19 tile's (u,v)        0.8855               12.93%              6.27%
+
+  BIAS-OR-NOISE, and does refinement fix it?  (area-weighted over a whole face)
+  level    mean signed error in A     |mean| / sd     converging?
+  L5        +17.810%                   1.70          
+  L7        +17.810%                   1.70          NO — it is FIXED (no N in it)
+  L9        +17.810%                   1.70          NO — it is FIXED (no N in it)
+  L11       +17.810%                   1.70          NO — it is FIXED (no N in it)
+  L13       +17.810%                   1.70          NO — it is FIXED (no N in it)
+
+  ⇒ IT IS A BIAS, IT IS A SMOOTH FIELD OVER THE FACE, AND IT DOES NOT CONVERGE AWAY.
+    It is EXACTLY ZERO at the face centre and rises monotonically outward to +41% at the
+    edge midpoints — **the same spatial signature as the MFD fan defect** (grid report §9a:
+    "exactly zero at a face CENTRE … rising monotonically outward"). That is not a
+    coincidence: both are the equiangular map's JACOBIAN showing through a kernel that
+    assumed a flat uniform grid. The fan is the Jacobian's SHEAR; this is its DETERMINANT.
+    ⇒ Erosion rate carries a ~0–19% smooth positional bias, zero at each face centre,
+      worst at each face edge. Six faces ⇒ a six-fold pattern locked to the cube. It is
+      a manufactured fake physical law, and no amount of refinement removes it.
+
+  ⇒ AND NOTE HOW IT WAS FOUND. Not by auditing erosion. By being FORCED TO NAME THE WEIGHT
+    in the wavelet store's update step. That is the strongest practical argument for the
+    design in this entire spike: **it makes the cell's measure a first-class, declared thing,
+    and an undeclared measure is where this bias was hiding.**
+
+
+(verdicts in the spike's FINDINGS.md — this binary prints only measurements)
+

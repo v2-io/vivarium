@@ -251,9 +251,20 @@ Take a field band-limited to $k_N$ and square it. The product has content up to 
 
 > ⚠ **CORRECTED 2026-07-13 — THIS WAS THE ANALOGY IN COSTUME, AND THE RED TEAM FOUND IT.** An earlier draft claimed *"**[≡]** Jensen's inequality and aliasing of nonlinear terms are one phenomenon, two vocabularies."* **They are NOT the same statement.** They share a **parent** — *nonlinearity does not commute with projection* — but they are **different consequences in different representations**: in the **cell-average** representation the residue is a **sign-definite BIAS IN THE MEAN** (Jensen); in the **point-sample** representation it is a **fold-back that redistributes energy among the resolved modes**, and it is **not sign-definite** (aliasing — which the 2/3 rule prevents, and which does *not* prevent a Jensen bias). **§3.1 above carefully separates cell-average from point-sample; this section then merged their error modes.** That is exactly the failure this document warns about, committed by its author, three sections after warning about it. **Demoted from [≡] to [me]: a shared parent, not an identity.**
 
-**Concretely for us:** stream power is $E = K A^m S^n$, **nonlinear in slope**. A coarse cell containing a cliff *and* a flat: carry only $\bar S$ and you compute $f(\bar S)$, but the physics does $\overline{f(S)}$. For $n>1$ you **systematically underestimate erosion — forever, never converging away, compounding down the catchment.**
+> ### ⚠⚠ CORRECTED 2026-07-13 — I NAMED THE WRONG VARIABLE, THE WRONG STATISTIC, AND THE WRONG SIGN.
+>
+> An earlier draft argued: *"stream power is $E = K A^m S^n$, **nonlinear in slope**… for $n>1$ you systematically **UNDER**-estimate erosion."* **Read the kernel. `incise()` runs $n = 1$** — the Braun–Willett implicit solve `h ← (h + f h_r)/(1+f)`, which is **exact *because* $n=1$**. ⇒ **At $n=1$ stream power is LINEAR IN SLOPE, and the Jensen gap in $S$ is EXACTLY ZERO.** The Prime Question, turned on the author: *I argued about the algorithm I imagined instead of the one in the file.*
+>
+> **[D] The two gaps that ARE there — and both push the SAME way:**
+>
+> 1. **Jensen on $A^{0.5}$.** $m=0.5<1$, so $A^m$ is **concave**: $\overline{A^{1/2}} \le \bar A^{1/2}$. Using the mean $A$ **OVER-estimates.**
+> 2. **Negative covariance $\mathrm{Cov}(A^m, S) < 0$.** Channels are **high-$A$/low-$S$**; hillslopes are **low-$A$/high-$S$** — strongly anti-correlated in any real landscape. So $\overline{A^m S} < \overline{A^m}\,\bar S$. **OVER-estimates** again.
+>
+> ⇒ **For the kernel we actually run, coarse-graining OVER-estimates incision — and the sufficient statistic required is the JOINT sub-grid distribution of $(A, S)$, at minimum their COVARIANCE. Not the marginal variance of $S$.**
+>
+> **And the payoff is bigger than the correction: $A$ is exactly what the ROUTER computes.** The routing bias and the coarse-graining bias **enter through the same variable.** A biased fan mis-concentrates $A$; a coarse cell then evaluates $A^{0.5}$ on the mis-concentrated mean. ⇒ **The routing fix is the PRECONDITION for the sufficient-statistic contract being well-posed at all** — you cannot carry an honest sub-grid distribution of a quantity your router is systematically mis-routing.
 
-> **Coarse-graining a nonlinear law does not lose precision. IT LIES.** And the sufficient statistic a column must carry is precisely **the spectral energy above the Nyquist cutoff.** Carrying only the mean asserts that energy is *zero*. It is not.
+> **Coarse-graining a nonlinear law does not lose precision. IT LIES.** The conclusion stands; only the variable, the statistic and the sign were wrong. Carrying only the mean asserts the sub-grid structure is *absent*. It is not. *(And per the LEM survey: **nobody in the field carries a sub-grid distribution through the erosion law.** Their two answers are "re-tune $K$ per resolution" — which they themselves call a fudge — or "fix the routing so the dependence goes away.")*
 
 ### 3.4 ⚠ [thm] Fated jitter is not a hack — it is a THEOREM
 

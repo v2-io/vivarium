@@ -1,0 +1,121 @@
+    Finished `release` profile [optimized] target(s) in 0.14s
+     Running `target/release/examples/redteam_probe`
+=== RED-TEAM PROBE — discretisation-and-information.md ===
+
+── A. Does mean-pin preserve the block mean? ────────────────────
+  interior blocks: 484  (b = 4, nb = 24)
+  MEASURED |block mean − target|:  mean 0.4301 m   MAX 2.9668 m  (block 12,22)
+  MY PREDICTION  (1,6,1)/8 ⊗ (1,6,1)/8 applied to the delta field:
+     max |measured − predicted| = 1.116e-4 m
+  ⇒ CONFIRMED. mean-pin does NOT preserve the block mean. The residual
+     IS (Δ_b²/8)·∇²(delta) — the doc's own §4.2 curvature term, live in
+     the dynamics path. R∘L = id ON THE MEAN IS FALSE AS IMPLEMENTED.
+
+  CLAIM 3 (artifact correlates with the landforms erosion produces):
+     corr(pin residual, ∇² of the eroded coarse surface) = -0.419
+
+── A2. Would the in-tree guard survive full sampling? ────────────
+  epochs = 6 (the guard's value), tolerance = 2.0 m
+    worst error over the blocks the guard ACTUALLY CHECKS  0.658 m
+    worst error over ALL 576 blocks .......................  0.986 m
+  ⇒ the guard would still pass under full sampling.
+
+── B. Haar needs equal weights. How unequal are ours, LOCALLY? ──
+  tile-wide cell-area max/min ...................... 1.000153×
+  WORST within a single 4×4 parent block ......... 1.00000807×
+  worst |unweighted mean − area-weighted mean| ..... 8.508e-6 m
+  (terrain relief across the tile is ~143 m)
+
+  Σ A·h before pin ... 3.772021e-4
+  Σ A·h after  pin ... 3.773426e-4
+  relative change .... 3.724e-4
+
+── C. §2.4's centroid identity: parametric centre ≠ area centroid ──
+  L9  (~78 km): |area centroid − parametric centre| = 7.3808e-7 cell widths
+        ⇒ a slope-0.1 surface mis-states the cell's mean height by
+          7.381e-8 × cell_width  (at L19, cell ≈ 19 m ⇒ 1.40e-6 m)
+  L19 (~19 m): |area centroid − parametric centre| = 7.2693e-8 cell widths
+        ⇒ a slope-0.1 surface mis-states the cell's mean height by
+          7.269e-9 × cell_width  (at L19, cell ≈ 19 m ⇒ 1.38e-7 m)
+
+── D. water.rs's θ sweep vs de Almeida et al. 2012's θ scheme ────
+  ONE pass, θ = 0.8, sharp-front flux field:
+    ‖GS(+x) − Jacobi(paper)‖₂ ......... 1.3289e-3
+    ‖GS(+x) − GS(−x)‖₂  (mirror test) . 1.8790e-3   ← a SYMMETRIC operator gives 0
+    mean flux: q0 0.199504  jacobi 0.199506  gs 0.199505
+    variance:  q0 0.171700  jacobi 0.169116  gs 0.169015
+    ⇒ GS removes 1.6% of the flux variance per pass; Jacobi removes 1.5%
+
+  200 passes (a real run):
+    variance left — GS 1.296e-1   Jacobi 1.311e-1   (start 1.717e-1)
+    ‖GS − Jacobi‖₂ .................... 4.4776e-3
+  ⇒ Jensen: sediment capacity ∝ |v| and incision ∝ v^n are SUPERLINEAR,
+     so destroying flux variance while preserving the flux MEAN is a
+     systematic UNDER-transport bias — measurable, and nothing to do
+     with a missing fluctuation partner.
+
+── E. Is water.rs actually BLIND to the checkerboard? ────────────
+  checkerboard amplitude in the water surface, per step:
+    step  0 ... 1.000037e-1
+    step  1 ... 9.903980e-2
+    step  2 ... 9.731852e-2
+    step  3 ... 9.496915e-2
+    step  4 ... 9.215159e-2
+    step  8 ... 7.811645e-2
+
+  A NULL MODE would be INVARIANT (the operator returns exactly zero on it)
+  or GROW without resistance. Ours decayed to 78.12% of its initial amplitude
+  in 8 steps — WITHOUT any θ term being needed to see it.
+  Reason: water.rs's head operator is (η_i − η_j) across the FACE — a
+  COMPACT 2-point difference, spacing Δ, not the collocated 2Δ central
+  difference. Its symbol is 2·sin(kΔ/2)/Δ, which at k=π/Δ is 2/Δ ≠ 0.
+  ⇒ water.rs is ALREADY STAGGERED. It HAS NO NYQUIST NULL MODE.
+     There is no rank deficiency for a Rhie–Chow term to cure.
+
+── F. Does the pin residual GROW with the age gap? ───────────────
+   epochs   mean |resid|   max |resid|
+        6       0.1982 m      0.9861 m
+       18       0.2991 m      1.7845 m
+       30       0.4301 m      2.9668 m
+       60       0.8480 m      5.0838 m
+      150       1.9303 m      7.9645 m
+  ⇒ if this grows with epochs, it is a SECOND mechanism for the seam
+     ridge, co-located with it and with the same age signature.
+
+── G. Where does the equal-weight assumption actually bite? ──────
+   level   cells/face   area ratio WITHIN one 2×2 parent block (worst)
+       1            4   1.00000000×     (whole-face centre/corner: 1.0000×)
+       2           16   1.19935143×     (whole-face centre/corner: 1.1994×)
+       3           64   1.07828266×     (whole-face centre/corner: 1.2720×)
+       4          256   1.02258300×     (whole-face centre/corner: 1.2921×)
+       5         1024   1.00602368×     (whole-face centre/corner: 1.2973×)
+       6         4096   1.00155509×     (whole-face centre/corner: 1.2986×)
+       7        16384   1.00039511×     (whole-face centre/corner: 1.2989×)
+       8        65536   1.00009958×     (whole-face centre/corner: 1.2990×)
+      12     16777216   1.00000039×     (whole-face centre/corner: 1.2990×)
+      16            0   1.00000003×     (whole-face centre/corner: 1.2990×)
+      20            0   1.00001940×     (whole-face centre/corner: 1.2990×)
+  ⇒ the 1.4× is a WHOLE-FACE figure. Within a PARENT BLOCK the spread
+     collapses as 1 + O(Δ). Equal-weight (Haar) coarsening is wrong at
+     COARSE levels and asymptotically harmless at fine ones.
+
+── H. What Froude regime does water.rs actually run in? ──────────
+   seeded 9216/9216 cells with 2 m of water on 60-epoch eroded land
+   step    max Fr    % of wet cells supercritical (Fr > 1.5)
+     50       2.00      2.64%
+    100       2.00      4.55%
+    150       2.00      4.98%
+    200       2.00      5.23%
+    250       2.00      5.47%
+    300       2.00      5.64%
+    350       2.00      5.66%
+    400       2.00      5.68%
+
+  de Almeida & Bates 2013's envelope:  Fr < 0.5 good · → 1.0 degrading
+                                       Fr > 1.0 CANNOT be expressed
+  ours: max Fr 2.0, 5.7% of wet cells above Fr 1.5.
+  ⇒ The honest audit finding is NOT 'θ lacks a fluctuation partner'.
+     It is: WE ARE OUTSIDE THE PUBLISHED VALIDITY ENVELOPE of the
+     momentum equation we chose, and the three stabilisers (θ, Jarrett
+     roughness, the Fr=2 breaking cap) are what keep it from detonating.
+

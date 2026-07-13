@@ -1,0 +1,21 @@
+# Spike: the multiresolution (wavelet) store.
+#
+# Standalone — its own `[workspace]` table keeps it OUT of the parent workspace,
+# so it cannot perturb the main build for the agents sharing this tree. It
+# path-depends on `vivarium-world` so every probe runs against the REAL kernels
+# (erosion, gen, sphere), never a toy re-implementation.
+#
+# Run:  cargo run --release --manifest-path msc/spike-wavelet-store/Cargo.toml
+[package]
+name = "spike-wavelet-store"
+version = "0.0.0"
+edition = "2021"
+license = "MIT"
+
+[workspace]
+
+[dependencies]
+vivarium-world = { path = "../../crates/vivarium-world" }
+
+[profile.release]
+opt-level = 3

@@ -1,0 +1,404 @@
+    Finished `release` profile [optimized] target(s) in 0.04s
+     Running `target/release/examples/null_space`
+╔══════════════════════════════════════════════════════════════════════════╗
+║  NULL-SPACE PROBE — what our field kernels CANNOT SEE                     ║
+║  Cardiff §3.5.3 / Fig. 17: periodic patch → eigenvalues → count the zeros ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+──────────────────────────────────────────────────────────────────────────────
+§0  THE INSTRUMENT AND ITS CONTROLS
+──────────────────────────────────────────────────────────────────────────────
+   Standing guard: *a probe that cannot fail is not a probe.* Before any kernel
+   is measured, the instrument must separate an operator that PROVABLY has a null
+   mode from one that PROVABLY has not — on the same patch, same solver, same
+   threshold. If it cannot, nothing below means anything.
+
+   staggered(div∘grad_face) − compact 5-point Laplacian :  max|Δ| = 0.000e0
+   ⇒ they are the SAME OPERATOR. Staggering does not tame the null mode; it
+     never creates one. (This is fig/staggering.svg, measured.)
+
+   CTRL-CLEAN  compact 5-point Laplacian (faces, Δ apart)
+      zero eigenvalues: 1   (legitimate: 1 = the constant)   spurious: 0
+      spectral gap at the cut: 6.38e15      |λ| range: 5.858e-1 … 8.000e0
+      λ(checkerboard) = -8.0000  ← the MOST damped mode, not the least
+   CTRL-BLIND  collocated central differences (2Δ apart)
+      zero eigenvalues: 4   (legitimate: 1)   SPURIOUS: 3
+      spectral gap at the cut: 8.00e15
+      λ(checkerboard) = 0.0000e0  ← INVISIBLE
+
+   ✓ INSTRUMENT LIVE — it separates 1 from 4 with a 6e15 spectral gap.
+     The 3 spurious modes of CTRL-BLIND are (−1)^i, (−1)^j and (−1)^(i+j).
+     The last is the CHECKERBOARD. Drawn in fig/ctrl-blind-modes.svg.
+
+──────────────────────────────────────────────────────────────────────────────
+§1  erosion.rs — the creep / hillslope-diffusion term (THE REAL KERNEL)
+──────────────────────────────────────────────────────────────────────────────
+   `erosion::diffuse_step` and `Fluvial::creep` are the same stencil:
+       lap = h[i−1] + h[i+1] + h[i−nx] + h[i+nx] − 4·h[i]
+   Called here for real, on a Patch whose HALO we filled with wrapped values —
+   so the shipped code runs on Cardiff's periodic patch, untouched.
+
+   asymmetry ‖A−Aᵀ‖/‖A‖ = 0.00e0   (symmetric ⇒ eigenvalues are the honest form)
+   λ smallest = 1.863e-6   λ next = -5.858e-1   λ largest = 8.000e0
+   (f32 kernel ⇒ an exact zero returns as ~1e-7·λmax; cut at 1e-5·λmax = 8.00e-5)
+   zero eigenvalues: 1    legitimate: 1 (the constant)    spurious: 0
+   spectral gap at the cut: 3.14e5   ← the cut is unambiguous
+   λ(checkerboard) = -8.0000   ← seen, and damped HARDEST of all
+
+   CLEAN. The 5-point Laplacian's every difference crosses a FACE (Δ, not 2Δ).
+   It is the compact operator, not the collocated one. It has no checkerboard
+   null mode and never did. The blindness hypothesis is REFUTED for this kernel.
+   But hold the finding — §3 shows what this term is actually FOR.
+
+──────────────────────────────────────────────────────────────────────────────
+§2  erosion.rs — the MFD routing operator
+──────────────────────────────────────────────────────────────────────────────
+   Drainage solves  (I − Wᵀ)·A = q.  A zero eigenvalue of (I − Wᵀ) is an
+   eigenvalue 1 of Wᵀ: a CLOSED CIRCULATION — cells handing flow round a loop,
+   leaking none, so a nonzero drainage field exists with NO SOURCE. Water running
+   in a circle on a hillside, forever. That is the router's rank deficiency, and
+   it is the discrete ∇×∇φ ≠ 0 pathology.
+
+   PIN — our W vs the kernel's own `drainage` field:
+      Priority-Flood raised pits by up to 0.542 m (its ε-gradient; expected)
+      max |ours − kernel| / max(drainage) = 4.716e-8
+      ✓ pinned — W is the kernel's routing operator, to f32 precision.
+
+   (I − Wᵀ) on a 24×24 real land patch, 576 cells:
+      σ_min = 2.5489e-2   σ_max = 2.1974e0   cond = 8.62e1
+      zero singular values (tol = 1e-8·σ_max): 0    spectral gap: inf
+
+   CLEAN. (I − Wᵀ) is nonsingular. There is NO closed circulation: MFD's
+   flow graph is a strict DAG (weights only ever go to cells that are LOWER, so
+   a cycle would need a cell below itself). MFD cannot make water run in a circle.
+   Its sin is a BIAS in DIRECTION (grid_lab §9a, measured), not a null space.
+      asymmetry ‖A−Aᵀ‖/‖A‖ = 0.734 (advective, as expected — singular values are the honest form)
+
+──────────────────────────────────────────────────────────────────────────────
+§3  erosion.rs — the FULL epoch (Priority-Flood → MFD → stream-power → Davy-Lague → talus → creep)
+──────────────────────────────────────────────────────────────────────────────
+   Real footprint (the verified-LAND one, erosion.rs `fn small()`): relief 5181–5214 m
+   Free DOF (interior AND above sea level): 196 of 256   — the rest are base level,
+   i.e. CONSTRAINED DOF in Cardiff's sense, and are excluded from the operator.
+
+   ⚠ The kernel is NOT DIFFERENTIABLE: D8 receiver choice is an argmax, MFD weights
+   switch at drop > 0, Priority-Flood is a heap-ordered flood-fill. A finite-difference
+   Jacobian is therefore a SECANT across those kinks. The ε-sweep is the control that
+   says whether it means anything: if the spectrum moves with ε, it does not.
+
+         ε (m)          σ_min         σ_max   zeros(1e-6)     gap
+          0.25      9.2707e-5     4.3874e-1             0     inf
+          0.50      1.5507e-5     3.6276e-1             0     inf
+          1.00      2.5938e-4     4.3423e-1             0     inf
+          2.00      3.1876e-5     4.6720e-1             0     inf
+          4.00      1.4764e-2     4.9057e-1             0     inf
+
+   At ε = 1 m:  σ_min/σ_max = 5.973e-4
+   ⚠ σ_min itself is NOT stable across ε (it moves ~3 orders). That end of the
+   spectrum is noise-dominated (f32 kernel, a 5000 m datum, ULP ≈ 0.5 mm) and we
+   read NOTHING into it. What IS stable across every ε is the zero-count (0) and
+   σ_max — and those are the two numbers the conclusion rests on.
+
+   The real question for a time-stepper: does the epoch AMPLIFY anything?
+   The epoch map is (I + A). |λ| > 1 = a terrain shape erosion makes MORE of.
+   And `FluvialParams::diffusivity_m2` (κ, the creep term) has a docstring that
+   already tells us what to look for:
+
+      "detachment-limited incision leaves un-drained single-cell peaks standing
+       while cutting everything around them — without diffusion, minimum valley
+       spacing collapses to the grid wavelength"
+
+   That is a description of a GRID-SCALE INSTABILITY, written in the code, years
+   before anyone said the word. So: run the epoch with κ ON and κ OFF.
+
+      κ (creep)                 ρ(I+A)      |λ|>1 fastest-growing mode (k/π)
+      ────────────────────────────────────────────────────────────────────────
+      κ = 0   (creep OFF)      1.04820         37   (0.38,0.25)  7% of energy
+      κ = 2   (SHIPPED)        1.03871         18   (0.25,0.25)  7% of energy
+
+      κ (creep)                   ‖A·checker‖    ‖A·long-wave‖     ratio
+      ────────────────────────────────────────────────────────────────────
+      κ = 0   (creep OFF)              0.1145           0.0574      1.99×
+      κ = 2   (SHIPPED)                0.1389           0.0570      2.44×
+
+   (k/π = (1.00, 1.00) is the CHECKERBOARD. (0.x, 0.x) is a long wave.)
+
+   Both GROW — and the fastest mode is a LONG WAVE, not the grid scale. ρ > 1 here is
+   not (necessarily) a disease: stream-power incision on a landscape IS a positive
+   feedback (deeper channel → more drainage → deeper still). That is how valleys
+   form. It is the physics the kernel exists to produce. Creep DAMPS it (ρ 1.048 →
+   1.039, growing modes 37 → 18) but does not remove it, and should not.
+
+   ⚠ But the docstring's claim is about the FINE tiers. κ/cell² is 0.006 at L19 and
+   0.09–0.24 at L21/L24 — and the sawtooth was SEEN at L21. An L19 answer cannot
+   settle it. So: sweep the level, and ask where the FASTEST-GROWING mode sits.
+
+   The number that actually answers the docstring is not "which mode is fastest"
+   (a channelised mode is spatially LOCALISED, so its Fourier energy is smeared) —
+   it is: does ONE EPOCH AMPLIFY A CHECKERBOARD?  gain = 1 + χᵀAχ/‖χ‖².
+   gain > 1 ⇒ grid-scale sawteeth GROW. gain < 1 ⇒ they decay.
+
+       level  cell (m)   κ/cell²       ρ κ=0       ρ κ=2    χ-gain κ=0    χ-gain κ=2
+      ────────────────────────────────────────────────────────────────────────────────
+          19     19.09     0.005     1.01686     1.00754        0.8914        0.8536
+          21      4.77     0.088     1.01824     0.98929        0.8419        0.2761
+          24      0.60     0.240     1.08905     0.99336        0.9534       -0.8018
+
+   κ/cell² is the grid coefficient the Laplacian actually applies (clamped at 0.24).
+   Base state = the terrain AFTER a default erosion run (80 epochs), not the raw
+   fBm prior — see the note in the source. ρ > 1 on a raw prior is the kernel
+   WORKING (it is supposed to cut channels into an fBm surface); only at a relaxed
+   state does ρ > 1 mean the scheme is running away.
+
+   TWO THINGS, AND THEY DO NOT SAY THE SAME THING. Read them separately.
+
+   (i) κ IS LOAD-BEARING FOR STABILITY. With creep OFF the relaxed epoch still has
+       growing modes at every tier. With creep ON it is stable at L21/L24. The
+       `.min(0.24)` in the source is the explicit-Laplacian stability bound, in the
+       code, right there — this term is holding the scheme up, not only modelling
+       soil. That is a stabilisation role ASSUMPTIONS.md does not record.
+
+   (ii) BUT IT IS NOT A CHECKERBOARD / NULL-SPACE DISEASE. The χ-gain columns are
+        BELOW 1 EVEN WITH CREEP OFF — the epoch DAMPS a checkerboard by ~5% per
+        epoch with no creep at all (talus and the upwind incision see it). So the
+        mode κ is holding down is NOT an invisible mode, and κ is NOT Rhie–Chow.
+        It is honest dissipation acting on a resolved, long-wave, channelising
+        instability. I expected the opposite and the measurement said no.
+
+──────────────────────────────────────────────────────────────────────────────
+§4  water.rs — the virtual-pipes shallow-water operator  ⚠ THE ONE UNDER SUSPICION
+──────────────────────────────────────────────────────────────────────────────
+   The hypothesis under test (Joseph, from doc/theory §2.5):
+     "the solitons WERE the invisible mode, and the θ-smoothing is Rhie–Chow-class
+      stabilisation … its physical claim is NONE."
+
+   PIN — real `WaterSim::step` vs our transcription, 400 steps, 14×14, sloping bed,
+   every non-hydrodynamic stage OFF (sed/infil/evap/precip/ocean = 0, sea below bed):
+      max |Δdepth| = 2.895e-6 m   (mean depth 0.507 m)   ⇒ relative 5.71e-6
+      ✓ pinned (f64 transcription vs f32 kernel — the residual IS the f32).
+
+   (A) base state: a still lake — flat bed, uniform depth 1 m, zero flux
+      asymmetry = 0.00e0   zero eigenvalues: 1   legitimate: 1 (total mass)   spurious: 0
+      spectral gap: 2.36e7
+      λ(checkerboard)/λ_max = 1.0000
+      ⇒ the virtual-pipes DEPTH operator is the COMPACT Laplacian: the head
+        difference (η_i − η_j) is taken across the FACE, and the flux lives ON
+        the face. water.rs is ALREADY A STAGGERED SCHEME. It is not blind to the
+        checkerboard in depth — the checkerboard is its most-damped mode.
+
+   (B) base state: steady uniform flow down a STEEP channel — the regime the
+       solitons appeared in. Full 5-DOF state (d, fl, fr, ft, fb) per cell.
+
+      Historically the scheme ran with n = 0.04 everywhere ('torrents at 16 m/s'),
+      no breaking cap and no θ. Three terms were then added. We take them apart.
+
+      slope 10%, cell 4.8 m, depth 1 m, dt 0.2 s
+      configuration                          Fr      ρ(J)    |λ|>1     fastest mode (k/π)
+      ────────────────────────────────────────────────────────────────────────────────────
+      θ=1  n=0.04  no-cap  (ORIGINAL)      2.49   1.04011       48   (0.33,0.00)  36% of E
+                                           guards at base state: ON-KINK 288 / breaking-cap 0 / clamp 0  (of 576 pipes)
+      θ=0.8 n=0.04 no-cap  (θ ALONE)       2.49   1.02655       10   (0.17,0.00)  50% of E
+                                           guards at base state: ON-KINK 288 / breaking-cap 0 / clamp 0  (of 576 pipes)
+      θ=0.5 n=0.04 no-cap  (θ HARDER)      2.49   1.00775        6   (0.17,0.00)  50% of E
+                                           guards at base state: ON-KINK 288 / breaking-cap 0 / clamp 0  (of 576 pipes)
+      θ=1  Jarrett no-cap  (n ALONE)       0.75   1.00000        0   (0.00,0.00) 100% of E
+                                           guards at base state: ON-KINK 288 / breaking-cap 0 / clamp 0  (of 576 pipes)
+      θ=1  n=0.04  cap     (cap ALONE)     2.00   1.00000        0   (0.00,0.00) 100% of E
+                                           guards at base state: ON-KINK 288 / breaking-cap 144 / clamp 0  (of 576 pipes)
+      θ=0.8 Jarrett cap    (SHIPPED)       0.75   1.00000        0   (0.00,0.00) 100% of E
+                                           guards at base state: ON-KINK 288 / breaking-cap 0 / clamp 0  (of 576 pipes)
+
+      Fr  = Froude number of the base flow.   ρ(J) = spectral radius of one step.
+      ρ>1 ⇒ a mode that GROWS unforced.  ρ=1 ⇒ a mode that meets NO RESISTANCE —
+      Cardiff's zero eigenvalue, in step-operator coordinates.
+      k/π = (1.00,1.00) is the CHECKERBOARD. (0.3,0.0) is a 6-cell wave along the flow.
+      NOTE: λ = 1 EXACTLY is LEGITIMATE here — it is the uniform-depth mode, and it
+      is λ=1 because the scheme CONSERVES MASS. The |λ|>1 column is cut at 1+1e-5 so
+      that rigid mode is not miscounted as a pathology.
+
+   CONTROLS — is this linearisation admissible?
+      (1) THE RECTIFIER KINK. On a pure +x tilt the transverse pipes sit at exactly
+          zero head — the `.max(0.0)` kink — so a ±ε difference straddles it.
+          Re-run with a 5% oblique tilt, which moves every pipe strictly off the kink:
+            pure +x  : Fr 2.49  ρ(J) = 1.04011   pipes on the kink: 288
+            oblique  : Fr 2.49  ρ(J) = 1.04011   pipes on the kink: 0
+            |Δρ| = 0.00000  ⇒ the kink does not carry the result
+      (2) THE IN-PLACE SWEEP. The kernel smooths θ in place (Gauss–Seidel), which
+          is not the symmetric filter de Almeida writes down. Out-of-place (Jacobi):
+            Gauss–Seidel (kernel) : ρ(J) = 1.04011
+            Jacobi (symmetric)    : ρ(J) = 1.04011
+          ⇒ the sweep order is not carrying the result either; the Jacobi form is
+            exactly translation-invariant, so we may diagonalise it BY WAVENUMBER.
+
+   THE DECISIVE PICTURE — growth rate as a function of WAVENUMBER
+      peak growth |λ| = 1.04011 at k/π = (0.33, 0.00)   — wavelength 6.0 cells
+      growth AT THE CHECKERBOARD, k/π = (1.00, 1.00):  |λ| = 0.91922
+      growth at k = 0 (uniform):                        |λ| = 1.00000
+
+      ⇒ THE UNSTABLE MODE IS A LONG WAVE, NOT THE CHECKERBOARD.
+        The Nyquist corner is STABLE. The growth is at ~6-cell wavelength,
+        travelling ALONG the flow (ky = 0.00). That is not a null mode.
+        That is a ROLL WAVE — and roll waves are REAL PHYSICS above Fr ≈ 1.5.
+
+   SLOPE SWEEP — where does the SHIPPED kernel go unstable again?
+         slope      Fr       ρ(J)    |λ|>1   fastest mode (k/π)
+      ────────────────────────────────────────────────────────────
+            2%    0.62    1.00293        2  (0.00,0.00)
+            5%    0.58    1.01244       16  (0.17,0.00)
+           10%    0.75    1.00000        0  (0.00,0.00)
+           20%    1.04    1.00000        0  (0.00,0.00)
+           40%    1.43    1.00806        6  (0.17,0.00)
+           70%    1.85    1.01618        6  (0.17,0.00)
+          100%    2.00    1.00000        0  (0.00,0.00)
+      (Vedernikov: uniform flow with Manning friction is roll-wave unstable above
+       Fr ≈ 1.5. Compare the Fr column against that line, not against the ρ column.)
+      ⚠ The sweep is NOT MONOTONE, and Fr does not explain it: 2% and 5% GROW at
+      Fr < 0.65, which no roll-wave criterion permits. There is a SECOND mechanism.
+
+   THE SECOND MECHANISM — the Jarrett slope-roughness term is a POSITIVE FEEDBACK
+      water.rs computes roughness from the LOCAL WATER-SURFACE SLOPE, per pipe:
+          n = min(n_base + 1.6·(head/l), 0.13)          [Jarrett 1984, linearised]
+      and friction divides the flux by (1 + dt·g·n²·v / h^4ᐟ³). So:
+
+        a cell that gains water  →  its surface steepens  →  n RISES  →  its outflow
+        FALLS  →  it gains more water.  That loop closes with the wrong sign.
+
+      It should switch off once n saturates at the 0.13 cap (dn/dhead = 0 there).
+      Prediction: unstable on GENTLE slopes (n uncapped), quiet in the middle band
+      (n capped, Fr still < 1.5), unstable again when Fr passes ~1.5. Test it:
+
+        slope      Fr  n(base)    ρ Jarrett     ρ n=0.04    capped?
+      ──────────────────────────────────────────────────────────────
+           2%    0.62    0.072      1.00293      1.00000         no
+           5%    0.58    0.120      1.01244      1.00000         no
+           8%    0.67    0.130      1.00000      1.00000        YES
+          10%    0.75    0.130      1.00000      1.00000        YES
+          20%    1.04    0.130      1.00000      1.00000        YES
+          40%    1.43    0.130      1.00806      1.00806        YES
+          70%    1.85    0.130      1.01618      1.01618        YES
+
+      Column 4 is the SHIPPED kernel. Column 5 is the same friction magnitude held
+      CONSTANT (so the roughness cannot respond to the surface slope) — the feedback
+      loop cut, everything else identical.
+
+   NONLINEAR CONFIRMATION — a linear growth rate is a prediction. Test it.
+      Perturb the steady state by 1e-6 m of fated noise and run the FULL nonlinear
+      step (no pinning). If ρ(J) is real, ‖δd‖ grows at exactly that rate.
+
+      configuration                     ρ(J) pred     ρ measured      match
+      ──────────────────────────────────────────────────────────────────────
+      θ=1  n=0.04  no-cap (ORIGINAL)      1.04011        1.03850 ✓   ‖δd‖ end = 3.3e-5 m
+      θ=0.8 n=0.04 no-cap (θ ALONE)       1.02655        1.02462 ✓   ‖δd‖ end = 6.0e-7 m
+      θ=0.8 Jarrett cap   (SHIPPED)       1.00000        0.99999 ✓   ‖δd‖ end = 5.9e-9 m
+
+      (Measured = the actual per-step growth of ‖δd‖ in the running nonlinear kernel.
+       ‖δd‖ stays ≪ the 1 m base depth throughout, so this is the LINEAR rate — the
+       eigenvalue is not an artefact of the linearisation. The scheme really does
+       amplify that mode, at that rate.)
+
+   ╭──────────────────────────────────────────────────────────────────────────╮
+   │  §4 VERDICT — the hypothesis is REFUTED, and the truth is more useful    │
+   ╰──────────────────────────────────────────────────────────────────────────╯
+   Hypothesis: "the solitons WERE the invisible mode; θ is Rhie–Chow-class
+   stabilisation; its physical claim is NONE."
+
+   No. Every part of that is contradicted by a measurement with a control:
+
+   1. there is no invisible mode to be. water.rs is ALREADY STAGGERED — the head
+      difference is taken across the face and the flux lives on the face. Its depth
+      operator is the compact Laplacian; the checkerboard is its MOST-damped mode
+      (§4A: 1 null mode, the constant; 0 spurious; ρ at Nyquist = 0.919 < 1).
+      The Cardiff disease is the one disease this kernel does not have.
+
+   2. the solitons were a LONG WAVE, not a grid-scale mode. The unstable mode of
+      the pre-fix scheme sits at k/π = (0.33, 0.00) — a ~6-cell wave running ALONG
+      the flow — while the Nyquist corner is quiet. That is the signature of a
+      ROLL WAVE, and roll waves are REAL PHYSICS above Fr ≈ 1.5 (Vedernikov).
+      The base flow was at Fr 2.49. The scheme was RESOLVING an instability, not
+      hallucinating one. (What it got wrong is the SATURATION — a local-inertial
+      scheme drops the advective term, so nothing bounds the wave.)
+
+   3. θ DOES NOT REMOVE THE MODE. It damps it, and it MOVES it.
+        θ = 1.0 → ρ = 1.04011   (48 growing modes, peak at k/π = 0.33)
+        θ = 0.8 → ρ = 1.02655   (10 growing modes, peak at k/π = 0.17)  ← SHIPPED gain
+        θ = 0.5 → ρ = 1.00775   ( 6 growing modes, peak at k/π = 0.17)
+      Still unstable at HALF the shipped θ. And note where the peak goes: a low-pass
+      filter cannot kill a long wave, so the instability simply relocates to the
+      wavelengths the filter has no grip on. θ buys time, not stability.
+
+   4. what actually stabilises the SHIPPED kernel is the JARRETT ROUGHNESS — by
+      dropping the flow from Fr 2.49 to Fr 0.75, i.e. out of the roll-wave regime
+      entirely. Not θ. The credit was on the wrong term.
+
+   5. AND THE JARRETT TERM HAS ITS OWN, PREVIOUSLY UNKNOWN INSTABILITY. Because n
+      rises with the local surface slope, a cell that gains water throttles its own
+      outflow. On GENTLE slopes (where n has not yet saturated at the 0.13 cap) that
+      loop is unstable at Fr ≈ 0.6 — nowhere near any roll-wave threshold. Hold n
+      constant at the same magnitude and it vanishes (ρ 1.012 → 1.000). This one IS
+      a numerical artefact with no physical claim, and it is in the shipped kernel
+      at exactly the slopes most of a landscape has.
+
+   Net for ASSUMPTIONS.md — the opposite of the proposed correction: θ's physical
+   claim is not NONE; it is damping a mode that is (partly) real, which means it may
+   be suppressing PHYSICS. The term that deserves the hard look is the Jarrett
+   proxy, which MANUFACTURES an instability the physics does not have.
+
+──────────────────────────────────────────────────────────────────────────────
+§5  THE PAYOFF — staggered vs collocated shallow water, same points, same grid
+──────────────────────────────────────────────────────────────────────────────
+   The claim in doc/theory/fig/staggering.svg: a collocated scheme must reach TWO
+   cells to get a flux across a face, so it computes (h_{i+1} − h_{i−1})/2Δ, which on
+   the checkerboard is EXACTLY ZERO. A staggered scheme keeps the flux on the face
+   it actually crosses and reaches only Δ. Same points. Same grid. Same cost.
+
+   Tested on IDENTICAL linear shallow water (no friction — friction would hide the
+   answer by damping everything): ∂f/∂t = −g·h̄·∇η ,  ∂d/∂t = −∇·f.
+
+   Whole-operator null space (A = (J−I)/Δt):
+   scheme                         zero σ   spectral gap
+   ──────────────────────────────────────────────────────
+   STAGGERED (flux on face)          146        1.1e299
+   COLLOCATED (2Δ central)           152        1.0e299
+
+   BOTH numbers are large, and BOTH are mostly legitimate — so the raw count is
+   not the finding. A wave system's null space contains every DIVERGENCE-FREE flux
+   field (steady rotational flow: real, physical, and it should exert no force).
+   The honest question is narrower and it is the one Cardiff is actually asking:
+
+      Is there a DEPTH field that exerts NO FORCE on the momentum equation?
+
+   That is the null space of the pressure-gradient block G = ∂(flux rate)/∂(depth),
+   and a nonzero one is EXACTLY the checkerboard disease: a pressure/height pattern
+   the scheme cannot feel, so nothing pushes back, so it grows without bound.
+
+   scheme                      depth fields with     spurious   spectral gap
+                                      ZERO force                            
+   ──────────────────────────────────────────────────────────────────────────
+   STAGGERED (flux on face)                    1            0        1.1e300
+   COLLOCATED (2Δ central)                     4            3        1.0e300
+
+   legitimate: 1 — the CONSTANT depth field (a uniform lift exerts no force; that
+   is a rigid mode, exactly as Cardiff says it should be).
+
+   ρ(J) staggered  = 1.000000   (a wave operator: |λ| = 1 for the WAVES — correct)
+   ρ(J) collocated = 1.000000
+
+   The restoring force on a CHECKERBOARD depth field:
+      staggered  : ‖A·χ‖/‖χ‖ = 5.7772   ← the mode is SEEN, and strongly
+      collocated : ‖A·χ‖/‖χ‖ = 8.433e-16   ← EXACTLY ZERO. INVISIBLE.
+      ratio      : 6.85e15
+
+   ⇒ THE STAGGERING CLAIM IS CONFIRMED, ON THE SAME POINTS AND THE SAME GRID.
+     The collocated scheme needs an α_stab to survive. The staggered one needs
+     nothing: the unphysical term is not TAMED, it is NEVER REQUIRED.
+
+   The force the momentum equation exerts on each canonical depth mode:
+      depth mode                          STAGGERED       COLLOCATED
+      ──────────────────────────────────────────────────────────────
+      constant  (LEGITIMATE)                 0.0000          0.000e0
+      (−1)^i                                 4.0833          0.000e0
+      (−1)^j                                 4.0833          0.000e0
+      (−1)^(i+j)  CHECKERBOARD               5.7747          0.000e0
+      smooth long wave (control)             1.4946          1.444e0
+
+── figures written to msc/spike-null-space/fig/ ──
