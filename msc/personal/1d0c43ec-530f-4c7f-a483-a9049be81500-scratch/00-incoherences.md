@@ -115,10 +115,17 @@ and the ratified layer is what a fresh agent reads first.
 
 ### P1 — the ordinum's schema has outgrown its own `|meta[reading-rules]`
 `|meta[reading-rules]` declares **charges · promises · defeasances · record**. The phases
-also use `:regime` (all), `:target` (6/7/8 — **defined nowhere in the file; I cannot tell
-you what it means**), `:sub-gates` (Abyssal), `:opened-by` (×2), and an entire
-`|obligation` block (phase 7). Two days old and already growing past its schema — which is
+also use `:regime` (all), `:target` (6/7/8), `:sub-gates` (Abyssal), `:opened-by` (×2), and an
+entire `|obligation` block (phase 7). Two days old and already growing past its schema — which is
 what a live schema does.
+
+> ⚠ **SELF-CORRECTION (after reading LEXICON): I claimed `:target` was "defined nowhere; I cannot
+> tell you what it means." That was FALSE.** It is defined — `LEXICON.udon` §1 `|term[target]`:
+> *"Phases 6/7/8 as TARGET 1/2/3 — the playable entry points."* **I asserted an absence from one
+> file's silence, having not yet read the file where the definitions live.** The real observation
+> survives and is much smaller: the *ordinum's own reading-rules* do not carry the field, so the
+> artifact is not self-describing. *(Recorded rather than quietly edited — it is the project's own
+> failure mode, committed by me, in the ledger built to catch it.)*
 
 ### P2 — charge/promise "subset" language does not match the data model
 Reading rules: a charge is *"the GATING SUBSET of its promises"*. But they are separate
@@ -191,3 +198,28 @@ quotes it. Verify on read.)*
 partially VOID and nothing replaces it"** — which is exactly F2's situation (the attractor claim is
 not superseded; it is *contaminated*). The ordinum's `|defeasance :voids "<x>" :by <cause>` is the
 stronger primitive and it already exists. **Same hole as M1, fourth instance.**
+
+### M3 — the LEXICON's `|rel` graph has 2 DANGLING EDGES and no closure test
+84 terms, 58 `|rel :to <slug>` edges. **Two point at terms that do not exist:** `manifest`
+(pointed at by `beacon` *lives-in* and `vivium` *individuated-by* — and it is the noun the **regula
+collapsed INTO**) and `nomotheke` (pointed at by `promise` and `nomos`, both *declared-in* — and it
+is **the scaffold itself**).
+
+⇒ **The two undefined terms in this vocabulary are the thing the architecture just collapsed into,
+and the thing the architecture IS.**
+
+**And the mechanism that would have caught this exists thirty lines away**: `flux.rs` has
+`is_in_vocabulary()` + `flux_vocabulary_is_closed`, which **fails the build** if a nomos names a
+quantity that is not a term. **`|rel :to X` has no such check.** Same vocabulary-closure discipline,
+applied to the flux alphabet but never to the vocabulary itself.
+
+### M4 — `permit` / `defeasance` / `canceling-pair` are ONE mechanism, and the LEXICON already says so
+`|term[defeasance]` carries `|rel :to permit :kind same-shape-as`. `|term[canceling-pair]` carries
+`|rel :to permit :kind audited-as`. The general form is **a NEGATIVE DECLARATION WITH A VOID
+CONDITION** — *"this is absent/retired/refuted, and here is what would prove that claim false"* —
+and **the void condition is a GRAPH QUERY, i.e. it is executable and free.**
+
+This is M1/M2 again (the missing retraction primitive), now with the project's own edge already
+drawn between the three instances. **Nobody walked the edge.** And `permit` was itself demoted into
+the manifest by the regula collapse three hours before the LEXICON's last edit — so the mechanism
+got relocated exactly when it was about to be recognized as general.
