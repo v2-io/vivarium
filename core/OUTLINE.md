@@ -24,6 +24,27 @@ diagnosed.**
 | **③ TABULARIUM** | the **instituted content** ① and ② operate on | `tabularium/*.ordinum.udon`, `LEXICON.udon`, `ASSUMPTIONS.md` |
 | **④ NOMOS / SIM** | the **physics** — the thing all of the above exists to keep honest | `erosion.rs`, `water.rs`, `hydrosphere.rs`, … |
 
+## ⚑ The mission, in six words — and it is the project's own front door
+
+**`README.md`, in bold, at the top:**
+
+> # **"Epistemic honesty is enforced in code, not culture."**
+
+**That claim is true for roughly 15% of the honesty and false for the other 85%** — and the project has
+already convicted itself of it once, in `doc/theory/discretisation-and-information.md` §2.4a:
+
+> *"`README.md`: **'Epistemic honesty is enforced in code, not culture.'** **HERE IT WAS NOT.** The
+> declaration lived as **prose in a Level-B doc with nothing mechanical behind it**… **A declaration that
+> cannot fail a build is a wish.**"*
+
+⇒ **In the project's own vocabulary, the README is a PROMISE WITHOUT A PREDICATE** — a **gloss**: a word
+of honor, greppable, unmechanized. **It is the most load-bearing gloss in the repository.**
+
+> # ⇒ **`core/` exists to MAKE THE README TRUE.**
+>
+> **Every piece of how already exists.** Not one of them is invented here. **The debt is assembly and
+> mechanization — not design.**
+
 **The founding diagnosis, in one line:**
 
 > ## **The system is FULLY DESIGNED, distributed across ~25 prose documents, BUILT AT ~15%, and no single artifact contains it. The specification exists only in the UNION — which nobody, including its authors, has ever assembled.**
