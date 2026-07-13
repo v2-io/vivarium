@@ -92,6 +92,45 @@ that FAILS when this is violated?"*
 
 ---
 
+## ⚑ `VIVARIA-DEFINITIONS.md` IS A PROTO-`core/` — and it explains a fork Joseph did not know had happened
+
+*Established 2026-07-13 by dates + content, after Joseph asked whether it was a LEXICON predecessor.*
+
+**It is a SUCCESSOR, not a predecessor.** `LEXICON.md` **Jul 4** → `LEXICON.udon` **Jul 11** →
+`VIVARIA-DEFINITIONS` **Jul 12, 01:14**.
+
+**And it is deliberately the ANTI-LEXICON.** Its own opening rule: *"**no noun gets defined in the
+abstract.** Every piece is shown as **the actual udon it tracks** (or the rust type/function it becomes)…
+**Not built where marked `— NOT BUILT`**."*
+
+| | **`LEXICON.udon`** | **`VIVARIA-DEFINITIONS.md`** |
+|---|---|---|
+| genre | **a dictionary** — term → definition → `\|not` / `\|confused` / `\|carve` / `\|rel` | **a layer map with BUILD STATUS** — artifact ↔ rust signature ↔ udon ↔ ✗ not built |
+| answers | *what does this WORD mean, and what did we carve it against?* | *what IS this thing, concretely, and does it EXIST yet?* |
+
+> ### ⇒ **THE FORK IS NOT DUPLICATION. IT IS COMPENSATION — and the evidence is exact.**
+>
+> **The LEXICON's two dangling `|rel` edges are `manifest` and `nomotheke`. BOTH are defined in
+> `VIVARIA-DEFINITIONS`.** The vocabulary graph has holes **precisely where the spike doc filled them**.
+> A dictionary has **no slot** for *"here is the Rust signature, and it is not built yet"* — so a second
+> document grew to hold what the first one's FORM could not, and neither learned about the other.
+
+**⇒ `VIVARIA-DEFINITIONS` is the first attempt at THIS DIRECTORY.** It is ~80% of Part II, written the day
+before the audit, sitting at the repo root looking like a scratch file. **Part II is therefore mostly a
+PORT, not a composition.**
+
+**⇒ And it fixes the `core/` ↔ LEXICON boundary before it re-opens:**
+
+- **LEXICON keeps what a WORD means** — carves, collisions, register, the `|rel` graph. **It stays a
+  dictionary.**
+- **`core/` keeps what the SYSTEM is** — layers, contracts, modes, invariants, build status. **It absorbs
+  `VIVARIA-DEFINITIONS`.**
+
+*Without that line, the same fork re-opens between LEXICON and `core/` within a week, for the same reason
+it opened the first time.*
+
+---
+
 # *Part 0* — Purpose: what a vivium is FOR
 
 *Ordering: **first**, because every downstream requirement derives from it — and because the project ran
