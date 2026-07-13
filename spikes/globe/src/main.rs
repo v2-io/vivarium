@@ -1,12 +1,12 @@
-//! vivarium-globe — spin the planet, zoom in, see what the spine puts above water.
+//! vivarium-globe — spin the planet, zoom in, see what the initial-topography puts above water.
 //!
 //! The Phase-2 "smallest-first visible win" (`doc/plan/abyssal-parity-plan.md`):
-//! the coarse fBm spine rendered as a whole globe — continents and oceans, pre-
+//! the coarse fBm initial-topography rendered as a whole globe — continents and oceans, pre-
 //! erosion, pre-everything. Google-Earth verbs only: drag to spin, wheel to zoom.
 //!
 //! **The discipline this view exists to demonstrate** (the new frame, `store.rs` +
 //! `query.rs`): a view *only queries; it owns no world state*. Every elevation on
-//! screen arrived through [`query::spine_tile`] via a persistent [`Store`] — the
+//! screen arrived through [`query::initial_topography`] via a persistent [`Store`] — the
 //! first pull computes and memoizes; every later launch (and every zoom back out)
 //! is a store HIT, and the HUD counts both so you can watch the world being built
 //! once and reused. The only state living here is camera state and the meshes the
@@ -123,8 +123,8 @@ struct GlobeMsg {
 /// tie resolves differently per face and each samples a different edge cell —
 /// whole-edge elevation cliffs, found live as a 60 km-deep skirt canyon.
 ///
-/// (Leans on the spine being a pure function of (seed, position), which at this
-/// rung it is — the spine IS the prior. When the spine matures past that,
+/// (Leans on the initial-topography being a pure function of (seed, position), which at this
+/// rung it is — the initial-topography IS the prior. When the initial-topography matures past that,
 /// out-of-face cells must come from neighbour-face tile pulls instead; noted so
 /// the shortcut can't silently outlive its premise.)
 fn cell_value(world: &World, face: Face, level: u8, tile: &[f32], ci: i64, cj: i64) -> f32 {
@@ -137,7 +137,7 @@ fn cell_value(world: &World, face: Face, level: u8, tile: &[f32], ci: i64, cj: i
         let cv = ((cj as f64 + 0.5) / nx as f64) * 2.0 - 1.0;
         let dir = CubeCoord { face, u: cu, v: cv }.to_unit();
         let cell = CubeCoord::from_unit(dir).cell(level);
-        gen::surface_prior_m(world.seed(), cell, level) as f32
+        gen::initial_topography_m(world.seed(), cell, level) as f32
     }
 }
 
@@ -412,7 +412,7 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx
                     .map(|f| {
                         s.spawn(move || {
                             let face = Face::from_index(f);
-                            let (tile, src) = world.spine_tile(face, level, 0, 0, nx);
+                            let (tile, src) = world.initial_topography(face, level, 0, 0, nx);
                             let land = tile.iter().filter(|&&h| h as f64 > SEA_LEVEL_M).count();
                             let (mesh, fseam) = build_face(world, face, level, &tile, exag, audit);
                             (mesh, tile, src, land, fseam)
@@ -613,7 +613,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "vivarium — globe (fBm spine, pre-erosion)".into(),
+                title: "vivarium — globe (fBm initial-topography, pre-erosion)".into(),
                 resolution: bevy::window::WindowResolution::new(1280, 800),
                 ..default()
             }),
@@ -654,7 +654,7 @@ fn setup(mut commands: Commands) {
     commands.insert_resource(GlobalAmbientLight { color: Color::srgb(0.65, 0.72, 0.85), brightness: 240.0, affects_lightmapped_meshes: true });
 
     commands.spawn((
-        Text::new("pulling the spine..."),
+        Text::new("pulling the initial-topography..."),
         TextFont { font_size: 14.0, ..default() },
         TextColor(Color::srgb(0.85, 0.87, 0.90)),
         Node { position_type: PositionType::Absolute, top: Val::Px(8.0), left: Val::Px(10.0), padding: UiRect::all(Val::Px(6.0)), ..default() },
@@ -799,7 +799,7 @@ fn input_update(
     }
 }
 
-/// Resolution-on-zoom: pick the sampling level from altitude (finer spine levels
+/// Resolution-on-zoom: pick the sampling level from altitude (finer initial-topography levels
 /// as you approach — each level's fBm runs more octaves, so detail is *pulled*,
 /// not interpolated), and request a rebuild whenever (level, exag) drifts from
 /// what is built. One build in flight; the desired-vs-built check re-fires until
@@ -973,7 +973,7 @@ fn hud_update(
     let (lat, lon) = (geo.lat.to_degrees(), geo.lon.to_degrees());
     // ASCII only: Bevy's default font has no glyphs for middle-dot/degree/etc.
     let status = match (&state.built, state.inflight) {
-        (None, _) => "pulling the spine...".to_string(),
+        (None, _) => "pulling the initial-topography...".to_string(),
         (Some(b), inflight) => {
             let cell_km = (r * std::f32::consts::FRAC_PI_2) / (1u32 << b.level) as f32;
             let s = &b.seam;
@@ -982,7 +982,7 @@ fn hud_update(
                 (s.within_sum / s.n.max(1) as f64) as f32,
             );
             format!(
-                "world \"{}\" (seed {:016x}) | spine L{} | cell ~{cell_km:.0} km | pull {} computed / {} hit, {:.2} s | land ~{:.0}%{}\n\
+                "world \"{}\" (seed {:016x}) | initial-topography L{} | cell ~{cell_km:.0} km | pull {} computed / {} hit, {:.2} s | land ~{:.0}%{}\n\
                  alt {alt:.0} km | centre {:.1}{} {:.1}{} | relief x{:.0} (1 = honest) | level {}\n\
                  {pick_line}\n\
                  face-seam dh: cross {c_mean:.0} m mean, {:.0} m max | within-face {w_mean:.0} m mean, {:.0} m max{}\n\

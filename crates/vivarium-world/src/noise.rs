@@ -51,7 +51,7 @@ pub fn hash2(seed: u64, domain: u32, ix: i64, iy: i64) -> u64 {
 
 /// Hash a world-seed + domain tag + a **3-D** integer lattice key — the
 /// sphere-continuous twin of [`hash2`], for fields sampled on unit-sphere
-/// directions (the spine prior since v2) rather than per-face `(u, v)`.
+/// directions (the initial-topography prior since v2) rather than per-face `(u, v)`.
 #[inline]
 pub fn hash3(seed: u64, domain: u32, ix: i64, iy: i64, iz: i64) -> u64 {
     let a = (ix as u64).wrapping_mul(0xD1B5_4A32_D192_ED03);

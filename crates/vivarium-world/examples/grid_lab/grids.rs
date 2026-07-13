@@ -63,9 +63,24 @@ impl CubeProj {
 // the polygon's symmetry replicates it. For the square, the vertex-to-vertex sector is
 // 2(90° − θ) = 90°.
 
-pub const SNY_G: f64 = 54.735_610_32; // degrees, centre→vertex spherical distance
-pub const SNY_BIG_G: f64 = 60.0; // degrees
-pub const SNY_THETA: f64 = 45.0; // degrees
+/// Table 1's printed value for the cube, kept for the record: `g = 54.73561032°`.
+pub const SNY_G_TABLE: f64 = 54.735_610_32;
+pub const SNY_BIG_G: f64 = 60.0; // degrees — exact for the cube
+pub const SNY_THETA: f64 = 45.0; // degrees — exact for the cube
+
+/// `g` — the spherical distance from the face centre to a vertex. **Use the exact value,
+/// not Table 1's decimal.** The paper itself supplies the closed form: *"The values of
+/// tan g for the various polyhedra may be expressed as quadratic surds, namely …"* and
+/// for the cube that surd is **√2**, so `g = arctan √2 = 54.735610317245346°`.
+///
+/// Table 1 rounds it to `54.73561032`, which is off by 2.8e-9°. That sounds harmless and
+/// is not: it perturbs the spherical excess by ~2.4e-11, the Newton solve for `Az` by
+/// ~1.6e-10, and it therefore moves the image of the face BOUNDARY off the cube edge's
+/// great circle by ~1e-10 — so the six faces no longer weld. The seam assertion in
+/// `cube_sphere()` caught exactly this, which is the whole reason it is an assertion and
+/// not a comment.
+pub fn sny_g_rad() -> f64 { 2.0_f64.sqrt().atan() }
+pub const SNY_G: f64 = SNY_G_TABLE; // (only for reporting; the math uses sny_g_rad)
 
 /// Snyder eq (1)/(2): area of the right spherical triangle A′B′C′, in steradians on a
 /// unit sphere. `A_GT = (G − θ)·π/180`.
@@ -75,7 +90,7 @@ pub fn sny_agt() -> f64 { (SNY_BIG_G - SNY_THETA).to_radians() }
 /// makes the plane right-triangle area `A_MT = ½(R′ tan g)² sin θ cos θ` equal `A_GT`.
 /// For the cube, `tan g = √2`, so `A_MT = ½·2R′²·½ = 0.5 R′²` ⇒ `R′ = √(2·A_GT)`.
 pub fn sny_rprime() -> f64 {
-    let tg = SNY_G.to_radians().tan();
+    let tg = sny_g_rad().tan();
     let (st, ct) = (SNY_THETA.to_radians().sin(), SNY_THETA.to_radians().cos());
     // A_MT = 0.5 * (R'·tan g)^2 * sinθ cosθ  =  k · R'^2  with k below
     let k = 0.5 * tg * tg * st * ct;
@@ -89,7 +104,7 @@ pub fn sny_rprime() -> f64 {
 /// vertex ray and `z` the spherical distance from the face centre.
 pub fn snyder_inverse(x: f64, y: f64) -> (f64, f64) {
     let rp = sny_rprime();
-    let (bg, th, g) = (SNY_BIG_G.to_radians(), SNY_THETA.to_radians(), SNY_G.to_radians());
+    let (bg, th, g) = (SNY_BIG_G.to_radians(), SNY_THETA.to_radians(), sny_g_rad());
     let sector = 2.0 * (std::f64::consts::FRAC_PI_2 - th); // 90° for the square
 
     // (17), (18)
@@ -144,7 +159,7 @@ pub fn snyder_inverse(x: f64, y: f64) -> (f64, f64) {
 /// checks the inverse against.
 pub fn snyder_forward(az_in: f64, z: f64) -> (f64, f64) {
     let rp = sny_rprime();
-    let (bg, th, g) = (SNY_BIG_G.to_radians(), SNY_THETA.to_radians(), SNY_G.to_radians());
+    let (bg, th, g) = (SNY_BIG_G.to_radians(), SNY_THETA.to_radians(), sny_g_rad());
     let sector = 2.0 * (std::f64::consts::FRAC_PI_2 - th);
     let k = (az_in / sector).floor();
     let az = az_in - k * sector;

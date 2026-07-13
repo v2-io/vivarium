@@ -131,7 +131,7 @@ const EPOCH_YEARS: f32 = 100.0;
 /// Physics/nomos version for the fill cache — the crude rung of §12's
 /// nomos-version hash: BUMP THIS whenever erosion or water physics changes, or stale
 /// caches will serve worlds the current algorithms would not produce.
-const FILL_ALGO_VERSION: &str = "2026-07-10g"; // g: sphere-continuous prior (spine v2 — face-edge cliffs gone)
+const FILL_ALGO_VERSION: &str = "2026-07-10g"; // g: sphere-continuous prior (initial-topography v2 — face-edge cliffs gone)
 
 /// The FILL CACHE (first rung of DESIGN-REDUX §12–13): the filled world —
 /// eroded tiers + steady-state water — is a pure function of its parameters,
@@ -449,7 +449,7 @@ fn spawn_settle(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sende
                 let chunk = 2.min(fine_total - done);
                 fine.erode(&FluvialParams { epochs: chunk, ..Default::default() });
                 if let Some(par) = &parent {
-                    fine.pin_block_means(19, |c| par.surface_bilinear_m(c).unwrap_or_else(|| vivarium_world::gen::surface_prior_m(world_seed(), c, 19)));
+                    fine.pin_block_means(19, |c| par.surface_bilinear_m(c).unwrap_or_else(|| vivarium_world::gen::initial_topography_m(world_seed(), c, 19)));
                 }
                 done += chunk;
                 let region = fine.to_region();
@@ -711,7 +711,7 @@ fn spawn_telescope(
                     if let Some(parent) = tiers.iter().find(|r| r.level == parent_level).cloned() {
                         let sim = &mut st.sim.as_mut().unwrap().0;
                         sim.pin_block_means(parent_level, |c| {
-                            parent.surface_bilinear_m(c).unwrap_or_else(|| vivarium_world::gen::surface_prior_m(world_seed(), c, parent_level))
+                            parent.surface_bilinear_m(c).unwrap_or_else(|| vivarium_world::gen::initial_topography_m(world_seed(), c, parent_level))
                         });
                     }
                 }

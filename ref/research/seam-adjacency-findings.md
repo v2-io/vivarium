@@ -773,3 +773,82 @@ these are logged here as pending):
   method.
 
 To chase (secondary only, §3.7): **`salles-2020-gospl`** — JOSS 5(56):2804.
+
+---
+
+## Addendum (2026-07-12, end of session) — material for the grid-comparison report
+
+*Reasoning developed in dialogue with Joseph after the main findings above were written.
+Recorded here because it exists nowhere else, and the report being written in
+`grid-comparison-report.md` should incorporate it.*
+
+### A1. The topological charge can be AMORTIZED, but not removed (Joseph's intuition, confirmed)
+
+Joseph asked whether there is "some physically defensible way to *amortize* the
+non-standard stencils that is still closed and conserves — some way to do partial fluxes
+so that by the time you get to the worst area it's still the normal number of neighbours
+(8 minus a little)." The answer is **yes for the physics, no for the topology**:
+
+- **Topology: irreducible.** `Σ(4 − valence) = 8` on any quad mesh on S² (Gauss–Bonnet).
+  Valence is an *integer*, so the charge cannot be smeared. And **the cube already achieves
+  the minimum** (8 defects of charge 1). No cleverer quad mesh exists. (Hexagonal meshes
+  redistribute rather than remove: `Σ(6 − v) = 12` → exactly 12 pentagons — more defect
+  cells, each a *milder* perturbation, and hexagons are more isotropic. That is why the
+  dynamical-core community chose them, and it costs the quadtree.)
+
+- **Physics: fully amortizable.** The defect only bites schemes that depend on what it
+  breaks. Conservation does **not** depend on valence (flux is a boundary integral
+  `∮F·n dl`; a 3-edge cell closes exactly). Flow routing does **not** either, *if* you stop
+  quantising direction into 8 sectors: project the true gradient onto each real edge normal,
+  weight by edge length, take outgoing components (D-∞ generalised to a mesh). Then the
+  outflow fans across however many edges exist **as partial fluxes summing exactly** —
+  Joseph's "8 minus a little", literally. Only the local *accuracy* of second-derivative
+  operators degrades, and least-squares gradient reconstruction over whatever neighbours a
+  cell actually has recovers second order at any valence (standard unstructured-CFD).
+
+- **⇒ The prize: the defect is DEMOTED, not removed** — from a *conservation failure*
+  (accumulates globally, destroys the physics) to a *bounded local accuracy wart at 24 cells
+  on the whole planet*. Those are not comparable harms. **This is the argument the report
+  should make, because it is what decides that the grid does not need replacing.**
+
+### A2. The two-grid (cube ∪ octahedron) overlay — and why it is the wrong trade
+
+Joseph asked what shapes arise if a cube and its dual are both projected to the sphere so
+that each covers the other's singularities. Worked out:
+
+- A cube's 8 corners cannot align with a cube's 6 face-centres. The complementary partner is
+  the **dual octahedron**: its 6 vertices sit exactly at the cube's face-centres, its 8 faces
+  exactly at the cube's corners. **Perfect complementarity.**
+- The **Delaunay** of the combined 14 singularity directions is the **rhombic dodecahedron**
+  (12 rhombic faces; its faces alternate cube/octahedron vertices, so the adjacency graph is
+  *bipartite*). The **Voronoi** is therefore the **cuboctahedron** — 8 triangular cells (around
+  the cube corners) + 6 square cells (around the axes), 12 vertices at the cube's
+  edge-midpoint directions. *(Joseph guessed the cuboctahedron before the derivation.)*
+- Partitioning by "use whichever grid is locally regular" means **no cell is ever evaluated at
+  a singularity** — elegant, and the boundary irregularity really is *fractional* (partial
+  edges, exactly conservative — a mortar / non-conformal interface), i.e. gentler than an
+  integer valence defect. **Joseph's intuition is correct.**
+- **But it is an `O(1) → O(N)` trade.** The cube's defect is **24 cells, forever**. A partition
+  boundary is a 1-D network that **grows linearly with resolution** — millions of interface
+  cells at L19, each needing partial-edge geometry, neighbour search, and (for the ORDERED
+  drainage sweep) cross-grid dependencies. Plus two grid types, two addressing schemes, and a
+  broken `CellId` quadtree. It pays a *scaling* cost to fix something that (per A1) is already
+  nearly free. **Recommend against — but say WHY in the report, because the mechanism is right.**
+
+### A3. Where the partial-edge mechanism DOES belong
+
+The non-matching-interface/partial-edge formulation is **exactly the correct treatment for our
+actual seam** — the **coarse↔fine tile boundary**, which is non-matching by nature and
+unavoidable. That is what Berger–Colella flux registers *are*. **Right mechanism, wrong target:
+apply it where the interface is forced on us, not where the defect can be dissolved for free.**
+
+### A4. Lead worth a row: the rhombic-dodecahedral base (12 quad faces)
+
+Falls out of A2. 12 rhombic faces, 24 edges, 14 vertices (8 valence-3 + 6 valence-4). Euler
+checks (`14 − 24 + 12 = 2`; `Σ(4−v) = 8` — the same irreducible charge). **A rhombus subdivides
+into four rhombi, so it QUADTREES** — it keeps the property hexagonal/geodesic meshes lose. And
+**12 faces instead of 6 → half the solid angle per face → potentially materially less projection
+distortion**, which is exactly the axis Snyder's Table 1 says the cube is bad on (cube ω=25.17°
+vs truncated icosahedron ω=3.75°). Corroborating hint: **HEALPix's base is also 12
+quadrilaterals.** Honest caveat to MEASURE, not assume: the rhombic faces are skewed (√2 diagonal
+ratio, ~70.53°/109.47°), which may hand back in shear what it wins in face size.

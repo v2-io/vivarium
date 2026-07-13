@@ -16,7 +16,7 @@
 //!
 //! Run: `cargo run --release -p vivarium-world --example globe_ascii`
 
-use vivarium_world::gen::{surface_prior_m, SEA_LEVEL_M};
+use vivarium_world::gen::{initial_topography_m, SEA_LEVEL_M};
 use vivarium_world::sphere::CubeCoord;
 
 fn env_or<T: std::str::FromStr>(name: &str, default: T) -> T {
@@ -68,7 +68,7 @@ fn main() {
             ];
             let cc = CubeCoord::from_unit(d);
             faces[j * w + i] = cc.face.index();
-            let elev = surface_prior_m(seed, cc.cell(level), level);
+            let elev = initial_topography_m(seed, cc.cell(level), level);
             let ch = if elev < SEA_LEVEL_M {
                 '~'
             } else {

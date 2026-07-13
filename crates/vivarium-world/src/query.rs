@@ -18,7 +18,7 @@
 
 use crate::erosion::{Fluvial, FluvialParams};
 use crate::gen;
-use crate::nomotheke::{CLIMATE, EROSION, HYDROSPHERE, SPINE, UPLIFT, WATER};
+use crate::nomotheke::{CLIMATE, EROSION, HYDROSPHERE, INITIAL_TOPOGRAPHY, UPLIFT, WATER};
 use crate::sphere::{CellId, Face};
 use crate::store::{Key, Store};
 
@@ -75,9 +75,9 @@ impl<'s> World<'s> {
         (h, Source::Computed)
     }
 
-    /// The complete key for a spine tile: every input folded in (§12).
-    fn spine_key(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> Key {
-        SPINE
+    /// The complete key for a initial-topography tile: every input folded in (§12).
+    fn initial_topography_key(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> Key {
+        INITIAL_TOPOGRAPHY
             .key()
             .field("seed", self.seed)
             .field("face", face.index())
@@ -87,24 +87,24 @@ impl<'s> World<'s> {
             .field("nx", nx)
     }
 
-    /// System #1 — the fBm coarse spine: a `nx × nx` tile of band-limited
+    /// System #1 — the fBm coarse initial-topography: a `nx × nx` tile of band-limited
     /// surface-prior elevations (m), a pure function of (seed, face, level,
     /// origin, nx) via the coordinate-hashed prior. This is the conservation-
     /// honest first light: land vs water, before any principled tectonics.
-    fn compute_spine_tile(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> Vec<f32> {
+    fn compute_initial_topography(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> Vec<f32> {
         let mut out = Vec::with_capacity(nx * nx);
         for j in 0..nx as u32 {
             for i in 0..nx as u32 {
                 let cell = CellId::from_face_ij(face, oi + i, oj + j, level);
-                out.push(gen::surface_prior_m(self.seed, cell, level) as f32);
+                out.push(gen::initial_topography_m(self.seed, cell, level) as f32);
             }
         }
         out
     }
 
-    /// Pull a spine tile through the store: hit → load; miss → compute + memoize.
+    /// Pull a initial-topography tile through the store: hit → load; miss → compute + memoize.
     /// Returns the tile (row-major, `nx × nx`) and whether it was computed or served.
-    pub fn spine_tile(
+    pub fn initial_topography(
         &self,
         face: Face,
         level: u8,
@@ -112,11 +112,11 @@ impl<'s> World<'s> {
         oj: u32,
         nx: usize,
     ) -> (Vec<f32>, Source) {
-        let key = self.spine_key(face, level, oi, oj, nx);
+        let key = self.initial_topography_key(face, level, oi, oj, nx);
         if let Some(bytes) = self.store.get(&key) {
             return (decode_f32(&bytes), Source::Hit);
         }
-        let tile = self.compute_spine_tile(face, level, oi, oj, nx);
+        let tile = self.compute_initial_topography(face, level, oi, oj, nx);
         let _ = self.store.put(&key, &encode_f32(&tile));
         (tile, Source::Computed)
     }
@@ -191,7 +191,7 @@ impl<'s> World<'s> {
     }
 
     /// The complete key for an eroded tile — including its *upstream dependencies'*
-    /// identities (§12): the spine surface it carves, the uplift field it carves
+    /// identities (§12): the initial-topography surface it carves, the uplift field it carves
     /// against, and the climate precipitation that drives its discharge. If any
     /// changes, this key changes and the tile recomputes.
     fn erosion_key(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize, epochs: u32) -> Key {
@@ -204,13 +204,13 @@ impl<'s> World<'s> {
             .field("oj", oj)
             .field("nx", nx)
             .field("epochs", epochs)
-            .field("spine", SPINE.version)
+            .field("initial-topography", INITIAL_TOPOGRAPHY.version)
             .field("uplift", UPLIFT.version)
             .field("climate", CLIMATE.version)
     }
 
-    /// System #2 — the fluvial-erosion tier, *composed on the spine through the
-    /// store*. On a miss it **pulls its input surface from the spine** (which
+    /// System #2 — the fluvial-erosion tier, *composed on the initial-topography through the
+    /// store*. On a miss it **pulls its input surface from the initial-topography** (which
     /// recurses into system #1 and memoizes it), seeds the fluvial kernel from
     /// that surface, runs `epochs`, and memoizes the eroded elevation field. This
     /// is the coupling property in miniature: one system depends on another
@@ -230,9 +230,9 @@ impl<'s> World<'s> {
             return (decode_f32(&bytes), Source::Hit);
         }
         // Dependencies, all pulled (memoized — recurse into their nomoi): the
-        // spine surface it carves, the uplift field it carves against, and the
+        // initial-topography surface it carves, the uplift field it carves against, and the
         // climate precipitation that drives its discharge.
-        let (spine, _) = self.spine_tile(face, level, oi, oj, nx);
+        let (initial_topo, _) = self.initial_topography(face, level, oi, oj, nx);
         let (uplift, _) = self.uplift_tile(face, level, oi, oj, nx);
         let (precip, _) = self.climate_tile(face, level, oi, oj, nx);
         // Relative precipitation weight = precip / tile-mean (uniform climate → all
@@ -240,18 +240,18 @@ impl<'s> World<'s> {
         let mean = precip.iter().sum::<f32>() / precip.len().max(1) as f32;
         let precip_weight: Vec<f32> =
             if mean > 0.0 { precip.iter().map(|p| p / mean).collect() } else { vec![1.0; precip.len()] };
-        // Seed erosion from the pulled spine; any cell the kernel samples outside
+        // Seed erosion from the pulled initial-topography; any cell the kernel samples outside
         // the tile (edge/halo) falls back to the prior — identical values, since
-        // the spine IS the prior at this rung.
+        // the initial-topography IS the prior at this rung.
         let surf = |cell: CellId| -> f64 {
             let (cf, ci, cj, _) = cell.to_face_ij();
             if cf.index() == face.index() && ci >= oi && cj >= oj {
                 let (di, dj) = ((ci - oi) as usize, (cj - oj) as usize);
                 if di < nx && dj < nx {
-                    return spine[dj * nx + di] as f64;
+                    return initial_topo[dj * nx + di] as f64;
                 }
             }
-            gen::surface_prior_m(self.seed, cell, level)
+            gen::initial_topography_m(self.seed, cell, level)
         };
         let mut f = Fluvial::from_surface(self.seed, face, level, oi, oj, nx, surf);
         f.set_uplift_rate(uplift); // erosion CONSUMES the uplift nomos's field
@@ -276,7 +276,7 @@ impl<'s> World<'s> {
             .field("eepochs", erosion_epochs)
             .field("steps", steps)
             .field("erosion", EROSION.version)
-            .field("spine", SPINE.version)
+            .field("initial-topography", INITIAL_TOPOGRAPHY.version)
             .field("climate", CLIMATE.version)
     }
 
@@ -368,14 +368,14 @@ mod tests {
     }
 
     #[test]
-    fn spine_tile_computes_then_memoizes() {
-        let dir = tmpdir("spine");
+    fn initial_topography_computes_then_memoizes() {
+        let dir = tmpdir("initial-topography");
         let s = Store::open(&dir).unwrap();
         let w = World::new(&s, 0);
-        let (a1, src1) = w.spine_tile(Face::from_index(2), 19, 1000, 2000, 16);
+        let (a1, src1) = w.initial_topography(Face::from_index(2), 19, 1000, 2000, 16);
         assert_eq!(src1, Source::Computed, "first pull computes");
         assert_eq!(a1.len(), 16 * 16, "tile is nx × nx");
-        let (a2, src2) = w.spine_tile(Face::from_index(2), 19, 1000, 2000, 16);
+        let (a2, src2) = w.initial_topography(Face::from_index(2), 19, 1000, 2000, 16);
         assert_eq!(src2, Source::Hit, "second pull hits the store");
         assert_eq!(a1, a2, "a hit returns exactly the bytes it computed");
         let _ = fs::remove_dir_all(&dir);
@@ -397,7 +397,7 @@ mod tests {
             let s = Store::open(&dir).unwrap();
             let w = World::new(&s, 0);
             for &(oi, oj) in &path {
-                let (_t, src) = w.spine_tile(face, 19, oi, oj, nx);
+                let (_t, src) = w.initial_topography(face, 19, oi, oj, nx);
                 sources.push(src);
             }
         }
@@ -409,14 +409,14 @@ mod tests {
         // Survives a fresh open — the store IS the save.
         let s2 = Store::open(&dir).unwrap();
         let w2 = World::new(&s2, 0);
-        let (_t, src) = w2.spine_tile(face, 19, 100, 100, nx);
+        let (_t, src) = w2.initial_topography(face, 19, 100, 100, nx);
         assert_eq!(src, Source::Hit, "reopened store still holds the walked world");
         let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn erosion_composes_on_the_spine_and_memoizes() {
-        // The coupling proof: erosion pulls the spine as a dependency (memoizing
+        // The coupling proof: erosion pulls the initial-topography as a dependency (memoizing
         // it), composes on it, and its own result memoizes — all through the
         // store, no shared mutable state.
         let dir = tmpdir("erosion");
@@ -431,9 +431,9 @@ mod tests {
         assert!(e1.iter().all(|x| x.is_finite()), "eroded field is finite");
 
         // Erosion's pull memoized BOTH its dependencies (the recursion): the
-        // spine surface it carves and the uplift field it carves against.
-        let (_sp, spine_src) = w.spine_tile(face, 19, 1000, 2000, nx);
-        assert_eq!(spine_src, Source::Hit, "the spine dependency was memoized by erosion's pull");
+        // initial-topography surface it carves and the uplift field it carves against.
+        let (_sp, spine_src) = w.initial_topography(face, 19, 1000, 2000, nx);
+        assert_eq!(spine_src, Source::Hit, "the initial-topography dependency was memoized by erosion's pull");
         let (_up, uplift_src) = w.uplift_tile(face, 19, 1000, 2000, nx);
         assert_eq!(uplift_src, Source::Hit, "the uplift dependency was memoized by erosion's pull");
 
@@ -447,7 +447,7 @@ mod tests {
     #[test]
     fn water_composes_on_erosion_and_memoizes() {
         // System #3 through the same loop: water pulls the eroded bed
-        // (memoizing erosion AND spine on the way), settles deterministically,
+        // (memoizing erosion AND initial-topography on the way), settles deterministically,
         // memoizes. The three-system dependency chain, proven end to end.
         let dir = tmpdir("water");
         let face = Face::from_index(2);
@@ -461,7 +461,7 @@ mod tests {
         assert!(d1.iter().any(|x| *x > 0.01), "somewhere there is standing water (sea or pond)");
         // The chain memoized its dependencies:
         assert_eq!(w.erosion_tile(face, 19, 2000, 3000, nx, eepochs).1, Source::Hit);
-        assert_eq!(w.spine_tile(face, 19, 2000, 3000, nx).1, Source::Hit);
+        assert_eq!(w.initial_topography(face, 19, 2000, 3000, nx).1, Source::Hit);
         // Re-pull hits and is byte-identical (deterministic bounded fill):
         let (d2, src2) = w.water_tile(face, 19, 2000, 3000, nx, eepochs, steps);
         assert_eq!(src2, Source::Hit);
@@ -478,13 +478,13 @@ mod tests {
         let s = Store::open(&dir).unwrap();
         let (wa, wb) = (World::new(&s, 1), World::new(&s, 2));
         let face = Face::from_index(2);
-        let (ta, _) = wa.spine_tile(face, 19, 1000, 2000, 16);
-        let (tb, src_b) = wb.spine_tile(face, 19, 1000, 2000, 16);
+        let (ta, _) = wa.initial_topography(face, 19, 1000, 2000, 16);
+        let (tb, src_b) = wb.initial_topography(face, 19, 1000, 2000, 16);
         assert_eq!(src_b, Source::Computed, "world B must not hit world A's memo");
         assert_ne!(ta, tb, "different seeds ⇒ different terrain at the same coordinates");
         // And each re-pull hits its own:
-        assert_eq!(wa.spine_tile(face, 19, 1000, 2000, 16).1, Source::Hit);
-        assert_eq!(wb.spine_tile(face, 19, 1000, 2000, 16).1, Source::Hit);
+        assert_eq!(wa.initial_topography(face, 19, 1000, 2000, 16).1, Source::Hit);
+        assert_eq!(wb.initial_topography(face, 19, 1000, 2000, 16).1, Source::Hit);
         let _ = fs::remove_dir_all(&dir);
     }
 }

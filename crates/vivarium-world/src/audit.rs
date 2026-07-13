@@ -188,7 +188,7 @@ pub fn render_flux_web() -> String {
 mod tests {
     use super::*;
     use crate::flux;
-    use crate::nomotheke::{self, EROSION, SPINE, WATER};
+    use crate::nomotheke::{self, EROSION, INITIAL_TOPOGRAPHY, WATER};
 
     #[test]
     fn producers_are_unique() {
@@ -211,7 +211,7 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(met, vec!["spine-tile"], "erosion's surface input resolves to the spine");
+        assert_eq!(met, vec!["initial-topography"], "erosion's surface input resolves to the initial-topography");
     }
 
     #[test]
@@ -244,7 +244,7 @@ mod tests {
     #[test]
     fn water_chain_reaches_the_hydrosphere() {
         // The transitive closure of water now closes: eroded-surface (→erosion) →
-        // surface-elevation (→spine) + rock-uplift (→uplift) + precipitation
+        // surface-elevation (→initial-topography) + rock-uplift (→uplift) + precipitation
         // (→climate) → atmosphere-water (→hydrosphere, which consumes nothing).
         // Every line is Met, and the chain reaches the atmosphere-water stock.
         let chain = requisite_chain(&WATER);
@@ -266,11 +266,11 @@ mod tests {
 
     #[test]
     fn noise_is_the_true_root_and_the_spine_stands_on_it() {
-        // The spine is NOT the root: it builds relief on the fated asymmetry the KRNG
+        // The initial-topography is NOT the root: it builds relief on the fated asymmetry the KRNG
         // seeds. Declaring that edge makes the world's one acknowledged fundamental
         // cheat (fBm-as-tectonics) visible IN THE WEB rather than hidden in a kernel.
         // `noise` consumes nothing — IT is the root, and it is honestly tier-None.
-        let spine_needs: Vec<_> = requisites(&SPINE).into_iter().map(|r| r.quantity).collect();
+        let spine_needs: Vec<_> = requisites(&INITIAL_TOPOGRAPHY).into_iter().map(|r| r.quantity).collect();
         assert_eq!(spine_needs, vec![flux::SEEDED_ASYMMETRY]);
         assert_eq!(producer_of(flux::SEEDED_ASYMMETRY).map(|n| n.name), Some("noise"));
         assert!(requisites(nomotheke::lookup("noise").unwrap()).is_empty(), "noise is the root");

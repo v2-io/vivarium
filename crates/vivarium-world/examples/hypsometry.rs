@@ -2,7 +2,7 @@
 //! 2026-07-10: "are land/water proportions and height percentiles even
 //! statistically plausible?").
 //!
-//! Samples the spine prior over all six faces and prints land fraction,
+//! Samples the initial-topography prior over all six faces and prints land fraction,
 //! elevation percentiles (relative to sea level), land/ocean means, and an
 //! ASCII hypsometric histogram, next to Earth's reference values. Earth's
 //! signature feature is **bimodality** — two humps (continental platform
@@ -21,7 +21,7 @@
 //!
 //! Run: `cargo run --release -p vivarium-world --example hypsometry`
 
-use vivarium_world::gen::{surface_prior_m, SEA_LEVEL_M};
+use vivarium_world::gen::{initial_topography_m, SEA_LEVEL_M};
 use vivarium_world::spec::WorldSpec;
 use vivarium_world::sphere::{CellId, Face};
 
@@ -48,7 +48,7 @@ fn main() {
         for j in 0..nx {
             for i in 0..nx {
                 let cell = CellId::from_face_ij(face, i, j, level);
-                h.push(surface_prior_m(seed, cell, level) - SEA_LEVEL_M);
+                h.push(initial_topography_m(seed, cell, level) - SEA_LEVEL_M);
             }
         }
     }

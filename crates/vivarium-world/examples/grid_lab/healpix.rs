@@ -70,44 +70,53 @@ fn vpos(nside: usize, r: usize, m: i64) -> V3 {
 /// Which of the 12 base pixels a `(ring i, in-ring j)` pixel belongs to — the natural
 /// coarse partition, and the object whose vertex census we want to look at.
 ///
-/// This is an **exact inversion of the paper's own eqs (10)–(18)**, not a geometric
-/// guess: for each candidate base pixel `f`, eq (17) `i = F₁(f)·N − v − 1` gives the
-/// required `v = x + y` and eq (18) `j = (F₂(f)·N + h + s)/2` gives the required
-/// `h = x − y`; the pixel belongs to `f` iff the resulting `x = (v+h)/2`, `y = (v−h)/2`
-/// are integers in `[0, N)`. Exactly one `f` can satisfy that, and `healpix()` asserts
-/// each `f` ends up with exactly `N²` pixels — so a wrong inversion cannot pass.
+/// Derived from the paper's own boundary lattice, not from a geometric guess:
+///
+/// * In the **caps**, eq (21) says the base-pixel boundaries are literally the meridians
+///   `φ = k·π/2`. Cap ring `i` has exactly `i` pixels per quadrant, so the quadrant is
+///   `(j−1)/i`. Exact, no float.
+/// * In the **belt**, eq (22)'s two boundary families are `U ≡ z − 8φ/3π = const` and
+///   `V ≡ z + 8φ/3π = const`. So `(U, V)` is a square lattice — and evaluating the twelve
+///   `N_side = 1` pixel centres in it lands them on *integer* multiples of `4/3`:
+///
+///   ```text
+///   north  (bu,bv) = ( 0, 1) (−1, 2) (−2, 3) (−3, 4)     bu+bv =  1
+///   equat.           (−1, 1) (−2, 2) (−3, 3) (−4, 4)     bu+bv =  0
+///   south            (−1, 0) (−2, 1) (−3, 2) (−4, 3)     bu+bv = −1
+///   ```
+///
+///   So `bu + bv` names the ROW (north / equatorial / south) and `bv − bu` names the
+///   quadrant — and a 2π shift in longitude sends `(bu, bv) → (bu−4, bv+4)`, which leaves
+///   `bu+bv` alone and moves `bv−bu` by 8, so the quadrant is just `(bv−bu) mod 8`. The
+///   base pixel is a `4/3`-square centred on each of those, so `round()` finds it.
+///
+///   A fine pixel centre can never land ON a base boundary: boundaries need
+///   `P ≡ N_side (mod 2)` while centres have `P − N_side` odd. Exact by parity.
 fn base_pixel(nside: usize, i: usize, j: usize) -> u32 {
-    let ns = nside as i64;
-    let s: i64 = if i < nside || i > 3 * nside { 1 } else { ((i - nside + 1) % 2) as i64 };
-    let ringlen: i64 = if i < nside {
-        4 * i as i64
-    } else if i <= 3 * nside {
-        4 * ns
-    } else {
-        4 * (4 * ns - i as i64)
-    };
-    for f in 0..12i64 {
-        let f_row = f / 4;
-        let f1 = f_row + 2;
-        let f2 = 2 * (f % 4) - (f_row % 2) + 1;
-        let v = f1 * ns - i as i64 - 1;
-        if v < 0 || v > 2 * ns - 2 {
-            continue;
-        }
-        // longitude wraps: j is only defined modulo the ring length
-        for w in -1i64..=1 {
-            let jj = j as i64 + w * ringlen;
-            let h = 2 * jj - s - f2 * ns;
-            if (v + h).rem_euclid(2) != 0 {
-                continue;
-            }
-            let (x, y) = ((v + h) / 2, (v - h) / 2);
-            if x >= 0 && x < ns && y >= 0 && y < ns {
-                return f as u32;
-            }
-        }
+    let ns = nside;
+    if i < ns {
+        return ((j - 1) / i) as u32; // north cap: eq (21) meridians
     }
-    panic!("HEALPix: pixel (ring {i}, j {j}) belongs to no base pixel — eq (17)/(18) inversion failed");
+    if i > 3 * ns {
+        let ip = 4 * ns - i;
+        return 8 + ((j - 1) / ip) as u32; // south cap
+    }
+    // belt
+    let s = ((i - ns + 1) % 2) as f64;
+    let z = 4.0 / 3.0 - 2.0 * i as f64 / (3.0 * ns as f64);
+    let phi = (PI / (2.0 * ns as f64)) * (j as f64 - s / 2.0);
+    let x = 8.0 * phi / (3.0 * PI);
+    let bu = ((z - x) * 0.75).round() as i64;
+    let bv = ((z + x) * 0.75).round() as i64;
+    let row = bu + bv; // 1 = north, 0 = equatorial, −1 = south
+    let off = if row == 0 { 2 } else { 1 };
+    let quad = (((bv - bu - off) / 2).rem_euclid(4)) as u32;
+    match row {
+        1 => quad,
+        0 => 4 + quad,
+        -1 => 8 + quad,
+        _ => panic!("HEALPix: pixel (ring {i}, j {j}) fell outside the base lattice (row {row})"),
+    }
 }
 
 pub fn healpix(nside: usize, radius_m: f64) -> Mesh {

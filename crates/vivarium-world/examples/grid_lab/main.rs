@@ -98,7 +98,9 @@ fn gate_snyder_reproduces_table_1() {
     // plane polar coordinates with Az′ strictly inside a sector.
     let rp = sny_rprime();
     let sv = |x: f64, y: f64| -> (f64, f64) {
-        let e = 1e-8;
+        let e = (x * x + y * y).sqrt() * 1e-6; // scale the FD to the radius: the map is
+                                               // cone-like at the centre, so a fixed step
+                                               // cannot resolve the limit that Table 1 quotes
         let p = snyder_plane_to_unit(4, x, y);
         let px = snyder_plane_to_unit(4, x + e, y);
         let py = snyder_plane_to_unit(4, x, y + e);
@@ -115,22 +117,22 @@ fn gate_snyder_reproduces_table_1() {
         ((tr / 2.0 + disc).sqrt(), (tr / 2.0 - disc).max(0.0).sqrt())
     };
     let th = SNY_THETA.to_radians();
-    let g = SNY_G.to_radians();
+    let g = sny_g_rad();
     // the face boundary at azimuth Az′ — Snyder eq (10)
     let dprime = |azp: f64| rp * g.tan() / (azp.cos() + azp.sin() * th.tan().recip());
 
     let (mut a, mut area_err, mut at) = (0.0f64, 0.0f64, (0.0, 0.0));
-    let e = 1e-8;
     for ai in 1..900 {
         let azp = ai as f64 / 900.0 * std::f64::consts::FRAC_PI_2; // (0°, 90°) — the sector
         let dmax = dprime(azp);
         for ri in 1..400 {
-            let rho = ri as f64 / 400.0 * dmax * 0.999;
+            // geometric in ρ, so the ρ → 0 limit (where Table 1 says ω peaks) is reached
+            let rho = dmax * 0.999 * 10f64.powf(-5.0 + 5.0 * ri as f64 / 400.0);
             // Guard: the finite difference must not reach across a cusp. The nearest
             // vertex radius is at Az′ = 0 or 90°; the FD displaces the azimuth by ~e/ρ.
             let to_cusp = azp.min(std::f64::consts::FRAC_PI_2 - azp);
-            if to_cusp < 20.0 * (e / rho) {
-                continue;
+            if to_cusp < 20.0 * 1e-6 {
+                continue; // never finite-difference across a cusp (a vertex radius)
             }
             let (x, y) = (rho * azp.sin(), rho * azp.cos());
             let (s1, s2) = sv(x, y);

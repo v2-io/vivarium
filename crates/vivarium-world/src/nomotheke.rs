@@ -234,11 +234,11 @@ pub static CLIMATE: NomosDecl = NomosDecl {
     assumptions: &["atmosphere residence time", "precip jitter"],
 };
 
-/// System #1 — the fBm coarse spine (surface prior on the sphere).
-pub static SPINE: NomosDecl = NomosDecl {
-    name: "spine-tile",
-    version: "spine-2026-07-10b-sphere3d",
-    system: "surface-prior",
+/// System #1 — the fBm coarse initial-topography (surface prior on the sphere).
+pub static INITIAL_TOPOGRAPHY: NomosDecl = NomosDecl {
+    name: "initial-topography",
+    version: "initial-topography-2026-07-10b-sphere3d",
+    system: "initial-topography",
     approach: Approach::Analytic,
     earth_fidelity: Tier::None, // no Earth process; hypsometry measured wrong for every era
     physics: Tier::None,        // pure coordinate noise; conserves nothing
@@ -260,10 +260,10 @@ pub static UPLIFT: NomosDecl = NomosDecl {
     name: "uplift-tile",
     version: "uplift-2026-07-12a-fbm-stub",
     system: "tectonic-uplift",
-    approach: Approach::Analytic, // a closed-form coordinate noise field, like the spine
+    approach: Approach::Analytic, // a closed-form coordinate noise field, like the initial-topography
     earth_fidelity: Tier::None,   // no Earth tectonic history — a placeholder curve
     physics: Tier::None,          // no mechanics; low-frequency fBm stand-in, uncalibrated rate
-    relation: "#mech stand-in: constant rate × low-frequency fBm (differential uplift); the real driver is the thermal-spine / plume-upwelling work (TODO)",
+    relation: "#mech stand-in: constant rate × low-frequency fBm (differential uplift); the real driver is the thermal-initial-topography / plume-upwelling work (TODO)",
     status: "v0 crude stub: deterministic differential uplift-rate field (band + determinism unit-tested in uplift.rs); rate is a declared placeholder, no calibration",
     deps: &[],
     consumes: &[], // conjured from (seed, coordinate); a real driver would consume mantle-thermal state
@@ -271,7 +271,7 @@ pub static UPLIFT: NomosDecl = NomosDecl {
     assumptions: &["uplift rate"],
 };
 
-/// System #2 — fluvial erosion composed on the spine.
+/// System #2 — fluvial erosion composed on the initial-topography.
 pub static EROSION: NomosDecl = NomosDecl {
     name: "erosion-tile",
     version: "erosion-2026-07-12b-uplift", // now consumes the uplift nomos's field
@@ -281,8 +281,8 @@ pub static EROSION: NomosDecl = NomosDecl {
     physics: Tier::Med,        // real process laws, uncalibrated rates, hardcoded edge policy
     relation: "mechanistic-causal (stream-power incision + deposition + talus + creep), on a stand-in substrate",
     status: "kernel probe-verified in the testbench (channel_profile, spike_probe, armor_regimes 1/3); tile form has fixed epochs (no convergence-ε — component E) and non-composable edges (plan Phase-3)",
-    deps: &[&SPINE, &UPLIFT, &CLIMATE],
-    // Three needs, all now MET: the surface it carves (→ SPINE), the rock-uplift
+    deps: &[&INITIAL_TOPOGRAPHY, &UPLIFT, &CLIMATE],
+    // Three needs, all now MET: the surface it carves (→ INITIAL_TOPOGRAPHY), the rock-uplift
     // rate it carves AGAINST (→ UPLIFT), and the rain that drives incision
     // (→ CLIMATE, the precipitation throughput of the conserved reservoir).
     // At v0 climate is UNIFORM, so erosion consumes it as a discharge WEIGHT
@@ -323,7 +323,7 @@ pub static WATER: NomosDecl = NomosDecl {
 };
 
 /// Every nomos there is. A store root whose name is not here is a bug.
-pub static NOMOTHEKE: &[&NomosDecl] = &[&NOISE, &PLANET, &HYDROSPHERE, &CLIMATE, &SPINE, &UPLIFT, &EROSION, &WATER];
+pub static NOMOTHEKE: &[&NomosDecl] = &[&NOISE, &PLANET, &HYDROSPHERE, &CLIMATE, &INITIAL_TOPOGRAPHY, &UPLIFT, &EROSION, &WATER];
 
 /// Look a nomos up by its key-stem name (the part before `@`).
 pub fn lookup(name: &str) -> Option<&'static NomosDecl> {
@@ -384,7 +384,7 @@ mod tests {
 
     #[test]
     fn declarations_mint_the_keys() {
-        assert!(SPINE.key().as_str().starts_with("spine-tile@spine-2026-07-10b-sphere3d"));
+        assert!(INITIAL_TOPOGRAPHY.key().as_str().starts_with("initial-topography@initial-topography-2026-07-10b-sphere3d"));
         assert!(EROSION.key().as_str().starts_with("erosion-tile@erosion-2026-07-12b-uplift"));
     }
 

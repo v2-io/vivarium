@@ -8,7 +8,7 @@
 //! - `vivarium new <dir> [name]` — individuate a world: write its manifest
 //!   (fresh seed unless the dir already has one — identity is never re-minted).
 //! - `vivarium build <dir> [--level L] [--epochs E]` — builder v0: sweep all six
-//!   cube faces at level `L` through the spine nomos (the breadth-first,
+//!   cube faces at level `L` through the initial-topography nomos (the breadth-first,
 //!   whole-world degenerate beacon — "all of the world to the end of Phase 2"),
 //!   then erode the same tiles (`--epochs 0` skips erosion). Appends `build.log`,
 //!   maintains `status.json`, holds `builder.lock`; a second invocation on a
@@ -204,7 +204,7 @@ fn cmd_build(rest: &[String]) -> i32 {
     let mut out = BuilderLog { log: log_file, status_path: dir.join("status.json") };
 
     out.line(&format!(
-        "builder v0 on vivium \"{}\" (seed {}) — spine sweep L{level}, {}x{} tiles/face-row, erosion {epochs} epochs",
+        "builder v0 on vivium \"{}\" (seed {}) — initial-topography sweep L{level}, {}x{} tiles/face-row, erosion {epochs} epochs",
         spec.name, spec.seed, TILE_NX, TILE_NX
     ));
 
@@ -213,8 +213,8 @@ fn cmd_build(rest: &[String]) -> i32 {
     let total = 6 * per_face * per_face;
     let mut done = 0;
     let mut computed = 0;
-    for phase in ["spine", "erosion", "water"] {
-        if phase != "spine" && epochs == 0 {
+    for phase in ["initial-topography", "erosion", "water"] {
+        if phase != "initial-topography" && epochs == 0 {
             out.line("erosion + water skipped (--epochs 0)");
             break;
         }
@@ -227,7 +227,7 @@ fn cmd_build(rest: &[String]) -> i32 {
                 for ti in 0..per_face {
                     let (oi, oj) = ((ti * TILE_NX) as u32, (tj * TILE_NX) as u32);
                     let src = match phase {
-                        "spine" => world.spine_tile(face, level, oi, oj, TILE_NX).1,
+                        "initial-topography" => world.initial_topography(face, level, oi, oj, TILE_NX).1,
                         "erosion" => world.erosion_tile(face, level, oi, oj, TILE_NX, epochs).1,
                         _ => world.water_tile(face, level, oi, oj, TILE_NX, epochs, 200).1,
                     };

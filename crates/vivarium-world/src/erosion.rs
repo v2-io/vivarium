@@ -193,7 +193,7 @@ impl Fluvial {
     /// Seed from the band-limited prior over `nx × nx` cells of `face` at `level`
     /// starting at `(oi, oj)` — the honest initial condition (no imposed shapes).
     pub fn from_prior(seed: u64, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> Self {
-        Self::from_surface(seed, face, level, oi, oj, nx, |c| gen::surface_prior_m(seed, c, c.level()))
+        Self::from_surface(seed, face, level, oi, oj, nx, |c| gen::initial_topography_m(seed, c, c.level()))
     }
 
     /// Seed from an arbitrary surface function — how a FINE tier is seeded from
@@ -698,7 +698,7 @@ mod fluvial_tests {
 /// A finished erosion run, sampleable at ANY finer level: within the region, a
 /// column's surface = **bilinear(eroded field) + the detail increment** — the
 /// prior's octaves finer than the erosion grid's Nyquist
-/// (`surface_prior_m(cell, cell.level()) − surface_prior_m(cell, region level)`).
+/// (`initial_topography_m(cell, cell.level()) − initial_topography_m(cell, region level)`).
 /// The carved structure replaces exactly the band the sim simulated; fine texture
 /// rides on top; outside the region the caller falls back to the baseline (an
 /// honest seam at the region edge — the §7.1 spatial seam, unblended for now).
@@ -718,7 +718,7 @@ pub struct ErodedRegion {
 impl ErodedRegion {
     /// Seed from the prior around a centre (face cells at `level`), erode, keep.
     pub fn build(seed: u64, face: Face, level: u8, center_i: u32, center_j: u32, nx: usize, p: &FluvialParams) -> Self {
-        Self::build_from(seed, face, level, center_i, center_j, nx, p, |c| gen::surface_prior_m(seed, c, c.level()))
+        Self::build_from(seed, face, level, center_i, center_j, nx, p, |c| gen::initial_topography_m(seed, c, c.level()))
     }
 
     /// Seed from an arbitrary surface (e.g. the coarser tiers of the telescope),
@@ -778,7 +778,7 @@ impl ErodedRegion {
             + at(x0 + 1, y0) * fx * (1.0 - fy)
             + at(x0, y0 + 1) * (1.0 - fx) * fy
             + at(x0 + 1, y0 + 1) * fx * fy;
-        let detail = gen::surface_prior_m(self.seed, cell, level) - gen::surface_prior_m(self.seed, cell, self.level);
+        let detail = gen::initial_topography_m(self.seed, cell, level) - gen::initial_topography_m(self.seed, cell, self.level);
         Some(base + detail)
     }
 }
@@ -796,7 +796,7 @@ pub fn surface_at(seed: u64, cell: CellId, regions: &[ErodedRegion]) -> f64 {
             return s;
         }
     }
-    gen::surface_prior_m(seed, cell, cell.level())
+    gen::initial_topography_m(seed, cell, cell.level())
 }
 
 /// The finest tier level covering `cell`, if any — the fidelity-debug query

@@ -19,7 +19,7 @@
 //! scalar), lifted out into its own nomos — consolidation, not new physics. Its
 //! epistemic tag is honest: physics `None` (no mechanics — a placeholder curve,
 //! not mantle convection), a `#mech stand-in`. The real driver is the
-//! thermal-spine / plume-upwelling work (`TODO.md`); this is the declared rung
+//! thermal-initial-topography / plume-upwelling work (`TODO.md`); this is the declared rung
 //! beneath it, and flipping the rate to 0 makes it a clean no-op.
 
 use crate::noise;

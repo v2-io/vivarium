@@ -41,7 +41,7 @@
 /// Phase-2 `seeded-asymmetry` promise — found undeclared 2026-07-12 by the ordinum audit.
 pub const SEEDED_ASYMMETRY: &str = "seeded crustal asymmetry (dimensionless)";
 
-/// The surface-prior elevation field the spine produces (m). Consumed by erosion.
+/// The surface-prior elevation field the initial-topography produces (m). Consumed by erosion.
 pub const SURFACE_ELEVATION: &str = "surface elevation field (m)";
 
 /// Top-of-atmosphere insolation (W/m²) — produced by the `planet` nomos from tilt,

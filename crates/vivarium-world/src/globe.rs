@@ -29,8 +29,8 @@
 //! ## What the colour means (and what it does NOT)
 //!
 //! Colour encodes the **deepest nomos materialised** for the tile a pixel falls
-//! in — read from the store census, not assumed: unbuilt → initial-topography
-//! (`spine`) → eroded (`fluvial`) → watered. This is a **build-state** claim
+//! in — read from the store census, not assumed: unbuilt → initial_topo
+//! (`initial-topography`) → eroded (`fluvial`) → watered. This is a **build-state** claim
 //! ("what is in the store"), *not* a geological-phase claim — no per-region
 //! phase state exists yet (the ordinum's phases are world-global). The legend
 //! says so out loud.
@@ -47,8 +47,8 @@ use crate::sphere::{CubeCoord, Geo};
 enum State {
     /// No tile for this region in the store — rendered from the raw prior, dim.
     Unbuilt,
-    /// Only the initial-topography (`spine`) tile exists.
-    Spine,
+    /// Only the initial_topo (`initial-topography`) tile exists.
+    InitialTopography,
     /// The fluvial-erosion tile exists (carved, no water settled yet).
     Eroded,
     /// The surface-water tile exists (water settled on the eroded bed).
@@ -59,8 +59,8 @@ enum State {
 struct Coverage {
     level: u8,
     nx: usize,
-    /// `(face, oi, oj)` origins that have a spine tile.
-    spine: std::collections::HashSet<(u8, u32, u32)>,
+    /// `(face, oi, oj)` origins that have a initial_topo tile.
+    initial_topo: std::collections::HashSet<(u8, u32, u32)>,
     /// `(face, oi, oj)` → erosion `epochs` (needed to re-pull the eroded field).
     erosion: HashMap<(u8, u32, u32), u32>,
     /// `(face, oi, oj)` origins that have a settled water tile.
@@ -81,14 +81,14 @@ impl Coverage {
         // Deepest level present among the surface nomoi.
         let level = roots
             .iter()
-            .filter(|(k, _)| k.starts_with("spine-tile@") || k.starts_with("erosion-tile@"))
+            .filter(|(k, _)| k.starts_with("initial-topography@") || k.starts_with("erosion-tile@"))
             .filter_map(|(k, _)| field(k, "level").and_then(|v| v.parse::<u8>().ok()))
             .max()
             .unwrap_or(6);
         let mut cov = Coverage {
             level,
             nx: 64,
-            spine: Default::default(),
+            initial_topo: Default::default(),
             erosion: Default::default(),
             watered: Default::default(),
         };
@@ -111,8 +111,8 @@ impl Coverage {
                 cov.nx = nx;
             }
             match nomos {
-                "spine-tile" => {
-                    cov.spine.insert((face, oi, oj));
+                "initial-topography" => {
+                    cov.initial_topo.insert((face, oi, oj));
                 }
                 "erosion-tile" => {
                     let epochs = field(k, "epochs").and_then(|v| v.parse::<u32>().ok()).unwrap_or(0);
@@ -133,8 +133,8 @@ impl Coverage {
             State::Watered
         } else if self.erosion.contains_key(&t) {
             State::Eroded
-        } else if self.spine.contains(&t) {
-            State::Spine
+        } else if self.initial_topo.contains(&t) {
+            State::InitialTopography
         } else {
             State::Unbuilt
         }
@@ -156,7 +156,7 @@ extern "C" {
 // depth, independent of state.
 const OCEAN: &[u8] = &[17, 18, 19, 20, 26, 39]; // deep → shallow
 const GREY: &[u8] = &[238, 241, 244, 247, 250]; // unbuilt, low → high
-const TAN: &[u8] = &[94, 130, 137, 173, 180]; // spine, low → high
+const TAN: &[u8] = &[94, 130, 137, 173, 180]; // initial_topo, low → high
 const OLIVE: &[u8] = &[58, 100, 142, 148, 185]; // eroded, low → high
 const GREEN: &[u8] = &[22, 28, 34, 40, 156]; // watered, low → high
 
@@ -228,7 +228,7 @@ pub fn render(world: &World, roots: &[(String, String)], w: usize, lon0_deg: f64
             let st = cov.state(f, oi, oj);
 
             // Elevation from the deepest materialised surface field for this
-            // tile (eroded → spine), else the raw prior for an unbuilt region.
+            // tile (eroded → initial_topo), else the raw prior for an unbuilt region.
             let elev = match st {
                 State::Watered | State::Eroded => {
                     let epochs = *cov.erosion.get(&(f, oi, oj)).unwrap_or(&0);
@@ -238,14 +238,14 @@ pub fn render(world: &World, roots: &[(String, String)], w: usize, lon0_deg: f64
                     let (di, dj) = ((ci - oi) as usize, (cj - oj) as usize);
                     tile.get(dj * nx + di).copied().unwrap_or(sea as f32) as f64
                 }
-                State::Spine => {
+                State::InitialTopography => {
                     let tile = spine_cache
                         .entry((f, oi, oj))
-                        .or_insert_with(|| world.spine_tile(face, level, oi, oj, nx).0);
+                        .or_insert_with(|| world.initial_topography(face, level, oi, oj, nx).0);
                     let (di, dj) = ((ci - oi) as usize, (cj - oj) as usize);
                     tile.get(dj * nx + di).copied().unwrap_or(sea as f32) as f64
                 }
-                State::Unbuilt => gen::surface_prior_m(world.seed(), cell, level),
+                State::Unbuilt => gen::initial_topography_m(world.seed(), cell, level),
             };
 
             let ocean = elev < sea;
@@ -263,7 +263,7 @@ pub fn render(world: &World, roots: &[(String, String)], w: usize, lon0_deg: f64
             } else {
                 match st {
                     State::Unbuilt => '`',
-                    State::Spine => ':',
+                    State::InitialTopography => ':',
                     State::Eroded => '+',
                     State::Watered => '#',
                 }
@@ -276,7 +276,7 @@ pub fn render(world: &World, roots: &[(String, String)], w: usize, lon0_deg: f64
                     let t = ((elev - sea) / relief).clamp(0.0, 1.0);
                     match st {
                         State::Unbuilt => pick(GREY, t),
-                        State::Spine => pick(TAN, t),
+                        State::InitialTopography => pick(TAN, t),
                         State::Eroded => pick(OLIVE, t),
                         State::Watered => pick(GREEN, t),
                     }
@@ -297,13 +297,13 @@ pub fn render(world: &World, roots: &[(String, String)], w: usize, lon0_deg: f64
     }
 
     // Footer: what the whole census reached (tiles per state), and the legend.
-    for &(f, oi, oj) in cov.spine.iter() {
+    for &(f, oi, oj) in cov.initial_topo.iter() {
         tally[cov.state(f, oi, oj) as usize] += 1;
     }
     // Unbuilt tiles are, by definition, not in the census — report the built
     // ladder only (honest: we can't count what was never materialised).
-    let built = cov.spine.len().max(cov.erosion.len()).max(cov.watered.len());
-    let (n_spine_only, n_eroded, n_watered) = (tally[State::Spine as usize], tally[State::Eroded as usize], tally[State::Watered as usize]);
+    let built = cov.initial_topo.len().max(cov.erosion.len()).max(cov.watered.len());
+    let (n_spine_only, n_eroded, n_watered) = (tally[State::InitialTopography as usize], tally[State::Eroded as usize], tally[State::Watered as usize]);
     let cell_km = crate::sample::cell_size_m(level, Planet::EARTH.radius_m) / 1000.0;
     out.push_str(&format!(
         "\nprojection  Hammer equal-area oval (WHOLE sphere, area-honest; central meridian {:.0}°)\n",
@@ -313,14 +313,14 @@ pub fn render(world: &World, roots: &[(String, String)], w: usize, lon0_deg: f64
         "display     L{level} · {nx}×{nx}-cell tiles · ~{cell_km:.0} km/cell · {built} tiles built (of the visible + hidden planet)\n"
     ));
     out.push_str(&format!(
-        "reached     spine-only {n_spine_only} · eroded {n_eroded} · watered {n_watered}   (build-state from the store census)\n"
+        "reached     initial-topography-only {n_spine_only} · eroded {n_eroded} · watered {n_watered}   (build-state from the store census)\n"
     ));
     if color {
         out.push_str(&format!(
-            "legend      \x1b[38;5;39m~\x1b[0m ocean   \x1b[38;5;247m▓\x1b[0m unbuilt   \x1b[38;5;173m▓\x1b[0m initial-topography   \x1b[38;5;148m▓\x1b[0m eroded   \x1b[38;5;40m▓\x1b[0m watered   (glyph = relief)\n"
+            "legend      \x1b[38;5;39m~\x1b[0m ocean   \x1b[38;5;247m▓\x1b[0m unbuilt   \x1b[38;5;173m▓\x1b[0m initial_topo   \x1b[38;5;148m▓\x1b[0m eroded   \x1b[38;5;40m▓\x1b[0m watered   (glyph = relief)\n"
         ));
     } else {
-        out.push_str("legend      ~ ocean · ` unbuilt · : initial-topography · + eroded · # watered   (glyph = build-state; colour disabled)\n");
+        out.push_str("legend      ~ ocean · ` unbuilt · : initial_topo · + eroded · # watered   (glyph = build-state; colour disabled)\n");
     }
     out.push_str("            colour = deepest nomos MATERIALISED per region (a build-state fact from the store), NOT a geological-phase claim.\n");
     out
@@ -343,17 +343,17 @@ mod tests {
     #[test]
     fn coverage_ladders_by_deepest_nomos() {
         let roots = vec![
-            ("spine-tile@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64".into(), "a".into()),
+            ("initial-topography@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64".into(), "a".into()),
             ("erosion-tile@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64|epochs=20".into(), "b".into()),
             ("water-tile@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64|eepochs=20|steps=200".into(), "c".into()),
-            // a second face with only spine reached
-            ("spine-tile@v|seed=0|face=1|level=6|oi=0|oj=0|nx=64".into(), "d".into()),
+            // a second face with only initial_topo reached
+            ("initial-topography@v|seed=0|face=1|level=6|oi=0|oj=0|nx=64".into(), "d".into()),
         ];
         let cov = Coverage::parse(&roots);
         assert_eq!(cov.level, 6);
         assert_eq!(cov.nx, 64);
         assert_eq!(cov.state(0, 0, 0), State::Watered, "deepest nomos wins");
-        assert_eq!(cov.state(1, 0, 0), State::Spine, "spine-only face");
+        assert_eq!(cov.state(1, 0, 0), State::InitialTopography, "initial-topography-only face");
         assert_eq!(cov.state(5, 0, 0), State::Unbuilt, "untouched face");
     }
 }

@@ -52,10 +52,10 @@ pub fn column_from_surface(cell: CellId, surface_m: f64, soil_m: f64) -> Column 
 /// The two-band prior surface height (m above bedrock datum) for `cell`, with the
 /// mountain band's octaves truncated at `nyquist_level`'s cell size. Exposed so
 /// the eroded-region sampler can form the *detail increment*
-/// `surface_prior_m(cell, cell.level()) - surface_prior_m(cell, region_level)` —
+/// `initial_topography_m(cell, cell.level()) - initial_topography_m(cell, region_level)` —
 /// exactly the octave band finer than what the erosion grid simulated (fBm
 /// truncation is a prefix, §8, so the difference IS the fine octaves).
-pub fn surface_prior_m(seed: u64, cell: CellId, nyquist_level: u8) -> f64 {
+pub fn initial_topography_m(seed: u64, cell: CellId, nyquist_level: u8) -> f64 {
     let p = cell.to_cube().to_unit();
     // Two-band prior (the 2009 neworld idea — "change parameters based on earlier
     // noise" — and core's proven scaling). Slope is what makes terrain read, and
@@ -92,7 +92,7 @@ pub fn surface_prior_m(seed: u64, cell: CellId, nyquist_level: u8) -> f64 {
 }
 
 pub fn baseline_column(seed: u64, cell: CellId) -> Column {
-    column_from_surface(cell, surface_prior_m(seed, cell, cell.level()), 2.0)
+    column_from_surface(cell, initial_topography_m(seed, cell, cell.level()), 2.0)
 }
 
 #[cfg(test)]
@@ -140,8 +140,8 @@ mod tests {
         use crate::sphere::Face;
         let c1 = CellId::from_face_ij(Face::from_index(2), 5308416, 13238272, 24);
         let c2 = CellId::from_face_ij(Face::from_index(1), 100, 100, 19);
-        assert_eq!(surface_prior_m(0, c1, 24), GOLDEN_V2_C1);
-        assert_eq!(surface_prior_m(0, c2, 19), GOLDEN_V2_C2);
+        assert_eq!(initial_topography_m(0, c1, 24), GOLDEN_V2_C1);
+        assert_eq!(initial_topography_m(0, c2, 19), GOLDEN_V2_C2);
     }
     const GOLDEN_V2_C1: f64 = 4.16019378505400800e3;
     const GOLDEN_V2_C2: f64 = 3.50238149865287596e3;
@@ -149,7 +149,7 @@ mod tests {
     #[test]
     fn different_seeds_are_different_worlds() {
         let c = some_cell(0.3, 0.3);
-        assert_ne!(surface_prior_m(0, c, 12), surface_prior_m(42, c, 12));
+        assert_ne!(initial_topography_m(0, c, 12), initial_topography_m(42, c, 12));
     }
 
     /// The face-seam probe (written FIRST, per the regime-probe discipline —
@@ -173,7 +173,7 @@ mod tests {
         let prior_at = |d: [f64; 3]| {
             let n = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
             let cell = CubeCoord::from_unit([d[0] / n, d[1] / n, d[2] / n]).cell(level);
-            surface_prior_m(0, cell, level)
+            initial_topography_m(0, cell, level)
         };
         // Pairs straddling the +X/+Z edge, the +X/+Y edge, and rays past the
         // (1,1,1) corner; matched within-face pairs at the same arc length.

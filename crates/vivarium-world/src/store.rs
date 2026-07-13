@@ -1,4 +1,4 @@
-//! Content-addressed, memoized store — the framework's persistence spine
+//! Content-addressed, memoized store — the framework's persistence initial-topography
 //! (`doc/design/DESIGN-REDUX.md` §13: "the save-file *is* the memo store").
 //!
 //! **Domain-neutral by construction.** Keys and values here are opaque; the
@@ -176,7 +176,7 @@ mod tests {
     fn miss_then_hit_roundtrip() {
         let dir = tmpdir("roundtrip");
         let s = Store::open(&dir).unwrap();
-        let k = Key::new("spine", "v0")
+        let k = Key::new("initial-topography", "v0")
             .field("face", 2)
             .field("level", 19)
             .field("oi", 100)
@@ -191,7 +191,7 @@ mod tests {
     fn persists_across_reopen() {
         // The load-bearing property: the store IS the save.
         let dir = tmpdir("reopen");
-        let k = Key::new("spine", "v0").field("tile", 42);
+        let k = Key::new("initial-topography", "v0").field("tile", 42);
         {
             let s = Store::open(&dir).unwrap();
             s.put(&k, &[1, 2, 3, 4]).unwrap();
@@ -218,12 +218,12 @@ mod tests {
         // key string attached — the substrate of every instrument.
         let dir = tmpdir("census");
         let s = Store::open(&dir).unwrap();
-        s.put(&Key::new("spine", "v0").field("level", 7), b"a").unwrap();
+        s.put(&Key::new("initial-topography", "v0").field("level", 7), b"a").unwrap();
         s.put(&Key::new("erosion", "v0").field("level", 9), b"b").unwrap();
         let mut roots = s.roots().unwrap();
         roots.sort();
         assert_eq!(roots.len(), 2);
-        assert!(roots.iter().any(|(k, _)| k.starts_with("spine@v0") && k.contains("level=7")));
+        assert!(roots.iter().any(|(k, _)| k.starts_with("initial-topography@v0") && k.contains("level=7")));
         assert!(roots.iter().any(|(k, _)| k.starts_with("erosion@v0") && k.contains("level=9")));
         let _ = fs::remove_dir_all(&dir);
     }
@@ -261,8 +261,8 @@ mod tests {
         // stay distinct.
         let dir = tmpdir("keys");
         let s = Store::open(&dir).unwrap();
-        let k1 = Key::new("spine", "v0").field("oi", 100).field("oj", 200);
-        let k2 = Key::new("spine", "v0").field("oi", 100).field("oj", 201);
+        let k1 = Key::new("initial-topography", "v0").field("oi", 100).field("oj", 200);
+        let k2 = Key::new("initial-topography", "v0").field("oi", 100).field("oj", 201);
         s.put(&k1, b"tileA").unwrap();
         s.put(&k2, b"tileB").unwrap();
         assert_eq!(s.get(&k1).as_deref(), Some(&b"tileA"[..]));

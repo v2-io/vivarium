@@ -28,7 +28,7 @@
 //!
 //! Run: `cargo run --release -p vivarium-world --example sea_level_probe`
 
-use vivarium_world::gen::{surface_prior_m, SEA_LEVEL_M};
+use vivarium_world::gen::{initial_topography_m, SEA_LEVEL_M};
 use vivarium_world::hydrosphere::Hydrosphere;
 use vivarium_world::planet::Planet;
 use vivarium_world::sphere::{CubeCoord, Face};
@@ -62,7 +62,7 @@ fn main() {
                 let u = ((i as f64 + 0.5) / n as f64) * 2.0 - 1.0;
                 let v = ((j as f64 + 0.5) / n as f64) * 2.0 - 1.0;
                 let cell = CubeCoord { face, u, v }.cell(LEVEL);
-                let h = surface_prior_m(seed, cell, LEVEL);
+                let h = initial_topography_m(seed, cell, LEVEL);
 
                 // TRUE area: spherical excess of the four corners (two triangles).
                 let (a, b, c, d) = (corner(i, j), corner(i + 1, j), corner(i + 1, j + 1), corner(i, j + 1));
