@@ -38,7 +38,8 @@ already convicted itself of it once, in `doc/theory/discretisation-and-informati
 > cannot fail a build is a wish.**"*
 
 ⇒ **In the project's own vocabulary, the README is a PROMISE WITHOUT A PREDICATE** — a **gloss**: a word
-of honor, greppable, unmechanized. **It is the most load-bearing gloss in the repository.**
+of honor, greppable, unmechanized. **And it is the gloss that every other segment in this outline is a
+piece of keeping.**
 
 > # ⇒ **`core/` exists to MAKE THE README TRUE.**
 >
@@ -76,6 +77,28 @@ must hold) · **contract** (what something must declare) · **mechanism** (an ex
 **mode** (a verification mode) · **constraint** (a hard architectural line — a *thou shalt not*) ·
 **der** (derived here) · **discussion** (a part intro) · **failure** (a gallery specimen — *a wrong
 answer and why it was seductive*) · **open** (a named unsolved problem).
+
+### ⚠ A standing rule for every segment: **NO ABSOLUTES**
+
+> **Joseph, 2026-07-13:** *"When you are surprised with a unifying concept, it of course FEELS like 'the
+> most important part' … it is true — **but it is not true for the future.** Any time you are writing an
+> absolute … recognize it as **'valid feel for me, valid signal for importance for me right now, almost
+> certainly false as a written assertion.'**"*
+
+**The sharp form, in this project's own vocabulary: AN ABSOLUTE IS A CLAIM WITH NO PREDICATE.** Nothing
+could convict *"the most important X."* It cannot be marked true at any tier. **It is a gloss wearing the
+typeface of a result** — and it is written at the moment of surprise, which means it **reports the
+author's state as a property of the world.** *(Same failure family as authority inflation: my gradient,
+published as the terrain.)*
+
+**And it compounds exactly the way this project cannot afford:** a future session inherits *one agent's
+surprise ordering* as a ranking, with no way to check it and no reason to doubt it.
+
+> **⇒ In a segment: STATE THE CLAIM, DROP THE RANKING.** *"Load-bearing for Parts II, III and VI"* is
+> checkable. *"The load-bearing law of the whole spec"* is not. **Superlatives belong in personal
+> reflections — where they are honest phenomenology — and nowhere else.**
+> *(Exception, narrow: a genuine, triple-checked epistemological finding. Those are rare and they will
+> know it.)*
 
 ### ⚠ `area` — **which layer does this segment GOVERN?** *(added at Joseph's ask, 2026-07-13)*
 
@@ -190,8 +213,7 @@ it opened the first time.*
 
 > ## ⇒ **THE AUDIT IS THE CONTENT THE FRONTIER DESIGNED THE CONTAINER FOR. NEITHER IS COMPLETE WITHOUT THE OTHER, AND NOBODY HAS JOINED THEM.**
 >
-> **This is the single most important thing `core/` does**, and it means **Part II cannot be a straight
-> PORT of `VIVARIA-DEFINITIONS`.** It must be that document's *form* **married to** twenty-four hours of
+> **Concretely, this means Part II cannot be a straight PORT of `VIVARIA-DEFINITIONS`.** It must be that document's *form* **married to** twenty-four hours of
 > mathematics that did not exist when it was written — *mathematics that was, as Joseph notes, **available
 > all along and unused.***
 
@@ -218,8 +240,9 @@ so in the first commit.*
 # *Part I* — The Ontology
 
 *Ordering: **before** the substrate, because the substrate's shape is DERIVED from it (fated lifting ⇒
-memoization ⇒ the content-addressed store; kingdom nesting ⇒ the coarse/fine seam). **This part has needed
-almost no correction in 24 days** — it is the most stable thing in the project.*
+memoization ⇒ the content-addressed store; kingdom nesting ⇒ the coarse/fine seam). **Measured: this part
+has needed almost no correction in 24 days** — every entry traces to Jun 20 – Jul 6 and none has been
+superseded.*
 
 > ⚠ **AND MUCH OF IT IS INHERITED FROM ASF, NOT DISCOVERED HERE — say so plainly.** `ASF.md` §2: *"the cut
 > is **INVARIANCE, not slowness**; **the tower derives by SELF-SIMILAR APPLICATION**"* — and *"**the phase
@@ -263,7 +286,7 @@ one row; `relation: &'static str` is box ⑤ as prose); ③ is `ARCHITECTURE` §
 | contract | [#con-box5-claim](src/con-box5-claim.md) | **⑤** the **modified equation** — the unphysical term it **ADDED**, *with a sign and a differential order*. **A COMPUTATION, not a disposition** | draft |
 | contract | [#con-dynamic-exponent-z](src/con-dynamic-exponent-z.md) | ⚠ **The time-axis twin of box ②, and NOBODY HAS PROPOSED IT.** $z{=}1$ advective / $z{=}2$ diffusive. **One integer.** *(`erosion`'s creep **CLAMPS rather than substeps** — an undeclared, level-dependent sacrifice)* | draft |
 | law | [#law-bias-or-noise](src/law-bias-or-noise.md) | ⚖ **The verdict function shared by ALL the boxes.** *"Negligible at this scale"* is admissible **only for noise**. **A sign-definite operation cannot average out ⇒ it is a BIAS BY CONSTRUCTION** | verified |
-| law | [#law-cannot-fail-a-build](src/law-cannot-fail-a-build.md) | ⚠⚠ **THE LOAD-BEARING LAW OF THE WHOLE SPEC.** *"A declaration that cannot fail a build is a **WISH**."* **Every mechanism here that WORKS, works because it made a lie UNREPRESENTABLE** | verified |
+| law | [#law-cannot-fail-a-build](src/law-cannot-fail-a-build.md) | *"A declaration that cannot fail a build is a **WISH**."* **Load-bearing for Parts II, III and VI** — every mechanism in this project that convicts, convicts because it made a lie UNREPRESENTABLE; every one that does not, is prose | verified |
 | open | [#open-error-propagation-graph](src/open-error-propagation-graph.md) | The flux web is a **reachability** graph; it wants to be an **ERROR-PROPAGATION** graph — *and the edges TRANSFORM the error's KIND* (a convex law turns **noise into bias**, via Jensen). `min()` is what you write when errors have magnitude but not **kind** | draft |
 
 ---
@@ -304,7 +327,7 @@ one row; `relation: &'static str` is box ⑤ as prose); ③ is `ARCHITECTURE` §
 | law | [#law-coarse-graining-lies](src/law-coarse-graining-lies.md) | **Carrying only the mean of a nonlinear law does not blur — IT LIES** (Jensen). *Uniform is not the safe default; it is a positive claim of **zero** sub-grid variance — a measure-zero state* | draft |
 | law | [#law-float-is-the-bottom-seam](src/law-float-is-the-bottom-seam.md) | ⚠ **Floating-point is the BOTTOM-MOST SEAM**, and needs the same conservation discipline as any coupler (**land** vs **count**). *(Written Jul 4, from two prior f32 bugs. **Paid for a THIRD time Jul 13.**)* | verified |
 | law | [#law-rectification](src/law-rectification.md) | ⚠ *(the ONE claim I could not source — treat with suspicion)* **Representability is not the question; RECTIFICATION is.** A sign-definite op cannot cancel, and a downstream law **INTEGRATES** it ⇒ **a scheme can be EXACTLY well-balanced and forge a current anyway.** *Structure-preservation is not enough if the numbers cannot hold the structure* | draft |
-| open | [#open-detail-to-abstract](src/open-detail-to-abstract.md) | ⚠ **THE one research problem.** Upscaling an **irreducible discrete edit** into a memoized macro with correct **up-invalidation** *(every incremental framework does downstream-only)*. **⇒ `[me]`: this is the access matrix's INTERCESSION cell — mediated, never direct. You cannot petition a parent who kept no record of the thing you want changed** ⇒ **downstream of [#con-box3-semantics](src/con-box3-semantics.md)** | draft |
+| open | [#open-detail-to-abstract](src/open-detail-to-abstract.md) | ⚠ **The project's one NAMED open research problem** *(its own phrase — `ARCHITECTURE` §8)*. Upscaling an **irreducible discrete edit** into a memoized macro with correct **up-invalidation** *(every incremental framework does downstream-only)*. **⇒ `[me]`: this is the access matrix's INTERCESSION cell — mediated, never direct. You cannot petition a parent who kept no record of the thing you want changed** ⇒ **downstream of [#con-box3-semantics](src/con-box3-semantics.md)** | draft |
 
 ---
 
@@ -321,8 +344,8 @@ one row; `relation: &'static str` is box ⑤ as prose); ③ is `ARCHITECTURE` §
 
 # *Part VI* — The Project's Own Scaffold *(the meta-system)*
 
-*⚠ **This part may not belong in `core/` at all — Joseph's call.** It is the session's largest finding and
-it is **about the project, not the world.** But it is also what makes every part above survivable, and it
+*⚠ **This part may not belong in `core/` at all — Joseph's call.** It is **about the project, not the
+world.** But it is also what makes every part above survivable, and it
 uses **the same schema** (charge → promise → predicate → defeasance → maturity). **Candidate: its own
 `meta/OUTLINE.md`, sharing the segment machinery.** Kept here so it is not lost.*
 
@@ -339,8 +362,7 @@ uses **the same schema** (charge → promise → predicate → defeasance → ma
 
 # *Appendix* — The failure gallery
 
-*⚠ **The highest-value teaching content the project owns**, currently scattered across four documents.
-Every specimen was expensive. **Rule (`NOMOS-CONTRACT`): include the ones where WE got it wrong, and WHY
+*⚠ **Teaching content, currently scattered across four documents.** Every specimen was expensive. **Rule (`NOMOS-CONTRACT`): include the ones where WE got it wrong, and WHY
 THE WRONG ANSWER WAS SEDUCTIVE.***
 
 | Tag | The specimen |
@@ -358,7 +380,7 @@ THE WRONG ANSWER WAS SEDUCTIVE.***
 ## ⚠ Open questions **on the outline itself** *(Joseph's calls, not mine)*
 
 1. **Does Part VI belong in `core/`?** It is about the *project*, not the *world*. **I lean: split into
-   `meta/`, sharing the segment machinery.** It must not be lost — it is the session's largest finding.
+   `meta/`, sharing the segment machinery.** It must not be lost.
 2. ~~**Where does ETHICS live?**~~ ⇒ **DERIVED, not chosen — `ETHICS.md` answers it** *(2026-07-13)*:
    > *"The world may be **fictional**; the agent's **situation-awareness must be truthful**."*
    > *"Keep the world **truthful about being a world**. Internal coherence and determinism are **not just
