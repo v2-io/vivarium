@@ -36,9 +36,15 @@ carries the conceptual bridge, the reading gates, and the **standing moratorium
 7. `LEXICON.udon` — canonical vocabulary; `SUPERSEDED.md` — the do-not-reuse
    ledger; `ASSUMPTIONS.md` — the magic-constant ledger (touch a constant,
    touch the ledger).
-8. `doc/theory/` — the technical core: `multiscale-seams.md` (position AND time
-   as one seam discipline; the resolution-light-cone / dynamic-exponent-$z$
-   unification) + `multiscale-methods.md` (the R/L/closure operator algebra).
+8. `doc/theory/` — the technical core. **⚠ REQUIRED before authoring or reworking any
+   field nomos: [`discretisation-and-information.md`](doc/theory/discretisation-and-information.md)**
+   — *what a nomos is actually claiming*. The **Prime Question** (*"what physical claim
+   is this algorithm making?"*), the FV/FD/FE taxonomy, the **structure table** (find
+   your phenomenon → find your scheme → **find what it conflicts with**), bias-vs-noise,
+   one-reconstruction-per-consumer, and the probes that would convict us. Then
+   `multiscale-seams.md` (position AND time as one seam discipline; the
+   resolution-light-cone / dynamic-exponent-$z$ unification) + `multiscale-methods.md`
+   (the R/L/closure operator algebra).
 9. `doc/plan/` — the live build path: `abyssal-parity-plan.md` (the six phases),
    `builder-explorer-decoupling.md` (operational design),
    `framework-to-status-quo.md`, `vivium-operational-workflow.md`,

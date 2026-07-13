@@ -133,6 +133,30 @@ Joseph asked whether such a mesh existed. It has existed for thirty years. **The
 
 **⇒ It resolves the Minecraft conflation.** A Minecraft column is the **zeroth-order** version of this (a flat plane, zero gradient — so trivially both a "point" and a "cell average"). Add the gradient and the two split. **The column was never the mesh. A column is a cell average plus a gradient; the "mesh" is a *rendering choice*.**
 
+### ⚠ 2.4a — CORRECTION: the project ALREADY declared this. It was not undeclared. It was UNENFORCED.
+
+*Added 2026-07-13, after an onboarding audit caught the author asserting a stronger and more flattering claim than the evidence supports. Corrected in place — because the real finding is sharper than the one it replaces.*
+
+**An earlier draft of this document claimed *"nobody has ever said what a stored value means."* That is FALSE.** `doc/design/DESIGN-MATERIAL.md` §4 — **a Level-B document** — said it, and said it *well*:
+
+> *"**The conserved primitive is volume / mass of material** — not a height. Erosion and hydrology move mass; conservation is the thing that must survive every LOD crossing. **This is finite-volume thinking** (store the cell-integrated conserved quantity), which is the correct frame for the physics."*
+>
+> *"**Surface elevation is a derived reading**: top-of-topmost-solid, sampled at the column's center — **a finite-difference node**. *(Settled by code… §14 just names it so **a later tier can't quietly treat it as a mean/max**.)*"*
+>
+> *"Converting between these readings (volume↔height, sample↔mean) is **lossy and directional** → it is **coupler** work, and any downscale must honor whichever statistic was stored."*
+>
+> *"Prior art (not novel): finite-volume vs finite-difference; GDAL `AREA_OR_POINT` and DEM grid registration (**a cell value's meaning must be declared**); **Arakawa staggering**; Volume-of-Fluid."* — **[P]** `DESIGN-MATERIAL.md` §4
+
+**Read that, then read the bug.** The project made the FV/FD carve; named the conserved primitive; declared elevation a *derived* FD node; identified the conversion as **lossy, directional, coupler work**; cited **Arakawa staggering** as prior art — **and wrote a guard whose literal stated purpose was to stop a later tier from quietly treating it as a mean.** Then `mean-pin` treated it as a mean, the coupler was never built, and nobody noticed for months.
+
+> ### **The finding is not "the semantics were undeclared." It is: THE SEMANTICS WERE DECLARED, A GUARD WAS WRITTEN, AND THE CODE DRIFTED THROUGH IT ANYWAY.**
+>
+> **That is strictly worse — and it indicts the project's own thesis.** `README.md`: *"Epistemic honesty is enforced in code, not culture."* **Here it was not.** The declaration lived as **prose in a Level-B doc with nothing mechanical behind it** — no `NomosDecl` field, no test, no store key. **A declaration that cannot fail a build is a wish.** Same class as an unaccounted magic constant, same fix: **it must become DATA the audit can check** (§6 item 5), not prose a future reader may skip.
+
+**And the author committed the same sin one level up.** §7(a) of this document originally announced staggering as *"a lead the grid report never tested."* **It is sitting in `DESIGN-MATERIAL` §4's prior-art list.** The author never read that Level-B doc *while writing a Level-B doc* — precisely the failure the Prime Question exists to prevent.
+
+> **Generalise it, because it is the sharpest lesson in this file: BEFORE CLAIMING SOMETHING IS NEW, READ WHAT THE PROJECT ALREADY DECIDED.** The archaeology is cheaper than the rediscovery — and a rediscovery presented as a discovery is dishonest by omission, even when it is entirely sincere.
+
 ### 2.5 ⚠ The invisible modes — the thing I did not see coming
 
 **A discretisation has a NULL SPACE: modes it literally cannot see.**
@@ -321,6 +345,23 @@ The information-theoretic restatement, which subsumes it:
 
 **⚠ Note two things about that table.** First: **conservation is *necessary but not sufficient*.** A perfectly conservative scheme can still violate thermodynamics. Second: **positivity and well-balancedness are NOT conservation laws** — they are *realizability* and *equilibrium* structures. Conservation says *the books balance*; realizability says *this state is a thing that can exist*. **A scheme can honour one and destroy the other.**
 
+### 4.1a ⚠ THE STRUCTURES CONFLICT — and the table above hides it
+
+*Added 2026-07-13. An onboarding-audit agent designed an atmospheric-circulation nomos from this table and found the gap immediately: **its phenomenon hit SIX rows at once, and they fight each other.** The table as written implies you pick a scheme per structure. **Often you cannot.***
+
+- **Energy-conserving and enstrophy-conserving schemes are DIFFERENT SCHEMES.** For 2-D rotating flow you may have one exactly, or a compromise, but **not both** (this is the entire subject of Arakawa & Lamb 1981).
+- **A positivity limiter destroys the enstrophy budget.** Clipping to keep a state realizable is a nonlinear, non-conservative intervention that pollutes the very invariant you were preserving.
+- **Well-balancedness and high-order accuracy pull against each other** at wet/dry fronts.
+- **Entropy stability costs you exact energy conservation** — you *add* dissipation on purpose.
+
+> ### **⇒ Erosion is UNUSUALLY CLEAN. A rotating fluid is the NORMAL case. The table is a menu of structures, NOT a menu of independent choices.**
+>
+> **So the real instruction is stronger than "preserve the structure":**
+>
+> **Enumerate ALL the structures your phenomenon has. Find which ones CONFLICT. Choose which to preserve exactly, which to preserve approximately, and which to abandon — and DECLARE ALL THREE.** A nomos that declares "I preserve conservation" while silently trading away enstrophy has told you a true thing and hidden the load-bearing one.
+
+**[⊘ owed] The table needs a "conflicts with" column**, and the `NomosDecl` needs somewhere to *put* these declarations — **there is currently no field for preserved-structure, sacrificed-structure, or bias-vs-noise.** The document demands declarations the data model cannot hold. That is the gap between this theory and the flux web, and it is unbuilt (§6 item 5).
+
 ### 4.2 One reconstruction per consumer — declared, and reconciled, never unified
 
 The discontinuity of the FV reconstruction (Fig. 24, orange) is **not a claim about the ground.** It is a device internal to the scheme. **The moment you RENDER it, or let an agent WALK on it, you have converted a numerical device into a physical claim** — and *that* is the error, and it is ours, not FVM's. It is the **core/view wall**, one level deeper than we had been reading it.
@@ -391,7 +432,9 @@ So the **volume under the interpolating mesh differs from $\sum h_i A_i$ by a CU
 
 **The grid question remains Joseph's to adjudicate** (`DECISIONS[grid-question-not-closed-authority-was-inflated]`). This document *reopens* two lines the report could not have seen, because **the report audited coordinates, not physics**:
 
-**(a) STAGGERING is not hexagons, and it survives.** Staggering is about **where you store components**, not the cell's shape. Hexagons were ruled out because they cannot quadtree. **Staggering is entirely compatible with a cube-sphere quadtree** — keep `CellId`, keep 1→4, and simply store scalars at centres and **fluxes at faces**. It adds no points; it **buys a wider representable band from the same points** (§3.2), and it is what every serious geophysical model does. **⚠ And per the structure table, it may be *mandatory* for the ocean/atmosphere nomos, whose vorticity dynamics collocated grids get wrong.**
+**(a) STAGGERING is not hexagons, and it survives. ⚠ AND IT IS NOT NEW — the project named it as prior art and then forgot.** `DESIGN-MATERIAL.md` §4 lists **"Arakawa staggering"** in its prior-art line. An earlier draft of this section announced it as *"a lead the grid report never tested."* **It is our own Level-B doc's prior art, and the author had not read it** (see §2.4a). *Recorded, not quietly deleted: the rediscovery is the finding.*
+
+Staggering is about **where you store components**, not the cell's shape. Hexagons were ruled out because they cannot quadtree. **Staggering is entirely compatible with a cube-sphere quadtree** — keep `CellId`, keep 1→4, and simply store scalars at centres and **fluxes at faces**. It adds no points; it **buys a wider representable band from the same points** (§3.2), and it is what every serious geophysical model does. **⚠ And per the structure table, it may be *mandatory* for the ocean/atmosphere nomos, whose vorticity dynamics collocated grids get wrong.**
 
 ![Staggering — the same points, used better](fig/staggering.svg)
 
