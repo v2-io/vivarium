@@ -279,6 +279,34 @@ explorer in a Realized-not-Lawful early-Abyssal world** — the six-phase path i
 `doc/plan/abyssal-parity-plan.md`, with conservation riding WITH the parity
 track, not behind it. Next increments:
 
+> ## ⚑ HANDOFF — the state at the end of 2026-07-13
+>
+> *A long session audited the kernels, ran eight agents, and found that **almost every "principled" thing we believed about our own physics was wrong in an interesting way.** Read `DECISIONS.decision-log.udon` for 2026-07-12/13 in full — it is the record. Nothing below is decided except where it says so.*
+>
+> ### Fix these today. Verified, no decision required, and each is small.
+> 1. **`erosion.rs:371` — `cell_area = cell_m * cell_m`.** One uniform area for a grid whose cells vary 1.4×. **Measured +17.8% mean, +41.2% at face edge-midpoints, bit-identical across L5–L13 ⇒ CANNOT be out-resolved.** It hands erosion a **cube-locked fake erodibility field**. ~6 lines; closed form in `msc/spike-wavelet-store/`.
+> 2. **`erosion.rs:369` — `const P: f32 = 1.1` → `1.0`.** **One character.** At `p=1` the first moment is **exactly zero** (a theorem); at 1.1 it is a 45°-periodic grid-locked deflection **toward the axes** — *and `grid_lab`'s perfect-lattice control has been printing that 0.24° on every run, and we read it as a baseline.*
+> 3. **Kill MFD's diagonals.** They cross **no face** — measured **47.8% phantom flux** — and they are what makes MFD un-correctable by any post-process.
+> 4. **`water.rs`: store the surface `η`, not `depth`.** `η = bed + depth` in f32 at a 4000 m datum **forges a 1.6e-4 m/s (≈14 m/day) current in a dead-calm lake that never decays** (f64: 2.9e-13). Free, and structurally honest — `η` is what the scheme integrates.
+> 5. **Promote `water.rs`'s hardcoded θ / Froude cap / Jarrett constants to `WaterParams`.** *An assumption you cannot vary is an assumption you cannot test.* **This currently blocks every water probe.**
+> 6. **`pin_block_means`: swap the bilinear delta upsample for a block-CONSTANT one** (preserves the mean *exactly*, costs *less*), then **re-run `seam_ridge`.** **Cheap, decisive, and it can fail.** *(And fix the test `pin_preserves_parent_means` — it is named for an invariant it does not test, with a tolerance sized to accommodate the defect.)*
+>
+> ### The #1 gap — and it now has a sourced mechanism
+> **`uplift` is STRICTLY POSITIVE everywhere and is therefore MECHANICALLY INCAPABLE of keeping `promise[emerged-land]`** — the gate the whole queue is blocked on. The fix is not a better uplift field: **uplift should not be a producer at all.** The primitive is the **lithospheric COLUMN** (conserved); **elevation is DERIVED by isostasy**; and *"uplift rate"* is merely `de/dt`. **The depleted mantle keel is half the mechanism** (Chowdhury et al. 2025, read; `relata: chowdhury-2025-subaerial`). **⊘ Korenaga et al. 2017 (the freeboard-modelling reference) is unread and wanted.** See `DECISIONS[isostasy-is-the-uplift-nomos-and-the-keel-is-half-of-it]`.
+>
+> ### The architectural payload — and it is the thing worth doing
+> **[`doc/design/NOMOS-CONTRACT.md`](doc/design/NOMOS-CONTRACT.md) — read it.** Every defect found on 2026-07-13 fell into **one of five boxes, and the flux web only has the first.** ② geometry · ③ semantics · ④ structure · ⑤ the modified equation. **`NomosDecl` has nowhere to put any of them** — that gap is the next build, and it is mechanical. **The five `doc/design/nomos-contract/*.md` files are specified in that document and NOT YET WRITTEN** (Joseph's design: each box gets a file with the math, the procedure, a worked specimen, **its probe**, and a **failure gallery** — *a procedure, not a taxonomy*).
+>
+> ### Open, and NOT Claude's to decide
+> - **The leaf-only-evolution price** on flux-on-the-face (it cuts against the memoised-independent-tier design — the lazy pull-query's whole premise).
+> - **LEXICON:** `regula` is a **13-edge hub node** still `:status settled` though retired; **`manifest` — the load-bearing noun — has NO entry**; and `:status` has **no value meaning *retired*** (a blocking sub-decision).
+> - **Three `:by us` tags flagged as possibly inflated** and deliberately NOT corrected (`snyder-closes-the-projection-lead`, `seam-amortization-and-the-two-grid-overlay`, `geometric-contract-metric-set`) — *correcting an authority tag is not Claude's authority.*
+>
+> ### Probes that could still convict us — none have run
+> The **landscape consequence** of the routing κ (does the channel network actually differ? ~a day — *this prices it*) · **well-balanced + sediment ON** (does the f32 ULP current **rectify into net bed transport**?) · the **roll-wave probe** (raise Manning `n` until `Ve<1` at fixed θ) · an **entropy/shock probe** · and — before believing *any* emergent result — **the CUBE CONTROL** (`DECISIONS[plate-tectonics-as-an-emergent-regime...]`): *if plate boundaries emerge along cube-face edges, that is the grid talking, and the result is void.*
+>
+> *Housekeeping: two router agents died on API errors (work survived; findings landed by hand). Some findings are double-recorded under different slugs — corroboration, but the log wants a tidy. `relata decide --choose` crashes with a Ruby backtrace. `tmptmp.md` is untracked and is not Claude's.*
+
 **The ladder now says what to build next — it is no longer a matter of taste.**
 Abyssal's `promise[emerged-land]` is *specified* (it has a falsifiable predicate)
 but **nothing keeps it**, and it is a `:tag gate`. That is the **#1 gap**, and the
