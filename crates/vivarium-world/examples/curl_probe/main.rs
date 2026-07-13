@@ -276,7 +276,7 @@ fn main() {
     println!("   that sum to point where the water is supposed to go. \x1b[1mSo constrain it.\x1b[0m → §8");
 
     // ==================================================================
-    rule("§8  THE FIX — impose the physical claim as a CONSTRAINT on the split");
+    rule("§8  THE REMEDY — impose the physical claim as a CONSTRAINT on the split");
     // ==================================================================
     println!("The physical claim is \"the transport direction is the steepest-descent direction of φ\".");
     println!("Written on the actual outflow weights, that claim IS a first-moment condition:\n");
@@ -285,9 +285,9 @@ fn main() {
     println!("*The tangential moment of the outflow must vanish.* MFD never imposed it; it just");
     println!("hoped 8 evenly-spaced nodes would deliver it for free, and on a sphere they do not.");
     println!("Impose it directly — minimum-relative-entropy tilt of MFD's OWN slope weights,");
-    println!("wₖ ← wₖ·exp(−λ sin(βₖ−ψ)), λ by bisection. Weights stay positive and sum to 1, so");
-    println!("conservation and MFD's dispersion both survive. ~20 lines. No new stencil, no new");
-    println!("grid, no diagonals-are-45° premise. \x1b[2m(:by claude :status proposed — Joseph decides.)\x1b[0m\n");
+    println!("wₖ ← wₖ·exp(−λ sin(βₖ−ψ)), λ by bisection. Weights stay strictly positive and sum to 1,");
+    println!("so conservation is untouched. ~20 lines. No new stencil, no new grid, no new adjacency,");
+    println!("no diagonals-are-45° premise. \x1b[2m(:by claude :status proposed — Joseph decides.)\x1b[0m\n");
 
     println!("\x1b[1mThe two defects are SEPARABLE, and that is the useful part.\x1b[0m The moment constraint");
     println!("fixes the DIRECTION (κ) and does nothing for the dispersion; edge-flux weighting fixes");
