@@ -417,10 +417,15 @@ the corner was a red herring; the fan is inaccurate *everywhere*.
 
 ## A hard research problem, and it has no known method (open)
 
-⚠ *Previously titled "THE one hard research problem" — that superlative is struck (2026-07-13). The corpus
-names several open problems (`vivium-operational-workflow`'s five BREAKs; the grid/router question; the AAT
-identifiability bet), and **BREAK-2** — convergence-undecidability ⇒ *"certify Lawful" may be permanently
-unreachable* — arguably reaches further, since the moratorium's own revisit-condition depends on it.*
+⚠ *Previously titled "THE one hard research problem." **Struck twice over (2026-07-13).** (1) The
+superlative is a claim with no predicate, and it **suppressed competitors** — `vivium-operational-workflow`'s
+BREAK-2 (*"certify Lawful" may be permanently unreachable*) touches the **moratorium's own
+revisit-condition**. (2) **The statement below is ALSO stale**: the audit MEASURED the state-upscaling half
+as exact and O(log N), and the surviving residue is **a nonlinear closure for a NON-LOCAL flux** —
+`DECISIONS[wavelet-store-spiked-the-seam-is-not-the-details]` says to **RENAME it, not close it and not
+leave it as written.** It has not been renamed. ⇒ **And we do not currently know what this project's open
+problems ARE** — the audit dissolved some and created others, the BREAK list predates it, and **no count or
+ranking should be trusted until the `core/` segments are laid down and the census is DERIVED.**
 
 **detail→abstract**: upscaling an irreducible agent edit back into a memoized
 macro with correct up-invalidation (`DESIGN-REDUX` §6, `doc/theory/multiscale-seams.md`
