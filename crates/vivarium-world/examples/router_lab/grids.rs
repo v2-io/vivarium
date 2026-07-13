@@ -242,7 +242,7 @@ pub fn cube_sphere(proj: CubeProj, n: usize, radius_m: f64) -> Mesh {
     // an internal azimuth frame (Snyder) a handedness slip would weld two DIFFERENT
     // points and silently corrupt every seam length. So we assert it.
     let mut seam_max = 0.0f64;
-    let mut vid = |k: (i64, i64, i64), p: V3, key2v: &mut std::collections::HashMap<(i64, i64, i64), u32>, verts: &mut Vec<V3>, seam_max: &mut f64| -> u32 {
+    let vid = |k: (i64, i64, i64), p: V3, key2v: &mut std::collections::HashMap<(i64, i64, i64), u32>, verts: &mut Vec<V3>, seam_max: &mut f64| -> u32 {
         if let Some(&x) = key2v.get(&k) {
             let d = norm(sub(verts[x as usize], p));
             if d > *seam_max {

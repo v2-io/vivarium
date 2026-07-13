@@ -280,6 +280,20 @@ pub enum DistRule {
 /// `(D, β)` is exactly `D·cos(β − φ)`, so no discretization of `h` enters and the only
 /// error measured is the router's.
 pub fn deflection(f: &Fan, phi_deg: f64, rule: DistRule) -> f64 {
+    deflection_p(f, phi_deg, rule, P)
+}
+
+/// `deflection`, with MFD's slope exponent `p` lifted out of its hardcode.
+///
+/// ⚠ **This exists because `p` turns out to be load-bearing and nobody wrote that down.**
+/// Freeman (1991) picked `p = 1.1` by trial and error. At **`p = 1` the fan's first moment
+/// vanishes IDENTICALLY** on a perfect lattice — the weights go as `cos θₖ`, and
+/// `Σ cos θₖ sin θₖ = ½ Σ sin 2θₖ` over eight bearings whose doubles are 90° apart is zero,
+/// exactly, at every φ. So any perfect-lattice deflection MFD shows **is the exponent**, not
+/// an intrinsic quadrature floor. `grid_lab` measured that floor at 0.24° and charged every
+/// sphere number against it as *"MFD's own intrinsic error."* This function is how you find
+/// out whether that baseline was ever irreducible.
+pub fn deflection_p(f: &Fan, phi_deg: f64, rule: DistRule, p: f64) -> f64 {
     let phi = phi_deg.to_radians();
     let (mut rx, mut ry) = (0.0f64, 0.0f64);
     for k in 0..8 {
@@ -292,7 +306,7 @@ pub fn deflection(f: &Fan, phi_deg: f64, rule: DistRule) -> f64 {
             DistRule::Hardcoded => assumed_dist(k, f.cell_m),
             DistRule::True => f.dist_m[k],
         };
-        let w = (drop / d).powf(P);
+        let w = (drop / d).powf(p);
         rx += w * b.cos();
         ry += w * b.sin();
     }
@@ -319,9 +333,14 @@ pub struct Bias {
 }
 
 pub fn bias(f: &Fan, rule: DistRule) -> Bias {
+    bias_p(f, rule, P)
+}
+
+/// `bias`, with the slope exponent lifted out. See `deflection_p`.
+pub fn bias_p(f: &Fan, rule: DistRule, p: f64) -> Bias {
     let n = 3600usize; // 0.1° resolution
     let d: Vec<f64> = (0..n)
-        .map(|t| deflection(f, t as f64 * 360.0 / n as f64, rule))
+        .map(|t| deflection_p(f, t as f64 * 360.0 / n as f64, rule, p))
         .collect();
     let rms = (d.iter().map(|x| x * x).sum::<f64>() / n as f64).sqrt();
     let max = d.iter().fold(0.0f64, |m, x| m.max(x.abs()));

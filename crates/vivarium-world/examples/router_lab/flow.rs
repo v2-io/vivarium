@@ -463,7 +463,6 @@ pub fn weights_with_psi(
     psi_override: Option<f64>,
     p: f64,
 ) -> Vec<(usize, f64)> {
-    let P: f64 = p;
     match r {
         Router::MooreMfd => {
             let mut w = Vec::new();
@@ -477,7 +476,7 @@ pub fn weights_with_psi(
                 let dist = if is_edge { cell_m } else { cell_m * std::f64::consts::SQRT_2 };
                 let drop = h[i] - h[j];
                 if drop > 0.0 {
-                    let x = (drop / dist).powf(P);
+                    let x = (drop / dist).powf(p);
                     w.push((j, x));
                     tot += x;
                 }
@@ -494,7 +493,7 @@ pub fn weights_with_psi(
                 let dist = geodesic(g.centers[i], g.centers[j]) * g.radius_m;
                 let drop = h[i] - h[j];
                 if drop > 0.0 {
-                    let x = (drop / dist).powf(P);
+                    let x = (drop / dist).powf(p);
                     w.push((j, x));
                     tot += x;
                 }
@@ -606,7 +605,7 @@ pub fn weights_with_psi(
                 if cs <= 0.0 {
                     continue;
                 }
-                nb.push((j, (drop / dist).powf(P), (beta - psi).sin()));
+                nb.push((j, (drop / dist).powf(p), (beta - psi).sin()));
             }
             if nb.is_empty() {
                 return Vec::new();
@@ -626,7 +625,7 @@ pub fn weights_with_psi(
             for e in &g.adj[i] {
                 let drop = h[i] - h[e.j];
                 if drop > 0.0 {
-                    let x = (drop / e.dist_m).powf(P) * e.edge_len_m;
+                    let x = (drop / e.dist_m).powf(p) * e.edge_len_m;
                     w.push((e.j, x));
                     tot += x;
                 }
@@ -863,6 +862,17 @@ pub struct Plume {
 /// report the centroid drift and spread as it descends. `frame` is a tangent vector at the
 /// pole defining azimuth 0.
 pub fn plume(g: &Mesh, r: Router, pole: V3, frame: V3, theta0: f64, launch_deg: f64, rings: &[f64]) -> Plume {
+    plume_p(g, r, pole, frame, theta0, launch_deg, rings, 1.1)
+}
+
+/// `plume`, with MFD's slope exponent lifted out. See `fan::deflection_p` for why it matters:
+/// `p` is the ONLY knob MFD has that touches the fan's first moment, and at `p = 1` that moment
+/// vanishes identically on a perfect lattice. **The plume is the test of whether the bias
+/// ACCUMULATES** — a deflection that cancels along a path is noise; one that integrates is a
+/// manufactured law. So this is where "does removing the exponent actually buy anything" is
+/// settled, and it is allowed to say no.
+#[allow(clippy::too_many_arguments)]
+pub fn plume_p(g: &Mesh, r: Router, pole: V3, frame: V3, theta0: f64, launch_deg: f64, rings: &[f64], p: f64) -> Plume {
     let h: Vec<f64> = g.centers.iter().map(|&p| -geodesic(p, pole)).collect();
     let e0 = tangent(pole, frame);
     let e1 = cross(pole, e0);

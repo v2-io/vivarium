@@ -8,17 +8,25 @@
 
 ## 0. The answer, stated once
 
-Joseph's instinct — *"if there's some fuzziness, we're missing some terms or factors"* — is **correct**, and the missing factor is **not** the one my briefing hypothesised.
+Joseph's instinct — *"if there's some fuzziness, it usually means we're missing some terms or factors — we've an oversimplified mental model"* — is **correct**, and the oversimplification is deeper than a missing term. It is a **category error about what the router's output IS.**
 
-> ## **The routers do not have one missing term. They have a CONFLATION.**
->
-> ## **`p` — the slope exponent — is applied to the DIRECTIONAL slope `(h_K − h_L)/d_KL`. That single choice makes one number do two independent jobs: it selects WHICH neighbour gets the mass (a direction), and it sets HOW CONCENTRATED the flow is (a scalar). The two are separately meaningful and jointly inseparable in that form.**
->
-> ## **The consistent split is published, and it is not the one I guessed: flow concentration belongs on the magnitude of the CELL'S RECONSTRUCTED GRADIENT, `‖∇h‖^{p_w}` with `p_w = q − 1` — a SCALAR, per cell. Direction comes from the gradient vector. Neither may be smuggled into the other.**
->
-> **A router that raises the directional slope to a power `q ≠ 1` is INCONSISTENT — not inaccurate, inconsistent — and no post-processing can repair it until `q` is put back to 1.** **[P]**
+> ## **⛔ THE ROUTER'S OUTPUT IS A SCALAR. THE PHYSICS IS A VECTOR FIELD. EVERY ROUTER IN THE TABLE WAS TRYING TO MAKE A SCALAR ACCUMULATION CARRY A DIRECTION *AND* A MAGNITUDE — AND THE TWO FIXES FOUGHT BECAUSE THEY WERE EXTRACTING THOSE TWO THINGS FROM ONE OBJECT, IN TWO DIFFERENT AND INCOMPATIBLE COORDINATE SYSTEMS.**
 
-**The briefing's hypothesis — that the missing constraint is the SECOND MOMENT (angular variance) of the outflow weights, and that it must match the plan curvature `k_c` — is refuted on two independent grounds, below (§3). The briefing's *meta*-prediction — "`p` has been doing two jobs, badly, at once; split them and both may become principled" — is exactly right.** It named the disease and mis-named the organ.
+**Two independent defects, one structural resolution:**
+
+**① [P] THE ACCUMULATED QUANTITY IS ILL-POSED — *in the continuum*, not just on our mesh.** MFD's `q̃_K` is *the total flux leaving cell K* — a **boundary integral over the cell's outflow faces**. Coatléven & Chauveau prove it, and then say the sentence that ends the argument: *"even at the continuous level, `CA(𝒪)` **strongly depends on the geometry of `𝒪` and its orientation with respect to the flow**."* **[P]** **A cell rotated 45° to the flow presents a different outflow perimeter and therefore integrates a different number. This is not a discretisation error and no refinement touches it.** ⇒ **We have been accumulating, and feeding to stream power, a quantity that HAS NO MESH-INDEPENDENT LIMIT.**
+**THE FIX (their eqs. 12–13): reconstruct the flux VECTOR from the face fluxes the router already computed, via the geometric identity `|K|·Id = Σ_σ |σ|(x_σ − x_K) ⊗ n_{K,σ}`; take `q_K = ‖Q_K‖` and `Q̂_K = Q_K/‖Q_K‖`.** A local, algebraic, **no-solve post-process**. **[D] It needs no mesh orthogonality — the identity is the divergence theorem and holds on any polygon.**
+
+> ### **⇒ AND THIS DISSOLVES THE PARADOX. Direction and magnitude now come from THE SAME OBJECT. They *cannot* fight. `MomentEdge` under-performed both parents because the moment condition `Σ w_k sin(β_k − ψ) = 0` is stated on CENTRE-BEARINGS while the conservation law lives on EDGES — so satisfying it required DESTROYING the correct face fluxes. It was not two good fixes interfering. It was one fix stated in the wrong coordinates. (§2.3)**
+
+**② ⛔ [D][M] AND `p = 1.1` MANUFACTURES DIRECTIONAL BIAS BY ITSELF — ON A PERFECT SQUARE LATTICE.** Derived and verified numerically: with weights `∝ cos^q(β_k − ψ)`, the first moment `Σ w_k sin(β_k − ψ)` is **exactly zero for all ψ at `q = 1`** (a four-line theorem), and at `q = 1.1` it is a **signed, 45°-periodic, grid-locked deflection of up to 0.2665° that pushes the flow TOWARD THE GRID AXES.**
+**⚠ `grid_lab`'s perfect-lattice control measured 0.24° and the project has been treating it as *"MFD's own intrinsic error, the baseline everything else is charged against."* [D] It is not intrinsic. It is the exponent, and it vanishes at `p = 1`.** (§4.2)
+
+**⇒ The two convict `p` by independent routes** — one from consistency theory **[P]**, one from trigonometry **[D]** — and they agree. **`p` is not masking a first-moment error. `p` IS a first-moment error.**
+
+---
+
+**My briefing's hypothesis — that the missing constraint is the SECOND MOMENT (angular variance) of the outflow weights, and that it must match the plan curvature `k_c` — is REFUTED on two independent grounds (§3), and I am recording the refutation rather than quietly replacing it.** Its *meta*-prediction — *"`p` has been doing two jobs, badly, at once; split them and both may become principled"* — is **exactly right, and it is the one that led here.** It named the disease and mis-named the organ.
 
 ---
 
@@ -100,7 +108,27 @@ let err = ((acc[i] / wid) / exact - 1.0).abs();
 >
 > **The residual 23.16% / 4.68% / 20.26% / 8.09% are therefore REAL errors in the accumulated mass `A_K` itself. They are not normalisation artifacts, and the highest-value unread document does not dissolve them.**
 
-**I record this as a negative result because I went looking for the opposite.** The briefing's top-priority item — *"get Coatléven 2025 and price it before you build anything; it is plausibly the missing term, already derived"* — is now **priced: for the router table, it buys nothing.** The reason is that a previous agent had *already*, independently, implemented the correct direction-dependent width in the probe (and, notably, wrote a comment explaining precisely why the naive outflow-edge sum double-counts). **The project got there first and did not know it had.**
+**I record this as a negative result because I went looking for the opposite.** The briefing's top-priority item — *"get Coatléven 2025 and price it before you build anything; it is plausibly the missing term, already derived"* — is **priced, and the price is split:** for the **cone catchment error** it buys little; for **κ** it buys everything (§2.3). The reason for the first half is that a previous agent had *already*, independently, implemented the correct direction-dependent width in the probe (and wrote a comment explaining precisely why the naive outflow-edge sum double-counts). **The project got there first and did not know it had.**
+
+⚠ **The one place I must be careful not to over-read the paper against ourselves.** **[P]** §2.2 does say the SCA *"is in fact a mean of `q_w` along the outflow portion of `∂𝒪`, and thus **still retains some dependency** in the geometry of `𝒪` and its orientation."* True — **but read what the literature's SCA actually divides by:** *"`w(K)` is a normalization factor related to a **geometric property of the cell** (Desmet–Govers) or to an **estimate of the flow width** (Pelletier)."* **[P]** §1. **Those are SCALARS.** Our probe divides by `W(v̂,K) = Σ_σ|σ|(v̂·n̂_σ)⁺` — the *direction-dependent projected width*, with the *exact analytic* direction. That is strictly better than anything the paper is criticising, and it captures the whole leading-order effect; the residual the paper names is the departure from constant-flux-within-the-cell, i.e. **`O(h·∇q_w)` — second order.** ⇒ **[me] The paper's "strong mesh dependency" indicts the LITERATURE's scalar `w(K)`, and indicts `erosion.rs` (which has no width at all). It does not indict `grid_lab`'s cone probe. Predicted, and under test.**
+
+### 2.3 ⚠⚠ Where the correction DOES bite the router table: **κ was measuring the wrong object**
+
+This is the reframe that dissolves the paradox in my briefing, and it is not mine — it came back from the coordinator's own read, and **I sustain it on the merits.**
+
+The curl probe defines the router's transport direction as the **fan-weighted bearing sum**, `d̂ ∝ Σ_k w_k ê_k` — the mean direction of the *mass split among neighbour centres*. **But that is not the physical flow direction of a finite-volume scheme.** The physical direction is `Q̂_K = Q_K/‖Q_K‖`, the **reconstructed flux vector**, built from the *face* fluxes with *face-centre* lever arms `(x_σ − x_K)`.
+
+**[D] On a non-orthogonal mesh these are DIFFERENT VECTORS**, because the bearing to the neighbour centre `ê_k` and the face normal `n̂_σ` do not align — and their misalignment is exactly our mesh's 28.79° worst-case non-orthogonality.
+
+> ### **⇒ THE MOMENT CORRECTION WAS FORCING THE WRONG OBJECT TO HAVE THE RIGHT FIRST MOMENT.**
+>
+> `Σ w_k sin(β_k − ψ) = 0` pins the *centre-bearing* moment. The FV scheme's conservation law lives on *edges*. **Imposing a condition stated in the wrong lever arm requires DISTORTING the face fluxes away from their correct values — which is precisely why `MomentEdge` (which starts from the CORRECT face fluxes and then overwrites them) UNDER-PERFORMS BOTH PARENTS.** The composition does not fail because two good fixes mysteriously interfere; it fails because **the second "fix" is stated in a coordinate system the first one does not live in, and it destroys real information to satisfy a mis-stated identity.**
+>
+> ### **⇒ AND THE REAL RESOLUTION IS STRUCTURAL, NOT A TRADE-OFF: reconstruct the VECTOR, and DIRECTION (`Q̂`) and MAGNITUDE (`‖Q‖`) come from THE SAME OBJECT. They cannot fight, because there is no longer a scalar accumulation being asked to also carry a direction.**
+>
+> **Every router in the table — MFD, edge-flux, moment-corrected, all of them — was trying to make a SCALAR behave like a VECTOR FIELD. That is the oversimplified mental model Joseph predicted was there.**
+
+**[⊘] Under test:** re-measure κ with `Q̂_K` as the transport direction, for every router. **Prediction: κ collapses across the board, and the routers stop disagreeing about direction.** If it does not collapse, then the non-orthogonality of the face fluxes themselves is the dominant term and the grid, not the quantity, is the defect — **which is the other thing worth knowing, and the measurement separates them.**
 
 ### 2.2 ⇒ Where Coatléven DOES bite: `erosion.rs`, hard
 
@@ -219,13 +247,147 @@ For a cell whose downhill neighbours sit at bearings `β_k` with true slopes `S_
   w_k  =  cos^q(β_k − ψ)  /  Σ_j cos^q(β_j − ψ)
 ```
 
-> **[D] ⇒ `q` DOES NOT AFFECT FLOW CONCENTRATION AT ALL ON A PLANAR CELL — the gradient magnitude cancels exactly. Its ONLY surviving effect is to sharpen or flatten the ANGULAR distribution about `ψ`. `q` is, in its entirety, a SECOND-MOMENT knob wearing a slope-exponent's clothes.**
+> **[D] ⇒ `q` DOES NOT AFFECT FLOW CONCENTRATION AT ALL ON A PLANAR CELL — the gradient magnitude cancels exactly. Its ONLY surviving effect is to sharpen or flatten the ANGULAR distribution about `ψ`. `q` is, in its entirety, an ANGULAR knob wearing a slope-exponent's clothes.** *(And note the corollary: the hardcoded `dist` cancels too — `drop/dist = S·cos θ` exactly, for any `dist`. This independently re-derives `DECISIONS[mfd-fan-is-a-bias…]`'s carve (4): the absolute `cell_m` is inert for routing.)*
 
-**That is the sharpest form of the finding, and it is checkable on paper.** The transport direction is `Σ w_k ê_k`; raising `q` concentrates the fan toward the steepest compass point (as `q → ∞`, D8; as `q → 0`, uniform over all downhill neighbours). **On an evenly-spaced fan, `Σ w_k sin(β_k − ψ) = 0` by symmetry for ANY `q`** — the first moment is free. **On our sheared cube-sphere fan the nodes are NOT evenly spaced, so the first moment is `q`-dependent and nonzero.**
+### 4.2 ⛔ [D][M] AND `q ≠ 1` MANUFACTURES SPURIOUS CIRCULATION ON A PERFECT SQUARE LATTICE
 
-> ### **[D] ⇒ AND THERE IS THE COUPLING THE BRIEFING WAS REACHING FOR, DERIVED RATHER THAN GUESSED: on a NON-UNIFORM fan, the SECOND-MOMENT KNOB `q` LEAKS INTO THE FIRST MOMENT. That is *why* `p = 1.1` looks like it is "cancelling directional bias" — on a square lattice it cannot (symmetry forbids it), but on ANY sheared lattice it does, uncontrollably, as a side-effect. `q` is a dispersion knob whose directional side-effect is exactly zero on the grid it was tuned on and NONZERO on ours.**
+*An earlier draft of this section asserted the opposite — "on an evenly-spaced fan `Σ w_k sin(β_k−ψ) = 0` by symmetry for ANY `q`; the first moment is free." **I ran it. That is FALSE, and the truth is a much bigger finding.** Corrected in place; the error is recorded because the correction is the result.*
+
+Compute `m1(ψ) = Σ_k w_k sin(β_k − ψ)` on a **perfect square lattice** — no sphere, no shear, no projection — with `w_k ∝ cos^q(β_k − ψ)` over the strictly-downhill Moore neighbours:
+
+| `q` | `max_ψ |m1|` | implied transport deflection |
+|---|---|---|
+| **1.0** | **0.000000** | **0.0000°** — machine zero at *every* ψ |
+| **1.1** *(Freeman; `erosion.rs`)* | **4.651e-3** | **0.2665°** |
+| 1.5 | 1.319e-2 | 0.7557° |
+| 2.0 | 1.167e-2 | 0.6689° |
+
+**[D] `q = 1` is EXACT, and it is a theorem, not a coincidence.** At `q = 1` the weights are `∝ cos θ_k`, so
+
+```
+  Σ_k cos θ_k · sin θ_k  =  ½ Σ_k sin 2θ_k
+```
+
+and the doubled bearings `2θ_k` of the four downhill Moore neighbours are **90° apart on the circle** — and four points 90° apart sum to zero identically, for any offset. **The first moment vanishes for every ψ, exactly. Raise the exponent off 1 and the pairing breaks.**
+
+**[D] And the residual is not noise — it is a signed, 45°-periodic, grid-locked field:**
+
+```
+  ψ =  0°     +0.0000°     ← zero on the AXIS
+  ψ =  5°     −0.2464°
+  ψ = 10°     −0.2565°     ← maximum, pushing BACK toward the axis
+  ψ = 15°     −0.1810°
+  ψ = 20°     −0.0645°
+  ψ = 22.5°   −0.0000°     ← zero on the BISECTOR
+  ψ = 25°     +0.0645°
+  ψ = 35°     +0.2565°     ← maximum, pushing back toward the DIAGONAL
+  ψ = 45°     +0.0000°     ← zero on the DIAGONAL
+```
+
+> ### ⛔ **[D] ⇒ `p = 1.1` IS AN ATTRACTOR TOWARD THE GRID AXES. IT REINTRODUCES THE GRID-ALIGNED-CHANNEL ARTIFACT MFD WAS ADOPTED TO REMOVE — ON A FLAT, PERFECT, UNSHEARED SQUARE LATTICE, WITH NO SPHERE ANYWHERE IN SIGHT.**
+
+**⚠⚠ AND IT CLOSES, IN CLOSED FORM, A NUMBER THE PROJECT HAS BEEN TREATING AS IRREDUCIBLE.**
+
+`DECISIONS[mfd-fan-is-a-bias-and-does-not-converge]`, probe discipline: *"the bias probe runs against a **perfect-lattice control** (reads **0.24°** — **MFD's own intrinsic error, and the baseline everything else is charged against**, so the sphere is not over-charged)."*
+
+`grid_lab/fan.rs` defines that control precisely: `Δ(φ) = arg(Σ wₖ d̂ₖ) − φ` evaluated on `fan_ideal` (bearings exactly `k·45°`, distances exactly `cell_m`/`cell_m·√2`), with `pub const P: f64 = 1.1`. **[D] Reproduce that exact metric analytically, over a full circle of φ:**
+
+| | `Δ_rms` | `max|Δ|` |
+|---|---|---|
+| **[M] `grid_lab` measured, perfect-lattice control, P = 1.1** | **0.24°** | — |
+| **[D] derived, closed form, `q = 1.1`** | **0.2419°** | 0.3333° |
+| **[D] derived, closed form, `q = 1.0`** | **0.0000°** | **0.0000°** |
+
+> ### ⛔ **0.2419° DERIVED vs 0.24° MEASURED — EXACT TO THREE SIGNIFICANT FIGURES. AND EXACTLY ZERO AT `p = 1`.**
 >
-> **⇒ Freeman's `1.1` is a constant calibrated on a lattice where its only effect was benign, imported onto a lattice where it has a second, unintended, grid-locked effect. That is the whole story, and it is a *theorem about the fan*, not a fact about Freeman.** **[D — check it]**
+> ### **⇒ THE "IRREDUCIBLE BASELINE" IS NOT IRREDUCIBLE, AND IT IS NOT MFD'S. IT IS THE EXPONENT. Every accuracy number in the grid report was charged against a floor that a one-character change removes — and the floor is a fake law that steers water toward the grid axes.**
+>
+> **⇒ And it inverts the `p`-story completely. The briefing guessed Freeman picked `p = 1.1` to *cancel* directional bias on a square lattice. [D] On a square lattice `p = 1` has NO directional bias to cancel — it is exactly zero, by a symmetry theorem — and `p = 1.1` CREATES one. `p` is not masking a first-moment error. `p` IS the first-moment error.**
+
+**[⊘] Still to confirm on the real kernel:** the algebra above is a *planar-cell* idealisation with an exact analytic gradient. The real probe uses real elevations and a reconstructed gradient, so the two can disagree. **Set `P = 1.0` and re-run: prediction is that the perfect-lattice control → ~0 and MFD-8's κ drops substantially.** Under measurement; result in `MEASUREMENTS.md`. **If it does not move, this section is wrong.**
+
+### 4.2b ⚠ CREDIT WHERE IT IS DUE — the project conjectured this THIS MORNING, and the literature says 1.1
+
+**I must not present this as a discovery.** `ASSUMPTIONS.md:20`, added **2026-07-13**, already says: *"It also **plausibly explains the fan probe's unexplained 0.24° 'perfect-lattice control' residual** — that is not MFD's intrinsic error; it is the bias `p=1.1` failed to cancel on the very lattice it was fitted to."* **The conjecture is not mine. What is new is the DERIVATION, the exact closed-form match, and — because the closed form carries a SIGN — a correction to the conjecture's framing that changes what to do about it.**
+
+And the ledger cites the literature *against* me:
+
+> **[P via `ASSUMPTIONS.md`, Prescott et al. 2025]** *"values of `p` **higher** than 1.1 bias flow **towards** the cardinal and ordinal directions of the grid, while values of `p` **smaller** than 1.1 bias flow **away** from"* them.
+> **[P via `ASSUMPTIONS.md`, Hyväluoma 2017]** rotational invariance is **maximal near 1**.
+
+**Those two cannot both be right, and the closed form adjudicates. [D] Sweep `q`:**
+
+| `q` | `Δ_rms` | `Δ(ψ=10°)` | bias direction |
+|---|---|---|---|
+| 0.5 | 2.9081° | **+3.5176°** | **AWAY** from the axis |
+| 0.9 | 0.3237° | **+0.4233°** | **AWAY** |
+| **1.0** | **0.0000°** | **+0.0000°** | ⚖ **EXACTLY ZERO** |
+| **1.1** *(Freeman; ours)* | **0.2419°** | **−0.3234°** | **TOWARD** the axis |
+| 1.5 | 0.6614° | −0.9083° | **TOWARD** |
+| 2.0 | 0.5647° | −0.7870° | **TOWARD** |
+
+> ### **⇒ PRESCOTT'S *STRUCTURE* IS CONFIRMED — there IS a sign change; low `p` biases away, high `p` biases toward. ⛔ BUT THE ZERO-CROSSING IS AT `p = 1.0`, NOT `p = 1.1`. HYVÄLUOMA IS RIGHT. FREEMAN OVERSHOT THE NULL BY 0.1 — AND THAT OVERSHOOT IS THE ENTIRE 0.24°.**
+>
+> ### ⚠⚠ **AND THE PROJECT'S OWN CONTROL ALREADY FALSIFIED `p = 1.1`, AND NOBODY READ IT THAT WAY.** `grid_lab`'s perfect-lattice control **IS a square lattice — the exact lattice Freeman fitted `1.1` on.** **IF `p = 1.1` CANCELLED GRID BIAS THERE, THAT CONTROL WOULD READ ZERO. IT READS 0.24°.** The measurement that refutes the literature's constant has been in the repo, printed on every run, since 2026-07-12.
+>
+> **⇒ So `ASSUMPTIONS.md`'s framing — *"the bias `p=1.1` FAILED to cancel"* — is the wrong way round, and the correction changes the action. There was no bias to cancel. `p = 1.1` MANUFACTURED one. ⇒ The fix is NOT "re-tune `p` for a cube-sphere." It is `p = 1`, exactly, on ANY lattice — and it is free.**
+
+*(⊘ Scope, stated honestly. My metric is the **single-cell first moment** — the deflection of the transport direction, which is what `fan.rs` measures and what "directional bias" means for a flow *vector*. **I have NOT read Prescott directly this spike; the quote is second-hand from our own ledger.** His `p = 1.1` optimum may be stated on a **whole-DEM accumulated** metric, where **dispersion** also enters — and the two optima need not coincide. **Read Prescott and check which metric his 1.1 optimises before acting.** If it is an accumulation metric, then both results stand, they are about different things — and `p` is once again **two knobs fused into one**, exactly as §4 says. Either way §4's prescription is unchanged: **separate them.**)*
+
+### 4.2a ⚖ [D] THE MODIFIED EQUATION — the term, its sign, and its differential order
+
+`CLAUDE.md` demands the computation, not the disposition: *Taylor-expand the discrete scheme and read off the PDE it is actually solving. It returns a term, with a sign and a differential order.* Here it is.
+
+**[D] The deflection field is, to leading order, `Δ(ψ) = −A·sin(8ψ)`** — zeros at `ψ = 0°, 22.5°, 45°`; extrema near `11°` and `34°` with opposite signs; period 45°, i.e. **wavenumber 8 in the flow azimuth**, which is exactly the octagonal symmetry of the 8-neighbour fan. Least-squares fit over a full circle: **`A = 0.3320°` (`= 5.79e-3` rad), and this single mode explains 94.2% of the deflection's variance** (residual rms 0.058° — higher harmonics at wavenumber 16, 24, …; the fit is leading-order, not exact, and I state it as such). **`A ≡ 0` exactly at `q = 1`.**
+
+So the router's transport direction is not `v̂` but `v̂_num = R(Δ(ψ))·v̂`, a rotation. For small `A`, with `t̂ = v̂^⊥`:
+
+```
+  v̂_num  ≈  v̂  −  A·sin(8ψ)·t̂
+```
+
+Substitute into the law the scheme is actually enforcing, `∇·(a·v̂_num) = 1`:
+
+> ```
+>   TRUE:      ∇·(a v̂)  =  1
+>
+>   ACTUAL:    ∇·(a v̂)  =  1  +  A · ∇·( a · sin(8ψ) · t̂ )
+>                              └───────────────┬──────────────┘
+>                          A SPURIOUS TRANSVERSE ADVECTION OF DRAINAGE AREA
+>
+>          differential order:  ONE  (odd / advective — NOT a diffusion)
+>          amplitude:           A ≈ 5.8e-3 rad   (q = 1.1)   →   A ≡ 0  (q = 1)
+>          structure:           wavenumber 8 in ψ, PHASE-LOCKED to the grid axes
+>          sign:                rotates v̂ TOWARD the nearest axis  ⇒  AXES ARE ATTRACTORS,
+>                               the 45° diagonal is a REPELLER
+> ```
+
+> ### **⇒ AND THE DIFFERENTIAL ORDER IS THE WHOLE ANSWER TO "WHY DOESN'T IT CONVERGE AWAY."**
+>
+> **It is ODD — an ADVECTIVE term. Advective errors INTEGRATE ALONG THE PATH: a fixed angular deflection per step accumulates to `L·Δ` regardless of step size `h`. An EVEN (diffusive) error would fall as `O(√h)` and wash out.**
+>
+> **[M] And that is exactly what was measured, and never explained: the plume's *drift* is level-independent (BIAS) while the plume's *spread* converges away (20.5° → 6.7°). ⇒ The drift is this odd term. The spread is the second moment. THE PROJECT MEASURED BOTH HALVES OF THIS MODIFIED EQUATION AND DID NOT KNOW WHICH WAS WHICH.**
+
+**⚠ [D] And note what this term is NOT.** `CLAUDE.md` records that `water.rs`'s θ-smoothing *"has a modified equation, and it says exactly which unphysical term we added — **an even/Laplacian diffusion, which is why it cannot be the odd/advective term the file's comment claimed**."* **Here, in the router, is a genuine odd/advective spurious term** — the thing `water.rs` was wrongly accused of having. **[me] The two kernels have opposite pathologies, and the project had them swapped.**
+
+**[P] And the paper convicts `q ≠ 1` independently, by a completely different route** (§4, above): raising the *directional* slope to `q ≠ 1` destroys consistency, and the consistent substitute is `‖∇h‖^{p_w}`, `p_w = q−1` — a **scalar**, per cell. **Two independent arguments, one from consistency theory and one from a four-line trigonometric identity, convict the same constant. That agreement is the strongest evidence in this document.**
+
+---
+
+## 4.3 [P] Two parameters are STRUCTURALLY UNIDENTIFIABLE from the routed flow — and we can stop carrying them
+
+> *"it is indeed clear that the choice of the water mobility function `η_w` **has no influence on the water flux strength `q_w`**, as it appears nowhere in (8) and (12). In the same way, **only the contrasts of the coefficient `k_m` will impact `q_w`**, as only ratios `τ_KL/s_K` are appearing in (8) and (12)."* — **[P]** §2.2
+
+Read that as an identifiability claim, because that is what it is:
+
+| parameter | status w.r.t. the routed flow |
+|---|---|
+| **`η_w`** — the water-mobility function | **NOT IDENTIFIABLE. AT ALL.** It cancels out of both the accumulation and the reconstruction. Any `η_w` gives the same `q_w`. |
+| **`k_m`** — conveyance / inverse roughness | **Only its CONTRASTS are identifiable.** A **spatially uniform** roughness field is a **NO-OP** — only ratios `τ_KL/s_K` survive. |
+
+> ### **⇒ [me] A uniform Manning's `n` cannot change the routed flow field. If a nomos carries one and claims it matters for routing, that claim is FALSE BY CONSTRUCTION — and it is exactly the kind of undeclared-but-inert parameter the nomotheke exists to catch.** It is a *free* consequence of the structure, not a measurement, and it is checkable in one run: **perturb a uniform `k_m` and assert the routed field is bit-identical.** A probe that must return "no change."
+
+*(Scope, stated so it is not over-read: this is about the **routed flow `q_w`**, not about the water-depth solution `h_w`, where `η_w` very much matters. `water.rs` is not touched by this. It bites the **router** and anything that consumes only the flow field.)*
 
 ---
 

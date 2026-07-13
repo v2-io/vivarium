@@ -180,6 +180,22 @@ pub struct Rec {
     /// fraction of this cell's outflow sent to a Moore neighbour that shares **no edge** —
     /// i.e. mass crossing a face that does not exist. Coatléven's reconstruction cannot see it.
     pub phantom: f64,
+
+    // ---- THE TWO TRANSPORT DIRECTIONS, AND THE POINT IS THAT THEY ARE NOT THE SAME -------
+    /// signed deflection (deg) of the **FAN** direction `d̂ = Σ wₖ êₖ` from the exact flow.
+    /// This is what the curl probe measured κ from — a **Lagrangian** reading (where the mass
+    /// is sent, along centre-to-centre bearings).
+    pub defl_fan: f64,
+    /// signed deflection (deg) of the **RECONSTRUCTED** direction `Q̂ = Q_K/‖Q_K‖` from the
+    /// exact flow. This is the **Eulerian** reading — the direction implied by the FACE FLUXES,
+    /// via the geometric identity. Coatléven's eq. (12) hands it to you for free.
+    ///
+    /// ⚠ **On a non-orthogonal mesh these two are DIFFERENT OBJECTS, and only the second is
+    /// what a finite-volume scheme ever claimed.** A perfect FV router can show a nonzero fan
+    /// deflection, because it never promised to send mass toward neighbour CENTRES — it
+    /// promised a flux through FACES. If `defl_q` collapses where `defl_fan` does not, the
+    /// curl probe was convicting the router for a promise it never made.
+    pub defl_q: f64,
 }
 
 pub struct Stats {
@@ -299,6 +315,17 @@ pub fn run(g: &Mesh, rt: Rt, pole: V3) -> Stats {
         }
         let qn = (q[0] * q[0] + q[1] * q[1]).sqrt() / g.areas[i];
 
+        // the FAN direction: where the weights actually send the mass, along centre bearings
+        let (mut fx, mut fy) = (0.0f64, 0.0f64);
+        for &(j, wk) in &wts[i] {
+            let t = tangent(c, g.centers[j]);
+            fx += wk * dot(t, e0);
+            fy += wk * dot(t, e1);
+        }
+        let wrap = |a: f64| a.sin().atan2(a.cos()).to_degrees();
+        let defl_fan = if fx == 0.0 && fy == 0.0 { 0.0 } else { wrap(fy.atan2(fx) - pt) };
+        let defl_q = if qn <= 0.0 { 0.0 } else { wrap(q[1].atan2(q[0]) - pt) };
+
         // flow azimuth relative to the local cube u-axis, folded to [0°,90°) — the grid's own
         // 4-fold symmetry. THIS is the rotation test, taken for free: a router that is
         // rotation-invariant shows no structure across this axis.
@@ -319,6 +346,8 @@ pub fn run(g: &Mesh, rt: Rt, pole: V3) -> Stats {
             coat_ratio: qn / (acc[i] / wid),
             azim_face: az,
             phantom,
+            defl_fan,
+            defl_q,
         });
     }
     Stats { tag: rt.tag, conservation: sink / total, recs }
