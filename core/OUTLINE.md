@@ -78,6 +78,31 @@ must hold) · **contract** (what something must declare) · **mechanism** (an ex
 **der** (derived here) · **discussion** (a part intro) · **failure** (a gallery specimen — *a wrong
 answer and why it was seductive*) · **open** (a named unsolved problem).
 
+### ⚠ The open-problem CENSUS is unknown — and it must be DERIVED, not written
+
+> **Joseph, 2026-07-13:** *"I can't imagine **the number of breaks or problems we have is current anymore
+> either**, or indicative of our most up-to-date understanding. **I don't think we'll even know that until
+> the outline is iterated on a bunch and most of the segments are laid down.**"*
+
+**This is true and it is checkable.** The audit **dissolved** some open problems (`detail→abstract` *as
+written* — the state upscales **bit-exactly**, O(log N), measured), **renamed** others (the residue is *a
+nonlinear closure for a non-local flux*, and **the rename was instructed and never done**), and **created**
+new ones (the router; the leaf-only-evolution price). **The BREAK list predates all of it.**
+
+⇒ **No count and no ranking of open problems should be trusted — INCLUDING ANY IN THIS OUTLINE — until the
+segments exist.**
+
+> ### ⇒ **AND THE FIX IS THE SAME AS EVERYWHERE ELSE: `open` IS A SEGMENT TYPE, SO THE CENSUS IS A QUERY.**
+> *"What are our open problems?"* = **`type: open`, in dependency order, each with the `mechanism:` that
+> would close it.** **Generated, not asserted.** You will know the count when the segments exist and not
+> before.
+
+⚠ **A habit worth naming, since it will recur:** *when caught overclaiming, the reflex is to substitute a
+BETTER claim rather than to admit ignorance.* Struck *"THE one research problem"* → immediately supplied an
+inventory (*five breaks, plus the grid, plus identifiability*) — **a census I had no more standing to assert
+than the ranking I had just removed.** **Same error, one level down.** *The honest output was available:
+"we do not currently know."*
+
 ### ⚠ A standing rule for every segment: **NO ABSOLUTES**
 
 > **Joseph, 2026-07-13:** *"When you are surprised with a unifying concept, it of course FEELS like 'the
