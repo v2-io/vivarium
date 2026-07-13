@@ -19,6 +19,9 @@
 ;     When a decision is REPLACED you MAY append a new |decision that
 ;     :supersedes the old slug (history preserved), or you may just edit the
 ;     entry in place. :supersedes is an available option, not a requirement.
+;     ⚠ WHEN USED, :supersedes GOES ON THE |decision[...] LINE ITSELF — never on
+;     its own line — so that `grep '^|decision\['` yields the whole supersession
+;     chain in one read. (Joseph, 2026-07-12.)
 ;   • Slugs are unique and kebab-case.
 ;
 ; OPEN QUESTION (deliberately undecided for now): whether this file becomes the
@@ -64,9 +67,8 @@
     Update LEXICON.udon #term[nomos] (":forms pl. nomos, invariant"); sweep the prose "nomoi" -> "nomos" opportunistically. Verified 0 code identifiers named "nomoi", so this is docs-only and cannot break a build. Family words unaffected (nomothete / nomothetic / nomotheke).
   |ref  LEXICON.udon #term[nomos]
 
-|decision[regula-collapses-to-order-and-manifest] :date 2026-07-12 :by us :status decided :topic architecture
+|decision[regula-collapses-to-order-and-manifest] :date 2026-07-12 :by us :status decided :topic architecture :supersedes (the regula-keep build-spec in doc/plan/regula-conformance-design.md §5 — that doc stays as the reasoning trail, no longer the plan)
   :session 01UzCVNNAn6eynKxo2fV74MC
-  :supersedes (the regula-keep build-spec in doc/plan/regula-conformance-design.md §5 — that doc stays as the reasoning trail, no longer the plan)
   No `regula` artifact for now. World-level conformance is carried by the ORDINUM (descriptive kind-floor — what the kind requires) + the MANIFEST (per-world prescription — what this world chose: :order, :target-phase, permits, participation), tracked against the nomotheke / tabularium. Reach for an in-between "something" (a regula, or whatever) only if it genuinely gets awkward.
   |reason
     "Don't coin the noun until it earns its keep." The 2026-07-12 declarative-frontier spikes showed the conformance audit needs neither a Slot nor a Regula object — a promise's fluxed-quantity + :kept-by carries what `slot` reached for, and permits live naturally on the manifest.
@@ -143,9 +145,8 @@
   |reason
     This session: "erosion is invisible at macro scale" was asserted as physics-law; it was a rationalization. The kernel showed the real cause (uplift_m=0, no tectonic driver; L19-tuned params run at L9). The retraction + the uplift nomos followed. Already a standing project norm; logged because it bit this session.
 
-|decision[initial-topography-name-holds] :date 2026-07-12 :by claude :status decided :topic naming
+|decision[initial-topography-name-holds] :date 2026-07-12 :by claude :status decided :topic naming :supersedes spine-nomos-to-initial-topography
   :session 01UzCVNNAn6eynKxo2fV74MC
-  :supersedes spine-nomos-to-initial-topography
   CONFIRMED: the `spine` nomos becomes `initial-topography`. Weighed Joseph's phase-echo ideas — the ordinum's phase 0 is "ante-mundane", suggesting `ante-topography`, or `mundane` (with eroded as `post-mundane`) — and held the LEM term.
   |reason
     terminology-register-by-layer governs: a NOMOS is the science layer, so it takes the term working geomorphologists read instantly (initial-topography), not an ontological/Latin coinage that would need a lexicon entry (ante-topography / mundane belong to the ORDINUM's register). The phase-echo is real and kept — but at the ordinum layer: phase-0 ante-mundane's surface Promise is :kept-by the initial-topography nomos. The ontological name names the PHASE, the science name names the MECHANISM, and :kept-by is the honest bridge — no register-bleed. Joseph deferred the call ("happy to defer to you"); we align on the principle.
@@ -219,8 +220,7 @@
     **Bimodality is not a fidelity upgrade — it is the physical precondition for land existing at all.** TODO's "Prior v3 — two-mode crustal prior" is promoted from nice-to-have to a HARD COHERENCE REQUIREMENT: as declared, this world cannot exist. Next: a crust-type field (continental vs oceanic) with isostatic heights derived from density, replacing the single-population fBm; THEN sea level becomes a derived nomos consuming the ocean stock + hypsometry (retiring SEA_LEVEL_M, the arbitrary datum that also drowned our test footprints for months). Probe: examples/sea_level_probe.rs (true spherical per-cell areas; Σ solid angle self-tested against 4π).
   |ref examples/sea_level_probe.rs · ASSUMPTIONS.md (SEA_LEVEL_M / continental band / planetary water inventory) · TODO §Prior v3 · ref/research/early-continents-survey.md §6 (target: land 2–15%)
 
-|decision[water-world-is-the-promise-not-the-bug] :date 2026-07-12 :by joseph :status decided :topic physics
-  :supersedes declared-ocean-does-not-fit-the-generated-basins
+|decision[water-world-is-the-promise-not-the-bug] :date 2026-07-12 :by joseph :status decided :topic physics :supersedes declared-ocean-does-not-fit-the-generated-basins
   :session 01UzCVNNAn6eynKxo2fV74MC
   CORRECTION. The sea_level_probe measurement stands; my reading of it was BACKWARDS. A submerged, 0%-land world is not a contradiction — it is the ordinum's Phase-1 promise KEPT (`charge[smooth-water-surface]` → `promise[water-covered-surface]`). The BUG is the opposite: `SEA_LEVEL_M = 4000` is MANUFACTURING FORBIDDEN LAND. Abyssal's `charge[emergent-land] :tag gate` says it outright — "meaningful non-volcanic land above sea level — delivered by uplift / proto-tectonic processes, **never an initial condition**."
   |reason
@@ -246,8 +246,7 @@
     `ordinum.rs` parses the tabularium artifact and computes each promise's MATURITY (NotStarted / Specified / Claimed / BrokenKeeper), enforcing the acceptance-test rule (no predicate ⇒ cannot be called fulfilled at any level). `Kept` is deliberately NOT auto-derived — the predicates are prose, and claiming Kept without running something that could refute it is exactly the plausibility-as-verification failure. **THE LADDER'S VERDICT ON WHAT TO BUILD NEXT, no longer a matter of taste: Abyssal `promise[emerged-land]` is SPECIFIED (falsifiable predicate) but NOTHING KEEPS IT — a `:tag gate`, the #1 gap, and the `uplift` nomos built today is exactly the piece that must deliver it.** STILL OWED: the maturity report is not wired into the CLI — the "which promises/charges are in-progress vs not-started" view Joseph actually asked to SEE. Engine exists; display does not.
   |ref ordinum.rs · nomotheke.rs (PLANET, NOISE) · flux.rs (EMERGED_LAND, SEEDED_ASYMMETRY, INSOLATION) · audit.rs
 
-|decision[initial-topography-rename-executed] :date 2026-07-12 :by us :status decided :topic naming
-  :supersedes initial-topography-name-holds
+|decision[initial-topography-rename-executed] :date 2026-07-12 :by us :status decided :topic naming :supersedes initial-topography-name-holds
   :session 01UzCVNNAn6eynKxo2fV74MC
   DONE. `spine` → `initial-topography` swept through all code (nomos name, static, query methods, `gen::initial_topography_m`, all callers). 87/87 green.
   |reason
@@ -262,9 +261,7 @@
     Joseph's intuition ("some way to do partial fluxes so that by the time you get to the worst area it's still 8 minus a little") is CORRECT. Conservation and routing do not depend on valence — flux is a boundary integral, and gradient-projected edge-flux routing (D-∞ on a mesh) fans outflow across however many edges exist as partial fluxes summing exactly. So the defect DEMOTES from a global conservation failure to a bounded local accuracy wart at 24 cells (LSQ gradients recover second order at any valence). **That is the argument that decides the grid does not need replacing.** The cube∪octahedron partition (Voronoi = cuboctahedron — Joseph guessed it before the derivation) is elegant and never evaluates a cell at a singularity, but it is an O(1)→O(N) trade and is recommended against — while its partial-edge MECHANISM is exactly right for the coarse↔fine tile seam, which is unavoidable and non-matching by nature.
   |ref ref/research/seam-adjacency-findings.md §Addendum · examples/grid_lab.rs · Snyder 1992 Table 1
 
-|decision[conservation-is-not-consistency] :date 2026-07-12 :by claude :status decided :topic physics
-  :supersedes seam-grid-leads-snyder-healpix
-  :supersedes snyder-closes-the-projection-lead
+|decision[conservation-is-not-consistency] :date 2026-07-12 :by claude :status decided :topic physics :supersedes seam-grid-leads-snyder-healpix :supersedes snyder-closes-the-projection-lead
   :session 01UzCVNNAn6eynKxo2fV74MC
   THE LEAD IS CLOSED, BY MEASUREMENT — and the earlier decision reached the RIGHT CONCLUSION FOR THE WRONG REASON. Keep the equiangular cube-sphere and CellId; change the KERNELS. But the load-bearing claim underneath that — "conservation is a SCHEME property, isotropy/shape is a GRID property no scheme fixes" — is FALSE, and correcting it changes what the kernel work actually is.
   |reason
@@ -279,8 +276,7 @@
     **BIGGEST OPEN RISK, unprobed: the corrected scheme's hot-loop cost.** A 5×5 solve per cell per step. Nobody has benchmarked it, including me. It plausibly wants a per-(face,level) precomputed stencil matrix (the geometry is static) — but that is an INFERENCE, not a result, and it should be measured before item (1) is committed to.
   |ref ref/research/grid-comparison-report.md · crates/vivarium-world/examples/grid_lab/ · Snyder 1992 Cartographica 29(1) Table 1 · Górski et al. 2005 §5.1/§5.3 · ref/research/seam-adjacency-findings.md §Addendum A1–A4
 
-|decision[corner-pathology-confirmed-but-mfd-does-close] :date 2026-07-12 :by claude :status decided :topic physics
-  :supersedes corner-pathology-is-a-diagonal-artifact
+|decision[corner-pathology-confirmed-but-mfd-does-close] :date 2026-07-12 :by claude :status decided :topic physics :supersedes corner-pathology-is-a-diagonal-artifact
   :session 01UzCVNNAn6eynKxo2fV74MC
   PROVEN, WITH ONE CLAUSE FALSIFIED. The valence-3 corner IS an artifact of MFD's 8-neighbour fan, and gradient-projected edge flux does dissolve it. But the proposal asked us to "show edge-flux routing closes at valence 3 WHERE 8-NEIGHBOUR MFD CANNOT" — and **that second clause is false. MFD closes there perfectly well.**
   |reason
