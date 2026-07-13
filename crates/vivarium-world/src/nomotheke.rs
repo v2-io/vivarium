@@ -157,6 +157,44 @@ impl NomosDecl {
 
 // --- The registry ----------------------------------------------------------
 
+/// Fated noise — the KRNG. The source of ALL stochasticity in the world, and a pure
+/// function of (seed, key): no wall-clock, no stream, no shared mutable state. It keeps
+/// the ordinum's Phase-2 `seeded-asymmetry` promise (the world is "Divided"), which the
+/// ordinum audit showed was `:kept-by noise` — a nomos the registry did not have.
+pub static NOISE: NomosDecl = NomosDecl {
+    name: "noise",
+    version: "noise-2026-07-12a-krng",
+    system: "fated-noise",
+    approach: Approach::Statistical,
+    earth_fidelity: Tier::None, // no Earth process — heterogeneity with no provenance
+    physics: Tier::None,        // pure noise; conserves nothing, models nothing
+    relation: "#mech stand-in: determinism-as-ontology. Genuine CHANCE to anything inside the world, a deterministic lookup to us (ASF.md §2: the aleatoric boundary is frame-relative). It is honest heterogeneity, not a mechanism",
+    status: "built; the whole world's replayability rests on it (same (seed,key) → same value, forever). Keeps ordinum Phase-2 promise[seeded-asymmetry]",
+    deps: &[],
+    consumes: &[],
+    promises: &[Promise { quantity: flux::SEEDED_ASYMMETRY, conservation: Conservation::NotTracked }],
+    assumptions: &["fBm shape"],
+};
+
+/// The planet itself — tilt, spin, orbit, and the insolation rhythm that falls out of
+/// them. Real, principled physics (`planet.rs`: declination + hour-angle + latitude) that
+/// was NEVER DECLARED — found 2026-07-12 by the ordinum audit, which showed the ladder's
+/// Phase-1 `axial-rhythms` promise is `:kept-by planet`, a nomos the registry did not have.
+pub static PLANET: NomosDecl = NomosDecl {
+    name: "planet",
+    version: "planet-2026-07-12a",
+    system: "planetary-rhythms",
+    approach: Approach::Analytic,
+    earth_fidelity: Tier::High, // earth-ref tilt/spin/orbit; the geometry is Earth's
+    physics: Tier::High,        // exact sun-position identities — no model, just geometry
+    relation: "exact geometry: solar declination from axial tilt + year-fraction, hour angle from spin, zenith from latitude. A circular-orbit approximation (no eccentricity/S(t) yet) — that is the only fudge",
+    status: "keeps the ordinum's Phase-1 promise[axial-rhythms] (predicate: insolation, declination and hour-angle correct for date and latitude); drives the globe's real terminator/seasons",
+    deps: &[],
+    consumes: &[],
+    promises: &[Promise { quantity: flux::INSOLATION, conservation: Conservation::NotTracked }],
+    assumptions: &["axial tilt", "planet mass"],
+};
+
 /// The hydrosphere — the planet's conserved water budget, from an ante-mundane
 /// charge (the water-mass-fraction). The framework's first NON-FIELD nomos: a
 /// reservoir/box (global stocks, no spatial grid — the domain-fixation-guard
@@ -206,8 +244,10 @@ pub static SPINE: NomosDecl = NomosDecl {
     physics: Tier::None,        // pure coordinate noise; conserves nothing
     relation: "#mech stand-in: fBm-as-tectonics (ARCHITECTURE §2 — parameterization missing its error model); phase-structurally it impersonates Abyssal output rather than the Phase-2 submerged promise (Joseph, 2026-07-10)",
     status: "built; deterministic + cross-face continuity + golden probed; hypsometry probe scores it (land 41.5%, unimodal, oceans shallow — all flagged)",
-    deps: &[],
-    consumes: &[], // a prior conjured from (seed, coordinate) alone — the world's root input
+    deps: &[&NOISE],
+    // The relief is BUILT ON the fated asymmetry — declaring it makes the world's one
+    // acknowledged fundamental cheat (fBm-as-tectonics) an edge in the web, not a secret.
+    consumes: &[flux::SEEDED_ASYMMETRY],
     promises: &[Promise { quantity: flux::SURFACE_ELEVATION, conservation: Conservation::NotTracked }],
     assumptions: &["SEA_LEVEL_M", "continental band", "mountain band", "fBm shape"],
 };
@@ -248,7 +288,14 @@ pub static EROSION: NomosDecl = NomosDecl {
     // At v0 climate is UNIFORM, so erosion consumes it as a discharge WEIGHT
     // (precip/mean = 1 everywhere → no behaviour change); when climate gains
     // geography the weight varies and incision follows the rain.
-    consumes: &[flux::SURFACE_ELEVATION, flux::ROCK_UPLIFT_RATE, flux::PRECIPITATION],
+    // FOUR needs. Three are met — and the fourth is the one that was never DECLARED:
+    // fluvial erosion cannot carve a landscape that is under water. `emerged land` is
+    // the ordinum's Abyssal gate-charge (`emergent-land`: "delivered by uplift /
+    // proto-tectonic processes, NEVER an initial condition"), and NOTHING keeps it.
+    // Declaring the need is what makes the audit tell the truth: the world is in its
+    // Phase-1 water-covered state, so erosion is UNRUNNABLE here — rather than silently
+    // no-op'ing on seabed, which is exactly what it has been doing.
+    consumes: &[flux::SURFACE_ELEVATION, flux::ROCK_UPLIFT_RATE, flux::PRECIPITATION, flux::EMERGED_LAND],
     promises: &[Promise { quantity: flux::ERODED_SURFACE, conservation: Conservation::ExportsAtBoundary }],
     assumptions: &["stream-power `m`", "erosion `k_dt`", "erosion run length"],
 };
@@ -276,7 +323,7 @@ pub static WATER: NomosDecl = NomosDecl {
 };
 
 /// Every nomos there is. A store root whose name is not here is a bug.
-pub static NOMOTHEKE: &[&NomosDecl] = &[&HYDROSPHERE, &CLIMATE, &SPINE, &UPLIFT, &EROSION, &WATER];
+pub static NOMOTHEKE: &[&NomosDecl] = &[&NOISE, &PLANET, &HYDROSPHERE, &CLIMATE, &SPINE, &UPLIFT, &EROSION, &WATER];
 
 /// Look a nomos up by its key-stem name (the part before `@`).
 pub fn lookup(name: &str) -> Option<&'static NomosDecl> {

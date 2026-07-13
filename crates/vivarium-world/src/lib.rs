@@ -36,4 +36,5 @@ pub mod spec;
 pub mod flux;
 pub mod nomotheke;
 pub mod audit;
+pub mod ordinum;
 pub mod globe;

@@ -164,7 +164,13 @@ pub fn render_flux_web() -> String {
         for (consumer, q) in &unmet {
             let _ = writeln!(s, "  {} needs {q} — but no nomos produces it", consumer.name);
         }
-        // The named specimen, if present, gets the plain-language verdict.
+        // The ordinum's ungranted gate: the world cannot validly run what depends on it.
+        if unmet.iter().any(|(_, q)| *q == crate::flux::EMERGED_LAND) {
+            let _ = writeln!(
+                s,
+                "\n  ⛔ THIS WORLD CANNOT RUN FLUVIAL EROSION.\n                 \x20    It needs EMERGED LAND, and nothing produces it. That is not a bug — it is the\n                 \x20    ordinum telling the truth: the world is in its Phase-1 `water-covered-surface`\n                 \x20    state, and Abyssal's `charge[emergent-land] :tag gate` says land is \"delivered by\n                 \x20    uplift / proto-tectonic processes, NEVER an initial condition\". Until a nomos\n                 \x20    KEEPS that promise, erosion has nothing to carve — and was silently no-op'ing on\n                 \x20    seabed instead of saying so. The ladder now governs the web."
+            );
+        }
         if unmet.iter().any(|(_, q)| *q == crate::flux::PRECIPITATION) {
             let _ = writeln!(
                 s,
@@ -182,7 +188,7 @@ pub fn render_flux_web() -> String {
 mod tests {
     use super::*;
     use crate::flux;
-    use crate::nomotheke::{EROSION, SPINE, WATER};
+    use crate::nomotheke::{self, EROSION, SPINE, WATER};
 
     #[test]
     fn producers_are_unique() {
@@ -221,24 +227,32 @@ mod tests {
     }
 
     #[test]
-    fn precipitation_is_met_and_the_chain_is_closed() {
-        // Was the live UNMET gap; the climate nomos now produces precipitation, so
-        // NOTHING in the registry is unmet — every consumed quantity has a
-        // producer, and the whole water chain closes back to the hydrosphere.
+    fn precipitation_is_met_but_the_land_gate_is_not() {
+        // Precipitation IS met (climate keeps it) — rain falls on the Phase-1 ocean,
+        // exactly as the ordinum says it should. But the web is NOT closed, and the
+        // ONE thing outstanding is the ordinum's Abyssal gate: EMERGED LAND. Nothing
+        // keeps it, so fluvial erosion — which needs land to carve — cannot validly run.
+        // This is the ladder GOVERNING the web: an unkept promise is an unmet need.
         assert_eq!(producer_of(flux::PRECIPITATION).map(|n| n.name), Some("climate"));
-        assert!(unmet_across_registry().is_empty(), "the declared flux web is fully met — no dangling needs");
+        assert!(producer_of(flux::EMERGED_LAND).is_none(), "no nomos keeps the land promise yet");
+        let unmet = unmet_across_registry();
+        assert_eq!(unmet.len(), 1, "exactly one outstanding need — the land gate");
+        assert_eq!(unmet[0].0.name, "erosion-tile");
+        assert_eq!(unmet[0].1, flux::EMERGED_LAND);
     }
 
     #[test]
-    fn water_chain_reaches_the_hydrosphere_all_met() {
+    fn water_chain_reaches_the_hydrosphere() {
         // The transitive closure of water now closes: eroded-surface (→erosion) →
         // surface-elevation (→spine) + rock-uplift (→uplift) + precipitation
         // (→climate) → atmosphere-water (→hydrosphere, which consumes nothing).
         // Every line is Met, and the chain reaches the atmosphere-water stock.
         let chain = requisite_chain(&WATER);
+        // Water's own needs are met; but its chain runs THROUGH erosion, which needs
+        // the unkept land gate — so the transitive closure is honestly not all-met.
         assert!(
-            chain.iter().all(|l| matches!(l.supply, Supply::Met(_))),
-            "every requisite of water is met — the chain is closed"
+            chain.iter().any(|l| l.quantity == flux::EMERGED_LAND && matches!(l.supply, Supply::Unmet)),
+            "water's chain inherits erosion's unmet land gate"
         );
         assert!(
             chain.iter().any(|l| l.quantity == flux::PRECIPITATION && matches!(l.supply, Supply::Met(p) if p.name == "climate")),
@@ -251,15 +265,22 @@ mod tests {
     }
 
     #[test]
-    fn spine_has_no_requisites() {
-        assert!(requisites(&SPINE).is_empty(), "the spine is the root input — it consumes nothing");
+    fn noise_is_the_true_root_and_the_spine_stands_on_it() {
+        // The spine is NOT the root: it builds relief on the fated asymmetry the KRNG
+        // seeds. Declaring that edge makes the world's one acknowledged fundamental
+        // cheat (fBm-as-tectonics) visible IN THE WEB rather than hidden in a kernel.
+        // `noise` consumes nothing — IT is the root, and it is honestly tier-None.
+        let spine_needs: Vec<_> = requisites(&SPINE).into_iter().map(|r| r.quantity).collect();
+        assert_eq!(spine_needs, vec![flux::SEEDED_ASYMMETRY]);
+        assert_eq!(producer_of(flux::SEEDED_ASYMMETRY).map(|n| n.name), Some("noise"));
+        assert!(requisites(nomotheke::lookup("noise").unwrap()).is_empty(), "noise is the root");
     }
 
     #[test]
-    fn render_reports_the_closed_chain() {
+    fn render_convicts_the_world_of_running_erosion_without_land() {
         let text = render_flux_web();
-        assert!(text.contains("unmet flux needs: none"), "the rendered web reports the chain fully met");
-        assert!(!text.contains("UNMET"), "no dangling need remains to flag");
+        assert!(text.contains("UNMET"), "the land gate is flagged");
+        assert!(text.contains("CANNOT RUN FLUVIAL EROSION"), "the verdict is loud, not a footnote");
         assert!(text.contains("conserved"), "conservation stances are still shown");
     }
 }

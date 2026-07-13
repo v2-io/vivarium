@@ -98,13 +98,17 @@ pub fn snyder_inverse(x: f64, y: f64) -> (f64, f64) {
     if rho == 0.0 {
         return (0.0, 0.0);
     }
-    // fold Az′ into [0, sector) — "add back the same multiple" at the end (step 2)
+    // Fold Az′ into [0, sector) and "add back the same multiple" at the end (the paper's
+    // step 2). NOTE: no reflection about the sector bisector. Snyder derives the map on
+    // ONE right triangle (centre–vertex–edge-midpoint) but states the formulas then apply
+    // "to one-sixth of it at a time, VERTEX TO VERTEX" — i.e. across the whole sector.
+    // They do: eq (9)'s `q` is the distance to the edge LINE (which spans the full
+    // vertex-to-vertex arc) and eq (7)'s angle `G` at the vertex holds for D′ anywhere on
+    // it. Reflecting instead of trusting that introduced a C¹ kink at the bisector, worth
+    // ~1e-2 in the equal-area residual — visible only because the residual is checked.
     let k = (azp / sector).floor();
     azp -= k * sector;
-    // Within a sector the map is symmetric about the sector's bisector (the
-    // edge-midpoint ray). Reflect so we always work in [0, sector/2] — the paper's
-    // one-twelfth (here one-eighth) right triangle.
-    let (azp_w, mirrored) = if azp > sector / 2.0 { (sector - azp, true) } else { (azp, false) };
+    let azp_w = azp;
 
     // (19): A_G from Az′
     let tg = g.tan();
@@ -132,8 +136,7 @@ pub fn snyder_inverse(x: f64, y: f64) -> (f64, f64) {
     let f = dp / (2.0 * rp * (q / 2.0).sin());
     let z = 2.0 * (rho / (2.0 * rp * f)).clamp(-1.0, 1.0).asin();
 
-    let az_out = if mirrored { sector - az } else { az };
-    (az_out + k * sector, z)
+    (az + k * sector, z)
 }
 
 /// The Snyder **forward** map: `(Az, z)` on the sphere → plane `(x, y)`. Eqs (5)–(16).
@@ -144,8 +147,7 @@ pub fn snyder_forward(az_in: f64, z: f64) -> (f64, f64) {
     let (bg, th, g) = (SNY_BIG_G.to_radians(), SNY_THETA.to_radians(), SNY_G.to_radians());
     let sector = 2.0 * (std::f64::consts::FRAC_PI_2 - th);
     let k = (az_in / sector).floor();
-    let az0 = az_in - k * sector;
-    let (az, mirrored) = if az0 > sector / 2.0 { (sector - az0, true) } else { (az0, false) };
+    let az = az_in - k * sector;
 
     let tg = g.tan();
     // (6), (7)
@@ -159,7 +161,7 @@ pub fn snyder_forward(az_in: f64, z: f64) -> (f64, f64) {
     let f = dp / (2.0 * rp * (q / 2.0).sin());
     let rho = 2.0 * rp * f * (z / 2.0).sin();
 
-    let azp_out = if mirrored { sector - azp } else { azp } + k * sector;
+    let azp_out = azp + k * sector;
     (rho * azp_out.sin(), rho * azp_out.cos()) // (15), (16)
 }
 
@@ -173,23 +175,31 @@ pub fn cube_to_unit(proj: CubeProj, f: usize, u: f64, v: f64) -> V3 {
             unit(add(c, add(scale(a, tu), scale(b, tv))))
         }
         CubeProj::SnyderEqualArea => {
-            // The plane face square has half-side R′ (Snyder), with +y toward a vertex.
-            // Our (u,v) axes point at EDGE midpoints, so a vertex is at 45°: rotate.
+            // Snyder's plane face square has half-side R′, with +y toward a VERTEX. Our
+            // (u,v) axes point at EDGE midpoints, so rotate by 45°: (u,v) = (1,1) → +y,
+            // (1,−1) → +x.
             let rp = sny_rprime();
-            let (px, py) = (u * rp, v * rp);
             let s = std::f64::consts::FRAC_PI_4;
-            let (xr, yr) = (px * s.cos() - py * s.sin(), px * s.sin() + py * s.cos());
-            let (az, z) = snyder_inverse(xr, yr);
-            // Rebuild the direction: rotate the +y (vertex) ray back by −45° in the
-            // tangent frame at the face centre, then walk `z` along azimuth `az`.
-            let n = unit(c);
-            let e_v = unit(add(scale(unit(a), s.sin()), scale(unit(b), s.cos()))); // the vertex ray (u=v=1 dir)
-            let e_v = tangent(n, e_v);
-            let e_p = cross(n, e_v); // completes the frame
-            let dir = add(scale(e_v, az.cos()), scale(e_p, az.sin()));
-            unit(add(scale(n, z.cos()), scale(dir, z.sin())))
+            let (px, py) = (u * rp, v * rp);
+            let (x, y) = (px * s.cos() - py * s.sin(), px * s.sin() + py * s.cos());
+            snyder_plane_to_unit(f, x, y)
         }
     }
+}
+
+/// Snyder plane `(x, y)` on face `f` → the sphere. `+y` is the ray to the `(u,v)=(1,1)`
+/// vertex and `+x` the ray to `(1,−1)`. The tangent frame is written out explicitly
+/// rather than derived from a cross product, because a handedness slip here would MIRROR
+/// the face — which is area- and shape-preserving (so the distortion stats would look
+/// fine) but would silently mis-weld every cube edge.
+pub fn snyder_plane_to_unit(f: usize, x: f64, y: f64) -> V3 {
+    let (c, a, b) = cube_face_basis(f);
+    let (az, z) = snyder_inverse(x, y);
+    let n = unit(c);
+    let e_y = tangent(n, add(unit(a), unit(b))); // toward (u,v) = (1, 1)
+    let e_x = tangent(n, sub(unit(a), unit(b))); // toward (u,v) = (1, −1)
+    let dir = add(scale(e_y, az.cos()), scale(e_x, az.sin()));
+    unit(add(scale(n, z.cos()), scale(dir, z.sin())))
 }
 
 /// Build a whole-sphere cube grid: 6 faces × n×n cells, with **combinatorial**

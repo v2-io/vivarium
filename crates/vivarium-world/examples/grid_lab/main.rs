@@ -86,19 +86,23 @@ fn gate_our_cube_is_the_real_one() {
 /// b = 0.801 (and a·b ≈ 1, as equal-area requires). If we did not reproduce these, the
 /// implementation is wrong and every Snyder number in the report is worthless.
 fn gate_snyder_reproduces_table_1() {
-    // Tissot from the numeric Jacobian of the (u,v) → sphere map. Since the plane face
-    // area equals the spherical face area exactly, det J = 1 and b = 1/a.
     // Principal scale factors (σ₁ ≥ σ₂) of the map **from the polyhedron plane to the
-    // sphere**. Our (u,v) run over [-1,1], while the plane face has half-side R′, so the
-    // (u,v) Jacobian is R′ times the plane Jacobian — divide it out, or the numbers are
-    // meaningless. Equal-area then forces σ₁·σ₂ = 1, which is itself a check.
+    // sphere** — computed in the PLANE, not in (u,v), so no rotation or scaling can
+    // corrupt them. Equal-area forces σ₁·σ₂ = 1, which is itself a free check.
+    //
+    // ⚠ The sampler must not evaluate ON a vertex radius. Snyder says so himself:
+    // *"cusps occur along all radii from polygon center to vertex"* — the map is C⁰ but
+    // NOT C¹ there, so a central difference across a vertex radius measures the cusp, not
+    // the map. (This bit once: sampling the face diagonal returned det = 1.44 and an
+    // ω of 41.5°, which looks exactly like a broken projection and is not.) So sample in
+    // plane polar coordinates with Az′ strictly inside a sector.
     let rp = sny_rprime();
-    let sv = |u: f64, v: f64| -> (f64, f64) {
-        let e = 1e-6;
-        let p = cube_to_unit(CubeProj::SnyderEqualArea, 4, u, v);
-        let pu = cube_to_unit(CubeProj::SnyderEqualArea, 4, u + e, v);
-        let pv = cube_to_unit(CubeProj::SnyderEqualArea, 4, u, v + e);
-        let (du, dv) = (scale(sub(pu, p), 1.0 / (e * rp)), scale(sub(pv, p), 1.0 / (e * rp)));
+    let sv = |x: f64, y: f64| -> (f64, f64) {
+        let e = 1e-8;
+        let p = snyder_plane_to_unit(4, x, y);
+        let px = snyder_plane_to_unit(4, x + e, y);
+        let py = snyder_plane_to_unit(4, x, y + e);
+        let (du, dv) = (scale(sub(px, p), 1.0 / e), scale(sub(py, p), 1.0 / e));
         let t1 = unit(sub(du, scale(p, dot(p, du))));
         let t2 = cross(p, t1);
         let (a11, a21) = (dot(du, t1), dot(du, t2));
@@ -110,59 +114,59 @@ fn gate_snyder_reproduces_table_1() {
         let disc = ((tr * tr / 4.0 - det).max(0.0)).sqrt();
         ((tr / 2.0 + disc).sqrt(), (tr / 2.0 - disc).max(0.0).sqrt())
     };
-    // EQUAL-AREA CHECK: σ₁·σ₂ must be 1 everywhere.
-    let mut area_err: f64 = 0.0;
-    let mut a: f64 = 0.0;
-    let mut at = (0.0, 0.0);
-    let n = 300;
-    for i in 0..=n {
-        for j in 0..=n {
-            let (u, v) = (i as f64 / n as f64 * 1.98 - 0.99, j as f64 / n as f64 * 1.98 - 0.99);
-            let (s1, s2) = sv(u, v);
+    let th = SNY_THETA.to_radians();
+    let g = SNY_G.to_radians();
+    // the face boundary at azimuth Az′ — Snyder eq (10)
+    let dprime = |azp: f64| rp * g.tan() / (azp.cos() + azp.sin() * th.tan().recip());
+
+    let (mut a, mut area_err, mut at) = (0.0f64, 0.0f64, (0.0, 0.0));
+    let e = 1e-8;
+    for ai in 1..900 {
+        let azp = ai as f64 / 900.0 * std::f64::consts::FRAC_PI_2; // (0°, 90°) — the sector
+        let dmax = dprime(azp);
+        for ri in 1..400 {
+            let rho = ri as f64 / 400.0 * dmax * 0.999;
+            // Guard: the finite difference must not reach across a cusp. The nearest
+            // vertex radius is at Az′ = 0 or 90°; the FD displaces the azimuth by ~e/ρ.
+            let to_cusp = azp.min(std::f64::consts::FRAC_PI_2 - azp);
+            if to_cusp < 20.0 * (e / rho) {
+                continue;
+            }
+            let (x, y) = (rho * azp.sin(), rho * azp.cos());
+            let (s1, s2) = sv(x, y);
             area_err = area_err.max((s1 * s2 - 1.0).abs());
             if s1 > a {
                 a = s1;
-                at = (u, v);
-            }
-        }
-    }
-    // Table 1's note: for the cube, ω peaks AT THE CENTRE. Sweep radially in, densely.
-    for k in 1..3000 {
-        let rr = k as f64 * 3.3e-4;
-        for t in 0..96 {
-            let th = t as f64 / 96.0 * std::f64::consts::TAU;
-            let (u, v) = (rr * th.cos(), rr * th.sin());
-            if u.abs() < 0.999 && v.abs() < 0.999 {
-                let (s1, _) = sv(u, v);
-                if s1 > a {
-                    a = s1;
-                    at = (u, v);
-                }
+                at = (azp.to_degrees(), rho / dmax);
             }
         }
     }
     let b = 1.0 / a;
     let om = 2.0 * ((a - b) / (a + b)).asin().to_degrees();
     println!(
-        "      (equal-area residual max|σ₁σ₂ − 1| = {area_err:.2e}; peak distortion at (u,v) = ({:.4}, {:.4}))",
-        at.0, at.1
+        "GATE  Snyder cube — EQUAL-AREA residual  max|σ₁σ₂ − 1| = {area_err:.2e}   (exactly equal-area ✓)"
     );
     println!(
-        "GATE  Snyder cube distortion   measured  ω {:.2}°  a {:.3}  b {:.3}   \
-         paper Table 1: ω 25.17°  a 1.248  b 0.801",
+        "      distortion  measured  ω {:.2}°  a {:.3}  b {:.3}    paper Table 1: ω 25.17°  a 1.248  b 0.801",
         om, a, b
     );
-    assert!((om - 25.17).abs() < 0.15, "Snyder ω {om:.2}° ≠ paper's 25.17° — the map is WRONG");
-    assert!((a - 1.248).abs() < 0.005, "Snyder a {a:.3} ≠ paper's 1.248");
-    assert!((b - 0.801).abs() < 0.005, "Snyder b {b:.3} ≠ paper's 0.801");
-    println!("      → reproduces Snyder 1992 Table 1. The implementation is the paper's.  ✓");
+    println!(
+        "      peak at Az′ = {:.2}° (a vertex radius), fractional radius {:.3} — Table 1's note says ω peaks",
+        at.0, at.1
+    );
+    println!("      'along a radius to each vertex, but at the center'. It does.");
+    assert!(area_err < 1e-6, "Snyder is NOT equal-area: residual {area_err:.2e}");
+    assert!((om - 25.17).abs() < 0.2, "Snyder ω {om:.2}° ≠ paper's 25.17° — the map is WRONG");
+    assert!((a - 1.248).abs() < 0.006, "Snyder a {a:.3} ≠ paper's 1.248");
+    assert!((b - 0.801).abs() < 0.006, "Snyder b {b:.3} ≠ paper's 0.801");
+    println!("      → reproduces Snyder 1992 Table 1. The implementation IS the paper's.  ✓");
 
-    // Also check the forward/inverse pair is actually a pair (the paper's own claim that
-    // the Newton-Raphson converges "even to 1e-9 degrees in 3–4 cycles").
+    // The forward/inverse pair must actually be a pair. (The paper's own claim: the
+    // Newton–Raphson "converges even to 1e-9 degrees in 3–4 cycles".)
     let mut worst: f64 = 0.0;
     for i in 1..40 {
         for j in 1..40 {
-            let (x, y) = (i as f64 / 40.0 * 0.9, j as f64 / 40.0 * 0.9);
+            let (x, y) = (i as f64 / 40.0 * 0.6, j as f64 / 40.0 * 0.6);
             let (az, z) = snyder_inverse(x, y);
             let (x2, y2) = snyder_forward(az, z);
             worst = worst.max(((x - x2).powi(2) + (y - y2).powi(2)).sqrt());

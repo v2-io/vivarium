@@ -35,8 +35,36 @@
 //! — the vocabulary term stays the same, so this module is forward-compatible
 //! with that extension by construction.
 
+/// **Seeded crustal asymmetry** (dimensionless) — the fated heterogeneity the world is
+/// divided by. Produced by the `noise` nomos (the KRNG: a pure function of (seed, key)),
+/// consumed by the surface prior which builds relief on it. This keeps the ordinum's
+/// Phase-2 `seeded-asymmetry` promise — found undeclared 2026-07-12 by the ordinum audit.
+pub const SEEDED_ASYMMETRY: &str = "seeded crustal asymmetry (dimensionless)";
+
 /// The surface-prior elevation field the spine produces (m). Consumed by erosion.
 pub const SURFACE_ELEVATION: &str = "surface elevation field (m)";
+
+/// Top-of-atmosphere insolation (W/m²) — produced by the `planet` nomos from tilt,
+/// spin and orbit. The ordinum's Phase-1 `axial-rhythms` promise is kept by this.
+pub const INSOLATION: &str = "insolation (W/m2)";
+
+/// **Emerged land** — surface standing above sea level (m). The ordinum's Abyssal
+/// `emerged-land` promise, as a fluxed quantity: *"meaningful non-volcanic land above
+/// sea level — delivered by uplift / proto-tectonic processes, never an initial
+/// condition"* (`charge[emergent-land] :tag gate`).
+///
+/// **Fluvial erosion CONSUMES this** — you cannot carve a landscape that is under
+/// water. Nothing produces it yet, which is the honest truth: the world is in its
+/// Phase-1 `water-covered-surface` state, and Abyssal has not yet earned its land.
+/// Declaring the need is what makes the flux web tell that truth: the audit reports
+/// erosion's requirement as **UNMET**, so the world is mechanically unrunnable for
+/// erosion rather than silently no-op'ing on seabed (which is exactly what it was
+/// doing — see `examples/sea_level_probe.rs` and the fluvial-test footprint story).
+///
+/// This is the ordinum GOVERNING the flux web (Joseph, 2026-07-12): a promise the
+/// ladder has not kept becomes an unmet need, and a world that depends on it cannot
+/// validly run.
+pub const EMERGED_LAND: &str = "emerged land — surface above sea level (m)";
 
 /// The rock-uplift-rate field the uplift nomos produces (m/epoch) — the tectonic
 /// driver erosion carves against. Its own separate nomos (`crate::uplift`) so
@@ -66,7 +94,10 @@ pub const PRECIPITATION: &str = "precipitation (m/yr)";
 /// this list is a typo (or an undeclared vocabulary addition) — a test convicts
 /// it, so a broken coupling edge cannot masquerade as an obvious one.
 pub const VOCABULARY: &[&str] = &[
+    SEEDED_ASYMMETRY,
     SURFACE_ELEVATION,
+    INSOLATION,
+    EMERGED_LAND,
     ROCK_UPLIFT_RATE,
     ATMOSPHERE_WATER,
     ERODED_SURFACE,
