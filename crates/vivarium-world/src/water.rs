@@ -349,8 +349,32 @@ impl WaterSim {
         //    Border neighbours are treated as equal-surface (the edge hold drains).
         // θ flux smoothing (de Almeida, Bates, Freer & Souvignet 2012, WRR 48
         // W05528; the 2013 paper is the applicability study): each pipe blends with its
-        // along-axis neighbours — the stand-in for the neglected momentum-
-        // advection term. Without it, a local-inertial scheme on steep slopes
+        // along-axis neighbours.
+        //
+        // ⚠ ITS PHYSICAL CLAIM IS *NONE*. This comment used to call θ "the stand-in for
+        // the neglected momentum-advection term" — which is **exactly what the cited
+        // paper denies**: ¶52 says the introduced term "obviously does not represent the
+        // physics of the advective term neglected in the simple inertial formulation,"
+        // and ¶58 warns that apparent physical improvements are "a spurious effect of
+        // the error terms introduced by the discretization." The authors call θ what it
+        // is: "a weighting factor that adjusts the amount of ARTIFICIAL NUMERICAL
+        // DIFFUSION … no artificial diffusion is added when θ = 1." A symmetric 3-point
+        // average is an EVEN operator (a Laplacian); advection is ODD. They cannot be
+        // the same term. (Corrected 2026-07-13 after two independent probes; see
+        // ASSUMPTIONS.md and DECISIONS[theta-is-lax-friedrichs-not-rhie-chow].)
+        //
+        // ⚠ AND DO NOT SIMPLY DELETE IT. Measured: θ does not remove the unstable mode —
+        // it damps and RELOCATES it (still unstable at θ=0.5), because a low-pass filter
+        // has no grip on a long wave. What it is suppressing is partly REAL: the blobs
+        // below are ROLL WAVES (Vedernikov; real above Fr≈1.5), which the local-inertial
+        // momentum equation can RESOLVE but cannot SATURATE, because it drops the very
+        // advective term ∂(q²/h)/∂x that makes them steepen into breaking bores. The
+        // authors say so too: the oscillations "arise as a result of the nonlinearity …
+        // (i.e., shocks)." The principled retirement is therefore NOT a tuned θ — it is
+        // an entropy-stable / shock-capturing momentum stage. A scheme that resolves
+        // roll waves correctly is a DIFFERENT SCHEME, not a different θ.
+        //
+        // Without it, a local-inertial scheme on steep slopes
         // organises the flux field into travelling solitons decoupled from the
         // depth field (Joseph's multi-metre blobs winding down channels, shape
         // intact — probe-confirmed: Fr max 226, 75% cell-to-cell depth swings).

@@ -289,11 +289,10 @@ fn main() {
     println!("conservation and MFD's dispersion both survive. ~20 lines. No new stencil, no new");
     println!("grid, no diagonals-are-45° premise. \x1b[2m(:by claude :status proposed — Joseph decides.)\x1b[0m\n");
 
-    println!("\x1b[1mAnd the two defects turn out to be SEPARABLE — which is the useful part.\x1b[0m The moment");
-    println!("constraint fixes the DIRECTION (κ) and does nothing for the DISPERSION; edge-flux");
-    println!("weighting fixes the dispersion (catchment magnitude) and does nothing for κ. Neither");
-    println!("alone is the answer. The moment correction is a PROJECTION on any weight set, so");
-    println!("apply it to the accurate one and you get both.\n");
+    println!("\x1b[1mThe two defects are SEPARABLE, and that is the useful part.\x1b[0m The moment constraint");
+    println!("fixes the DIRECTION (κ) and does nothing for the dispersion; edge-flux weighting fixes");
+    println!("the DISPERSION (catchment magnitude) and does nothing for κ. The obvious move is to");
+    println!("compose them. \x1b[1mI tried that. It does not work, and the table below shows why.\x1b[0m\n");
 
     let all = [
         flow::Router::MooreMfd,
@@ -313,7 +312,10 @@ fn main() {
         println!();
     }
 
-    println!("   \x1b[1mAnd it must not have bought that by breaking something else. It did not:\x1b[0m\n");
+    println!("   \x1b[1m⇒ THE MOMENT CONSTRAINT RESTORES THE IDENTITY EXACTLY.\x1b[0m κ falls ~4 orders, to the");
+    println!("   operator's own floor, and the per-cell deflection goes to 0.02°. It does so on ANY");
+    println!("   weight set with enough receivers, at any valence, on any grid.\n");
+    println!("   \x1b[1mNow the honest half. Did it buy that by breaking something else?\x1b[0m\n");
     println!("   {:<32}{:>18}{:>13}{:>16}{:>15}", "router", "conservation", "cone err", "at the defects", "plume drift");
     println!("   {:-<32}{:->18}{:->13}{:->16}{:->15}", "", "", "", "", "");
     let frame = tangent(generic, [0.0, 0.0, 1.0]);
@@ -322,17 +324,31 @@ fn main() {
         let pl = flow::plume(&g, r, generic, frame, 0.30, 22.5, &[1.30]);
         let d = pl.drift_deg.last().copied().unwrap_or(f64::NAN);
         let km = R * 1.30f64.sin() * d.to_radians().abs() / 1000.0;
-        let hi = if r == flow::Router::QuadMoment { "\x1b[32m" } else { "" };
         println!(
-            "   {hi}{:<32}{:>18.12}{:>12.2}%{:>15.2}%{:>12.0} km\x1b[0m",
+            "   {:<32}{:>18.12}{:>12.2}%{:>15.2}%{:>12.0} km",
             r.label(), ro.conservation, 100.0 * ro.cone_err_mean, 100.0 * ro.cone_err_at_defects, km
         );
     }
-    println!("\n   \x1b[1m→ MOMENT + EDGE FLUX: κ collapses ~4 orders to the operator's own floor, conservation");
-    println!("     stays exact to twelve figures, the catchment error is the best of the four, and the");
-    println!("     474 km plume drift is gone.\x1b[0m The identity is preserved BY CONSTRUCTION, not");
-    println!("     approximated — a property of the kernel, not of the resolution, so it cannot regress.");
-    println!("     ~20 lines, no new grid, no new stencil, no architectural cost.");
+    println!("\n   \x1b[1m⚠ CONSERVATION SURVIVES (exact to twelve figures, every router). ACCURACY DOES NOT");
+    println!("   FOLLOW. And I could not compose the two fixes — measured, twice:\x1b[0m\n");
+    println!("   • \x1b[1mmoment + edge flux is WORSE than either parent\x1b[0m — cone error 8.09% against plain");
+    println!("     edge flux's 4.68%. An edge router has 2–4 receivers, so `Σw=1` plus `Σwₖsₖ=0`");
+    println!("     nearly determines the weights: it collapses toward D-∞ and throws the");
+    println!("     slope-proportional magnitude away. Two correct ideas, composed, made it worse.");
+    println!("   • \x1b[1mtrue-width quadrature reaches κ≈0 and still drifts 371 km\x1b[0m, and its catchment");
+    println!("     error (17.7%) is nowhere near edge flux's 4.7%.\n");
+    println!("   \x1b[1m→ AND THAT LAST LINE IS THE MOST IMPORTANT NUMBER IN THIS SPIKE.\x1b[0m A router whose");
+    println!("     transport direction is exactly right at every cell (|Δ| = 0.02°, κ = 5e-6) still");
+    println!("     drifts a plume \x1b[1m371 km\x1b[0m off its meridian. \x1b[1mCirculation and drift are DIFFERENT");
+    println!("     DEFECTS.\x1b[0m Drift is carried by the CONVERGENT (attractor) part of the deformation and");
+    println!("     by asymmetric dispersion; κ is carried by the SOLENOIDAL part. Killing one leaves");
+    println!("     the other untouched — which is exactly what this probe was built on and is now");
+    println!("     independent evidence for. \x1b[1mThe fan probe and the curl probe do not subsume each");
+    println!("     other, and neither is sufficient alone.\x1b[0m\n");
+    println!("   \x1b[1mSo: the remedy for the IDENTITY is established and cheap. The full kernel is NOT");
+    println!("   designed, and this spike does not pretend to have designed it.\x1b[0m The moment constraint");
+    println!("   is a projection to compose INTO whatever routing scheme is chosen — it is not itself");
+    println!("   that scheme. \x1b[2m(:by claude :status proposed — the kernel choice is Joseph's.)\x1b[0m");
 
     // provenance gate
     println!("\n   \x1b[2mPROVENANCE GATE — this file is a COPY of grid_lab/flow.rs (that tree is another");

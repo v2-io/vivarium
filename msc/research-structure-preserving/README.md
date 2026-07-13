@@ -64,19 +64,42 @@ failure mode this project has been burned by, and it is one careless `curl` away
    one of their three commutation relations. They have three. **The third one — the one we never thought
    of — is the one that prevents spurious vorticity.**
 
-6. **Our grid choice has a real, named cost, and it is not the one we have been auditing.** The
-   equiangular cube-sphere is **non-orthogonal**, and the mainstream mimetic C-grid construction (TRiSK)
-   *requires* primal-dual orthogonality — it explicitly admits the **conformal** cubed sphere, not the
-   equiangular one. **[P]** But the news is far better than that sounds: on the *degree-of-freedom*
-   criterion that actually determines whether spurious modes exist, the **quadrilateral C-grid is the
-   best of the three** (2:1 velocity:mass — the ideal ratio; hexagons are 3:1 and carry spurious Rossby
-   modes; triangles are 3:2 and carry spurious inertia-gravity modes). **[P]** **The reason nobody runs
-   a cube-sphere C-grid is orthogonality and corner grid-imprinting — not the DOF ratio.** And the
-   escape hatch from the orthogonality requirement already exists and is named: **finite element exterior
-   calculus**, which Cotter & Thuburn explicitly recommend applying as **`RT0` on quadrilaterals on a
-   cubed-sphere mesh**. **[P]**
+6. **Our grid is in far better shape than I expected. COLLOCATION is the real cost — and it is a COST, not
+   a BUG.**
+   - **Our DOF ratio is the RIGHT one.** A quadrilateral grid has exactly 2:1 velocity:mass (D = 3) — **no
+     spurious computational modes** — unlike hexagons (spurious Rossby) or triangles (spurious
+     inertia-gravity). **[P]** Weller 2012, naming us: *"**The cubed sphere has the correct ratio of d.o.f.,
+     but is usually nonorthogonal**."*
+   - **⚠ So our disease is NOT computational modes.** A collocated quad A-grid *also* has D = 3. Its
+     pathology is **parasitic modes on the PHYSICAL branches** — **half the gravity-wave spectrum
+     propagates BACKWARDS**, and a forcing at one frequency **excites a spurious short wave alongside the
+     real one**. **[P]** *A bias — and a different disease from the one I set out to find.*
+   - **But collocation is survivable, and the C-grid partisans say so.** **[P]** MPAS's flagship paper:
+     *"**all grid staggerings can be made to work with some level of filtering** … We have found that the
+     C-grid … results in the highest efficiency."* **You pay in filtering and effective resolution — and
+     `α_stab` IS that payment.** Ferguson et al. run *our exact grid* — equiangular, quadtree,
+     collocated — with a 6th-order hyperdiffusion, and it works.
+   - **Non-orthogonality is a spectrum, not a cliff.** Even the *conformal* cube-sphere is non-orthogonal at
+     the 8 corners (120°) **[P]**; and Putman & Lin **measured** that *"the more uniform version of the
+     quasi-orthogonal cubed-sphere grids provided **better overall accuracy than the most orthogonal**
+     … conformal grid."* **[P]** **Uniformity beat orthogonality — a direct, measured defence of our
+     equiangular choice.**
+   - **⚖ And on ONE row our quad grid is not the compromise — it is the PRIVILEGED grid.** Exact
+     **simultaneous energy + potential-enstrophy** conservation is available on a square C-grid
+     (Arakawa–Lamb 1981) and is **NOT** available from TRiSK on arbitrary structure. **[P]**
 
-7. **⚖ AND THE FINDING THAT REORGANISES ALL THE OTHERS — WHICH IS OUR OWN JENSEN THEOREM, ARRIVING AT
+7. **⚖ THE LEAD I DID NOT EXPECT — RANDALL'S **Z GRID**, and our quadtree may be what makes it affordable.**
+   Randall 1994's real point is not "the A-grid is bad." It is that a **collocated** grid is *excellent* if
+   you carry **vorticity, divergence and mass** instead of momentum — with a dispersion relation **[P]**
+   *"**superior to that obtained with the Arakawa grids A–E**."* Its one cost is an **elliptic solve**,
+   which Randall priced as prohibitive — *"**although it may be appropriate to reexamine this point in the
+   light of modern algorithms for solving linear systems (e.g., multigrid methods).**"* **[P]**
+   **A `CellId` quadtree IS a multigrid hierarchy.** We built it for memoisation and LOD. **The thing that
+   makes the Z grid affordable is something we already have, for entirely unrelated reasons — and it stays
+   COLLOCATED, so it costs nothing in `CellId`, the store, or the quadtree.** ⚠ **A lead, not a proposal.
+   Unmeasured. But it belongs on the table when Joseph adjudicates the grid.**
+
+8. **⚖ AND THE FINDING THAT REORGANISES ALL THE OTHERS — WHICH IS OUR OWN JENSEN THEOREM, ARRIVING AT
    THE SEAM.** Structures do **not** all cross a coarse↔fine interface on the same terms:
 
    > ### **LINEAR structures cross the AMR seam for free, via a commuting restriction operator.**
@@ -376,43 +399,167 @@ mortar work, **it will not degrade — it will crash, and it will crash at a CFL
 
 ## 4. The sphere, and what our grid actually costs
 
-### 4.1 The good news first: the quadrilateral C-grid has the BEST degree-of-freedom ratio
+### 4.1 The DOF / branch rule — and the quadrilateral grid is the GOOD one
 
-The real diagnosis of which staggered grids carry spurious computational modes is the **ratio of velocity
-DOFs to mass/pressure DOFs**, and it is stated plainly by the people who built the alternatives:
+The real diagnosis of which grids carry spurious *computational modes* is the **ratio of velocity DOFs to
+mass DOFs**, and — better — the **branch count** underneath it. Stated flatly, and about our grid by name:
 
-> **Cotter, C. J. & Thuburn, J. (2014).** *A finite element exterior calculus framework for the rotating
-> shallow-water equations.* J. Comput. Phys. 257:1506–1526. `relata: cotter-2014-feec-swe` — **READ PRIMARY**
-> (arXiv:1207.3336), PDF registered.
+> **Weller, H. (2012).** *Controlling the Computational Modes of the Arbitrarily Structured C Grid.*
+> Mon. Wea. Rev. 140(10):3220–3234. `relata: weller-2012-modes` — **READ PRIMARY** (§1).
+> ⚠ **Single author — Hilary Weller.** *(I initially assumed "Weller, Thuburn & Cotter." That is a
+> **different paper**: `weller-2012-grid-imprinting`, MWR 140(8):2734–2755. Both are worth having; cite
+> them correctly.)*
 
-> **[P]** *"…it is now well understood that **the triangular C-grid supports spurious inertia-gravity mode
-> branches because of the decreased ratio of velocity degrees of freedom (DOFs) to pressure DOFs relative
-> to quadrilaterals (from 2:1 to 3:2)** … **The hexagonal C-grid has an increased ratio of velocity DOFs to
-> pressure DOFs (from 2:1 to 3:1), and so does not support spurious inertia-gravity mode branches, but does
-> have a branch of spurious Rossby modes.**"* (§1)
+> **[P]** *"If a 2D C grid is not constructed of quadrilateral cells and/or does not have exactly twice the
+> number of velocity degrees of freedom (d.o.f.) as mass variable d.o.f., then computational modes will be
+> present… The C grid on hexagons has **too many** velocity d.o.f. and therefore suffers from computational
+> modes consisting of a spurious branch of very slow Rossby waves… The triangular C grid has **too few**
+> velocity d.o.f. and therefore has two spurious branches of slow inertio-gravity modes… **The cubed sphere
+> has the correct ratio of d.o.f., but is usually nonorthogonal**, apart from the conformal cubed sphere,
+> **which is not quasi-uniform since cells cluster toward the cube corners**…"*
 
-| C-grid on | velocity : mass DOF | spurious modes |
-|---|---|---|
-| **quadrilaterals** | **2 : 1** | **none** — this is the reference ratio |
-| hexagons (MPAS) | 3 : 1 | spurious **Rossby** modes |
-| triangles (ICON) | 3 : 2 | spurious **inertia-gravity** modes |
+> ### **That single sentence is the cube-sphere's entire dilemma, from a primary, and it says our DOF ratio is RIGHT and our problem is ORTHOGONALITY.**
 
-**So the answer to "why did MPAS choose hexagons" is NOT "because hexagons are better."** It is: *given
-that you have committed to a quasi-uniform unstructured icosahedral mesh with an orthogonal dual (SCVT),
-hexagons are the choice that avoids the inertia-gravity disease that kills triangles* — and you then pay
-with a spurious Rossby branch, which is argued to be tolerable:
+The mechanism is branch-counting (Thuburn, *Computational Modes in Weather and Climate Models*, ECMWF
+Seminar 2013, §5 — **[P]**, free): the continuous rotating shallow-water system has exactly **3** branches
+(2 inertio-gravity + 1 geostrophic). Count the DOF per repeating unit; you get that many branches; the
+excess are spurious.
 
-> **[P]** *"There is an argument to be made that spurious Rossby mode branches arising from increasing
-> velocity DOFs relative to this ratio are **not harmful since they have very low frequencies and will
-> just be passively advected by the flow**."* (§ Discussion)
+| grid | cells / vertices / edges | D | branches | spurious |
+|---|---|---|---|---|
+| **quad C-grid** | 1 / 1 / 2 | **3** | 1 Rossby + 2 IG | **none** |
+| hexagonal C-grid (MPAS) | 1 / 2 / 3 | 4 | **2** Rossby | 1 Rossby branch |
+| triangular C-grid (ICON) | 2 / 1 / 3 | 5 | **4** IG | 2 IG branches |
+| **collocated quad A-grid (ours)** | — | **3** | — | **none** |
 
-*(And they are controlled in practice by upwind-biasing the PV advection — Weller 2012, `weller-2012-modes`. **[A]**)*
+### ⚠ 4.1a THE CORRECTION THAT MATTERS MOST — our disease is NOT computational modes
 
-**⇒ On the DOF criterion — the criterion that determines whether spurious computational modes exist at
-all — a cube-sphere C-grid is the best of the three. That is a genuinely encouraging finding and it was
-not what I expected to find.**
+**A collocated quad A-grid also has D = 3.** So — and this cuts against the framing I started with, and
+probably against the one in our own structure table —
 
-### 4.2 The bad news: TRiSK needs ORTHOGONALITY, and we do not have it
+> ### **The A-grid's pathology is NOT extra computational modes. It is PARASITIC modes ON THE PHYSICAL BRANCHES.**
+>
+> **[P]** Thuburn (ECMWF 2013) §5: *"Polygonal A-grids suffer from **parasitic modes** like those discussed
+> [in] section 3."*
+
+**That is a different disease from the hexagon's, and it means "spurious branch counting" is not the
+argument against us.** Our two real problems are **(i) collocation** and **(ii) non-orthogonality**, and
+**they are independent.** Diagnose them separately.
+
+### 4.2 What ACTUALLY breaks on a collocated grid — and it is worse than the checkerboard
+
+**[P]** Thuburn (ECMWF 2013), §2.1: *"an initial condition comprising zero velocity and a **checkerboard
+pattern in φ** will be steady and so fail to propagate; the finite difference formula estimates the
+gradient of φ as zero."* — **this is exactly the Nyquist null-mode we derived in
+`discretisation-and-information.md` §3.2, confirmed.**
+
+But there are **two** invisible modes, not one, and we only had the first:
+
+**[P]** §2.2: *"An initial condition comprising **zero geopotential perturbation and a u field with a 2Δx
+wavelength** … **and a v field with a 2Δy wavelength** … will be steady and so fail to propagate. In this
+case **the velocity divergence is estimated as zero.**"*
+
+**And the part that is genuinely alarming, and that we did not have:**
+
+> **[P]** §3: *"For the shortest resolvable waves, kΔx = π, the numerical frequency is zero… In particular,
+> **half of the numerical spectrum has ∂ω/∂k of the wrong sign implying that packets of such waves have
+> group velocity of the wrong sign.** Such modes are often called **parasitic modes**."*
+>
+> **[P]** *"…the numerical dispersion relation has **two values of k for each value of ω**. This means that,
+> when forced at a particular frequency, **a model can produce a spurious shortwave response as well as a
+> physically realistic longwave response.**"*
+
+> ### **⇒ HALF THE SPECTRUM PROPAGATES BACKWARDS. And a forcing at one frequency EXCITES A SPURIOUS SHORT WAVE alongside the real one.**
+> **That is a BIAS, not noise** (our own audit, `discretisation-and-information.md` §1) — energy is being
+> transported in the wrong direction, systematically, at the grid scale. **[me] Every forced system we
+> queue — precipitation forcing water, tides forcing the ocean — will inject a parasitic companion wave.**
+
+Corroborated independently, **Randall, D. A. (1994)**, *Geostrophic Adjustment and the Finite-Difference
+Shallow-Water Equations*, MWR 122(6):1371–1377, `relata: randall-1994-adjustment` — **[P]**:
+
+> *"The averaging described above inevitably '**hides**' the smallest represented scales (e.g., a
+> checkerboard pattern in h). Such dynamically '**invisible**' noise cannot participate in the dynamics of
+> the model… A plot of the dispersion equation for the A grid indicates a **maximum of the frequency (group
+> speed equal to zero)** … As a result, **solutions on the A grid are extremely noisy in practice and must
+> be smoothed** — for example, through filtering… Because of this well-known problem, **the A grid is hardly
+> used today.**"*
+
+### 4.3 …but collocation is a COST, not a BUG — and that is stated by a C-grid partisan
+
+> **Skamarock, W. C., Klemp, J. B., Duda, M. G., Fowler, L. D., Park, S.-H. & Ringler, T. D. (2012).**
+> *A Multiscale Nonhydrostatic Atmospheric Model Using Centroidal Voronoi Tesselations and C-Grid
+> Staggering.* Mon. Wea. Rev. 140(9):3090–3105. `relata: skamarock-2012-mpas` — **READ PRIMARY** (§2d).
+
+> **[P]** *"**C-grid staggering provides twice the resolution of divergent modes compared to the unstaggered
+> (A) grid**; it does not require any averaging of the velocities or pressures in the pressure gradient and
+> divergence terms as is required in the A-, B-, D-, and E-grid staggerings. Pressure and velocity averaging
+> lead to **stationary grid-scale modes (often referred to as parasitic modes) that must be filtered**… Our
+> experience is that **the level of filtering needed on these other meshes is considerably higher** than that
+> needed to provide sinks for the downscale energy and enstrophy cascades… we find that **solvers not using
+> C-grid staggering need finer meshes to produce similarly resolved features**… **Generally speaking, all
+> grid staggerings can be made to work with some level of filtering, and the choices affect scheme
+> efficiency (accuracy versus cost). We have found that the C-grid discretization results in the highest
+> efficiency.**"*
+
+> ### **⇒ THE HONEST ANSWER TO "HOW WRONG IS COLLOCATED?" — from the MPAS flagship paper, i.e. from the other side of the argument: NOT WRONG. EXPENSIVE.**
+> **You pay in filtering and in effective resolution. Nobody in this literature says the A-grid is
+> *incorrect*.** And **`α_stab` is the price** — which is precisely `discretisation-and-information.md`
+> §2.5, confirmed from a second, independent direction.
+
+**And one line from the same page cuts the other way, and we should not hide it:**
+
+> **[P]** *"**Randall's (1994) analysis of geostrophic adjustment indicates that the C-grid staggering is
+> not optimal for large-scale flows.** Our intended applications for MPAS are cell spacings of the order
+> 100 km and less."*
+
+**[me] Our ocean gyres and circulation bands ARE large-scale flow. The C-grid is not automatically the
+right answer for us — which is the doorway to §4.4.**
+
+### 4.4 ⚖ THE LEAD I DID NOT EXPECT TO FIND — RANDALL'S **Z GRID**
+
+*This is the most valuable single item in the reconnaissance for the grid question, and it is COLLOCATED.*
+
+Randall's 1994 point is **not** "the A-grid is bad." It is that a **collocated grid is excellent — if you
+abandon the momentum equations for the VORTICITY–DIVERGENCE form.**
+
+> **[P]** Randall 1994, Abstract: *"Numerical simulation of geostrophic adjustment in shallow water is
+> discussed for the case of an **unstaggered grid for vorticity, divergence, and mass**. The dispersion
+> equation is shown to be **very well behaved and superior to that obtained with the Arakawa grids A–E**."*
+
+**Superior to the C grid.** No zero-group-speed pathology, no parasitic branch. On one collocated,
+unstaggered mesh. And the cost is stated, honestly, by Randall himself:
+
+> **[P]** *"it is necessary to **solve elliptic equations** to obtain the winds from the vorticity and
+> divergence… Such solution procedures can be computationally expensive in finite-difference models…
+> although **it may be appropriate to reexamine this point in the light of modern algorithms for solving
+> linear systems (e.g., multigrid methods).**"*
+
+> ### **⇒ READ THAT PARENTHESIS AGAINST OUR DATA STRUCTURE.**
+> **The Z grid's one cost is an elliptic solve. Randall himself flagged MULTIGRID as the reason to revisit
+> it — in 1994.**
+>
+> **A `CellId` quadtree IS a multigrid hierarchy.** Parent = one bit-shift. We already have — for entirely
+> unrelated reasons (memoisation, LOD, the wavelet store) — precisely the data structure whose absence made
+> the Z grid unaffordable.
+>
+> **And it stays COLLOCATED**, so it costs us nothing in `CellId`, nothing in the store, nothing in the
+> quadtree, and it does not require a face-staggered rewrite.
+>
+> **[me] This is the highest-value unexplored lead in the whole recon, and it is a strange and pleasing
+> convergence: the thing that makes the Z grid affordable is the thing we built for other reasons.
+> ⚠ It is a LEAD, not a proposal. It is unmeasured, it interacts with the multiresolution store in ways
+> nobody has thought about, and an elliptic solve per step is a real cost in a lazy pull-query
+> architecture. But it deserves a spike, and it deserves to be on the table when Joseph adjudicates the
+> grid question.**
+
+*(Corroborating that the Z grid is the thing everyone wants: **FV3's entire two-grid C→D design is an
+explicit Z-grid surrogate.* **[P]** Lin 2004, MWR 132(10):2293–2307, p.2294: *"a two-grid two-step
+'reversed engineering approach' was developed. **It has the advantage of the Z grid (Randall 1994) without
+its computational expense of solving an elliptic equation.**"* — `relata: lin-2004-vertically-lagrangian`.
+⚠ **And note: Lin 2004 is a LATITUDE–LONGITUDE dycore, NOT a cubed-sphere one.** I had assumed otherwise
+and was wrong; FV3-on-cubed-sphere begins with `putman-2007-cubed-sphere`.)*
+
+### 4.5 Orthogonality — TRiSK needs it; we do not have it; and it matters LESS than I feared
 
 > **Thuburn, J., Ringler, T. D., Skamarock, W. C. & Klemp, J. B. (2009).** *Numerical representation of
 > geostrophic modes on arbitrarily structured C-grids.* J. Comput. Phys. 228(22):8321–8335.
@@ -430,25 +577,114 @@ And here is the constraint:
 > **[P]** *"**Our procedure is applicable to grids having the property that dual edges are orthogonal to
 > primal edges.** The allowed grids include arbitrary Delaunay triangulations and Voronoi diagrams, as well
 > as quadrilateral grids based on **orthogonal coordinate systems such as longitude–latitude and
-> ⟨**conformal**⟩ cubed sphere**."* (§1)
+> ⟨conformal⟩ cubed sphere**."* (§1)
 
-**Vivarium's grid is the EQUIANGULAR cube-sphere, not the conformal one, and we have measured it to be
-non-orthogonal.** So TRiSK-as-published does not apply to us. And the trade is *stated*, which means it
-is a known frontier and not our private problem:
+Stated most precisely in the follow-up (`ringler-2010-unified`, JCP 229:3065–3090, §1) — **[P]**:
+*"**The requirement for the method derived below to hold is that the mesh be locally orthogonal in the
+sense that the edges that define mass cells and the edges that define vorticity cells are perpendicular at
+their intersection.**"*
+
+**Vivarium's grid is EQUIANGULAR, not conformal, and we have measured it non-orthogonal. So TRiSK-as-published does not apply to us.** That much is confirmed.
+
+**⇒ But three findings make this far less damning than it sounds, and the third is a measured result in
+our favour.**
+
+**(a) NOBODY actually satisfies the orthogonality condition on a cube.**
+
+> **[P]** Putman, W. M. & Lin, S.-J. (2007), *Finite-volume transport on various cubed-sphere grids*, JCP
+> 227(1):55–78, `relata: putman-2007-cubed-sphere`, §1: *"We note, however, **the conformal mapping is only
+> orthogonal in the interior, with coordinate lines still intersecting at the 8 corners at a 120-degree
+> angle.** Therefore, some modifications to the algorithm still need to be made to counter the
+> non-orthogonality near the corners."*
+
+**TRiSK's own "allowed" conformal cubed sphere violates TRiSK's own precondition at the 8 corners.**
+Non-orthogonality on a cube is not a gate we failed — it is a condition **everyone special-cases**, and the
+corners are irreducible.
+
+**(b) UNIFORMITY BEATS ORTHOGONALITY — and that is a measurement, not an opinion.**
+
+> **[P]** Putman & Lin, Abstract: *"**It is found that slight deviations from orthogonality on the modified
+> cubed-sphere (quasi-orthogonal) grids do not negatively impact the accuracy. In fact, the more uniform
+> version of the quasi-orthogonal cubed-sphere grids provided better overall accuracy than the most
+> orthogonal (and therefore, much less uniform) conformal grid.** It is also shown that **a simple
+> non-orthogonal extension to the transport equation enables the use of the highly non-orthogonal and
+> computationally more efficient gnomonic grid with acceptable accuracy.**"*
+
+And the "simple extension" is exactly the metric-carrying move we already suspected: **[P]** *"the local
+metric factor due to grid non-orthogonality, **sin(α)**, … **reduces to unity for orthogonal grids**"* —
+i.e. **carry `sin α` and do not drop it.**
+
+> ### **⇒ This is a direct, measured defence of our equiangular choice, from the FV3 lineage. We are on a spectrum, not off a cliff.**
+
+**(c) And the trade is a stated open frontier, not our private embarrassment:**
 
 > **[P]** *"Two directions remain outstanding from this approach, namely **the relaxation of the
 > orthogonality requirement which constrains cubed sphere grids so that grid resolution increases much
 > more quickly in the corners than at the middle of the faces**, and the construction of higher-order
 > operators to avoid **grid imprinting**."* (Cotter & Thuburn §1)
 
-> ### **That sentence is the cube-sphere's whole dilemma, and we are already living on one horn of it.**
-> **Orthogonal (conformal) ⇒ mimetic C-grid works, but cell size clusters badly at the corners.**
-> **Equiangular ⇒ quasi-uniform cells, but non-orthogonal, so the standard mimetic C-grid is unavailable.**
-> We picked equiangular. **[me] That was, unknowingly, a choice against the off-the-shelf mimetic
-> machinery** — and it is a *live* instance of the governing principle: we sacrificed a structure
-> silently.
+### 4.6 ⚠ The quantity that actually governs convergence under refinement — and we have already measured it
 
-### 4.3 The escape hatch, and it is named: FEEC
+*This is the most transferable result in the entire reconnaissance.*
+
+> **[P]** `aechtner-2015-wavelet-sphere` §3.2 (*Grid optimization*): *"Since the discretization of the
+> differential operators from [TRiSK] is **second-order accurate for equilateral triangles, but drops to
+> first-order accurate when the triangles are far from equilateral**, optimizing grid quality improves the
+> accuracy of the solutions."*
+>
+> **[P]** *"**The approximation of the Laplacian operator is guaranteed to converge if the bisection of
+> primal edge and dual edge coincide. The distance between those two intersection points is an important
+> measure for the grid quality. On simple grids refined by edge bisection the Laplacian operator does not
+> even achieve first-order convergence.**"*
+
+> ### **Read that twice. NAIVE REFINEMENT DOES NOT DEGRADE CONVERGENCE — IT DESTROYS IT.** *"does not even achieve first-order."*
+>
+> **And the quantity that governs it — the offset between where the primal edge is bisected and where the
+> dual edge is bisected — IS THE QUANTITY OUR GRID REPORT MEASURED AS "NON-ORTHOGONALITY."**
+>
+> **We independently found the right diagnostic.** And the literature's response to a bad value of it is
+> **not** *"change the grid."* It is **"run a grid-optimisation pass."** Aechtner et al. reduced their
+> offset **by a factor of ~60** that way.
+
+**⇒ [me] This is a bounded, concrete, unexplored piece of work: a grid-optimisation pass on an equiangular
+cube-sphere quadtree that drives the primal/dual crossing offset toward zero. Nobody has done it. It does
+not change `CellId`, the quadtree, or the store. It may be the cheapest path to making a staggered scheme
+legal on our grid — and it is a far smaller commitment than changing grids.** ⚠ Unmeasured. A lead.
+
+### 4.7 ⚠ TRiSK cannot do what Arakawa–Lamb does — and that argues FOR quadrilaterals
+
+> **Arakawa, A. & Lamb, V. R. (1981).** *A Potential Enstrophy and Energy Conserving Scheme for the Shallow
+> Water Equations.* Mon. Wea. Rev. 109(1):18–36. `relata: arakawa-1981-enstrophy` — **READ PRIMARY**
+> (scanned).
+
+> **[P]** Abstract: *"It is pointed out that **a family of schemes can conserve total energy for general
+> flow and potential enstrophy for flow with no mass flux divergence.** The newly derived scheme is **a
+> unique member of this family, that conserves both potential enstrophy and energy for general flow.**"*
+
+| question | answer |
+|---|---|
+| energy? | **exact, general (divergent) flow** |
+| potential enstrophy? | **exact, general flow** — that is the novelty (older schemes need `∇·v* = 0`) |
+| constant *f* required? | **No.** *f* rides inside `q = (f+ζ)/h`; the Appendix does the sphere. |
+| ⚠ **exactly?** | **SEMI-DISCRETE ONLY.** **[P]** §3: *"**The time derivatives will be left, for simplicity, in differential form throughout.**"* Conservation is a property of the **space** discretisation, exact in continuous time. **Your time integrator breaks it at truncation order.** *This is the caveat every secondary source drops, and it is exactly the kind of undeclared sacrifice our governing principle exists to catch.* |
+| cost | the Coriolis/PV term stops being a simple average: six coefficients, each a 4-point combination of surrounding `q` (≈3×3 stencil), plus specific mandated averages for `h⁽ᵘ⁾`, `h⁽ᵛ⁾`, `h⁽q⁾`, `K`. |
+| grid | **C-grid, on quadrilaterals.** |
+
+**And here is the sting for the hexagonal alternative** — TRiSK, on arbitrary structure, **cannot** buy
+both:
+
+> **[P]** `ringler-2010-unified` §, p.3078: *"Both the potential enstrophy conserving and potential
+> enstrophy dissipating schemes will, in general, **act as spurious sources of kinetic energy.**"*
+>
+> *(Corroborating the tension in the secondary literature: `weller-2012-modes` p.3220 says TRiSK conserves
+> mass, PV, steady geostrophic states, and energy as Δt→0 — "**but not potential enstrophy**".)*
+
+> ### **⇒ EXACT SIMULTANEOUS ENERGY + POTENTIAL-ENSTROPHY CONSERVATION IS AVAILABLE ON A SQUARE C-GRID (Arakawa–Lamb 1981) AND IS *NOT* AVAILABLE FROM TRiSK ON ARBITRARY STRUCTURE.**
+> **That is the price of arbitrary-structure generality — and it is the single strongest structural
+> argument for keeping a QUADRILATERAL grid.** **[me]** We have been treating our quad grid as the
+> compromise. On this row of the structure table, **it is the privileged one.**
+
+### 4.8 The escape hatch from orthogonality, and it is named: FEEC
 
 Cotter & Thuburn's *entire point* is that **finite element exterior calculus removes the orthogonality
 requirement** while keeping the mimetic properties — and their recommended configuration is, of all
@@ -498,7 +734,7 @@ ALREADY BE the rehabilitated form, and the ABF defect may be an artifact of the 
 indictment of ours.** ⚠ **This is an inference, not a result. It is the second-highest-value thing to
 check, and if it holds it is very good news.**
 
-### 4.4 The curved-mesh tax nobody warned us about: the metric identities (GCL)
+### 4.9 The curved-mesh tax nobody warned us about: the metric identities (GCL) — and the escape from it
 
 > **Wintermeyer, N., Winters, A. R., Gassner, G. J. & Kopriva, D. A.** *An Entropy Stable Nodal
 > Discontinuous Galerkin Method for the Two Dimensional Shallow Water Equations on Unstructured Curvilinear
@@ -518,7 +754,39 @@ GCL exactly**, or well-balancedness and entropy conservation are **lost as theor
 A cube-sphere is a curved mapped mesh. **We have never checked a discrete GCL. [⊘] I do not know whether
 ours holds.** That is a probe, and it is cheap.
 
-### 4.5 What is actually done on a cubed sphere with AMR today
+**⚠ AND THERE IS A 2026 ESCAPE FROM THE WHOLE PROBLEM — which also demolishes an emptiness claim I was
+about to make:**
+
+> **Montoya, T., Rueda-Ramírez, A. M. & Gassner, G. J. (2026).** *Entropy-stable discontinuous
+> spectral-element methods for the spherical shallow water equations in covariant form.* arXiv:2509.08790v2
+> (rev. 9 Feb 2026). `relata: montoya-2026-covariant-sphere` — **READ PRIMARY**, PDF registered.
+
+> **[P]** Abstract: *"We introduce discontinuous spectral-element methods of arbitrary order that are **well
+> balanced, conservative of mass, and conservative or dissipative of total energy** (i.e., a mathematical
+> entropy function) for a covariant flux formulation of the rotating shallow water equations with variable
+> bottom topography **on curved manifolds such as the sphere** … proven to satisfy semi-discrete mass and
+> energy conservation **on general unstructured quadrilateral grids** … Furthermore, **the proposed covariant
+> formulation permits an analytical representation of the geometry and associated metric terms while
+> satisfying the aforementioned entropy stability, conservation, and well-balancing properties WITHOUT THE
+> NEED TO APPROXIMATE THE METRIC TERMS SO AS TO ENFORCE DISCRETE METRIC IDENTITIES.** Numerical experiments
+> **on cubed-sphere grids** are presented…"*
+
+> ### **⇒ SO THE GCL IS A DESIGN FORK, NOT A TAX.**
+> **Either (a) satisfy the discrete GCL exactly** — the flux-form route (Wintermeyer et al.), where the
+> metrics must be *discretely* consistent and not merely *true* — **or (b) adopt a COVARIANT formulation, in
+> which the metric terms are ANALYTIC and the GCL requirement never arises** (Montoya et al.).
+>
+> **[me] Option (b) is striking for us, because our cube-sphere map has a CLOSED-FORM JACOBIAN — the very
+> object `grid_lab` §9a used to prove the MFD fan bias does not converge away.** We already compute it
+> analytically, and we already trust it to 2e-16 against the code. **The thing that convicted our routing
+> kernel may be the thing that makes the covariant route cheap.** ⚠ **Inference, unverified — but the
+> coincidence is worth an hour of someone's time.**
+
+**And note what Montoya et al. do to the emptiness question:** structure-preserving (entropy-stable +
+well-balanced + mass- and energy-conserving), **on a cubed sphere, on quadrilaterals, in 2026.** That cell
+is **occupied**. It is **conforming** (no AMR) and carries **no positivity**. §5.2 is corrected accordingly.
+
+### 4.10 What is actually done on a cubed sphere with AMR today
 
 > **Ferguson, J. O., Jablonowski, C., Johansen, H., McCorquodale, P., Colella, P. & Ullrich, P. A. (2016).**
 > *Analyzing the Adaptive Mesh Refinement (AMR) Characteristics of a High-Order 2D Cubed-Sphere
@@ -549,6 +817,33 @@ a property of collocation, and everyone who chooses collocation pays this tax.**
 test and reported errors — they did not claim a preserved structure. **[me] For advection and gravity
 waves that is fine. For ocean gyres and persistent circulation bands — which is what our TODO queues — it
 is exactly the regime where the unclaimed structure is the one that matters.**
+
+**⚠ AND THE WARNING THAT IS DIRECTLY, SPECIFICALLY OURS — they measured a defect we will hit:**
+
+> **[P]** §3 (p. 4654): *"The maximum errors occur in cells bordering the **coarse–fine boundary of the AMR
+> patch** and the base grid **when that boundary intersects an edge of the cubed sphere**. This
+> **point-source-like artifact** of the AMR grid occurs in both the height-tag and vorticity-tag AMR
+> simulations."*
+
+**The AMR seam crossing a cube-panel seam is a real, measured error source** — it drops their `l∞`
+convergence from 4th order to between 3 and 2.5. **This is the interaction of our two seams — the tile
+seam and the face seam — and it is the one place where the two are known to compound.**
+**⇒ Cheap mitigation, free today: keep refinement-patch boundaries off panel edges and corners where the
+tile planner can choose.** *(Also from their Table 1, a calibration number worth having: the equiangular
+cube-sphere's asymptotic cell-area ratio `A_min/A_max ≈ 0.708`.)*
+
+**And one more, from MPAS, aimed squarely at our refinement strategy — carried openly because it is the
+best argument against us that I found:**
+
+> **[P]** `skamarock-2012-mpas` (p. 3091): *"**The smooth mesh transitions we use stand in contrast to the
+> abrupt mesh transitions used in traditional two-way nested models … or in mesh refinement achieved
+> directly through cell division.** **We believe** the smooth mesh transition will ameliorate many of the
+> difficulties associated with traditional nesting approaches."*
+
+**"Mesh refinement achieved directly through cell division" is a quadtree. That is our strategy, named, and
+the MPAS team believes it is the wrong one.** Note the words *"We believe"* — it is a **stated position,
+not a demonstrated result**, and Ferguson et al. is a counter-example in the same journal. **But we should
+have an answer to it, and right now we do not.**
 
 ---
 
@@ -600,20 +895,39 @@ Having found WAVETRISK, the honest statement of the gap is **much narrower and m
 
 | combination | status |
 |---|---|
-| structure-preserving + sphere + adaptive | ✅ **WAVETRISK** (hex/tri icosahedral) |
-| topological identity exact across non-conforming AMR | ✅ **Balsara** (Cartesian MHD) |
-| mimetic + hanging nodes | ✅ **Lipnikov/Morel/Shashkov**, MFD/VEM generally (Cartesian/polygonal) |
-| conservative FV + cubed sphere + nonconforming AMR | ✅ **Chombo / Ferguson et al.** (collocated; mass only) |
-| **mimetic / staggered C-grid + CUBE-SPHERE + quadtree AMR** | **⊘ I found nothing.** |
-| **structure-preserving + *fated-noise* closure / content-addressed memoised store** | **⊘ nothing, and this is genuinely ours** |
-| **a multiresolution transform on a cube-sphere quadtree with unequal cell areas** | ✅ **theory exists** (§6) — **but I found no implementation on a cube-sphere** |
+| structure-preserving + sphere + **adaptive** | ✅ **WAVETRISK** (hex/tri icosahedral) |
+| structure-preserving + **cube-sphere** (ES + WB + mass + energy) | ✅ **Montoya et al. 2026** — conforming; **no positivity, no AMR** |
+| topological identity exact across **non-conforming AMR** | ✅ **Balsara 2001** (Cartesian MHD) |
+| mimetic + **hanging nodes** | ✅ **Lipnikov/Morel/Shashkov**; MFD/VEM generally (Cartesian/polygonal) |
+| **well-balanced + positivity on a QUADTREE** (hanging nodes) | ✅ **Ghazizadeh, Mohammadian & Kurganov 2020** — *proved*, but **2nd-order, Cartesian, no entropy** |
+| conservative FV + cube-sphere + nonconforming AMR | ✅ **Chombo / Ferguson et al. 2016** — **collocated; mass only** |
+| **entropy stability + AMR** | ⚠ **the naive seam CRASHES** (Friedrich 2018); fixable only with mortar-projection machinery |
+| **mimetic / staggered + CUBE-SPHERE + quadtree AMR** | **⊘ Nothing. Searched hard. I believe it does not exist.** |
+| **ES + WB + positivity + AMR + sphere, all at once** | **⊘ Nothing.** |
+| **structure-preserving + *fated-noise* closure / content-addressed memoised store** | **⊘ nothing — genuinely ours** |
+| a multiresolution transform on a cube-sphere quadtree with unequal areas | ✅ **theory complete** (§6) — **⊘ no implementation on a cube-sphere** |
 
-**⇒ So the well-evidenced negative claim is this, and it is narrow enough to be useful:**
+**⇒ So the well-evidenced negative claim is this — and it is much narrower, and much more useful, than
+"nobody does this":**
 
-> ### **Nobody has built a structure-preserving STAGGERED scheme on a CUBE-SPHERE QUADTREE.** Every ingredient exists and has been separately proved. The reason the combination is empty is almost certainly §4.2 — **the equiangular cube-sphere is not orthogonal, so the cheap mimetic C-grid construction is unavailable, and everyone who wanted mimetic went to icosahedral/hexagonal instead** (where SCVT gives you orthogonality for free). **We would be building, not adopting. But we would be building on FEEC, which is exactly the tool built to remove that obstruction, and Cotter & Thuburn have already named the configuration.**
+> ### **Every ingredient exists and has been separately PROVED. Nobody has COMPOSED them on a cube-sphere quadtree.**
+>
+> **And the reason is now diagnosable rather than mysterious.** The mimetic-geophysics community went
+> **icosahedral/hexagonal**, because a Voronoi/SCVT mesh hands you **primal-dual orthogonality for free**
+> (§4.5) — which is TRiSK's precondition. Everyone who stayed on a cube stayed **collocated** and paid the
+> **filtering tax** (§4.3, §4.10). Nobody sat in the intersection because **the intersection requires
+> solving the orthogonality problem on a cube, which is a stated open frontier** (§4.5c), **and because the
+> entropy seam is genuinely hard** (§3.4).
+>
+> **We would be building, not adopting.** But we would be building on **three named tools that already
+> exist** — FEEC (removes the orthogonality requirement), the **grid-optimisation pass** (§4.6, drives the
+> primal/dual offset to ~0 — nobody has run it on a cube-sphere quadtree), and the **mortar projections**
+> (§3.4, makes the nonlinear seam legal) — **and Cotter & Thuburn have already named the target
+> configuration: `RT0` on quadrilaterals on a cubed sphere, primal-dual.**
 
-**[me] That is a real research position — defensible, narrow, and with a named path. It is not "nobody
-does this so we're on our own."**
+**[me] That is a real research position: defensible, narrow, with a named path, and — on the evidence of
+§4.7 — sitting on the ONE grid family where exact simultaneous energy + potential-enstrophy conservation is
+even available. It is not "we're on our own."**
 
 ---
 
@@ -776,54 +1090,247 @@ reduced CFL condition λ/ω₀ ≤ λ₀"*, set by the first Gauss–Lobatto qua
 with well-balancedness** — that combination is a published result (Xing, Zhang & Shu 2010), not a hope.
 **This row is pure adopt.**
 
-### 8.2 Entropy stability — necessary, and NOT sufficient, and the distinction is the whole point
+**⚠ AND ONE TRAP THAT WILL COST A DAY IF WE DON'T KNOW IT.** The positivity limiter is the *well-behaved*
+one — it is provably **inert** at lake-at-rest, so it does **not** break well-balancedness (**[P]**
+`xing-2010-positivity-wb-dg` §3: *"the limiter will not destroy the well-balanced property"*). **What breaks
+well-balancedness is the ordinary TVB/slope limiter** — and the WB-ified TVB limiter then **fights** the
+positivity limiter:
 
-**Conservation is not enough:** a conservative scheme can converge to a **non-physical weak solution** (an
-expansion shock conserves mass and momentum and runs time backwards). Entropy stability is what excludes
-those. Tadmor's construction: an **entropy-conservative** flux, plus **explicitly added dissipation** —
-because **[A]** *"exact entropy conserving schemes cannot dissipate energy at shocks."*
+> **[P]** `xing-2010-positivity-wb-dg` §4: *"numerical tests show that there may be a **conflict between the
+> well-balanced TVB limiter** … **and the positivity-preserving limiter** if care is not taken … We may
+> observe that **the numerical time step becomes smaller and smaller as time evolves, and eventually the
+> code stops.**"*
 
-**⚠ The honest limit, and it must be declared:** a discrete entropy inequality **rules out** entropy-
-violating solutions; for nonlinear **systems** it does **not** by itself prove convergence to *the* unique
-entropy solution. **Necessary, not sufficient.** *(Stated as my reading of the standard position — see the
-companion notes for what was verifiable.)*
+**That is a runtime death, not a silent inaccuracy.** The fix is a predicate/action split (flag on
+`(h+z, hu)` in wet cells, `(h, hu)` in dry ones; always *act* on `(h, hu)`), plus hard-zeroing velocity
+below an `h` threshold.
 
-**On a curved/spherical mesh it costs one more thing: the GCL (§4.4).**
+### 8.2 Entropy stability — necessary, NOT sufficient, and the honest limit is BLEAKER than I assumed
 
-### 8.3 Well-balanced — the minimal change is small and it is a *reconstruction*, not a flux
+**Conservation is not enough:** weak solutions are non-unique, and nothing in a conservative scheme forbids
+converging to one that *creates* energy across a discontinuity (the expansion shock — mass and momentum
+balance, and time runs backwards). Entropy stability adds the admissibility criterion.
 
-`audusse-2004-hydrostatic` (SIAM J. Sci. Comput. 25(6):2050–2065) — **hydrostatic reconstruction**: keep
-the free surface `h + z` (not `h`) as the reconstructed variable, and rebuild interface depths so that a
-flat surface over a bumpy bed produces **identically cancelling** pressure and bed-slope terms.
+**What it costs — real numbers, from `wintermeyer-2016-entropy-swe` §5 [P]:** the volume kernel goes from
+`2(N+1)²` to `2(N+1)³` flux evaluations, and each flux is dearer. Net: **~2.5× on CPU** (with the symmetry
+trick), and **~1× on GPU for N ≤ 7**, because the kernel is memory-bound in that range. **That is a cheap
+structure relative to what it prevents.**
 
-**⇒ The important structural point for us, and it is the one the brief was hunting:** well-balancedness is
-**not** a property of the flux function — it is a property of **which variable you reconstruct**. It costs
-almost nothing. **And our `water.rs` has never been tested for it.** The probe
-(`discretisation-and-information.md` §6.3) stands, and it is the cheapest convicting probe we have.
+**⚠ AND NOW THE PART THAT MUST GO IN THE LEDGER, BECAUSE IT IS A STANDING OVERCLAIM IN THE FIELD AND WE
+WOULD HAVE MADE IT.** My §8.2 draft said "necessary, not sufficient" as a hedge. It is **worse than a
+hedge — it is a theorem-shaped hole**:
 
-### 8.4 Symplectic — and the collision with adaptivity, which is a genuine no-go
+> **[P]** Fjordholm, Käppeli, Mishra & Tadmor (2017), *Construction of approximate entropy measure-valued
+> solutions…*, Found. Comput. Math. 17(3):763–827, `relata: fjordholm-2017-measure-valued`, §1.2:
+> *"Currently, **there are no rigorous proofs of convergence for any kind of finite volume (difference) and
+> finite element methods to the entropy solutions of a generic system of conservation laws, even in one
+> space dimension.**"*
+>
+> **[P]** §1.2: *"The only notion of numerical stability … that has been analyzed rigorously so far is that
+> of entropy stability… **However, entropy stability may not suffice to ensure the convergence of approximate
+> solutions.**"*
+>
+> **[P]** §1.1: *"recent results … provide counterexamples which illustrate that **entropy solutions for
+> multi-dimensional systems of conservation laws are not necessarily unique**. These results **raise serious
+> questions about the appropriateness of entropy solutions as the standard solution framework.**"*
 
-`hairer-2003-geometric`. The guarantee is a **backward-error** result: a symplectic method's numerical
-trajectory is the exact trajectory of a **nearby Hamiltonian** system, so the energy error is **bounded,
-not secular**, over exponentially long times.
+And they *demonstrate* it, running their own entropy-stable scheme on Kelvin–Helmholtz: **[P]** *"**there is
+no sign of any convergence as the mesh is refined**… the approximate solutions **do not seem to form a Cauchy
+sequence in L¹**"* — reproduced across three independent codes.
 
-> ### **⚠ AND THE HYPOTHESIS IS: CONSTANT STEP SIZE.**
-> **[A]** *"Symplectic methods … have favorable properties concerning long-time integrations … **if applied
-> with constant step sizes**, while **all of these properties are lost in a standard variable step size
-> implementation**."*
+> ### **⇒ DECLARE THIS PRECISELY. Entropy stability is a ONE-SIDED BOUND, not a selection principle.**
+> **It buys:** robustness, non-blow-up, and the **exclusion of energy-creating shocks** — which for a
+> *planet sim* means **honest long-time energy budgets**, and that is the one that actually matters to us.
+> **It does NOT buy:** convergence to *the* true solution. For **systems** no such guarantee exists at all,
+> and for shear-dominated flow entropy-stable schemes **demonstrably fail to converge**.
+>
+> **A scheme that "preserves the second law" is making a much smaller claim than it sounds like.** Saying
+> otherwise would be exactly the overclaim `voice-discipline` exists to prevent.
 
-**⇒ This is a first-class instance of the governing principle, and it lands directly on our architecture.**
-Our whole seam discipline (`multiscale-seams.md` §3) is built on **deriving Δt from the CellId level** —
-i.e. **step size varies**. For the ante-mundane orbital phase that is *exactly the thing that destroys the
-structure we would be adopting symplectic integration to get.*
+**On a curved mesh it costs one more thing: the GCL — or the covariant escape (§4.9).**
 
-**The ante-mundane phase must therefore either (a) run at fixed step, outside the multirate ladder — which
-is fine, because an orbit has no spatial grid — or (b) use a time-symmetric / Poincaré-transformed variable
-step, which is the standard workaround.** **⇒ Proposed: the orbital nomos is FIXED-STEP and is explicitly
-exempt from the CellId-derived-Δt rule, and that exemption gets DECLARED, not discovered.**
+### 8.3 Well-balanced — a *reconstruction*, not a flux — and it BREAKS in our exact regime
 
-*(Companion note also covers: what symplecticity buys once tidal dissipation makes the system
-non-Hamiltonian — the short answer is "less than you think," and it should be declared.)*
+`audusse-2004-hydrostatic` (SISC 25(6):2050–2065) — **hydrostatic reconstruction.** ⚠ **I could not obtain
+the full text** (SIAM paywall; HAL/CiteSeerX mirrors 404). What follows is verified against **two
+independent primary restatements that agree formula-for-formula** (Ranocha §7.7; Delestre et al. §2.1) —
+**the words are theirs, not Audusse's.**
+
+**The minimal change is three pieces, and our summary was missing the third:**
+1. Reconstruct on **`(u, h, h+z)`** — the free surface, not the depth.
+2. Clip the interface depths: `h_L = max(h₋ + z₋ − max(z₋, z₊), 0)`, symmetrically for `h_R`.
+3. **⚠ Add a pressure correction to each side of the flux** — `S_L = (0, ½g(h₋² − h_L²))ᵀ` — **plus** a
+   centred source term. **Drop this and you lose consistency and conservation.**
+
+**The structural point, and it is the one the brief was hunting:** well-balancedness is **not a property of
+the flux function** — it is a property of **which variable you reconstruct**, and HR is a **wrapper**:
+**[P]** Ranocha §7.7: *"This results in a consistent and well-balanced numerical flux that is positivity
+preserving and entropy stable, **if the given fluxes … have these properties**."* **HR transports structure
+you already have; it cannot manufacture it.**
+
+**⇒ Guarantee: LAKE-AT-REST ONLY.** Moving-water equilibria are a strictly harder object — they need a
+**cubic root-find per interface per step**, and per Kurganov's review (`kurganov-2018-swe-review` §5.1.5,
+**[P]**) the moving-water-equilibria-preserving schemes are **NOT positivity-preserving.**
+**⇒ Proposed: declare moving-water well-balancedness SACRIFICED, explicitly. Don't half-claim it.**
+
+### ⚠ 8.3a THE HYDROSTATIC-RECONSTRUCTION FAILURE MODE THAT LANDS EXACTLY ON US
+
+> **Delestre, O., Cordier, S., Darboux, F. & James, F. (2012).** *A limitation of the hydrostatic
+> reconstruction technique for shallow water equations.* C. R. Acad. Sci. Paris 350(13–14):677–681.
+> `relata: delestre-2012-hr-limitation` — **READ PRIMARY** (arXiv:1206.4986).
+>
+> **[P] Proposition 2.1:** *"For a fixed discretization, if for some i₀ ≤ i ≤ i₁ one has **Δz_{i+1/2} ≥
+> h_{i+1/2−} ≥ 0** … then the hydrostatic reconstruction will **overestimate (resp. underestimate) the water
+> height (resp. velocity)**."*
+
+> ### **`Δz ≥ h` — the bed-step across a face exceeds the local depth — is not an edge case for us. IT IS THE COMMON CASE.**
+> **A planet hydrology kernel is thin films on real topography. On any slope steeper than `h/Δx`, this
+> fires.** And the authors' consolation is cold comfort for a *multiresolution* code: **[P]** *"the problem
+> **disappears when refining the discretization.** However, it has to be taken into account for practical
+> computations, **with a fixed discretization**."*
+>
+> **On an adaptive grid there are ALWAYS coarse cells. There is always a level at which this bites.**
+> **[me] This is a BIAS — it systematically overestimates height and underestimates velocity — and it is
+> level-dependent, which means it will manifest as a COARSE↔FINE DISAGREEMENT at exactly our seam. It may
+> already be in `water.rs`. It is a probe.**
+
+### ⚖ 8.3b WELL-BALANCEDNESS AND POSITIVITY *ARE* PROVED ON A QUADTREE — and the trick is beautiful
+
+> **Ghazizadeh, M. A., Mohammadian, A. & Kurganov, A. (2020).** *An adaptive well-balanced positivity
+> preserving central-upwind scheme on quadtree grids for shallow water equations.* Computers & Fluids
+> 208:104633. `relata: ghazizadeh-2020-quadtree-wb-pos` — **READ PRIMARY** (arXiv:1911.12002).
+
+They **derive** — not assert, not merely test — well-balancedness *and* positivity **on a quadtree with
+hanging nodes.** Two ingredients carry it, and both transfer directly:
+
+1. **⚖ Make the BATHYMETRY representation conforming even though the MESH is not.** **[P]** §3.2: at a fine
+   vertex that "is a midpoint of the edge of the neighboring cell… **the point value of B at this vertex is
+   an average of the point values of B at those two vertices of the neighboring cell**." **`B` becomes
+   single-valued across the seam, so `w − B` cancels identically.**
+2. A **composite midpoint rule** on the split face, matching the two half-fluxes term by term.
+
+> ### **THAT IS THE LOAD-BEARING TRICK, AND IT IS THE GENERAL RECIPE FOR CROSSING A SEAM WITH A LINEAR STRUCTURE:**
+> ### **make the thing the cancellation depends on CONFORMING, even where the mesh is not.**
+>
+> **[me] And notice it is §3.2's "the hanging node is a polygon vertex" all over again — a coarse face that
+> is subdivided by its finer neighbour must be treated as *actually subdivided*, in the bathymetry too, not
+> just in the flux.**
+
+Positivity is likewise proved on the quadtree (§3.7), under `Δt ≤ ¼ · min(Δx/max|a|)`, and **[P]** for
+*"not only the forward Euler time discretization, but **any strong stability preserving (SSP) ODE
+solver**."* **Honest limits: 2nd-order, Cartesian quadtree (not spherical), no entropy stability.**
+
+---
+
+### 8.4 Symplectic — three findings, and the third rewrites the ante-mundane phase
+
+**The guarantee** (`hairer-2003-geometric`, `hairer-2006-gni-book`) is a **backward-error** result — verified
+verbatim from Hairer's own OA writing: for a symplectic (partitioned) Runge–Kutta method of order `r` on an
+**analytic** Hamiltonian, **[P]** *"**the Hamiltonian is preserved up to an error of size O(hʳ) on
+exponentially long time intervals**"* — specifically `‖H(yₙ) − H(y₀)‖ ≤ C hʳ` for `nh ≤ e^{γ/(2ωh)}`, where
+`γ` depends only on the method and **`ω` is the highest frequency in the problem**.
+
+**⇒ [me] Note what `ω` does to us: resolving a MOON (≈27 d) rather than a year (365 d) raises `ω` ~13×,
+which shrinks the exponential horizon's exponent ~13×. The Moon is not just a cost centre in step-size — it
+degrades the guarantee itself.** ⚠ Inference from the theorem, not a sourced claim.
+
+**FINDING 1 — the adaptivity collision is real, and it has THREE distinct mechanisms** (these get conflated
+constantly):
+
+| # | mechanism | source |
+|---|---|---|
+| 1 | The composed map **is simply not symplectic** when `h` depends on the state. | **[P]** Preto & Tremaine 1999 §1: *"its performance is **no better than that of non-symplectic integrators**; the reason is that the mapping M_{h(z)}(z,t) **is not symplectic** even when M_h(z,t) is."* |
+| 2 | Change `h` and you change `H̃`, so the **telescoping cancellation collapses**. | **[me]** — my reasoning from the proof I read. **Not citable as stated.** |
+| 3 | Classical error-estimate step control **destroys TIME-SYMMETRY**. | **[P]** Hairer & Söderlind 2005 §1: *"**classical step size strategies destroy these properties** … if step size selection is based on past information, **symmetry breaks down**, because what is 'past' depends on the direction of integration. **No advantage over explicit Runge–Kutta or multistep methods is then left.**"* |
+
+And bluntly, from the man who wrote the book — **[P]** Hairer & Stoffer 1997 §1: *"**At present no such
+extension is known for Hamiltonian problems.**"*
+
+**⇒ CONFIRMED. Our seam discipline (`multiscale-seams.md` §3) derives Δt from the `CellId` level — i.e.
+step size varies. For an orbital nomos that is precisely the thing that destroys the structure symplectic
+integration exists to buy.** ⇒ **Proposed: the orbital nomos runs FIXED-STEP and is EXPLICITLY EXEMPT from
+the CellId-derived-Δt rule — an orbit has no spatial grid, so the exemption costs nothing — and the
+exemption is DECLARED, not discovered.**
+
+**FINDING 2 — once TIDES are on, symplecticity is formally gone anyway. But SPLITTING is not.**
+
+> **[P]** `rein-2015-ias15` §1: *"When non-conservative forces are included in the equations of motion, **the
+> idea of a symplectic integrator — which depends on the system being Hamiltonian — breaks down.**"*
+>
+> **[P]** `tamayo-2020-reboundx` (REBOUNDx), Abstract: *"…moving to a general framework of **non-commutative
+> operators (dissipative or not) clarifies many of these questions, and **several important properties of
+> symplectic schemes carry over to the general case**. … explicit **splitting schemes generically exploit
+> symmetries in the applied external forces which often strongly suppress integration errors**."*
+
+**⇒ The concept to reach for is not "symplectic." It is SPLITTING.** And three warnings from the same paper,
+all **[P]**, all ours:
+- Dissipative splitting errors are **systematic** — *"dissipative errors systematically overdamp or
+  underdamp"* — **a BIAS, not noise.** (Our own audit vocabulary, again.)
+- *"**Splitting methods require a fixed timestep** … and it must be shorter than the fastest timescale …
+  **If there is substantial dissipation, the required timestep might be so small that a high-order adaptive
+  scheme like IAS15 is more efficient.**"* — **the REBOUND authors will themselves tell us to abandon
+  symplectic if the tides are strong.**
+- The classic recipes for velocity-dependent forces *"**give qualitatively wrong answers for conservative
+  but velocity-dependent forces like post-Newtonian corrections**."* **A live trap if we ever add GR.**
+
+**⚠ And a concrete instrumentation consequence:** with tides on, energy **should** drift (it is physical).
+**[P]** `laskar-2004-la2004` §2.3 diagnoses numerical health by first **removing** the physical tidal trend,
+and by watching **angular momentum** instead. ⇒ **In a dissipative run, energy conservation is not a valid
+error diagnostic. Angular momentum is.** And, universally: **[P]** `rein-2019-hybrid` §4: *"the energy error
+does not account for phase errors. **Thus an energy error of zero does not imply a perfect solution.**"*
+
+**⚖ FINDING 3 — AND THIS ONE RESHAPES THE ANTE-MUNDANE PHASE'S *CLAIM*, NOT ITS ALGORITHM.**
+
+**Nobody defends a Gyr trajectory. Nobody.** The inner solar system's Lyapunov time is ~4.3–4.5 Myr, and the
+state of the art is explicit:
+
+> **[P]** `laskar-2004-la2004` §1: *"the orbital motion of the planets … **is chaotic, with an exponential
+> divergence corresponding to an increase of the error by a factor of 10 every 10 Myr**, thus destroying the
+> hope to obtain a precise astronomical solution for paleoclimate studies over more than a few tens of
+> millions of years."*
+>
+> **[P]** §9.1: *"**we will thus consider here that 40 Myr is about the time of validity of our present
+> orbital solution for the Earth**… **we are much more limited by the precision of the model than by the
+> numerical accuracy.**"*
+>
+> **[P]** `laskar-2009-collisional` (Nature 459:817): *"**It is thus hopeless to search for a precise solution
+> for the motion of the Solar System over 5 Gyr** … **A numerical integration of the Solar System's motion
+> over 5 Gyr can thus only be considered as a random sample of its possible evolution.** Statistical studies
+> are then required…"*
+
+**And a consequence that should stop us:** *because* the claim is only statistical, **the practitioners
+relax fixed-step symplecticity when convenient.** **[P]** Laskar & Gastineau 2009, Methods: *"The step size
+is 2.5 × 10⁻² years, **unless the eccentricity of the planets increases beyond about 0.4, in which case the
+step size is reduced** to preserve numerical accuracy."* — **a state-dependent step change inside a
+symplectic Gyr integration, in *Nature*, by Laskar.** The exponentially-long-time bound is a **Myr-scale
+asset**; at Gyr scale, where the trajectory is already conceded, the field spends it without apology.
+
+**⇒ BUT THE FORCING IS FAR MORE ROBUST THAN THE TRAJECTORY, AND THAT IS WHAT WE ACTUALLY NEED:**
+
+> **[P]** `laskar-2004-la2004`, Abstract: *"**the most regular components of the orbital solution could still
+> be used over a much longer time span** … we propose to use the term of largest amplitude in the
+> eccentricity, related to g₂ − g₅ … corresponding to a **period of 405 000 yr. The uncertainty of this time
+> scale over 100 Myr should be about 0.1%, and 0.2% over the full Mesozoic era.**"*
+
+> ### ⚖ **⇒ THE ANTE-MUNDANE PHASE MUST DELIVER A *FORCING SAMPLE*, NOT A *HISTORY*.**
+> **"This is one draw from the ensemble of dynamically consistent histories, with the correct forcing
+> spectrum" is FULLY DEFENSIBLE OVER Gyr. "This is what the obliquity WAS at t = −1.2 Gyr" is NOT — and no
+> integrator, at any price, will make it so.**
+>
+> ### **AND LOOK WHAT THAT IS. IT IS FATED NOISE.**
+> **`determinism-is-ontology` says a vivium's history IS the one fated draw from (seed, key).
+> Celestial mechanics says a Gyr integration CAN ONLY BE a random sample of a possible evolution.**
+> **These are the same statement.** The literature's epistemic ceiling and vivarium's ontology **agree**,
+> and the agreement is not a coincidence — it is the same fact about chaotic systems seen from two sides.
+> **The honest claim is the one our own ontology already makes.** **[me]** — but I think this one is right,
+> and it is the kind of convergence `discretisation-and-information.md` §3.4 already found once.
+
+**Practical, all [P]:** the Moon is the cost centre (La2004 needs τ = 1.83 d to resolve it; Zeebe gets
+4–12 d by treating it as a **quadrupole**; Néron de Surgy & Laskar reached **5 Gyr at a 250-year step** by
+going to **secular averaged** equations). **A direct Gyr N-body with a resolved Moon is very likely the wrong
+architecture.** For spin/obliquity there are two precedented routes: **Lie–Poisson rigid-body integrators**
+(`touma-1994-liepoisson` — the structure preserved is Lie–Poisson, *not* symplectic-canonical) or **averaged
+precession/obliquity equations** (the route that actually produced every insolation solution in use).
 
 ---
 
