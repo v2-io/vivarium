@@ -143,6 +143,28 @@ fn gate_snyder_reproduces_table_1() {
             }
         }
     }
+    // Table 1's ω is a LIMIT: it is attained along a vertex radius, as ρ → 0. Approach it
+    // logarithmically from both sides — a uniform sweep simply cannot see it.
+    for ki in 0..60 {
+        let da = 10f64.powf(-5.0 + 4.0 * ki as f64 / 60.0); // radians off the vertex radius
+        for azp in [da, std::f64::consts::FRAC_PI_2 - da] {
+            if azp <= 0.0 || azp >= std::f64::consts::FRAC_PI_2 {
+                continue;
+            }
+            if azp.min(std::f64::consts::FRAC_PI_2 - azp) < 20.0 * 1e-6 {
+                continue;
+            }
+            let dmax = dprime(azp);
+            for ri in 0..60 {
+                let rho = dmax * 10f64.powf(-6.0 + 6.0 * ri as f64 / 60.0);
+                let (s1, _) = sv(rho * azp.sin(), rho * azp.cos());
+                if s1 > a {
+                    a = s1;
+                    at = (azp.to_degrees(), rho / dmax);
+                }
+            }
+        }
+    }
     let b = 1.0 / a;
     let om = 2.0 * ((a - b) / (a + b)).asin().to_degrees();
     println!(
@@ -158,9 +180,9 @@ fn gate_snyder_reproduces_table_1() {
     );
     println!("      'along a radius to each vertex, but at the center'. It does.");
     assert!(area_err < 1e-6, "Snyder is NOT equal-area: residual {area_err:.2e}");
-    assert!((om - 25.17).abs() < 0.2, "Snyder ω {om:.2}° ≠ paper's 25.17° — the map is WRONG");
-    assert!((a - 1.248).abs() < 0.006, "Snyder a {a:.3} ≠ paper's 1.248");
-    assert!((b - 0.801).abs() < 0.006, "Snyder b {b:.3} ≠ paper's 0.801");
+    assert!((om - 25.17).abs() < 0.05, "Snyder ω {om:.2}° ≠ paper's 25.17° — the map is WRONG");
+    assert!((a - 1.248).abs() < 0.002, "Snyder a {a:.3} ≠ paper's 1.248");
+    assert!((b - 0.801).abs() < 0.002, "Snyder b {b:.3} ≠ paper's 0.801");
     println!("      → reproduces Snyder 1992 Table 1. The implementation IS the paper's.  ✓");
 
     // The forward/inverse pair must actually be a pair. (The paper's own claim: the
