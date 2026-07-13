@@ -415,7 +415,12 @@ kernel** (the routing gain is 4×); and one of the report's own causal explanati
 harness (see `TODO.md` §grid, point 3). ⚠ **And its §4.2/§5 corner-anisotropy story is superseded** —
 the corner was a red herring; the fan is inaccurate *everywhere*.
 
-## The one hard research problem (open)
+## A hard research problem, and it has no known method (open)
+
+⚠ *Previously titled "THE one hard research problem" — that superlative is struck (2026-07-13). The corpus
+names several open problems (`vivium-operational-workflow`'s five BREAKs; the grid/router question; the AAT
+identifiability bet), and **BREAK-2** — convergence-undecidability ⇒ *"certify Lawful" may be permanently
+unreachable* — arguably reaches further, since the moratorium's own revisit-condition depends on it.*
 
 **detail→abstract**: upscaling an irreducible agent edit back into a memoized
 macro with correct up-invalidation (`DESIGN-REDUX` §6, `doc/theory/multiscale-seams.md`
