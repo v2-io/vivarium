@@ -11,6 +11,14 @@
 # if a spike needs it, rather than bloating this repo's history.
 ref/2d-circle-graphic/
 
+# Papers, anywhere under msc/. ref/.gitignore already states the law — no redistribution
+# rights, large binaries, "never committed", canonical registration lives in relata — but
+# it only reaches ref/, so a spike vendored 47 MB of papers into
+# msc/spike-principled-router/refs/ and they rode into history unnoticed. Scrubbed back out
+# before they ever reached origin; this rule is what stops the next spike. The files stay
+# on disk, untracked: read them locally, cite them through relata.
+msc/**/*.pdf
+
 # Rust / Bevy (active once an engine is chosen)
 /target/
 **/*.rs.bk
