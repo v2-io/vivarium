@@ -183,7 +183,7 @@ was always about.)*
 
 *(none yet beyond what I already fixed in ORIENTATION this morning — the grid decision, the
 "unbenchmarked" hot-loop cost, the corner-anisotropy story, and the conservation≠consistency
-framing. Committed `d904994`.)*
+framing. Committed `0505bb2`.)*
 
 ## UNHEEDED
 

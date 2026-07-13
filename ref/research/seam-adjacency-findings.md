@@ -21,7 +21,7 @@ I did not read primary), **could-not-verify**. Nothing here is asserted from mem
 > on §0.
 
 > [!note]
-> **Convergence with `grid_lab` (`cec4057`, landed mid-pass, same session).** A sibling
+> **Convergence with `grid_lab` (`0a53241`, landed mid-pass, same session).** A sibling
 > instrument attacked the same question **by measurement**, from the code side, while this
 > pass worked from the source side. **The two agree without having talked**, which is worth
 > more than either alone:
@@ -179,7 +179,7 @@ The MFD/D8 **diagonal** is the worst single term (50 %). And the 5-point Laplaci
 axes are 120° apart — no choice of `cell_m` can fix a non-orthogonal stencil.
 
 **And what it costs *dynamically* is worse than the static error suggests** *(measured by
-`grid_lab`, `cec4057`)*: run linear diffusion — whose mass invariant is *exactly* known, so
+`grid_lab`, `0a53241`)*: run linear diffusion — whose mass invariant is *exactly* known, so
 any drift is the scheme lying — and **the naive uniform-grid kernel leaks mass: up to ~9.7e-2
 (≈10 %) at L4, 8.5e-3 at L6, 5.4e-4 at L8.** Two things to sit with. First, **the leak is
 worst at COARSE levels** — i.e. exactly at early evolution, where the whole developmental

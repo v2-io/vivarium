@@ -1,7 +1,7 @@
 # 05 — `doc/ARCHITECTURE.md`
 
 *Read in full, 2026-07-13 ~15:40. v0.3, dated 2026-07-10. **The `git log` date says 07-13 — but
-the audit night changed exactly ONE LINE of it** (commit `0c2d33f`, the `R∘L = id` correction:
+the audit night changed exactly ONE LINE of it** (commit `928e0c4`, the `R∘L = id` correction:
 `1 insertion, 1 deletion`). **So this is a 07-10 frame doc with a one-line patch, and it is more
 pre-audit than its timestamp suggests.***
 

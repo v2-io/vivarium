@@ -118,7 +118,7 @@
   A VIEW only observes; it never authors world-evolution parameters. The ethereal explorer queries what the world autonomously did — it holds no knob that changes what the world IS.
   |reason
     Founding core/view wall (DESIGN.md), re-asserted after a violation this session: a `VIVARIUM_EROSION_EPOCHS` knob was added to the globe (the view choosing how long the world erodes). "Erode for N epochs" is a world-evolution decision. A view holding it makes the ethereal explorer NON-ethereal — and the milestone is moratorium-clear precisely BECAUSE the observer has no causal access. The knob was reverted.
-  |ref  commit 7b65483 (revert)
+  |ref  commit de747ca (revert)
 
 |decision[debug-poke-then-consolidate] :date 2026-07-12 :by us :status decided :topic process
   :session 01UzCVNNAn6eynKxo2fV74MC
@@ -160,14 +160,14 @@
   The tectonic driver (rock uplift) is its own declared nomos that erosion CONSUMES — not a hidden term inside the erosion kernel. Even a crude 30-line stub (or a no-op) is right, as long as it is separate, declared, and auditable.
   |reason
     Joseph, 2026-07-12: "uplift is a separate nomos that right now is 30 lines… or even a no-op." The world grows macro relief only under a tectonic driver; making it a nomos means the flux web shows "erosion consumes rock-uplift-rate <- uplift" and the driver is swappable for the real mantle-thermal source later. LANDED.
-  |ref  commit d8a2596 · crates/vivarium-world/src/uplift.rs · TODO §thermal-spine
+  |ref  commit e13907c · crates/vivarium-world/src/uplift.rs · TODO §thermal-spine
 
 |decision[flux-web-substrate-on-common-ground] :date 2026-07-12 :by claude :status decided :topic architecture
   :session 01UzCVNNAn6eynKxo2fV74MC
   Built the flux-quantity vocabulary + `consumes` on NomosDecl + the pre-run requisite/conservation audit ahead of, and independent of, the regula question — because both the (then-open) regula options agreed on it. LANDED.
   |reason
     It is the declarative spine the milestone's honesty rests on ("rain without a sky" / "mountains without tectonics" become mechanical audit findings) and it did not require deciding the world-level profile's shape. Tactical, but load-bearing.
-  |ref  commit 62ad351 · crates/vivarium-world/src/{flux,audit}.rs
+  |ref  commit a66c82c · crates/vivarium-world/src/{flux,audit}.rs
 
 |decision[cli-world-dir-default-and-symlink-promotion] :date 2026-07-12 :by claude :status decided :topic tooling
   :session 01UzCVNNAn6eynKxo2fV74MC
@@ -638,7 +638,7 @@
 
 |decision[mfd-fan-is-a-bias-and-does-not-converge] :date 2026-07-12 :by claude :status decided :topic physics
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
-  MEASURED (`grid_lab` §9a, commit 193669a). The first application of the bias-vs-noise audit, and it returns a decisive answer: **MFD's error on our cube-sphere is a BIAS, not noise, and it CANNOT BE OUT-RESOLVED.** ⚠ THIS IS A MEASUREMENT, NOT A VERDICT — it does not adjudicate the grid question, which remains Joseph's (`grid-question-not-closed-authority-was-inflated`).
+  MEASURED (`grid_lab` §9a, commit c316d34). The first application of the bias-vs-noise audit, and it returns a decisive answer: **MFD's error on our cube-sphere is a BIAS, not noise, and it CANNOT BE OUT-RESOLVED.** ⚠ THIS IS A MEASUREMENT, NOT A VERDICT — it does not adjudicate the grid question, which remains Joseph's (`grid-question-not-closed-authority-was-inflated`).
   |reason
     **(1) It does not converge away — and that is a THEOREM, not a trend.** As you refine, a cell's neighbourhood approaches the lattice sheared by the projection's **Jacobian**, whose closed form contains **no N**. So the fan converges to a fixed non-uniform limit. Corner gap error: 14.2° (L5) → 15.0° (L9) → **15.0° (L19) → 15.0° (L23)**, matching the closed form to <1e-4°. **L5→L19 refines cells 16,384× and moves the defect ~1° — in the WRONG direction.** The "it will wash out at the scale erosion actually runs" escape hatch is CLOSED.
     **(2) It is a FIELD over the face, not a number.** Exactly zero at a face CENTRE (MFD is perfectly correct there — it reproduces the perfect-lattice control), rising monotonically outward. Area-weighted over the sphere: **median 6.8°, 90th pct 14.3°, worst 18.5°; only 37.8% of the planet is under 5°.** UNPREDICTED, and it matters: there are **TWO independent defects peaking in DIFFERENT places** — *shear* (120° axes at the face corner, zero at edge-midpoints) and *anisotropy* (√2:1 at the edge-midpoints, 1:1 at the corner). Neither alone explains the field.
@@ -648,7 +648,7 @@
     **PROBE DISCIPLINE (the standing guard, honored).** Every number carries a control that could have killed it: the analytic fan is pinned cell-by-cell to the Euler-checked mesh's combinatorial adjacency; the Jacobian closed form is pinned to the code (2e-16); the bias probe runs against a **perfect-lattice control** (reads 0.24° — MFD's own intrinsic error, and the baseline everything else is charged against, so the sphere is not over-charged) AND a 120°-rhombus control that must scream (16.09°); the plume's noise floor is read from the four launches the face's mirror symmetry FORCES to zero (at L9 the signal is 16× the floor). And the one that makes "it does not converge" safe rather than convenient: **in the same runs, the SPREAD does converge away (20.5° → 6.7°)** — so the probe is demonstrably capable of showing a quantity going to zero. It did not have to return this answer.
   |impact
     **It kills one option and promotes another.** Joseph's option "the difference is physically negligible at this scale" is **NOT ADMISSIBLE** — a bias does not become true when you zoom in, and this one grows. His **fated stochastic jitter** option is correspondingly PROMOTED from hack to principled fallback: it is precisely a bias→variance conversion, and variance is what the catchment sum can eat. **What it does NOT do:** it does not price the fix. The corrected scheme's hot-loop cost remains UNBENCHMARKED, and that is still the pivot.
-  |ref crates/vivarium-world/examples/grid_lab/{fan,flow}.rs · ref/research/grid-comparison-report.md §9a · commit 193669a
+  |ref crates/vivarium-world/examples/grid_lab/{fan,flow}.rs · ref/research/grid-comparison-report.md §9a · commit c316d34
 
 |decision[column-is-a-control-volume-with-sufficient-statistics] :date 2026-07-12 :by us :status decided :topic architecture
   :status-note The FRAME is settled (Joseph: "it very much lands"). The IMPLEMENTATION is not designed. Do not read this as a spec.
