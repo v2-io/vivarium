@@ -62,6 +62,53 @@ build the thing that lets leaps propagate.**
 
 ---
 
+## ⚑ THE FRAME CORRECTION — Joseph, 2026-07-13. **The project's PURPOSE changed mid-flight.**
+
+> *"The project, notwithstanding the ethics, **has genuinely transformed** from 'strictly casual and for
+> fun — a distraction from ASF-rigor work' to **'serious project that gives worlds to ASF that allow
+> in-vivia studies'** (and maybe some games as well) — as another leg for the Archema research program
+> generally. **So the trend toward rigor wasn't initially expected but is not accidental.**"*
+
+**This is the missing variable, and the timeline shows the promotion to the hour:**
+
+| | |
+|---|---|
+| **Jun 20 – Jul 3** | **A GAME.** `erosion.rs`, `water.rs`, MFD, the fBm prior. Written to a *game's* bar — **which was the correct bar.** |
+| **Jul 4, 09:53** | ⚑ **`ASF.md` — *"vivarium takes its place as a supporting project for ASF/AAT."*** |
+| **Jul 6** | ⚖ **The moratorium.** Ethics becomes binding law. |
+| **Jul 10 →** | **The rigor machinery**: the frame, the nomotheke, declared-vs-derived, the epistemic axes. |
+| **Jul 13** | **The audit.** The kernels measured — for the first time — against the NEW standard. |
+
+> ### ⇒ **THE AUDIT IS NOT A FAILURE REPORT. It is the first honest measurement of a GAME's physics against a RESEARCH INSTRUMENT's requirements — and of course it came back red. The kernels were never built to be measured that way.**
+>
+> **There is no "technical debt" here, because debt cannot accrue against a standard that did not
+> exist.** I wrote a paragraph in `09-…` calling it *"poignant"* — the fast-and-working choice
+> outrunning the correct-and-slow one. **That reading is wrong.** Nobody chose speed over rigor. **The
+> project was promoted, and the bar moved under finished work.**
+
+### ⇒ AND IT REORDERS WHAT THE SCAFFOLD *IS*.
+
+If the deliverable is **worlds that support in-vivia studies** — LEXICON's third empirical register,
+*"between toy models (ground truth, trivial dynamics) and field data (rich dynamics, no ground truth):
+richer than the first, more legible than the second"* — then:
+
+> # **A world whose epistemic status you cannot STATE is worthless as an instrument, however beautiful it looks.**
+
+**⇒ The declared-vs-derived machinery, the fidelity pyramid, the maturity ladder, the recorded
+convergence-ε / unLawfulness budget — these are not hygiene AROUND the product. THEY ARE THE PRODUCT.**
+The world is the medium; **the WARRANT is the deliverable.**
+
+And that is exactly why `DECISIONS[plate-tectonics-as-an-emergent-regime]` makes the **cube control
+mandatory** and says the payoff *"would be **uninterpretable**"* until the grid-locked biases are
+fixed. **An emergent result from an uncharacterized kernel is not a weak result. It is a NON-result.**
+*(And it would be **extremely seductive** — "a planet with a dozen coherent plates and clean boundaries
+**looks like a triumph**.")*
+
+**⇒ So the scaffold is not infrastructure for the science. The scaffold IS the science.** Everything in
+this directory has been circling that and I did not have the sentence until Joseph gave it to me.
+
+---
+
 ## The eras
 
 ### ▸ **Jun 20** — day one. *Docs first.*
