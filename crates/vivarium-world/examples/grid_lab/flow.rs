@@ -308,15 +308,16 @@ fn weights(g: &Mesh, r: Router, h: &[f64], i: usize) -> Vec<(usize, f64)> {
             let mut w = Vec::new();
             let mut tot = 0.0;
             for e in &g.adj[i] {
-                // the edge normal, expressed in the cell's tangent frame
-                let nrm = tangent(c, add(c, e.normal)); // re-express at the centre
-                let nrm = tangent(c, sub(g.centers[e.j], c)); // (outward through this edge)
-                let _ = nrm;
-                let d = tangent(c, sub(g.centers[e.j], c));
-                let (nx, ny) = (dot(d, e0), dot(d, e1));
-                let out = -(gx * nx + gy * ny); // outgoing component of −∇h
+                // The **edge normal** — NOT the direction to the neighbour. On a
+                // non-orthogonal mesh those differ, and the difference is exactly the
+                // thing a centre-line router gets wrong. `e.normal` is the outward
+                // normal in the tangent plane at the mid-edge; parallel-transport it to
+                // the cell centre by projecting out the radial component.
+                let nv = tangent(c, e.normal);
+                let (nx, ny) = (dot(nv, e0), dot(nv, e1));
+                let out = -(gx * nx + gy * ny); // outgoing component of −∇h through the edge
                 if out > 0.0 {
-                    let x = out * e.edge_len_m;
+                    let x = out * e.edge_len_m; // weight by the edge LENGTH it crosses
                     w.push((e.j, x));
                     tot += x;
                 }

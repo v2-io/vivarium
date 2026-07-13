@@ -69,8 +69,8 @@ pub struct Edge {
     /// Outward unit normal to the shared edge, in the tangent plane at the mid-edge.
     pub normal: V3,
     /// The two endpoints of the shared edge.
-    pub va: usize,
-    pub vb: usize,
+    pub va: u32,
+    pub vb: u32,
 }
 
 /// Everything a grid must be able to say about itself.

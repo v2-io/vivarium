@@ -279,7 +279,7 @@ pub fn cube_sphere(proj: CubeProj, n: usize, radius_m: f64) -> Mesh {
         })
         .collect();
 
-    let blurb = match proj {
+    let blurb: String = match proj {
         CubeProj::Equiangular => "6 square faces, radial with a tan-warp; what vivarium runs on today".into(),
         CubeProj::Gnomonic => "6 square faces, plain radial projection (Snyder's 'Gnomonic'); the control".into(),
         CubeProj::SnyderEqualArea => "6 square faces, Snyder 1992 modified Lambert azimuthal; EXACTLY equal-area".into(),
@@ -392,7 +392,9 @@ pub fn rhombic_dodec(proj: RdProj, n: usize, radius_m: f64) -> Mesh {
     for (fi, f) in faces.iter().enumerate() {
         for j in 0..n {
             for i in 0..n {
-                let c = |a: usize, b: usize| dd.get(rd_to_unit(proj, f, a as f64 / n as f64, b as f64 / n as f64));
+                let mut c = |a: usize, b: usize| {
+                    dd.get(rd_to_unit(proj, f, a as f64 / n as f64, b as f64 / n as f64))
+                };
                 rings.push(vec![c(i, j), c(i + 1, j), c(i + 1, j + 1), c(i, j + 1)]);
                 centers.push(rd_to_unit(proj, f, (i as f64 + 0.5) / n as f64, (j as f64 + 0.5) / n as f64));
                 part.push(fi as u32);
@@ -410,7 +412,7 @@ pub fn rhombic_dodec(proj: RdProj, n: usize, radius_m: f64) -> Mesh {
         .iter()
         .map(|r| poly_area(&r.iter().map(|&v| verts[v as usize]).collect::<Vec<_>>()) * radius_m * radius_m)
         .collect();
-    let blurb = match proj {
+    let blurb: String = match proj {
         RdProj::Gnomonic => "12 rhombic faces (cube ∪ octahedron hull), radial projection".into(),
         RdProj::TanWarp => "12 rhombic faces, tan-warped in the parallelogram coords — OUR construction, not sourced".into(),
     };

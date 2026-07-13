@@ -358,7 +358,7 @@ pub fn harmonic_error(g: &Mesh, s: Scheme, ell: usize) -> (f64, f64) {
             _ => 1.5 * t * t - 0.5, // P₂(t): an ℓ=2 harmonic
         }
     };
-    let lam = -(ell * (ell + 1)) as f64 / (g.radius_m * g.radius_m);
+    let lam = -((ell * (ell + 1)) as f64) / (g.radius_m * g.radius_m);
     let u: Vec<f64> = g.centers.iter().map(|&p| f(p)).collect();
     let du = laplacian(g, s, &u, means(g));
     let (mut num, mut den, mut linf, mut lmax) = (0.0, 0.0, 0.0f64, 0.0f64);
