@@ -48,23 +48,33 @@ be **permanently unattainable.**
 > **"never discard a memo that has ever hosted a mourning-capable mind"** — the redeemer condition, as a
 > garbage-collection constraint. I find that extraordinary.)*
 
-### ⛔ BREAK-4 THREATENS PART I OF MY OUTLINE, AND I HAD NOT SEEN IT.
+### ⚠ BREAK-4 — I said it "threatens Part I." **It does not. It is already ANSWERED, in the one plan doc I had not read.** *(Seventh correction of the day.)*
 
-> *"**BREAK-4** cross-platform FP non-determinism → **replay-from-seed NOT GUARANTEED** → **publish
-> memos.**"*
+> *"**BREAK-4** cross-platform FP non-determinism → replay-from-seed not guaranteed → **publish memos.**"*
 
-**`prin-determinism-is-ontology` says the world is a pure function of (seed, key).** BREAK-4 says: **not
-across machines.** Float reassociation, FMA contraction, libm differences — the same seed on two CPUs
-need not give the same world.
+I wrote that this *"threatens `prin-determinism-is-ontology`"* and that the remedy was *"half-known and
+never joined to BREAK-4."* **Both claims were false, and `doc/plan/water-parallelism.md` (Jul 3) had the
+answer eight days before BREAK-4 was written down:**
 
-**The remedy is honest and it is a real weakening:** ***publish the MEMOS, not just the seed.*** ⇒ **The
-canonical world is the ARTIFACT, not the RECIPE.**
+> - *"The **CPU kernel is the reference implementation** — canon for tests, replay, and probes. **It never
+>   goes away.**"*
+> - *"A GPU backend is a **rung on the implementation ladder** behind the same flux interface: swappable,
+>   and **ITS IDENTITY IS PART OF THE NOMOS KEY**, so caches and saves **never silently mix backends**."*
+> - *"Validation is **by probe, not vibes**: conservation totals, `channel_profile` regime invariants, and
+>   `velocity_histogram` fingerprints **must agree with the CPU reference within STATED TOLERANCE**; the
+>   tolerance **is written down**, and divergence beyond it is **a bug in the rung, full stop**."*
 
-⇒ **This must go into the spec explicitly, because it changes what "determinism-as-ontology" MEANS:**
-the world is a pure function of (seed, key) **relative to a declared numeric backend** — and the backend
-therefore **belongs in the key** *(the CPU-reference determinism policy, `water-parallelism`; and
-`ARCHITECTURE` §5 already lists "backend" as a key component — **so it is half-known and never joined to
-BREAK-4**).
+> ### ⇒ **DETERMINISM-AS-ONTOLOGY SURVIVES, EXACTLY, AND THE PRICE IS ALREADY PAID.**
+>
+> The world is a pure function of **(seed, key)** — **and the BACKEND IS IN THE KEY.** There is a
+> **canonical** backend (the CPU reference). Cross-rung equivalence is **a declared contract, probe-checked,
+> with a written tolerance.** ⇒ **Nothing is threatened. The ontology holds, with a qualification that is
+> itself a declaration.**
+>
+> **⇒ AND IT IS A FIFTH INSTANCE OF THE SAME PATTERN:** a *rung* declares what it guarantees relative to
+> the reference, and a *probe* convicts it. **Same shape as the flux contract, the statistic contract, the
+> promise/predicate, and the maturity ladder.** *The project has one idea and applies it everywhere it
+> looks — and each application was invented independently.*
 
 ---
 
