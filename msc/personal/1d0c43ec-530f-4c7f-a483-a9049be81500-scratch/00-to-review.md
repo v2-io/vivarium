@@ -41,6 +41,70 @@ heeded, and no longer reachable from any front door. Each needs a different reme
 
 ---
 
+---
+
+## ⚠ PROCESS SELF-AUDIT (2026-07-13 ~14:50, prompted by Joseph — he caught the drift before I did)
+
+**Kept:** one-at-a-time (ordinum, DECISIONS) · `git log` + dates before each · full reads ·
+three-section reflections.
+
+**Broke, and the direction of the drift is toward SPEED:**
+1. **Batched.** Read the four scaffold source files as one unit, rationalizing "the scaffold is
+   one document." It is not. Recorded in `03-…`'s header so a reader knows to trust it less.
+2. **Skipped the EXPLORE step** after both reads. (Targeted greps to verify a claim are not the
+   same thing.) **Done now** — see the inventory below.
+3. **Skipped the QUEUE-UPDATE step** after DECISIONS. Wrote "queue changes" *inside* the
+   reflection and never updated this file. **Done now.**
+4. **Took no papers inventory.** **Done now.**
+
+**And the deeper correction, which is not about process at all** (Joseph): *"it's all shaky
+foundation … any tactical work you do right now will be wasted, however fun, because our goal is
+to comprehend well enough to put the solid thing in place."*
+
+> ⚠⚠ **EVERY "finding" I had produced was TACTICAL** — a contaminated probe, a false `:kept-by`, a
+> fold that will lie later. They felt like progress because they are crisp and I can be *right*
+> about them. **But the code is a superseded worldview, so auditing it for defects is cataloguing
+> the bugs in a building we are about to demolish.** The pleasure was the tell.
+>
+> **⇒ THE STANDING QUESTION FOR EVERY REMAINING FILE IS NOT "what is wrong here?" BUT "WHAT
+> WORLDVIEW DOES THIS ENCODE, AND WHAT DID IT NOT HAVE THE CONCEPTS TO SAY?"** Tactical residue gets
+> quarantined at the bottom of each reflection for the DECISIONS-cleanup fork. **It is not the yield.**
+
+---
+
+## 📚 Inventory (the explore step, done 2026-07-13)
+
+**Probes/instruments: 22 in `crates/vivarium-world/examples/`** — `grid_lab`, `router_lab`,
+`curl_probe`, `null_space`, `water_structures`, `seam_ridge`, `sea_level_probe`, `stencil_bench`,
+`redteam_probe`, `hypsometry`, `channel_profile`, `armor_regimes`, `spike_probe`, `budget_probe`,
+`velocity_histogram`, `source_incision`, `float_probe`, `scan_land`, `topo`, `globe_ascii`,
+`erosion_preview`, `store_explore`.
+
+> **⇒ AND `src/` REFERENCES `examples/` EXACTLY 3 TIMES — all of them in prose doc-comments.**
+> **The probes and the declarations have never been introduced to each other.** Nothing declares
+> which probe would convict which claim; nothing schedules them; the build does not run them.
+> *(This is `03-…`'s central wandering thought, confirmed by count: the ordinum's `Kept` rung is
+> unreachable because a `|predicate` is English, and 22 executable predicates are sitting right
+> there, unbound.)*
+
+**Papers.** `relata` holds **2,267 works** (cross-project corpus; bare command, mise PATH).
+24 PDFs in-repo (`ref/research/pdfs/`, `ref/hydrology/`, `ref/geology/`). **8 already converted to
+markdown** at `ref/research/pdfs/markdowns/`: `cardiff-2021-thirty` (the FV review the governing
+principle came out of) · `CorrectedMFD` (Coatléven — MFD's output is a boundary integral) ·
+`berger-1984-adaptive` · `gear-1984-multirate` · `galin-2019-review` · + 3 rendering/astro.
+Surveys in-repo: `msc/research-structure-preserving/README.md` (**61 works, ~45 read-primary** —
+the audit's literature half) · `msc/research-lem-sota/` · `ref/research/grid-comparison-report.md` ·
+`ref/research/{early-continents,fluvial-processes,material-models}-survey.md` · `BIBLIOGRAPHY.md`.
+
+**⊘ The ledger's most-wanted unread — and THREE OF FOUR ARE NOT IN THE LIBRARY AT ALL:**
+`korenaga-2017` (freeboard modelling) **not in relata** · `van Hunen & van den Berg 2008`
+(strength+buoyancy) **not in relata** · `Johnson et al. 2017, Nature 543:239` (continents came
+first) **not in relata** · `Coatléven 2020 [11]` (the cell-to-cell proof) **not in relata**
+(2024 and 2025 are). ⇒ **All four gate the isostasy / emerged-land chain — which is TACTICAL.
+Queued LOW for this pass. Fetchable with `relata inspect <designator>`.**
+
+---
+
 ## The queue (ordered; one at a time; full reads)
 
 Joseph's ordering, with one amendment I proposed and he can veto: **LEXICON moves
@@ -66,8 +130,9 @@ entries the ledger has moved out from under.
 | # | doc | date | bytes | why here |
 |---|---|---|---|---|
 | 1 | ~~`tabularium/terrestris.ordinum.udon`~~ | 07-11 | 22 K | ✅ **READ** → `01-terrestris-ordinum.md`. Phases are **states, not intervals** — the ordinum is a law, not a schedule. 27/32 promises are glosses. `:kept-by` is the org chart Joseph wants, and it already exists (5 edges). **`\|defeasance` is the retraction primitive every other ledger lacks.** |
-| 2 | `DECISIONS.decision-log.udon` | 07-13 | **232 K** | **The staleness adjudicator.** ~70 entries, ~60 unread. Read with dates in hand — this is what licenses me to disbelieve every doc below. **Extract the ratified spine (`:by joseph` / `:by us`) as I go — that, not the 232 K, is what binds.** |
-| **3** | **THE SCAFFOLD ITSELF (code):** `src/{nomotheke,flux,audit,ordinum}.rs` | 07-12 | — | **NEW — promoted after read #1.** The declaration model, the flux vocabulary, the requisite graph, the ladder parser. **This is the thing we are redesigning.** Everything in `doc/` is a claim about these four files. |
+| 2 | ~~`DECISIONS.decision-log.udon`~~ | 07-13 | 232 K | ✅ **READ** → `02-decisions-log.md`. Ratified spine = **25 of 78**. The log is a record of a mind correcting itself; the controls are reported as things that *could have killed the result*. Joseph's rule for it: **later thinking wins, whether or not it said it superseded.** |
+| ~~2b~~ | ~~`DECISIONS` (orig. note)~~ | 07-13 | **232 K** | **The staleness adjudicator.** ~70 entries, ~60 unread. Read with dates in hand — this is what licenses me to disbelieve every doc below. **Extract the ratified spine (`:by joseph` / `:by us`) as I go — that, not the 232 K, is what binds.** |
+| **3** | ~~**THE SCAFFOLD (code):** `src/{nomotheke,flux,audit,ordinum}.rs`~~ | 07-12 | 1172 ln | ✅ **READ** (⚠ *batched* — see `03-…`) → `03-the-scaffold-code.md`. **The boxes are not missing — they are DEGENERATE.** `Conservation` = box ④ with one row. `relation: &str` = box ⑤ as prose. `Approach` = the right slot, wrong taxonomy. Only ③ is greenfield. **The `min()` fold encodes a worldview where errors have magnitude but not KIND.** |
 | 4 | `LEXICON.udon` | 07-12 | 63 K | The vocabulary every `doc/` file is written in. Pre-audit ⇒ expect retired terms still marked settled (`regula` is a known 13-edge hub still `:status settled`). **Now also: check whether the KINGDOM nesting (§4/§7) is the same recursion as the phase ladder and the scale ladder — if it is, that's three.** |
 | 4 | `doc/ARCHITECTURE.md` | **07-13** | 29 K | Level B. One principle, three axes. Touched during the audit ⇒ probably the most current frame doc. |
 | 5 | `doc/theory/discretisation-and-information.md` | **07-13** | **68 K** | Level B, *required before any field nomos*. The theory the five boxes came out of. Known to contain at least one thing the ledger corrected (§3.3, the Jensen variable). |
