@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="uHead" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,0 L7,3.5 L0,7 Z" fill="#ea580c"/>
+    </marker>
+    <marker id="vHead" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,0 L7,3.5 L0,7 Z" fill="#7c3aed"/>
+    </marker>
+    <marker id="tick" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#5b6472"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="900" fill="#fbfbfd"/>
+
+  <text x="600" y="46" text-anchor="middle" font-size="26" font-weight="650" fill="#1f2430">Staggering — the same points, used better</text>
+  <text x="600" y="76" text-anchor="middle" font-size="15" fill="#5b6472">Not a new grid. Not hexagons. The cells, the <tspan font-family="ui-monospace, Menlo, monospace">CellId</tspan>, and the 1→4 quadtree are unchanged — only the <tspan font-style="italic">storage locations</tspan> move.</text>
+
+  <!-- ================= PANEL A : COLLOCATED ================= -->
+  <text x="252" y="122" text-anchor="middle" font-size="17" font-weight="600" fill="#1f2430">COLLOCATED  (Arakawa A)</text>
+  <text x="252" y="144" text-anchor="middle" font-size="13.5" fill="#5b6472">every quantity at the cell centre — what we do today</text>
+
+  <g stroke="#c9ced6" stroke-width="1.6" fill="none">
+    <rect x="120" y="164" width="264" height="264"/>
+    <line x1="208" y1="164" x2="208" y2="428"/><line x1="296" y1="164" x2="296" y2="428"/>
+    <line x1="120" y1="252" x2="384" y2="252"/><line x1="120" y1="340" x2="384" y2="340"/>
+  </g>
+
+  <g>
+    <circle cx="164" cy="208" r="7" fill="#2563eb"/><circle cx="252" cy="208" r="7" fill="#2563eb"/><circle cx="340" cy="208" r="7" fill="#2563eb"/>
+    <circle cx="164" cy="296" r="7" fill="#2563eb"/><circle cx="252" cy="296" r="7" fill="#2563eb"/><circle cx="340" cy="296" r="7" fill="#2563eb"/>
+    <circle cx="164" cy="384" r="7" fill="#2563eb"/><circle cx="252" cy="384" r="7" fill="#2563eb"/><circle cx="340" cy="384" r="7" fill="#2563eb"/>
+  </g>
+  <g font-size="12" font-weight="600" fill="#1f2430" text-anchor="middle" font-family="ui-monospace, Menlo, monospace">
+    <text x="164" y="230">h,u,v</text><text x="252" y="230">h,u,v</text><text x="340" y="230">h,u,v</text>
+    <text x="164" y="318">h,u,v</text><text x="252" y="318">h,u,v</text><text x="340" y="318">h,u,v</text>
+    <text x="164" y="406">h,u,v</text><text x="252" y="406">h,u,v</text><text x="340" y="406">h,u,v</text>
+  </g>
+
+  <text x="252" y="462" text-anchor="middle" font-size="13.5" fill="#5b6472">To get a flux <tspan font-style="italic">across a face</tspan>, it must</text>
+  <text x="252" y="482" text-anchor="middle" font-size="13.5" fill="#5b6472">reach <tspan font-weight="650" fill="#dc2626">two cells away</tspan> — spacing 2Δ.</text>
+
+  <!-- ================= PANEL B : STAGGERED ================= -->
+  <text x="848" y="122" text-anchor="middle" font-size="17" font-weight="600" fill="#1f2430">STAGGERED  (Arakawa C)</text>
+  <text x="848" y="144" text-anchor="middle" font-size="13.5" fill="#5b6472">scalars at centres, <tspan font-style="italic">fluxes on the faces they cross</tspan></text>
+
+  <g stroke="#c9ced6" stroke-width="1.6" fill="none">
+    <rect x="716" y="164" width="264" height="264"/>
+    <line x1="804" y1="164" x2="804" y2="428"/><line x1="892" y1="164" x2="892" y2="428"/>
+    <line x1="716" y1="252" x2="980" y2="252"/><line x1="716" y1="340" x2="980" y2="340"/>
+  </g>
+
+  <!-- scalars at centres -->
+  <g>
+    <circle cx="760" cy="208" r="7" fill="#2563eb"/><circle cx="848" cy="208" r="7" fill="#2563eb"/><circle cx="936" cy="208" r="7" fill="#2563eb"/>
+    <circle cx="760" cy="296" r="7" fill="#2563eb"/><circle cx="848" cy="296" r="7" fill="#2563eb"/><circle cx="936" cy="296" r="7" fill="#2563eb"/>
+    <circle cx="760" cy="384" r="7" fill="#2563eb"/><circle cx="848" cy="384" r="7" fill="#2563eb"/><circle cx="936" cy="384" r="7" fill="#2563eb"/>
+  </g>
+  <g font-size="12.5" font-weight="700" fill="#2563eb" text-anchor="middle" font-family="ui-monospace, Menlo, monospace">
+    <text x="760" y="230">h</text><text x="848" y="230">h</text><text x="936" y="230">h</text>
+    <text x="760" y="318">h</text><text x="848" y="318">h</text><text x="936" y="318">h</text>
+    <text x="760" y="406">h</text><text x="848" y="406">h</text><text x="936" y="406">h</text>
+  </g>
+
+  <!-- u fluxes on VERTICAL faces (horizontal arrows) -->
+  <g stroke="#ea580c" stroke-width="2.4" marker-end="url(#uHead)">
+    <line x1="705" y1="208" x2="727" y2="208"/><line x1="793" y1="208" x2="815" y2="208"/><line x1="881" y1="208" x2="903" y2="208"/><line x1="969" y1="208" x2="991" y2="208"/>
+    <line x1="705" y1="296" x2="727" y2="296"/><line x1="793" y1="296" x2="815" y2="296"/><line x1="881" y1="296" x2="903" y2="296"/><line x1="969" y1="296" x2="991" y2="296"/>
+    <line x1="705" y1="384" x2="727" y2="384"/><line x1="793" y1="384" x2="815" y2="384"/><line x1="881" y1="384" x2="903" y2="384"/><line x1="969" y1="384" x2="991" y2="384"/>
+  </g>
+  <!-- v fluxes on HORIZONTAL faces (vertical arrows) -->
+  <g stroke="#7c3aed" stroke-width="2.4" marker-end="url(#vHead)">
+    <line x1="760" y1="153" x2="760" y2="175"/><line x1="848" y1="153" x2="848" y2="175"/><line x1="936" y1="153" x2="936" y2="175"/>
+    <line x1="760" y1="241" x2="760" y2="263"/><line x1="848" y1="241" x2="848" y2="263"/><line x1="936" y1="241" x2="936" y2="263"/>
+    <line x1="760" y1="329" x2="760" y2="351"/><line x1="848" y1="329" x2="848" y2="351"/><line x1="936" y1="329" x2="936" y2="351"/>
+    <line x1="760" y1="417" x2="760" y2="439"/><line x1="848" y1="417" x2="848" y2="439"/><line x1="936" y1="417" x2="936" y2="439"/>
+  </g>
+
+  <g font-size="12.5" font-weight="700" font-family="ui-monospace, Menlo, monospace">
+    <text x="815" y="200" fill="#ea580c">u</text>
+    <text x="866" y="250" fill="#7c3aed">v</text>
+  </g>
+
+  <text x="848" y="472" text-anchor="middle" font-size="13.5" fill="#5b6472">The flux <tspan font-weight="650" fill="#059669">already lives on the face it crosses</tspan> —</text>
+  <text x="848" y="492" text-anchor="middle" font-size="13.5" fill="#5b6472">so it reaches only its two neighbours: spacing Δ.</text>
+
+  <line x1="80" y1="530" x2="1120" y2="530" stroke="#e2e5ea" stroke-width="1.5"/>
+
+  <!-- ================= WHY IT MATTERS ================= -->
+  <text x="600" y="572" text-anchor="middle" font-size="19" font-weight="650" fill="#1f2430">Why it matters: the checkerboard mode</text>
+  <text x="600" y="598" text-anchor="middle" font-size="14" fill="#5b6472">The highest frequency the grid can hold — <tspan font-family="ui-monospace, Menlo, monospace">(−1)ⁱ</tspan>, the <tspan font-style="italic">Nyquist</tspan> mode. Watch what each scheme sees.</text>
+
+  <!-- collocated bracket ABOVE -->
+  <g stroke="#dc2626" stroke-width="2" fill="none">
+    <path d="M 375 660 L 375 646 L 595 646 L 595 660"/>
+  </g>
+  <text x="485" y="638" text-anchor="middle" font-size="13" font-weight="650" fill="#dc2626" font-family="ui-monospace, Menlo, monospace">reaches 2Δ  →  skips the middle cell entirely</text>
+
+  <!-- the 1-D strip -->
+  <g>
+    <rect x="210" y="668" width="110" height="72" fill="#dbe6fb" stroke="#c9ced6" stroke-width="1.6"/>
+    <rect x="320" y="668" width="110" height="72" fill="#fde8e8" stroke="#c9ced6" stroke-width="1.6"/>
+    <rect x="430" y="668" width="110" height="72" fill="#dbe6fb" stroke="#c9ced6" stroke-width="1.6"/>
+    <rect x="540" y="668" width="110" height="72" fill="#fde8e8" stroke="#c9ced6" stroke-width="1.6"/>
+    <rect x="650" y="668" width="110" height="72" fill="#dbe6fb" stroke="#c9ced6" stroke-width="1.6"/>
+    <rect x="760" y="668" width="110" height="72" fill="#fde8e8" stroke="#c9ced6" stroke-width="1.6"/>
+  </g>
+  <g font-size="19" font-weight="700" text-anchor="middle" font-family="ui-monospace, Menlo, monospace">
+    <text x="265" y="712" fill="#2563eb">+1</text><text x="375" y="712" fill="#dc2626">−1</text><text x="485" y="712" fill="#2563eb">+1</text>
+    <text x="595" y="712" fill="#dc2626">−1</text><text x="705" y="712" fill="#2563eb">+1</text><text x="815" y="712" fill="#dc2626">−1</text>
+  </g>
+  <g fill="#2563eb">
+    <circle cx="265" cy="732" r="4"/><circle cx="375" cy="732" r="4"/><circle cx="485" cy="732" r="4"/>
+    <circle cx="595" cy="732" r="4"/><circle cx="705" cy="732" r="4"/><circle cx="815" cy="732" r="4"/>
+  </g>
+
+  <!-- staggered marker BELOW, on the face -->
+  <line x1="540" y1="660" x2="540" y2="762" stroke="#059669" stroke-width="2.6" stroke-dasharray="5 4"/>
+  <circle cx="540" cy="704" r="6" fill="#059669"/>
+  <text x="540" y="782" text-anchor="middle" font-size="13" font-weight="650" fill="#059669" font-family="ui-monospace, Menlo, monospace">flux lives HERE, on the face — reaches Δ</text>
+
+  <!-- the two results -->
+  <rect x="150" y="806" width="430" height="66" rx="8" fill="#fdecec" stroke="#f3b7b7" stroke-width="1.4"/>
+  <text x="168" y="830" font-size="13.5" font-weight="650" fill="#dc2626">COLLOCATED</text>
+  <text x="168" y="852" font-size="14" fill="#1f2430" font-family="ui-monospace, Menlo, monospace">(h₄ − h₂)/2Δ = (−1 − (−1))/2Δ = <tspan font-weight="700" fill="#dc2626">0</tspan></text>
+  <text x="470" y="830" font-size="12" font-weight="700" fill="#dc2626" text-anchor="middle">INVISIBLE</text>
+  <text x="470" y="848" font-size="11" fill="#8a5757" text-anchor="middle">the mode is in the</text>
+  <text x="470" y="862" font-size="11" fill="#8a5757" text-anchor="middle">operator's null space</text>
+
+  <rect x="620" y="806" width="430" height="66" rx="8" fill="#e8f6f0" stroke="#a7d9c6" stroke-width="1.4"/>
+  <text x="638" y="830" font-size="13.5" font-weight="650" fill="#059669">STAGGERED</text>
+  <text x="638" y="852" font-size="14" fill="#1f2430" font-family="ui-monospace, Menlo, monospace">(h₄ − h₃)/Δ = (−1 − (+1))/Δ = <tspan font-weight="700" fill="#059669">−2/Δ</tspan></text>
+  <text x="948" y="830" font-size="12" font-weight="700" fill="#059669" text-anchor="middle">SEEN</text>
+  <text x="948" y="848" font-size="11" fill="#3f7a66" text-anchor="middle">no null mode →</text>
+  <text x="948" y="862" font-size="11" fill="#3f7a66" text-anchor="middle">no stabilisation needed</text>
+
+  <text x="600" y="888" text-anchor="middle" font-size="12.5" fill="#8a919c" font-style="italic">Halving the effective spacing moves the null mode out of representable range. Same points. Wider band. This is why every serious ocean/atmosphere model is staggered.</text>
+</svg>
