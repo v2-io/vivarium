@@ -175,11 +175,27 @@ In FEM they are called **hourglassing**. Cardiff proves they are the same diseas
 
 $$\boldsymbol{t}^{\text{stab}}_{\text{Rhie–Chow}} = \alpha^{\text{stab}} K_f\left(\frac{\boldsymbol{u}_N - \boldsymbol{u}_P}{|\boldsymbol{d}_f|} - \boldsymbol{n}_f \cdot \frac{|\boldsymbol{d}_{Nf}|\nabla\boldsymbol{u}_N + |\boldsymbol{d}_{Pf}|\nabla\boldsymbol{u}_P}{|\boldsymbol{d}_f|}\right)|\boldsymbol{\Gamma}_f|$$
 
-> ### ⚠ **VIVARIUM ALREADY HAS ONE OF THESE AND NEVER NAMED IT.**
+> ### ⚠ **I APPLIED THIS TO `water.rs` AND WAS WRONG — READ THE RETRACTION, IT IS MORE USEFUL THAN THE CLAIM**
 >
-> The hydrology work found that the virtual-pipes scheme on steep slopes *"organises flux into multi-metre solitons winding down channels"* — Joseph: *"waves with dry ground between them are physically absurd."* The fix was three terms, the first being **de Almeida–Bates θ flux smoothing (θ = 0.8)**.
+> An earlier draft asserted: *"the θ flux-smoothing is **Rhie–Chow-class** stabilisation, and the travelling soliton blobs it was added to kill **were the invisible mode**."* **A red-team pass falsified both halves against the primary and against the running kernel. [M] [P]**
 >
-> **[me] Those solitons were the invisible mode. The θ-smoothing is Rhie–Chow-class stabilisation. θ is $\alpha^{\text{stab}}$.** `ASSUMPTIONS.md` lists it as *"literature — used as intended,"* which is honest as far as it goes but does not say the true thing: **its physical claim is NONE.** It is there to suppress a mode the scheme cannot resolve.
+> - **Wrong family.** de Almeida et al. 2012 say their momentum discretisation is *"inspired by the **Lax–Friedrichs** model"* — a monotone-flux / artificial-viscosity device from the **hyperbolic conservation law** lineage. **Rhie–Chow cures a rank deficiency of a COLLOCATED grid — and `water.rs` is already STAGGERED.** Its head operator is $\eta_i - \eta_j$ *across the face*: a 2-point difference at spacing $\Delta$, symbol $2\sin(k\Delta/2)/\Delta$, which at Nyquist is $2/\Delta \neq 0$. **There is no null mode for a Rhie–Chow term to cure.**
+> - **Measured.** Feed the real kernel its own Nyquist mode and it **decays to 78% in 8 steps** — damped by the head operator alone (θ is provably a no-op on step 1; the flux arrays start at zero). **A null mode is invariant or grows without resistance. Ours is SEEN and DAMPED.**
+> - ⚠ **And `water.rs` is therefore a COUNTEREXAMPLE to this document's own §7(a)**, which claimed staggering ⇒ *"no stabilisation needed… never required."* **`water.rs` IS staggered, HAS no null mode, and needs THREE stabilisers.** §7(a) is corrected there.
+>
+> **[inferred — the replacement hypothesis, with a probe attached] The solitons are probably ROLL WAVES, which are PHYSICALLY REAL.** *Travelling* multi-metre waves with near-dry troughs is the signature of the **Vedernikov instability**, not a stationary checkerboard. $Ve = (\beta-1)\cdot Fr$, unstable at $Ve>1$: Chézy ($\beta=3/2$) → $Fr=2$; **Manning ($\beta=5/3$, what `water.rs` uses) → $Fr=1.5$.** ⚠ **`water.rs` counts supercritical cells at $Fr>1.5$ and caps breaking flux at $Fr=2.0$ — exactly the Manning and Chézy roll-wave criticals.** If that holds, **θ is not suppressing a numerical artifact; it is suppressing a real phenomenon the scheme cannot render** (local-inertial drops the very advection term that sets a roll wave's shape and speed) — **and *"waves with dry ground between them are physically absurd"* becomes the thing to revisit, because that is what roll waves look like.** *The probe that decides it: raise Manning $n$ until $Ve<1$ at fixed θ. Blobs vanish with friction alone ⇒ roll waves (physical). Only θ kills them ⇒ numerical mode.*
+>
+> **WHAT SURVIVES:** *θ's physical claim is NONE* — the primary says so in the authors' own words (*"a weighting factor that adjusts the amount of **artificial numerical diffusion**"*, coefficient $(1-\theta)$). ⚠ **But `water.rs:352` says otherwise and nobody reconciled them:** it calls θ *"the stand-in for the neglected momentum-advection term"* — **a physical claim, un-sourced, that the cited paper does not make.** And **θ IS a bias — by a different mechanism than I claimed: it preserves the flux MEAN and destroys flux VARIANCE ([M] 24% over 200 passes). Sediment capacity ∝|v| and incision ∝ vⁿ are superlinear ⇒ by Jensen (§3.3) it systematically UNDER-predicts transport.**
+>
+> ### ⚠⚠ And the finding that actually matters, which I never went looking for
+>
+> **de Almeida & Bates 2013 — the applicability study `water.rs` itself cites — bounds the local-inertial model at $Fr<0.5$, diverging to $Fr=1$, and states outright that *"the physical characteristics of the flow field of supercritical flow with a Froude number of greater than 1 CANNOT BE CORRECTLY EXPRESSED by the local inertial model."* [P]**
+>
+> **[M] On real 60-epoch eroded land: ~5.7% of wet cells run supercritical ($Fr>1.5$)** — and those are the steepest, fastest cells, **exactly the ones doing the erosive work.** Worse: **`max Fr = 2.00`, bit-identical at every sample. The breaking cap is SATURATED — the instrument is reading its own clamp.** *(Same species of tell as the "22888" divide-by-zero.)*
+>
+> ⇒ **The honest audit finding is not "θ lacks a fluctuation partner." It is: WE ARE RUNNING OUTSIDE THE PUBLISHED VALIDITY ENVELOPE OF THE MOMENTUM EQUATION WE CHOSE, AND THREE STABILISERS ARE HOLDING IT TOGETHER.** `ASSUMPTIONS.md`'s *"used as intended"* is the claim to retire. See `DECISIONS[water-runs-outside-its-published-validity-envelope]`.
+>
+> ⚠ **AND I PROSECUTED THE WRONG TERM.** θ is the **symmetric, mean-preserving** one. The same function contains **three ONE-SIDED clips** — `.max(0.0)` on flux, the Froude cap (**measured saturated**), and the outflow scale-down — **each of which is a BIAS BY CONSTRUCTION under §1, because a sign-definite operation cannot average out.** Plus `depth = (…).max(0.0)`: **a positivity clamp is a silent MASS SOURCE if it fires. Unprobed.** *The audit needs the clip activation rates, not θ's.* ⚠ **And none of it can be tested as written: θ (`0.8`), the Froude cap (`2.0`), and Jarrett's constants are HARDCODED LITERALS inside `WaterSim::step()`, not `WaterParams` fields. An assumption you cannot vary is an assumption you cannot test.**
 
 **And Cardiff hands us a mechanical probe for it** — the only thing in this entire investigation that tells us *what we cannot see*:
 
@@ -233,7 +249,7 @@ This is ordinary Fourier (von Neumann) stability analysis. And it explains **sta
 
 Take a field band-limited to $k_N$ and square it. The product has content up to $2k_N$ — **unrepresentable, so it folds back**.
 
-> **[≡] Nonlinearity generates unrepresentable frequencies. "Jensen's inequality" and "aliasing of nonlinear terms" are one phenomenon, two vocabularies.** (This is why spectral methods carry the 2/3 dealiasing rule, and why large-eddy simulation exists at all.)
+> ⚠ **CORRECTED 2026-07-13 — THIS WAS THE ANALOGY IN COSTUME, AND THE RED TEAM FOUND IT.** An earlier draft claimed *"**[≡]** Jensen's inequality and aliasing of nonlinear terms are one phenomenon, two vocabularies."* **They are NOT the same statement.** They share a **parent** — *nonlinearity does not commute with projection* — but they are **different consequences in different representations**: in the **cell-average** representation the residue is a **sign-definite BIAS IN THE MEAN** (Jensen); in the **point-sample** representation it is a **fold-back that redistributes energy among the resolved modes**, and it is **not sign-definite** (aliasing — which the 2/3 rule prevents, and which does *not* prevent a Jensen bias). **§3.1 above carefully separates cell-average from point-sample; this section then merged their error modes.** That is exactly the failure this document warns about, committed by its author, three sections after warning about it. **Demoted from [≡] to [me]: a shared parent, not an identity.**
 
 **Concretely for us:** stream power is $E = K A^m S^n$, **nonlinear in slope**. A coarse cell containing a cliff *and* a flat: carry only $\bar S$ and you compute $f(\bar S)$, but the physics does $\overline{f(S)}$. For $n>1$ you **systematically underestimate erosion — forever, never converging away, compounding down the catchment.**
 
@@ -251,7 +267,12 @@ $$\underbrace{\text{memory kernel}}_{\textbf{DISSIPATION}} \;\;+\;\; \underbrace
 
 Consequences, and they are large:
 
-- **Joseph's "fated stochastic jitter" is the FLUCTUATION HALF of a fluctuation–dissipation pair.** It is not dithering. **Its amplitude is not free — it is *determined* by the sub-grid variance that was discarded.** It stops being a knob and becomes a **derived quantity**. And *fated* noise makes it deterministic and replayable, which no weather model can claim.
+⚠ **CORRECTED 2026-07-13 — the `[thm]` tag does NOT survive, and the red team was right to take it.** The Mori–Zwanzig **decomposition** is exact ✓. But the **magnitude tie — the second FDT — holds with respect to an EQUILIBRIUM (Gibbs) measure.** A landscape under uplift and rain is **driven, dissipative, and far from equilibrium, with no invariant Gibbs measure**; the relation does not hold there in general. ***"Its amplitude is DETERMINED" is not handed to you by a theorem.*** And a second, independent error: **MZ/FDT is about coarse-graining REAL PHYSICS — and I applied it to θ, which I had just declared a purely numerical stabiliser with no physical claim. You cannot say "its physical claim is NONE" and then demand its FDT-mandated fluctuation partner**; that would fabricate sub-grid variance with **no physical referent**, tuned to a discretisation parameter.
+
+**What survives, and it is still worth having:**
+
+- **Joseph's "fated stochastic jitter" is the FLUCTUATION HALF of the pair, and it is not dithering.** The discarded variance sets both **in principle** — and, crucially, **it can be MEASURED from resolved fine runs** (this is exactly what LES's *dynamic procedure* does). So jitter's amplitude is **derivable from measurement**, not free — but **derived, not theorem-given.** And *fated* noise makes it deterministic and replayable, which no weather model can claim.
+- ⚠ **AND A CONSEQUENCE I FAILED TO DRAW — JITTER FIGHTS JENSEN.** Jitter is a **bias→variance** conversion, and variance washes out **under summation**. **Drainage area is a sum — linear — so it does.** But **stream power $K A^m S^n$ is SUPERLINEAR in $S$: inject variance into $S$, apply a convex function, and you MANUFACTURE A NEW JENSEN BIAS.** **Measure that before adopting jitter as the fallback remedy.**
 - **[me — hypothesis, unverified] A scheme that adds dissipation but NO matching fluctuation is systematically under-energised at the sub-grid scale.** `water.rs` adds θ-smoothing (dissipation) and adds **no** corresponding fluctuation. Prediction: it is losing sub-grid energy and returning nothing. **That would be a bias, not noise.** Probe it.
 - It retroactively vindicates the `ASSUMPTIONS.md` precip-jitter reasoning — *"uniform rain is a physically impossible state (zero spatial variance)… white noise would be worse than uniform"* — which is the fluctuation–dissipation intuition, reached independently, and **correct**. Joseph, 2026-07-13: *"the non-jittered form is the one making specialized claims that aren't supported."* **Uniform is not the safe default; it is a positive claim of ZERO sub-grid variance — a measure-zero state.**
 
@@ -279,15 +300,29 @@ If coarse = low-pass filter of fine, then **fine = coarse + detail**. Store the 
 
 Now look at what we do:
 
-> **[me, confident] Mean-pinning IS the Haar wavelet's low-pass (scaling) coefficient. It keeps the block average and THROWS AWAY the detail coefficients. And that is exactly why *refluxing* is necessary: the information needed to reconcile the seam is precisely the information mean-pin discarded.**
+> ### ⚠⚠ THE HEADLINE OF THIS SECTION WAS WRONG. RED-TEAMED AND RETRACTED, 2026-07-13.
 >
-> **We are not failing to conserve. We are failing to *store the thing that makes conservation reconstructible*.**
+> An earlier draft claimed: *"Mean-pinning IS the Haar low-pass with the details discarded — which is exactly why refluxing is necessary — so store the details and **the seam never happens**; it may even retire `detail→abstract`."* **It dies three ways, and the deepest one is that it contradicts §3.3 of this same document.**
+>
+> **§3.3 proves coarse-graining does NOT commute with a nonlinear law. §3.7 then claimed the coarse↔fine seam becomes an identity. Both cannot be true. THE SEAM *IS* THE NON-COMMUTATION §3.3 PROVES.** I conflated a statement about the **representation** with a statement about the **dynamics**.
+>
+> **(a) `pin_block_means` is not the Haar low-pass, is not a projection, and does not even keep the block mean. [M]** It is not $h \leftarrow \mathrm{mean}(h)$; it is $h \leftarrow h + \mathrm{BilinearUpsample}(\text{target} - \mathrm{BlockMean}(h))$ — a *smoothed delta injection*, whose block-mean residual is **exactly the $(1,6,1)/8$ stencil this document derives in §4.2 for a different object.** Measured on a real L19 eroded tile: **0.43 m mean / 2.97 m max at 30 epochs, growing to 1.93 m / 7.96 m at 150.** *(This is a separate, live finding — see §4.2a and `DECISIONS[mean-pin-does-not-preserve-block-means]`.)*
+>
+> **(b) "Refluxing is necessary because mean-pin discarded the information" — FALSE, and our own doc says so. [P]** `multiscale-seams.md` §2.1, primary-read from Berger–Oliger: *"**Refluxing** … is **distinct from injection** … (Mean-pin ≈ injection, **not** refluxing.)"* Refluxing corrects a **flux mismatch between two independently-run solvers**. The fine fluxes are **computed and available — not discarded.** Storing state *details* gives you neither, because **flux is a nonlinear function of state AND of the scheme.**
+>
+> **(c) "May retire `detail→abstract`" — I INVERTED THE PROBLEM STATEMENT. [P]** `multiscale-seams.md` §2.4: *"Forward/downward (L, and dynamics-upscaling R for continuous fields) is **MATURE**… What is unsolved anywhere is upward R of an **irreducible discrete edit** … **not a statistical closure** … and the up-propagation must **invalidate cached macro derivations**."* **State upscaling is the MATURE half. The "residue" I waved off IS the problem.** `detail→abstract` remains open and remains hard.
 
-Store the details, and the seam is not *fixed* — **it never happens.** And it cascades:
+> ### **The honest statement, which is smaller and true:**
+>
+> **A multiresolution store makes the coarse↔fine REPRESENTATION an exactly invertible identity. It does NOT make the DYNAMICS commute, and it cannot — that is Jensen.**
 
-- **The refinement criterion becomes information-theoretic**: refine where the **detail coefficients are large** — i.e. where sub-grid entropy is high. (Berger–Oliger already flags cells by an equivalent estimate; now we know *what quantity it is*.)
-- **The store compresses.** Detail coefficients are ~zero wherever the field is smooth, which is most of a planet. Not a hack — it is why JPEG works.
-- **[⊘ hypothesis worth a spike] It may largely dissolve the "one hard research problem."** `detail→abstract` (upscale an irreducible agent edit into the memoised macro with correct up-invalidation) is hard when tiles are independent. In a multiresolution store, **the coarse coefficient is a LINEAR FUNCTIONAL of the fine ones**, so an edit propagates up the pyramid as a **delta, in $O(\log N)$, exactly**; up-invalidation is just the path to the root. *Residue: quantities that are **nonlinear** functionals of state (erosion of the coarse) do not upscale linearly. But the **state** upscaling — which is what ORIENTATION's open problem is about — becomes near-trivial.* **Do not believe this until it is spiked.**
+**What survives, and is still worth building:**
+
+- **$\text{fine} = \text{coarse} \oplus \text{detail}$ is an exactly invertible representation**, and the coarse coefficient **is** a linear functional of the fine ones. A **state** delta propagates to the root in **$O(\log N)$, exactly.**
+- **The refinement criterion becomes information-theoretic**: refine where the **detail coefficients are large** (high sub-grid entropy). Berger–Oliger already flags cells by an equivalent estimate; now we know *what quantity it is*.
+- **The store compresses.** Details are ~zero wherever the field is smooth, which is most of a planet. It is why JPEG works.
+- ⚠ **On non-uniform cell areas it is a *lifted / second-generation* wavelet (Sweldens), not Haar** — a correction to the **label**, not the structure. *(And the "Haar assumes equal weights, our cells vary 1.4×" objection **fails where it matters**: [M] the 1.4× is a whole-**face** figure; **within a parent block** it collapses to 1.006× at L5 and **1.000008× at L19** — worst measured error 8.5e-6 m on 143 m of relief. Wrong at coarse levels, harmless at fine ones, and a lifted wavelet handles the coarse ones anyway.)*
+- ⚠ **And the same category error infects `DECISIONS[flux-on-the-face-makes-refluxing-an-invariant]`, with an unwritten bill:** *"the coarse face's flux IS the sum of its children's"* is an identity **only if you DEFINE it so** — which means **the coarse tier can no longer be evaluated without running the fine tier.** That destroys the coarse tier's **independence**, which is the entire point of a memoised store. Berger–Colella pay this as an **explicit correction**; calling it *"an invariant"* **hides the bill.** Superseded by `DECISIONS[wavelet-store-solves-the-representation-not-the-dynamics]`.
 
 ### 3.8 [me] Powers of two — principled for scale-free fields, arbitrary otherwise
 
@@ -435,6 +470,16 @@ So the **volume under the interpolating mesh differs from $\sum h_i A_i$ by a CU
 **(a) STAGGERING is not hexagons, and it survives. ⚠ AND IT IS NOT NEW — the project named it as prior art and then forgot.** `DESIGN-MATERIAL.md` §4 lists **"Arakawa staggering"** in its prior-art line. An earlier draft of this section announced it as *"a lead the grid report never tested."* **It is our own Level-B doc's prior art, and the author had not read it** (see §2.4a). *Recorded, not quietly deleted: the rediscovery is the finding.*
 
 Staggering is about **where you store components**, not the cell's shape. Hexagons were ruled out because they cannot quadtree. **Staggering is entirely compatible with a cube-sphere quadtree** — keep `CellId`, keep 1→4, and simply store scalars at centres and **fluxes at faces**. It adds no points; it **buys a wider representable band from the same points** (§3.2), and it is what every serious geophysical model does. **⚠ And per the structure table, it may be *mandatory* for the ocean/atmosphere nomos, whose vorticity dynamics collocated grids get wrong.**
+
+> ### ⚠⚠ THE LEAD MUST CARRY ITS OWN COUNTER-EVIDENCE — AND AN EARLIER DRAFT OF THIS SECTION SUPPRESSED IT.
+>
+> This section quotes Cardiff §2.3's first clause on staggered grids. **It did not report that paragraph's LAST sentence, and a red-team pass quoted it back against me [P]:**
+>
+> > *"**The extension of staggered-grid approaches to general unstructured 3-D meshes is, however, not trivial; and consequently, this major limitation has resulted in declining popularity for such approaches in solid mechanics.**"*
+>
+> **Cardiff's own verdict on staggering is that its extension to irregular meshes killed it** — and a cube-sphere quadtree **with hanging nodes** is exactly such a mesh. *(That the geophysics community staggers anyway, on structured spheres, is not a refutation — it is a different mesh.)* **The lead may still be right. It is no longer allowed to be presented as clean.** Quoting a paragraph's supporting clause and omitting its concluding verdict is the same failure as the rest of this document's corrections, and it was found by the same method: **read the primary, in context, all the way to the end of the paragraph.**
+>
+> **[M] And the second counter-evidence is our own repo: `water.rs` IS staggered, HAS no null mode — and needs THREE stabilisers** (§2.5). The claim *"staggering ⇒ no stabilisation needed, never required"* is **refuted by our own code**, and is retracted.
 
 ![Staggering — the same points, used better](fig/staggering.svg)
 
