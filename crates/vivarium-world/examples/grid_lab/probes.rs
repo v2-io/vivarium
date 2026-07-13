@@ -33,11 +33,18 @@ impl Stat {
 
 pub struct Geometry {
     pub area: Stat,
+    /// The area of the GEODESIC polygon through the corners — what an FV code builds.
+    pub area_geo: Stat,
+    /// max |geodesic area / exact area − 1|. Non-zero only where the cell boundaries are
+    /// not great circles (Snyder, HEALPix) — the hidden tax on the equal-area grids.
+    pub area_geo_gap: f64,
     pub edge: Stat,
     pub arm: Stat,
     pub dist: Stat,
-    /// Non-orthogonality (deg): angle between the centre-line and the edge normal.
+    /// TRUE non-orthogonality (deg), at the crossing. 0 on any Voronoi mesh.
     pub nonortho: Stat,
+    /// Skewness: |mid-edge → crossing| / edge length. Independent of orthogonality.
+    pub skew: Stat,
     /// |arm_i + arm_j − dist| / dist — how far the mid-edge is OFF the centre-line.
     /// Exactly zero iff the centre-line passes through the mid-edge.
     pub arm_deficit: Stat,
@@ -57,6 +64,7 @@ pub fn geometry(g: &Mesh) -> Geometry {
     let mut arms = Vec::new();
     let mut dists = Vec::new();
     let mut no = Vec::new();
+    let mut sk = Vec::new();
     let mut defi = Vec::new();
     let mut clos = Vec::new();
     let mut angs = Vec::new();
@@ -74,6 +82,7 @@ pub fn geometry(g: &Mesh) -> Geometry {
             arms.push(e.arm_m);
             dists.push(e.dist_m);
             no.push(e.nonortho_deg);
+            sk.push(e.skew);
             defi.push(((e.arm_m + e.arm_opp_m - e.dist_m) / e.dist_m).abs());
             sum = add(sum, scale(e.normal, e.edge_len_m));
             per += e.edge_len_m;
@@ -92,12 +101,18 @@ pub fn geometry(g: &Mesh) -> Geometry {
         }
     }
 
+    let gap = (0..n)
+        .map(|i| (g.areas_geodesic[i] / g.areas[i] - 1.0).abs())
+        .fold(0.0f64, f64::max);
     Geometry {
         area: Stat::of(&areas),
+        area_geo: Stat::of(&g.areas_geodesic),
+        area_geo_gap: gap,
         edge: Stat::of(&edges),
         arm: Stat::of(&arms),
         dist: Stat::of(&dists),
         nonortho: Stat::of(&no),
+        skew: Stat::of(&sk),
         arm_deficit: Stat::of(&defi),
         angle: Stat::of(&angs),
         closure: Stat::of(&clos),
@@ -127,6 +142,9 @@ pub struct Curvature {
     /// resolution — which is itself the finding.
     pub sagitta_max_m: f64,
     pub cell_span_mean_m: f64,
+    /// Mean angle defect at the vertices that ARE the topological defects (the valence-3
+    /// cube corners / HEALPix junctions / icosa pentagon centres). Compare with the mean.
+    pub defect_at_topo_defects_deg: f64,
 }
 
 pub fn curvature(g: &Mesh) -> Curvature {
@@ -166,7 +184,19 @@ pub fn curvature(g: &Mesh) -> Curvature {
         sag = sag.max(s);
         span += sp;
     }
+    // the angle defect AT the topologically-defective vertices
+    let mut td: Vec<f64> = Vec::new();
+    for v in 0..g.verts.len() {
+        let val = g.vcells[v].len();
+        let regular = if g.rings[0].len() == 3 { 6 } else { 4 };
+        if val != regular {
+            td.push(defect[v]);
+        }
+    }
+    let td_mean = if td.is_empty() { f64::NAN } else { td.iter().sum::<f64>() / td.len() as f64 };
+
     Curvature {
+        defect_at_topo_defects_deg: td_mean.to_degrees(),
         defect_sum_over_4pi: sum / (4.0 * std::f64::consts::PI),
         defect_max_deg: dmax.to_degrees(),
         defect_mean_deg: dmean.to_degrees(),
@@ -229,7 +259,7 @@ pub fn classes(g: &Mesh, tol_pct: f64) -> Classes {
             })
             .collect();
         nb.sort_by(|a, b| a.0.total_cmp(&b.0));
-        let word: Vec<[i64; 5]> = nb
+        let word: Vec<[i64; 6]> = nb
             .iter()
             .map(|(_, e)| {
                 [
@@ -238,17 +268,18 @@ pub fn classes(g: &Mesh, tol_pct: f64) -> Classes {
                     q(e.arm_opp_m / s),
                     q(e.dist_m / s),
                     q(e.nonortho_deg / 90.0),
+                    q(e.skew),
                 ]
             })
             .collect();
         // canonical form over rotation + reflection
         let k = word.len();
-        let mut best: Option<Vec<[i64; 5]>> = None;
+        let mut best: Option<Vec<[i64; 6]>> = None;
         for rev in [false, true] {
-            let base: Vec<[i64; 5]> =
+            let base: Vec<[i64; 6]> =
                 if rev { word.iter().rev().cloned().collect() } else { word.clone() };
             for r in 0..k {
-                let rot: Vec<[i64; 5]> = (0..k).map(|t| base[(t + r) % k]).collect();
+                let rot: Vec<[i64; 6]> = (0..k).map(|t| base[(t + r) % k]).collect();
                 if best.as_ref().map_or(true, |b| rot < *b) {
                     best = Some(rot);
                 }
@@ -272,10 +303,33 @@ pub enum Scheme {
     /// Finite volume with the true geometry, transmissibility `L / dist` (centre-to-centre).
     FvCentreLine,
     /// Finite volume with the **mid-edge arm**: `L / (d_i + d_j)` where `d` is the arm
-    /// PROJECTED ON THE EDGE NORMAL. This is the correct two-point flux on a
-    /// non-orthogonal mesh — the difference from `FvCentreLine` IS the non-orthogonality
-    /// correction, made visible.
+    /// PROJECTED ON THE EDGE NORMAL — the correct two-point *transmissibility* on a
+    /// non-orthogonal mesh. Still a TWO-POINT scheme, so it still cannot see the
+    /// tangential gradient.
     FvArm,
+    /// **Finite volume with the non-orthogonality correction** — an LSQ gradient
+    /// reconstruction supplying the cross-diffusion term that two-point schemes discard:
+    ///
+    /// ```text
+    ///   ∂u/∂n̂  =  (n̂·ĉ)·(∇u·ĉ)          +   ∇u·(n̂ − (n̂·ĉ)ĉ)
+    ///          ≈  (n̂·ĉ)·(u_j − u_i)/d    +   ḡ·(n̂ − (n̂·ĉ)ĉ)
+    ///             └── the two-point part ──┘   └─ what TPFA THROWS AWAY ─┘
+    /// ```
+    ///
+    /// `ĉ` is the centre-line direction at the edge, `ḡ = ½(g_i + g_j)` the LSQ gradient.
+    /// The correction is ANTISYMMETRIC under `i ↔ j`, so conservation stays exact. This is
+    /// Putman & Lin's `sin α` metric factor in mesh form, and it is the thing that makes a
+    /// non-orthogonal grid usable at all.
+    ///
+    /// **The gradient is a QUADRATIC fit over the MOORE neighbourhood.** That detail is not
+    /// cosmetic and it took measuring to find: with a linear fit over the 4 edge-neighbours
+    /// ([`Scheme::FvLsqNarrow`]) the scheme converges, but only at ~0.5 order. With the wide
+    /// quadratic stencil it reaches ~1.6 and the error drops another 30×.
+    FvLsq,
+    /// The same correction, but with the NARROW gradient (linear fit, edge-neighbours only).
+    /// Kept because the gap between this and [`Scheme::FvLsq`] is one of the report's
+    /// results: it is the difference between "converges" and "converges usefully".
+    FvLsqNarrow,
 }
 
 impl Scheme {
@@ -284,6 +338,8 @@ impl Scheme {
             Scheme::NaiveUniform => "naive-uniform",
             Scheme::FvCentreLine => "FV centre-line",
             Scheme::FvArm => "FV mid-edge arm",
+            Scheme::FvLsq => "FV + corrected flux, WIDE quadratic gradient",
+            Scheme::FvLsqNarrow => "FV + corrected flux, narrow linear gradient",
         }
     }
 }
@@ -293,11 +349,155 @@ fn trans(s: Scheme, e: &Edge, mean_edge: f64, mean_dist: f64) -> f64 {
     match s {
         Scheme::NaiveUniform => mean_edge / mean_dist,
         Scheme::FvCentreLine => e.edge_len_m / e.dist_m,
-        Scheme::FvArm => {
+        Scheme::FvArm | Scheme::FvLsq | Scheme::FvLsqNarrow => {
             let d = e.arm_normal_m + e.arm_normal_opp_m;
             if d > 0.0 { e.edge_len_m / d } else { e.edge_len_m / e.dist_m }
         }
     }
+}
+
+/// **Quadratic** least-squares gradient over the MOORE neighbourhood.
+///
+/// Why this exists: a linear LSQ fit over the 4 edge-neighbours of a quad cell is only
+/// FIRST-order accurate on a distorted grid (the O(h) term cancels only on a symmetric
+/// stencil), and a first-order gradient is not good enough to feed a non-orthogonality
+/// correction — it caps the whole scheme below second order. A hexagon's 6 near-symmetric
+/// neighbours happen to give a second-order gradient for free, which is a large part of why
+/// the hex meshes converge and the quad grids do not.
+///
+/// The fix is not a different GRID, it is a wider STENCIL: fit
+/// `Δu = gₓx + g_y y + ½hₓₓx² + hₓ_y xy + ½h_y_y y²` (5 unknowns) over the 8 Moore
+/// neighbours. At a valence-3 corner there are 7 of them — still ≥ 5, so the fit is still
+/// determined. **That is Addendum A1's "LSQ recovers second order at any valence", made
+/// concrete: it does, but only with the wide stencil.**
+pub fn lsq_gradients_quadratic(g: &Mesh, u: &[f64]) -> Vec<V3> {
+    (0..g.cells())
+        .map(|i| {
+            let c = g.centers[i];
+            let e0 = tangent(c, g.centers[g.adj[i][0].j]);
+            let e1 = cross(c, e0);
+            let nb = &g.moore[i];
+            if nb.len() < 5 {
+                return [0.0; 3];
+            }
+            // normal equations for the 5-parameter quadratic
+            let mut ata = [[0.0f64; 5]; 5];
+            let mut atb = [0.0f64; 5];
+            for &j in nb {
+                let d = sub(g.centers[j], c);
+                let (x, y) = (dot(d, e0) * g.radius_m, dot(d, e1) * g.radius_m);
+                let row = [x, y, 0.5 * x * x, x * y, 0.5 * y * y];
+                // inverse-distance weighting — standard, and it keeps the near neighbours
+                // (which carry the gradient) from being swamped by the far ones
+                let w = 1.0 / (x * x + y * y);
+                let b = u[j] - u[i];
+                for a in 0..5 {
+                    for bb in 0..5 {
+                        ata[a][bb] += w * row[a] * row[bb];
+                    }
+                    atb[a] += w * row[a] * b;
+                }
+            }
+            // Gaussian elimination with partial pivoting
+            let mut m = [[0.0f64; 6]; 5];
+            for a in 0..5 {
+                m[a][..5].copy_from_slice(&ata[a]);
+                m[a][5] = atb[a];
+            }
+            for col in 0..5 {
+                let mut piv = col;
+                for rr in col + 1..5 {
+                    if m[rr][col].abs() > m[piv][col].abs() {
+                        piv = rr;
+                    }
+                }
+                if m[piv][col].abs() < 1e-300 {
+                    return [0.0; 3];
+                }
+                m.swap(col, piv);
+                for rr in 0..5 {
+                    if rr == col {
+                        continue;
+                    }
+                    let f = m[rr][col] / m[col][col];
+                    for cc in col..6 {
+                        m[rr][cc] -= f * m[col][cc];
+                    }
+                }
+            }
+            let gx = m[0][5] / m[0][0];
+            let gy = m[1][5] / m[1][1];
+            add(scale(e0, gx), scale(e1, gy))
+        })
+        .collect()
+}
+
+/// Least-squares gradient of `u` at each cell, as a 3-D tangent vector ([u]/m).
+pub fn lsq_gradients(g: &Mesh, u: &[f64]) -> Vec<V3> {
+    (0..g.cells())
+        .map(|i| {
+            let c = g.centers[i];
+            let e0 = tangent(c, g.centers[g.adj[i][0].j]);
+            let e1 = cross(c, e0);
+            let (mut sxx, mut sxy, mut syy, mut sxz, mut syz) = (0.0, 0.0, 0.0, 0.0, 0.0);
+            for e in &g.adj[i] {
+                let d = sub(g.centers[e.j], c);
+                let (x, y) = (dot(d, e0) * g.radius_m, dot(d, e1) * g.radius_m);
+                let z = u[e.j] - u[i];
+                sxx += x * x;
+                sxy += x * y;
+                syy += y * y;
+                sxz += x * z;
+                syz += y * z;
+            }
+            let det = sxx * syy - sxy * sxy;
+            if det.abs() < 1e-300 {
+                return [0.0; 3];
+            }
+            let gx = (syy * sxz - sxy * syz) / det;
+            let gy = (sxx * syz - sxy * sxz) / det;
+            add(scale(e0, gx), scale(e1, gy))
+        })
+        .collect()
+}
+
+/// The flux across one edge under a scheme. **Antisymmetric under `i ↔ j` for EVERY scheme
+/// here**, which is why they all conserve exactly — conservation is structural, not earned.
+fn edge_flux(g: &Mesh, s: Scheme, u: &[f64], grad: &[V3], i: usize, e: &Edge, m: (f64, f64, f64)) -> f64 {
+    if s != Scheme::FvLsq && s != Scheme::FvLsqNarrow {
+        return (u[e.j] - u[i]) * trans(s, e, m.2, m.1);
+    }
+    // FULLY CORRECTED FACE GRADIENT — both non-orthogonality AND skew.
+    //
+    // Work in the tangent plane at the mid-edge `f`. Let `vᵢ`, `vⱼ` be the tangent vectors
+    // from `f` to the two cell centres (their lengths are exactly the mid-edge ARMS, which
+    // is where the arm earns its keep). Project the cell centres onto the NORMAL LINE
+    // through `f`, giving auxiliary points `pᵢ′ = f + aᵢn̂`, `pⱼ′ = f + aⱼn̂`, and use the
+    // LSQ gradients to extrapolate `u` to them:
+    //
+    //     u(pᵢ′) ≈ uᵢ + gᵢ·(aᵢn̂ − vᵢ)        ∂u/∂n̂ ≈ [u(pⱼ′) − u(pᵢ′)] / (aⱼ − aᵢ)
+    //
+    // The two auxiliary points lie ON the normal, so the difference between them IS a normal
+    // derivative — no non-orthogonality error — and they are aligned with the mid-edge, so
+    // there is no skew error either. `aⱼ − aᵢ` is exactly `arm_normal + arm_normal_opp`.
+    //
+    // ⚠ Correcting only ONE of the two (the plain cross-diffusion form) gets you from a
+    // DIVERGENT scheme to a merely first-order one. Both corrections are needed for second
+    // order, and finding that out took measuring it: see §7's convergence table.
+    let f = unit(add(g.verts[e.va as usize], g.verts[e.vb as usize]));
+    let nh = tangent(f, e.normal);
+    let vi = scale(tangent(f, g.centers[i]), e.arm_m);
+    let vj = scale(tangent(f, g.centers[e.j]), e.arm_opp_m);
+    let (ai, aj) = (dot(vi, nh), dot(vj, nh));
+    let d = aj - ai;
+    if d <= 1e-9 {
+        return (u[e.j] - u[i]) * trans(Scheme::FvCentreLine, e, m.2, m.1);
+    }
+    let proj = |v: V3| sub(v, scale(f, dot(f, v)));
+    let (gi, gj) = (proj(grad[i]), proj(grad[e.j]));
+    let ui = u[i] + dot(gi, sub(scale(nh, ai), vi));
+    let uj = u[e.j] + dot(gj, sub(scale(nh, aj), vj));
+    (uj - ui) / d * e.edge_len_m
 }
 
 /// One explicit diffusion step. Mass `Σ uᵢAᵢ` is conserved EXACTLY by any scheme that
@@ -305,28 +505,36 @@ fn trans(s: Scheme, e: &Edge, mean_edge: f64, mean_dist: f64) -> f64 {
 /// decomposition, and the naive path fails it only because it divides by a FICTIONAL
 /// area.
 pub fn diffuse_step(g: &Mesh, s: Scheme, u: &mut [f64], k: f64, mean: (f64, f64, f64)) {
-    let (mean_area, mean_dist, mean_edge) = mean;
     let prev = u.to_vec();
+    let grad = match s {
+        Scheme::FvLsq => lsq_gradients_quadratic(g, &prev),
+        Scheme::FvLsqNarrow => lsq_gradients(g, &prev),
+        _ => Vec::new(),
+    };
     for i in 0..g.cells() {
         let mut f = 0.0;
         for e in &g.adj[i] {
-            f += (prev[e.j] - prev[i]) * trans(s, e, mean_edge, mean_dist);
+            f += edge_flux(g, s, &prev, &grad, i, e, mean);
         }
-        let a = if s == Scheme::NaiveUniform { mean_area } else { g.areas[i] };
+        let a = if s == Scheme::NaiveUniform { mean.0 } else { g.areas[i] };
         u[i] = prev[i] + k * f / a;
     }
 }
 
 /// The discrete Laplace–Beltrami operator under a scheme.
 pub fn laplacian(g: &Mesh, s: Scheme, u: &[f64], mean: (f64, f64, f64)) -> Vec<f64> {
-    let (mean_area, mean_dist, mean_edge) = mean;
+    let grad = match s {
+        Scheme::FvLsq => lsq_gradients_quadratic(g, u),
+        Scheme::FvLsqNarrow => lsq_gradients(g, u),
+        _ => Vec::new(),
+    };
     (0..g.cells())
         .map(|i| {
             let mut f = 0.0;
             for e in &g.adj[i] {
-                f += (u[e.j] - u[i]) * trans(s, e, mean_edge, mean_dist);
+                f += edge_flux(g, s, u, &grad, i, e, mean);
             }
-            let a = if s == Scheme::NaiveUniform { mean_area } else { g.areas[i] };
+            let a = if s == Scheme::NaiveUniform { mean.0 } else { g.areas[i] };
             f / a
         })
         .collect()
@@ -349,6 +557,50 @@ pub fn means(g: &Mesh) -> (f64, f64, f64) {
 /// of the Laplace–Beltrami operator: `Δ Yℓ = −ℓ(ℓ+1)/R² · Yℓ`. So the truncation error of
 /// a discrete Laplacian is *exactly known*, with no reference solution, no tuning, and no
 /// opinion. Returns the area-weighted relative L2 error and the L∞ error.
+/// Harmonic error split by DISTANCE FROM THE TOPOLOGICAL DEFECTS. Returns
+/// (L2 over cells within `ring` hops of a defect, L2 over everything else, n_near).
+/// This is the test that decides Addendum A1: is the defect a bounded LOCAL wart, or does
+/// it poison the whole grid?
+pub fn harmonic_error_split(g: &Mesh, s: Scheme, ell: usize, ring: usize) -> (f64, f64, usize) {
+    let e = unit([0.3, -0.7, 0.64]);
+    let f = |p: V3| -> f64 {
+        let t = dot(p, e);
+        if ell == 1 { t } else { 1.5 * t * t - 0.5 }
+    };
+    let lam = -((ell * (ell + 1)) as f64) / (g.radius_m * g.radius_m);
+    let u: Vec<f64> = g.centers.iter().map(|&p| f(p)).collect();
+    let du = laplacian(g, s, &u, means(g));
+
+    // BFS out from the defect cells
+    let mut near: Vec<bool> = (0..g.cells())
+        .map(|i| g.moore[i].len() != 2 * g.adj[i].len())
+        .collect();
+    for _ in 0..ring {
+        let cur = near.clone();
+        for i in 0..g.cells() {
+            if cur[i] {
+                for &j in &g.moore[i] {
+                    near[j] = true;
+                }
+            }
+        }
+    }
+    let (mut nn, mut dn, mut nf, mut df) = (0.0, 0.0, 0.0, 0.0);
+    for i in 0..g.cells() {
+        let exact = lam * u[i];
+        let err = (du[i] - exact).powi(2) * g.areas[i];
+        let sig = exact * exact * g.areas[i];
+        if near[i] {
+            nn += err;
+            dn += sig;
+        } else {
+            nf += err;
+            df += sig;
+        }
+    }
+    ((nn / dn).sqrt(), (nf / df).sqrt(), near.iter().filter(|&&b| b).count())
+}
+
 pub fn harmonic_error(g: &Mesh, s: Scheme, ell: usize) -> (f64, f64) {
     let e = unit([0.3, -0.7, 0.64]); // deliberately NOT aligned to any grid's axes
     let f = |p: V3| -> f64 {

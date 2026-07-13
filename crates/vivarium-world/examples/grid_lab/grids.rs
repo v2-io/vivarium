@@ -296,13 +296,25 @@ pub fn cube_sphere(proj: CubeProj, n: usize, radius_m: f64) -> Mesh {
         }
     }
 
-    let areas: Vec<f64> = rings
-        .iter()
-        .map(|r| {
-            let vs: Vec<V3> = r.iter().map(|&v| verts[v as usize]).collect();
-            poly_area(&vs) * radius_m * radius_m
-        })
-        .collect();
+    // AREA. For the gnomonic and equiangular maps a straight line in the face plane IS a
+    // great circle, so the cell really is a geodesic quad and the spherical excess is
+    // exact. **Snyder is different**: its interior grid lines are NOT great circles, so
+    // the cell's true area is the analytic equal-area value and the geodesic quad through
+    // its corners is only an approximation to it. Carry the exact value; `Mesh` records
+    // the geodesic one alongside, and the report prints the gap — because that gap is the
+    // hidden tax on every equal-area grid and nobody states it.
+    let areas: Vec<f64> = if proj == CubeProj::SnyderEqualArea {
+        let a = 4.0 * std::f64::consts::PI * radius_m * radius_m / 6.0 / (n * n) as f64;
+        vec![a; rings.len()]
+    } else {
+        rings
+            .iter()
+            .map(|r| {
+                let vs: Vec<V3> = r.iter().map(|&v| verts[v as usize]).collect();
+                poly_area(&vs) * radius_m * radius_m
+            })
+            .collect()
+    };
 
     let blurb: String = match proj {
         CubeProj::Equiangular => "6 square faces, radial with a tan-warp; what vivarium runs on today".into(),

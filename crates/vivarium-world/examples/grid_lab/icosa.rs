@@ -149,10 +149,25 @@ pub fn icosa_hex(freq: usize, lloyd: usize, radius_m: f64) -> Mesh {
         }
     }
 
-    // Lloyd/SCVT: move each generator to its Voronoi cell's centroid. Topology is held
-    // fixed — legitimate because an icosahedral Delaunay triangulation is stable under
-    // these small moves, and the metrics would scream (non-orthogonality) if it weren't.
+    // Lloyd/SCVT: move each generator to its Voronoi cell's centroid, then RESTORE the
+    // Delaunay property by edge flips.
+    //
+    // The flips are not optional, and finding that out was the point of measuring. A
+    // fixed-topology Lloyd (move the generators, keep the triangles) looks reasonable and
+    // is wrong: once a triangle stops being Delaunay its circumcentre wanders outside it,
+    // the "Voronoi" cell built from those circumcentres is no longer a Voronoi cell, and
+    // the primal-dual orthogonality that is the whole POINT of a hexagonal mesh silently
+    // dies. Measured: fixed-topology Lloyd took the mesh from 0.66° of non-orthogonality
+    // to 3.70° — i.e. it made the grid WORSE on the one metric it exists to be good at.
+    // With flips it stays orthogonal, as the duality theorem says it must.
+    let mut tris = tris;
     for _ in 0..lloyd {
+        let mut inc: Vec<Vec<usize>> = vec![Vec::new(); nv];
+        for (ti, t) in tris.iter().enumerate() {
+            for &v in t {
+                inc[v as usize].push(ti);
+            }
+        }
         let cc: Vec<V3> = tris
             .iter()
             .map(|t| circum(gen[t[0] as usize], gen[t[1] as usize], gen[t[2] as usize]))
@@ -170,6 +185,15 @@ pub fn icosa_hex(freq: usize, lloyd: usize, radius_m: f64) -> Mesh {
             next[v] = unit(acc);
         }
         gen = next;
+        delaunay_flips(&gen, &mut tris);
+    }
+
+    // Recompute incidence against the (possibly re-flipped) triangulation.
+    let mut inc: Vec<Vec<usize>> = vec![Vec::new(); nv];
+    for (ti, t) in tris.iter().enumerate() {
+        for &v in t {
+            inc[v as usize].push(ti);
+        }
     }
 
     let cc: Vec<V3> = tris
@@ -225,6 +249,57 @@ pub fn icosa_hex(freq: usize, lloyd: usize, radius_m: f64) -> Mesh {
         )
     };
     Mesh::build(&name, &blurb, radius_m, cc, rings, centers, areas, part, 20, quad)
+}
+
+/// Restore the Delaunay property by edge flips. On a sphere the empty-circumcircle test
+/// is a dot product: `d` lies inside the circumcircle of `(a,b,c)` iff
+/// `d · circum(a,b,c) > a · circum(a,b,c)` — i.e. it is closer to the circumcentre than
+/// the circle's own radius. Flip until no edge fails.
+fn delaunay_flips(gen: &[V3], tris: &mut Vec<[u32; 3]>) {
+    for _pass in 0..50 {
+        // edge -> the (≤2) triangles carrying it
+        let mut em: std::collections::HashMap<(u32, u32), Vec<usize>> = Default::default();
+        for (ti, t) in tris.iter().enumerate() {
+            for k in 0..3 {
+                let (a, b) = (t[k], t[(k + 1) % 3]);
+                em.entry(if a < b { (a, b) } else { (b, a) }).or_default().push(ti);
+            }
+        }
+        let mut flipped = 0usize;
+        let mut dirty = vec![false; tris.len()];
+        for (&(a, b), ts) in &em {
+            if ts.len() != 2 || dirty[ts[0]] || dirty[ts[1]] {
+                continue;
+            }
+            let (t1, t2) = (tris[ts[0]], tris[ts[1]]);
+            let c = match t1.iter().find(|&&v| v != a && v != b) {
+                Some(&v) => v,
+                None => continue,
+            };
+            let d = match t2.iter().find(|&&v| v != a && v != b) {
+                Some(&v) => v,
+                None => continue,
+            };
+            let o = circum(gen[a as usize], gen[b as usize], gen[c as usize]);
+            let rad = dot(gen[a as usize], o);
+            if dot(gen[d as usize], o) > rad + 1e-12 {
+                // `d` violates the empty-circumcircle condition: flip (a,b) → (c,d)
+                tris[ts[0]] = orient(gen, [a, d, c]);
+                tris[ts[1]] = orient(gen, [d, b, c]);
+                dirty[ts[0]] = true;
+                dirty[ts[1]] = true;
+                flipped += 1;
+            }
+        }
+        if flipped == 0 {
+            return;
+        }
+    }
+}
+
+fn orient(gen: &[V3], t: [u32; 3]) -> [u32; 3] {
+    let (a, b, c) = (gen[t[0] as usize], gen[t[1] as usize], gen[t[2] as usize]);
+    if dot(cross(sub(b, a), sub(c, a)), a) < 0.0 { [t[0], t[2], t[1]] } else { t }
 }
 
 /// Order the triangles around a primal vertex into a CCW fan (the dual cell's corners).

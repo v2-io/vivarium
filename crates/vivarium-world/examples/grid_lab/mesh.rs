@@ -63,9 +63,19 @@ pub struct Edge {
     /// non-orthogonality correction would have to carry.
     pub arm_normal_m: f64,
     pub arm_normal_opp_m: f64,
-    /// Angle between the centre-to-centre line and the edge normal at the mid-edge
-    /// (degrees). **0 = orthogonal.** Putman & Lin's `sin α` is `cos` of this.
+    /// **True non-orthogonality** (degrees): `90° −` the dihedral angle between the shared
+    /// edge's great circle and the centre-line's great circle, measured AT THEIR CROSSING.
+    /// 0 = the centre-line pierces the edge at a right angle. This is Putman & Lin's
+    /// `sin α` factor. It is exactly 0 on any Voronoi mesh, by duality — a falsifiable
+    /// prediction the numbers check.
     pub nonortho_deg: f64,
+    /// **Skewness**: the distance from the mid-edge to the point where the centre-line
+    /// actually crosses the edge, as a fraction of the edge length. A two-point flux
+    /// evaluates the gradient at the crossing but applies it over the whole edge; when
+    /// these differ, that is the error. ORTHOGONAL AND SKEW ARE INDEPENDENT — a hexagonal
+    /// Voronoi mesh is perfectly orthogonal and still skew, which is precisely why the
+    /// mid-edge arm (not the centre-to-centre line) is the right FV gradient arm.
+    pub skew: f64,
     /// Outward unit normal to the shared edge, in the tangent plane at the mid-edge.
     pub normal: V3,
     /// The two endpoints of the shared edge.
@@ -83,8 +93,16 @@ pub struct Mesh {
     /// Cell corner rings, CCW (outward).
     pub rings: Vec<Vec<u32>>,
     pub centers: Vec<V3>,
-    /// True spherical area (m²). For HEALPix this is the paper's exact `Ω`.
+    /// The area the SCHEME uses (m²). For Snyder and HEALPix this is the exact analytic
+    /// equal-area value; for every other grid the cell boundaries ARE great circles, so
+    /// it is the spherical excess and the two agree by construction.
     pub areas: Vec<f64>,
+    /// The spherical excess of the geodesic polygon through the cell's corners — i.e. the
+    /// area of the cell a finite-volume code would actually BUILD (Putman & Lin: *"the
+    /// cell edges for all grids are prescribed to be great circle arcs"*). Where this
+    /// differs from `areas`, the grid's equal-area guarantee is a property of the
+    /// continuous MAP that the discrete cell does not inherit.
+    pub areas_geodesic: Vec<f64>,
     /// Edge (flux-carrying) adjacency — the ONLY adjacency a finite volume needs.
     pub adj: Vec<Vec<Edge>>,
     /// Moore adjacency (shares ≥1 vertex) — what an 8-neighbour MFD fan needs, and
@@ -120,6 +138,13 @@ impl Mesh {
         nparts: usize,
         quadtree: &'static str,
     ) -> Mesh {
+        let areas_geodesic: Vec<f64> = rings
+            .iter()
+            .map(|r| {
+                let vs: Vec<V3> = r.iter().map(|&v| verts[v as usize]).collect();
+                poly_area(&vs) * radius_m * radius_m
+            })
+            .collect();
         let nc = rings.len();
         let nv = verts.len();
 
@@ -170,10 +195,22 @@ impl Mesh {
                 let arm_dir_j = tangent(mid, cj);
                 let arm_normal_m = arm_m * (-dot(arm_dir_i, nrm)).max(0.0);
                 let arm_normal_opp_m = arm_opp_m * dot(arm_dir_j, nrm).max(0.0);
-                // non-orthogonality: angle between the i→j centre-line (at the
-                // mid-edge) and the edge normal
-                let cl = tangent(mid, cj); // i is behind, j ahead: use the j-bearing
-                let ang = dot(cl, nrm).clamp(-1.0, 1.0).acos().to_degrees();
+                // TRUE non-orthogonality: the dihedral angle between the two great
+                // circles (edge, centre-line) equals the angle between their poles.
+                let pole_e = unit(cross(a, b));
+                let pole_c = unit(cross(ci, cj));
+                let between = dot(pole_e, pole_c).abs().clamp(0.0, 1.0).acos().to_degrees();
+                let ang = (90.0 - between).abs();
+                // SKEW: where does the centre-line actually cross the edge?
+                let xing = {
+                    let x = unit(cross(pole_e, pole_c));
+                    if dot(x, mid) >= 0.0 { x } else { scale(x, -1.0) }
+                };
+                let skew = if edge_len_m > 0.0 {
+                    geodesic(mid, xing) * radius_m / edge_len_m
+                } else {
+                    0.0
+                };
                 adj[i].push(Edge {
                     j,
                     edge_len_m,
@@ -183,6 +220,7 @@ impl Mesh {
                     arm_normal_m,
                     arm_normal_opp_m,
                     nonortho_deg: ang,
+                    skew,
                     normal: nrm,
                     va,
                     vb,
@@ -217,6 +255,7 @@ impl Mesh {
             rings,
             centers,
             areas,
+            areas_geodesic,
             adj,
             moore,
             vcells,
@@ -232,6 +271,43 @@ impl Mesh {
         (0..self.cells()).map(|i| u[i] * self.areas[i]).sum()
     }
     pub fn total_area(&self) -> f64 { self.areas.iter().sum() }
+}
+
+/// Rebuild a mesh with each cell's centre moved to its true **spherical centroid**.
+///
+/// This exists because of a measurement, not a theory. A finite-volume scheme evolves the
+/// cell AVERAGE of `u`, but every scheme here reads `u` at the cell's "centre". If the
+/// centre is not the centroid, `u(centre) ≠ ū` by `∇u·δ`, and that error does not vanish
+/// under refinement fast enough — it caps the convergence order no matter how good the
+/// flux is. Our quad grids take the cell centre to be the PARAMETER-SPACE midpoint (which
+/// is what `sphere.rs::CellId::to_cube()` returns), and on a distorted cell that is NOT the
+/// centroid. An SCVT hexagon, by contrast, has its generator AT the centroid by definition
+/// — which turns out to be a large part of why it converges and our grid does not.
+pub fn recentered(g: &Mesh) -> Mesh {
+    let centers: Vec<V3> = (0..g.cells())
+        .map(|i| {
+            let vs: Vec<V3> = g.rings[i].iter().map(|&v| g.verts[v as usize]).collect();
+            let mut acc = [0.0f64; 3];
+            for k in 1..vs.len() - 1 {
+                let (a, b, c) = (vs[0], vs[k], vs[k + 1]);
+                let w = tri_area(a, b, c);
+                acc = add(acc, scale(unit(add(add(a, b), c)), w));
+            }
+            unit(acc)
+        })
+        .collect();
+    Mesh::build(
+        &format!("{} +centroid", g.name),
+        &g.blurb,
+        g.radius_m,
+        g.verts.clone(),
+        g.rings.clone(),
+        centers,
+        g.areas.clone(),
+        g.part.clone(),
+        g.nparts,
+        g.quadtree,
+    )
 }
 
 /// Exact integer vertex key, deduplicated. Used where vertices are constructed by

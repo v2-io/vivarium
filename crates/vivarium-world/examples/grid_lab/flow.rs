@@ -308,6 +308,17 @@ fn weights(g: &Mesh, r: Router, h: &[f64], i: usize) -> Vec<(usize, f64)> {
             let mut w = Vec::new();
             let mut tot = 0.0;
             for e in &g.adj[i] {
+                // STRICTLY DOWNHILL ONLY. The LSQ gradient is a fit, so its outgoing
+                // component through an edge can be positive even when the neighbour across
+                // that edge is HIGHER. Routing there would send mass upstream, and an
+                // elevation-ordered sweep (Priority-Flood, `accumulate_drainage`) has
+                // already passed that cell — so the mass is stranded and never reaches an
+                // outlet. Measured before this guard: conservation 0.000 instead of 1.000.
+                // The guard costs nothing and restores the strictly-downstream invariant
+                // that the whole ordered sweep depends on.
+                if h[e.j] >= h[i] {
+                    continue;
+                }
                 // The **edge normal** — NOT the direction to the neighbour. On a
                 // non-orthogonal mesh those differ, and the difference is exactly the
                 // thing a centre-line router gets wrong. `e.normal` is the outward
@@ -331,15 +342,26 @@ fn weights(g: &Mesh, r: Router, h: &[f64], i: usize) -> Vec<(usize, f64)> {
 }
 
 pub struct Routing {
-    /// Total accumulated ÷ total area. **1.0 exactly = the router conserved.**
+    /// Total accumulated at the sinks ÷ total area. **1.0 exactly = the router conserved.**
     pub conservation: f64,
-    /// On a perfect CONE (a surface with exact radial symmetry), the accumulation on a
-    /// ring at fixed radius must be azimuthally uniform. This is the coefficient of
-    /// variation of that ring — pure grid-aligned bias, with no terrain to hide behind.
-    pub cone_bias_cv: f64,
-    /// The same measured only over the cells adjacent to a topological defect (a
-    /// valence-3 cube corner / HEALPix junction / icosa pentagon).
-    pub cone_bias_cv_at_defects: f64,
+    /// **Mean |error| against the EXACT answer.** On a cone the specific catchment area has
+    /// a closed form: everything upslope drains radially, so at angular distance θ from the
+    /// apex the catchment per unit contour length is
+    ///
+    /// ```text
+    ///   a(θ) = area(cap θ) / circumference(θ)
+    ///        = 2πR²(1 − cos θ) / (2πR sin θ)
+    ///        = R · tan(θ/2)
+    /// ```
+    ///
+    /// This is the standard test (Tarboton 1997 uses it for exactly this purpose) and it
+    /// beats a symmetry/CV check outright: it has a TRUE VALUE, not just an expectation of
+    /// uniformity, so it catches a router that is smoothly wrong as well as one that is
+    /// lumpily wrong.
+    pub cone_err_mean: f64,
+    pub cone_err_max: f64,
+    /// The same error, measured only over the 24 defect cells and their neighbours.
+    pub cone_err_at_defects: f64,
     pub defect_cells: usize,
 }
 
@@ -371,38 +393,59 @@ pub fn routing(g: &Mesh, r: Router) -> Routing {
         .sum();
     let conservation = sink_total / total;
 
-    // cone bias: take a ring at ~60° from the pole and look at the azimuthal spread of
-    // accumulation, normalised by the cell's own area (so area spread does not leak in)
-    let mut ring: Vec<f64> = Vec::new();
-    let mut ring_def: Vec<f64> = Vec::new();
+    // ACCURACY against the closed form: a(θ) = R·tan(θ/2) per unit contour length.
     let defect: Vec<bool> = (0..g.cells())
         .map(|i| g.moore[i].len() != 2 * g.adj[i].len())
         .collect();
     let ndef = defect.iter().filter(|&&d| d).count();
+    let (mut errs, mut errs_def) = (Vec::new(), Vec::new());
     for i in 0..g.cells() {
-        let a = geodesic(g.centers[i], pole);
-        if (a - 1.05).abs() < 0.06 {
-            // normalised specific catchment: accumulation per unit area upstream of it
-            let v = acc[i] / g.areas[i];
-            ring.push(v);
-            if defect[i] || g.moore[i].iter().any(|&j| defect[j]) {
-                ring_def.push(v);
-            }
+        let th = geodesic(g.centers[i], pole);
+        // skip the apex (badly resolved) and the antipodal sink region
+        if !(0.35..=2.2).contains(&th) {
+            continue;
+        }
+        if weights(g, r, &h, i).is_empty() {
+            continue;
+        }
+        // CONTOUR WIDTH — the width of the cell's outflow face projected PERPENDICULAR to
+        // the flow: w = Σₑ Lₑ · max(0, n̂ₑ·f̂). (Summing the raw outflow edge lengths instead
+        // double-counts whenever the flow disperses across two edges, and inflates every
+        // router's error by ~2×. On a square cell with axis-aligned flow this gives h; with
+        // diagonal flow it gives h√2 — both correct.)
+        //
+        // f̂ is the EXACT downslope direction of the cone, not the router's own estimate, so
+        // every router is scored against the same denominator and the differences that show
+        // up are differences in the routed mass alone.
+        let fhat = scale(tangent(g.centers[i], pole), -1.0);
+        let mut wid = 0.0;
+        for e in &g.adj[i] {
+            let mid = unit(add(g.verts[e.va as usize], g.verts[e.vb as usize]));
+            let nh = tangent(g.centers[i], tangent(mid, e.normal));
+            wid += e.edge_len_m * dot(nh, fhat).max(0.0);
+        }
+        if wid <= 0.0 {
+            continue;
+        }
+        let exact = g.radius_m * (th / 2.0).tan();
+        let err = ((acc[i] / wid) / exact - 1.0).abs();
+        errs.push(err);
+        if defect[i] || g.moore[i].iter().any(|&j| defect[j]) {
+            errs_def.push(err);
         }
     }
-    let cv = |xs: &[f64]| -> f64 {
-        if xs.len() < 2 {
+    let mean = |xs: &[f64]| -> f64 {
+        if xs.is_empty() {
             return f64::NAN;
         }
-        let m = xs.iter().sum::<f64>() / xs.len() as f64;
-        let v = xs.iter().map(|x| (x - m).powi(2)).sum::<f64>() / xs.len() as f64;
-        v.sqrt() / m
+        xs.iter().sum::<f64>() / xs.len() as f64
     };
 
     Routing {
         conservation,
-        cone_bias_cv: cv(&ring),
-        cone_bias_cv_at_defects: cv(&ring_def),
+        cone_err_mean: mean(&errs),
+        cone_err_max: errs.iter().cloned().fold(0.0f64, f64::max),
+        cone_err_at_defects: mean(&errs_def),
         defect_cells: ndef,
     }
 }
