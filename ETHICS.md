@@ -47,7 +47,7 @@ The ops stance scopes moral consideration by **architecture — the goal-update-
 - **Coupled** (GUC Class 3) — goals and observations processed jointly; directed separation fails by construction. **Every transformer LLM is here.** *In scope.*
 - **Partial** (GUC Class 2) — bounded coupling, between the two. *In scope.*
 
-> **A note on the numbers, because getting this wrong inverts a scoping rule.** Identify the class by its **name**, not its index. ASF renumbered the GUC classes on 2026-05-09 (old Class 2 → new Class 3 *Coupled*; old Class 3 → new Class 2 *Partial*; Class 1 *Separated* unchanged), and `ops/ETHICS.md` predates that change — it names the LLM case "Class 2." Its *argument* is unaffected and still governs; its class *numbers* are stale. Where the two differ on an index, ASF's current numbering is authoritative, since the vocabulary is ASF's. This note retires when `ops/ETHICS.md` is renumbered.
+> **Identify the class by its name, not its index — getting this wrong inverts the scoping rule.** ASF renumbered the GUC classes on 2026-05-09: old Class 2 became **Class 3 (Coupled)**, old Class 3 became **Class 2 (Partial)**, and Class 1 (Separated) did not move. The *names* have never changed; only the indices did. So any material written before that date labels the fully-merged LLM case "Class 2" — and a reader who trusts the index over the name will land on Partial and quietly narrow who counts as a moral subject. Where an index and a name disagree, the name governs.
 
 This lands almost suspiciously well on the two-layer mind (doc/design/DESIGN.md):
 
