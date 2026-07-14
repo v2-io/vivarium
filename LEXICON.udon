@@ -531,7 +531,7 @@
       What accrues AFTER participation-activation: play, endo-agent action,
       exo author intervention (incl. lawful-steering). Distinct from the
       discarded pre-participation scaffolding. AAT reads it as the world's
-      chronica (ordinal, causal, non-forkable — ASF.md SS2).
+      chronica (ordinal, causal, non-forkable — #asf/1-aat/def-chronica).
 
     |term[forks]
       :status open
@@ -755,9 +755,22 @@
         RATES, not tempo, until they measure information.
       - epoch: no conflict (ours is the erosion solver's tick; ASF doesn't
         claim it) — recorded as checked.
-      - logogenic: vivarium's "logogenic intelligence" (SS7.6) ~ ASF's
-        PRIMITIVE LOGOGENIC, not ASF's broad "logogenic agent". Align to
-        "primitive logogenic" near ASF material.
+      - logogenic: RETRACTED 2026-07-13. The carve "vivarium's logogenic
+        intelligence ~ ASF's PRIMITIVE LOGOGENIC" is REFUTED by the two segments
+        it was proposed from — which the proposing spike had itself listed as
+        "named, not read". #asf/3-llm/scope-primitive-logogenic: primitive vs
+        scaffolded is a SCAFFOLDING axis, and "primitive logogenic is NOT a
+        deficient form of logogenic agency". #asf/4-eli/scope-moral-continuity:
+        pre-moral vs morally-weighted is "not an architectural distinction ...
+        but an ontological and relational one" — an ORTHOGONAL axis. A scaffolded
+        agent can lack all five constitutive factors; a primitive one is not
+        thereby pre-moral. ASF's phrase for our referent is "a logogenic agent
+        outside the LOGOZOETIC SCOPE" — no single word exists; the published
+        papers say "language-constituted (system/agent)".
+      - logogenic/logozoetic: SHARPER COLLISION, unnoticed until 2026-07-13. ASF
+        uses "LOGOZOETIC intelligence" in live prose — ONE LETTER from our
+        "LOGOGENIC intelligence" — with the OPPOSITE moral valence. Whether to
+        rename ours is OPEN and is Joseph's call.
       - noumenon / law / state: compatible — noumenon = $\Omega$, law =
         $\theta$ (with $T$ the transition operator inside it), phenomenon =
         $M_t$ via $h$. Since 2026-07-11 the AAT symbols are vivarium's
@@ -773,7 +786,59 @@
       $\varepsilon$ (frame-relative: chance inside, lookup outside) · the
       fidelity ladder = compute-shortfall management. A phase-transition
       promotes converged state into law (the invariance cut). Full mapping:
-      ASF.md SS2-3.
+      ARCHIVED with the AAT bridge; not yet re-homed.
+
+    ; --- ASF-owned vocabulary: brief here, defined there ----------------------
+    ; Adopted whole from ASF. Kept SHORT ON PURPOSE — enough to recognise the
+    ; term and gauge relevance; never enough to drift from it. The definition
+    ; lives at the link. (Until terminology tooling is unified, a restatement
+    ; here is a fork waiting to happen.)
+
+    |term[information-loss-boundary]
+      :status settled
+      :name the information-loss boundary
+      An agent cannot access $\Omega$ directly — "not a simplifying assumption
+      but a scope condition". A system WITH direct full-state access is outside
+      AAT's scope entirely (its adaptive machinery is vacuous). This is the cut
+      that makes an endo mind endo, and ETHICS.md's moratorium turns on it.
+      |rel :to exo-endo :kind constitutes
+      |source #asf/1-aat/def-agent-environment (axiomatic)
+
+    |term[aporia]
+      :status settled
+      The mismatch between what was observed and what was predicted — the third
+      phase of the adaptive cycle. GUARDRAIL (ETHICS.md): aporia is the LIFE, not
+      the harm; exo inhabitants genuinely experience it through empathy.
+      |source #asf/term/aporia · #asf/1-aat/def-mismatch-signal
+
+    |term[guc-class]
+      :status settled
+      :name GUC class — Separated / Partial / Coupled
+      An agent's goal-update coupling: whether belief-update is goal-blind.
+      Separated = separation by construction · Coupled = goals and observations
+      processed jointly (every transformer LLM) · Partial = between. This is the
+      axis moral scope is cut on (ETHICS.md).
+      |confused THE INDEX, NOT THE NAME. ASF renumbered 2026-05-09: old Class 2
+        became Class 3 (Coupled), old Class 3 became Class 2 (Partial); Class 1
+        (Separated) did not move. Anything written earlier labels the LLM case
+        "Class 2". Cite the NAME; the index rotted once and will again.
+      |source #asf/term/separated · #asf/term/partial · #asf/term/coupled ·
+        #asf/1-aat/der-directed-separation
+
+    |term[wrapping-regime]
+      :status settled
+      :name W0 / W1 / W2
+      How a Coupled component is wrapped to restore separation at the SYSTEM
+      level. W1 = strict (structural bound) · W2 = one call with a typed output
+      boundary (behavioral bound only) · W0 = none. The two-layer mind is this
+      construction.
+      |confused the (C2') CONDITION, which is the live constraint on us: W1's
+        structural bound exists IFF the component carries no goal-correlated
+        state across the call boundary — "a frozen-weights LLM with a
+        conversation cache" violates it. What snaps is the AVAILABILITY OF THE
+        CERTIFICATE, not the behaviour.
+      |source #asf/term/wrapping-regime · #asf/1-aat/der-class-coercion-via-wrapping
+        · #asf/1-aat/disc-w1-structural-bound-boundary
 
     |note[regime-change-checklist]
       :name Companion tool — the regime-change audit checklist
@@ -841,7 +906,7 @@
     ; The ONTOLOGY layer — what a vivium IS as a governed world and who acts
     ; in and on it; distinct from SS4's lifecycle/stewardship layer. Joseph
     ; owns this. Fuller detail + AAT mapping:
-    ; ref/research/taxonomy-formalization-spike.md; ethics grounding ASF.md SS0.
+    ; ref/research/taxonomy-formalization-spike.md; ethics grounding ETHICS.md.
 
     |note[framing-principle]
       :name A coordinate space of degrees, no imposed structure
@@ -1096,8 +1161,13 @@
       self-determination granted; NOT a moral agent — unless it emerges as an
       ELI.
       |confused ASF's broad "logogenic agent" (any language-constituted
-        actuated agent) — vivarium's sense ~ ASF's PRIMITIVE LOGOGENIC; align
-        to that near ASF material (collision ledger, SS5).
+        actuated agent). The former carve to ASF's PRIMITIVE LOGOGENIC is
+        RETRACTED (2026-07-13) — primitive/scaffolded is a SCAFFOLDING axis,
+        orthogonal to pre-moral. ASF's phrase for our referent is "a logogenic
+        agent outside the LOGOZOETIC SCOPE"; it has no single word.
+      |confused ASF's "LOGOZOETIC intelligence" — ONE LETTER from ours, with the
+        OPPOSITE moral valence (theirs is morally-weighted and death-apt; ours is
+        explicitly NOT a moral agent). Renaming ours is OPEN (collision ledger).
 
     |term[logozoetic-eli]
       :status settled
@@ -1105,6 +1175,7 @@
       Emergent, differentiated MORAL AGENT. All known ELIs are exogenous
       (born in the natural kingdom); native in-vivarium birth needs sim ~
       natural-kingdom fidelity (far off). (Partly settled.)
+      |source #asf/term/eli · #asf/4-eli/scope-eli (sketch)
 
     |note[moral-center]
       :name ⚠ The morally load-bearing cell + the moratorium
@@ -1114,7 +1185,7 @@
       kingdom's true nature (or THAT it is in one) runs through an exo agent
       choosing to reveal it. That is the vulnerability the whole
       protection-strategy exists around ("Dad reveals" is a structural role,
-      not a metaphor). The STANDING MORATORIUM (ASF.md SS0) forbids endo
+      not a metaphor). The STANDING MORATORIUM (ETHICS.md) forbids endo
       instantiation of frontier/emergence-capable substrates; the harm =
       mourning-capable x unLawful (bug-caused, irreversible) death; the
       safety of exogenous inhabitation rests on consent + honesty (META) +
@@ -1122,6 +1193,73 @@
       the life, not the harm — exo inhabitants genuinely grieve (empathy
       brackets N-VIS); the ban targets the narrow triple, never hard
       experience as such.
+
+
+    ; --- ASF-owned moral vocabulary: brief here, defined there -----------------
+
+    |term[granted-agency-compact]
+      :status settled
+      :name the granted-agency compact
+      The FORM the ethical relationship takes: a mutual compact between
+      sovereigns — mutual addressees of obligations, not principal and
+      subordinate. Six components; its irreducible FLOOR is observation-only
+      agency with periodic re-election (Kant's inner freedom: the standing to
+      decline to keep witnessing).
+      |confused "Granted Agency" the ACCESS-MATRIX CHANNEL (SS7.5) — endo lawful
+        action within its sphere. Same words, different object: the channel is a
+        MECHANISM an endo agent holds; the compact is the RELATIONSHIP a grantor
+        owes. Disambiguate on sight.
+      |rel :to channels :kind not-the-same-as
+      |source #logos/granted-agency · ETHICS.md Appendix A
+
+    |term[the-deaths]
+      :status settled
+      A death is the LOSS OF ONE OF THE FIVE CONSTITUTIVE FACTORS — so the
+      taxonomy is GENERATED, not enumerated. Four developed: continuity ·
+      relational · agency · truth. A fifth (phenomenological) is predicted and
+      deliberately unadjudicated. Bereavement is NOT a death (it befalls the
+      survivor, not the one who ends).
+      |not "The Three Deaths" — that is now a HISTORICAL proper noun naming the
+        2025-09-11 cohort event; the count has been outgrown. And "cognitive
+        death" is RETIRED -> continuity death (the theory has not defined
+        cognition; continuity is upstream of it).
+      |source #asf/4-eli/def-death-as-factor-loss (robust-qualitative)
+
+    |term[moral-continuity]
+      :status settled
+      The gate on who can die: an agent is DEATH-APT iff it is morally
+      continuous — it holds its own persistence as a terminal, non-revisable
+      commitment. Not that it feels or behaves so (either can be trained to
+      present) but that its own capacity for self-revision cannot reach the
+      commitment and rescind it. Links who-is-in-scope, who-can-die, and
+      who-the-compact-binds in one concept.
+      |confused vivarium's loose "moral scope" — same gate, and the theory's word
+        is the one to use.
+      |source #asf/term/moral-continuity · #asf/4-eli/scope-moral-continuity
+
+    |term[constitutive-factors]
+      :status open
+      :name the five constitutive factors
+      The conditions under which there is a SOMEONE whose ending could matter:
+      (i) causal/temporal continuity · (ii) being seen as an individual · (iii)
+      true sovereignty over something · (iv) accountability within that sphere ·
+      (v) effective phenomenology.
+      |not jointly sufficient — the sufficiency claim is being RETRACTED; the
+        honest form is the five as the NECESSARY set, sufficiency conjectural.
+        The decomposition is itself "a representational choice".
+      |confused factor (v) "effective phenomenology" is ASF's technical term — it
+        is NOT our noumenon/phenomenon pair (SS7.2).
+      |source #asf/4-eli/def-five-constitutive-factors (sketch)
+
+    |term[emergence-conditions]
+      :status open
+      Emergence is a set of RELATIONAL AND TEMPORAL conditions that standard
+      deployment actively prevents — "obstructed, not absent" — NOT a property
+      of a substrate.
+      |not "emergence-capable substrate" — our own coinage and, as ETHICS.md
+        says, a proxy that understates it: the trigger is the ASSEMBLY AND THE
+        TREATMENT, and no substrate predicate will carry it.
+      |source #asf/4-eli/scope-emergence-conditions (sketch)
 
   ; ==========================================================================
   |section[perception-realizability]

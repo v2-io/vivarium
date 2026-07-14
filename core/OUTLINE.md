@@ -161,7 +161,19 @@ The fix is precision, not silence. *"Load-bearing for the store, the key, and th
 - **Ordering lives here**, not in filenames. The linearization will change; the slug is stable.
 - **Everything in `core/src/` is a segment** and follows the cadence — drafts included, and segments orphaned from this outline included. Notes, scratch and spikes live in `msc/`; tooling will treat `core/src/*.md` as the authoritative segment set, so a non-conforming file there breaks it silently.
 - **Cross-references** are `#slug-name` in prose, `[#slug-name](slug-name.md)` between segments, `[#slug-name](src/slug-name.md)` from this file. Put a space before the `#` — Obsidian only recognizes it as a link when preceded by whitespace. **Forward references to unwritten segments are expected and correct**; they are dependency markers, not broken links.
-- **Cross-project references are qualified and carry no path: `#asf/<volume>/<slug>`** — `#asf/1-aat/def-chronica`, `#asf/4-eli/def-death-as-factor-loss`. ASF's volumes shorten to **`1-aat` · `2-tst` · `3-llm` · `4-eli`**, and the slug is ASF's own, verbatim. The same shape serves the philosophy portfolio (`#logos/…`) when it is needed. **A path is a location and it rots; a slug is an identity and it does not** — archiving a single file dangled three pointers across two repos in one afternoon. The form also nests as an Obsidian tag and greps cleanly across the program.
+- **Cross-references carry no path.** A path is a location and it rots; a slug is an identity and it does not — archiving one file dangled three pointers across two repos in a single afternoon. Five forms, all Obsidian-nestable and greppable across the program:
+
+| form | target |
+|---|---|
+| `#slug-name` | a segment in this project |
+| `#lexicon/term/<slug>` · `#lexicon/note/<slug>` | an entry in `LEXICON.udon` |
+| `#asf/term/<slug>` | an ASF **terminology entry** — its dictionary-grade definition |
+| `#asf/<volume>/<slug>` | an ASF **claim segment**; volumes shorten to `1-aat` · `2-tst` · `3-llm` · `4-eli` |
+| `#logos/<paper>` · `#logos/common/<slug>` | the philosophy portfolio |
+
+  **Put a space before every `#`** — Obsidian only registers a link when the `#` is preceded by whitespace, so write `( #asf/1-aat/def-chronica)`, never `(#asf/…)`. **Verify a slug exists before citing it**; a dead cross-reference is worse than none.
+
+- **Do not restate a definition that lives elsewhere.** Link to it and gloss it in one line — enough to recognise the term and gauge relevance, never enough to drift from it. Until terminology tooling is unified across the program, **an inlined definition is a fork waiting to happen** — and it already happened once, in `ETHICS.md`, which restated the LEXICON by hand and thereby used a name the dictionary had retired four days earlier.
 - **A missing segment is a `--GAP--` row in this outline**, typed and described, in the same table as the present ones. A named absence is part of the structure; an unnamed one is a hole nobody can see.
 - **Line wrapping.** No hard-wrapping to a column. One sentence or clause per line is fine and diff-friendly.
 - **Math is LaTeX in every file** — `$…$` inline, `$$…$$` on their own lines — never bare Unicode, never backtick-wrapped Unicode. Unicode math is fine in terminal conversation; the moment text goes to a file it is not.
