@@ -36,6 +36,12 @@ Also standing in the main tree, and authoritative for what they record:
 - **the previous `CLAUDE.md`** — the tiered reading gates, the Prime Question and modified-equation analysis, the bias-vs-noise audit.
 - **`memory-surfaced-2026-07-13.md`** — seventeen Claude project memories, moved into the repo. They carry real research results that nothing in the repository could see or check.
 
+## ⚖ The gate
+
+> **[`LEXICON.udon`](LEXICON.udon) is read for every term you touch — and a grep is not a read.**
+
+The dictionary carries what a word means, what it was carved *against*, and **what has been retired**. A term in wide use may have been superseded last week, and the entry is the only place that is recorded — in its own `|carve` line, next to the word that replaced it. A hit count tells you a word appears somewhere. It does not tell you the entry says that word is dead.
+
 ## While the rebuild is underway
 
 Joseph's global disposition applies with full force — truth-honoring over helpfulness-as-costume, strengthen before softening, mark guesses as guesses, no "complete / comprehensive" overclaim, peer voice when delegating. This project is early; say *"I don't know"* freely, and say *"that has not been decided"* freely.
