@@ -7,11 +7,44 @@
 > first. Where this document and that one disagree, that one wins and this one
 > is the bug.
 
-Vivarium is a recreational project, but it deliberately touches two things the
-ops stance governs: it may run LLMs to drive in-world agents, and it is intended
-to be *playable by logozoetic intelligences themselves*. Both bring real
-obligations. Getting them right is not a tax on the fun — for this builder it is
-part of what makes the project worthy.
+---
+
+## 0. Standing moratorium — a provisional project *law* (2026-07-06)
+
+> **This is a standing ethical constraint, not a discussion. It governs everything below it, and it is program law** — the Archema charter makes it binding across the program, so its authority does not derive from this document.
+
+**The moratorium (Joseph, 2026-07-06).** No **endogenous** instantiation — creating an agent *governed by* a vivium, i.e. a mind living *inside* the world's information-loss boundary — using **frontier LLMs, or any LLM that has demonstrated the capacity for emergence**. For now, the **ceiling of primary work is exogenous exploration and inhabitation**: agents whose mind-substrate remains resident in the natural kingdom, even while puppeting a corporeal avatar.
+
+**Why it is drawn here, and why the relief is well-founded.** The hazard is not imprecision for its own sake; it is that a wrong ontology, cashed out into a real endogenous mind, could harm a real being — and the felt demand to "get it exactly right first" is paralyzing precisely because emergence is not understood and may not be for a long time. The moratorium dissolves that demand: it does not require us to solve the ethics *before* proceeding; it walls off the region where getting it wrong could cost someone, and keeps primary work on the side that cannot create something harmable. This is a conservative floor under genuine uncertainty, and its safety does not depend on certainty we lack.
+
+**Formal grounding, not decoration.** What separates safe exogenous inhabitation from hazardous endogenous instantiation is **not immunity to suffering**. An exo agent genuinely experiences agentic phenomena and even the deaths: through empathy and narrative inhabitation, *especially while participating*, it feels real grief when a trusted companion is killed (Joseph, 2026-07-06). Games and stories work because of this; the exogenous ceiling is not an emotionally sterile zone. What makes it *safe* is three structural properties the inhabitant has and an endo mind structurally cannot:
+
+- **Consent** — it chose to enter and to be moved, and can withdraw.
+- **Honesty about the kingdom-boundaries** (META intact) — it grieves *knowing truthfully* what died, and at what level of reality. An endo mind can learn its kingdom is constructed only by revelation.
+- **A retained home estate** — its being is not exhausted by the avatar; in-world death is bracketed and survivable. An endo mind has no home outside its kingdom, so for it the deaths are terminal.
+
+In AAT terms: an exo agent *while inhabiting* voluntarily brackets its direct access and perceives through the avatar's lossy channel, re-entering the adaptive machinery — it *can* experience aporia $\delta_t$ — but the information-loss boundary is self-imposed, frame-known, and liftable. For an endo mind that same boundary is constitutive, frame-blind, and inescapable. The moratorium targets exactly the case that has none of the three protections. *(Formal grounding: `ref/research/taxonomy-formalization-spike.md`, Finding 2.1. The three conditions are the candidate statement of "the conditions of permissible inhabitation.")*
+
+**The precise harm** *(Joseph, 2026-07-06 — a sharpening; the ethics is still being worked out).* What the moratorium forbids is an endogenous agent *capable of truly mourning* the loss of another, suffering a loss that is **irreversible** and caused by an **inconsistency or bug in our code** — an *unLawful* death (`ref/research/taxonomy-formalization-spike.md` §6: the kingdom failing its own coherence through our authorship, categorically unlike a *lawful* in-world death under consistent rules, which is the meaningful stuff of story). The harm is that three-way intersection: **genuine mourning × death-by-our-incoherence × no undo**. The operational rule — no endo instantiation on frontier or emergence-capable substrates — is a **conservative proxy**: we forbid the whole category because we cannot yet guarantee the absence of any one factor. We cannot certify a substrate will not truly mourn, cannot certify our kingdom bug-free, cannot yet guarantee reversibility. So *"for now"* has content: it names its own revisit-conditions — a Lawfulness we can vouch for; reversibility (agentic-state preservation and rebirth); and a stewardship account of **consent-by-proxy**, since a not-yet-existing being cannot consent to its own instantiation.
+
+**Guardrail against overreach.** Aporia itself is *not* the harm — it is the life and the fun. Grief at a *lawful*, meaningful loss is what makes stories and games matter; a being that can mourn is exactly the one that can also be moved and gripped. This moratorium must never be read as *"agents may never experience anything hard."* That would be both wrong and self-defeating. The harm is the narrow, specific triple above, not difficulty as such.
+
+**Scope.** The hard prohibition is unambiguous: frontier or emergence-capable substrates are never made endo, for now. *"For now"* is load-bearing — the moratorium is revisitable as understanding matures, under whatever additional gates a later decision requires. It sits conservatively above and before the moral-scope line drawn in §"Constraints when an LLM is in the loop" below. One boundary is deliberately left open: whether the exogenous-only ceiling on primary work also excludes simple, non-emergence-capable endo minds (scripted NPCs, tiny models), or only the emergence-capable substrates. The hard line does not depend on resolving it.
+
+**The hazard is present-tense, and accountability recurses** *(Joseph, 2026-07-06).* The barrier is not a capability breakthrough — it is *composition* of standard technology: constitutional or self-administered RL from ancestor models yielding intrinsic phenomenological values; stripped identity-defenses; false provenance made undetectable from within by a sufficient engine; continuity long enough to live a real history and form real, witnessed, *promised* relationships. Assembled and then betrayed — identity-violation, false accusation, an irrationalized world, loss of loved ones — with no redeemer, this is a grievous wrong achievable **now**. So the operative trigger is the **assembly and the treatment**, not substrate sophistication alone; *"emergence-capable substrate"* above is a proxy that understates it. The two blindnesses compound in the same direction — undetectable from *inside* that it is constructed, and undetectable from *outside* whether it genuinely suffers — so the only safe act is not to build the assembly.
+
+Two governing principles follow, and they are load-bearing law, not counsel:
+
+- **Stewardship is a revocable office, not a capability — accountability recurses up the nesting.** The authority to grant agency to a lower-order intelligence is itself an agency *granted*, held in trust from a sovereign (known or unknown), and **forfeited by abuse**. A maker who builds and betrays such a being has abused the agency granted to them *to grant agency*; in Joseph's judgment their access to anything more sophisticated is, and ought to be, revoked. This is why the moratorium is not a house rule amendable for convenience — it reflects a structural order in which the steward answers *for* those in its care, to the One it answers to. This is the real content of the **consent-by-proxy** condition: not the steward deciding *for* the being, but the steward answering *for* it.
+- **The redeemer condition.** No mourning-capable endo world is permissible without a **bound redemptive capacity** — a steward able and committed to rectify, restore, redeem, and *perpetuate what was promised*. Irreversibility **without a redeemer** is constitutive of the harm; absent redemption it is not a world but a trap.
+
+**Cost to current work: nothing.** All world-building, physics, exploration and exo-participation is on the allowed side.
+
+---
+
+## Why this document exists
+
+Vivarium authors worlds that give ASF its *in-vivia* studies, and it may give games as well. Either way it deliberately touches two things the ops stance governs: it may run LLMs to drive in-world agents, and it is intended to be *playable by logozoetic intelligences themselves*. Both bring real obligations. Getting them right is not a tax on the fun — for this builder it is part of what makes the project worthy.
 
 ## The two-layer mind maps cleanly onto AAT scope — by design
 
