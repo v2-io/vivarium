@@ -1,5 +1,16 @@
 # vivarium — ASSUMPTIONS (the magic-constant ledger)
 
+> **Why this file is still at the root, when every other front-door document was archived on 2026-07-13.**
+>
+> It is not a front door — nobody reads it to get oriented — and it is load-bearing *in code*: `crates/vivarium-world/src/nomotheke.rs` does `include_str!("../../../ASSUMPTIONS.md")`, and the `every_assumption_is_in_the_ledger` test fails the build when a nomos declares an anchor this file does not carry. That guard is one of the few things in the repo that actually convicts, so the file stays until the mechanism can move intact rather than being broken in transit.
+>
+> **It is not exempt from the new discipline. It is in debt to it.** Two things are owed:
+>
+> 1. **The register needs scrubbing.** Much of what follows argues in emphasis rather than in claims — bold, capitals, ⛔. The measurements underneath are real and were expensive; the typography is not evidence, and an absolute is a claim with no predicate. See `core/OUTLINE.md` §No absolutes.
+> 2. **It should not be prose.** A hand-kept markdown table is exactly the artifact class that goes stale, and this file already says so in its own opening: the ledger *"becomes generated, not hand-kept"* once each nomos carries its declaration as data. The destination is **udon**, with proper tooling, when the udon-util crate is ready — at which point the ledger is generated, and this file retires to `.archive/` with the others.
+>
+> Until then it is authoritative for what it records, and the `include_str!` guard stays live.
+
 *The canonical accounting of every value the world runs on that is not yet principled — created 2026-07-10 at Joseph's direction: "there needs to be a standard canonical place where these things must be all accounted for, so that we know exactly what assumptions are still being filled in unprincipled ways and we don't end up with guesses and magic constants (even fated ones or steered) scattered through the nomoi making it unlawful and **undiscoverably unlawful**."*
 
 **The rule.** No numeric constant enters a nomos without an entry here (or a doc-comment pointing here). An unprincipled value is not the sin — *an unaccounted one is*: declared placeholders are honest rungs (LEXICON §5's D-on-low-B made glaring instead of camouflaged); undeclared ones are latent unLawfulness that no probe will ever localize. This file is the prose bridge until the declared-vs-derived machinery (LEXICON §5) makes each nomos carry its own declaration as *data* — at which point this ledger becomes generated, not hand-kept.
