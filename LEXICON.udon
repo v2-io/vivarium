@@ -250,22 +250,11 @@
       :forms saved games / participatory worlds
       Branches off a vivium at a participation point (cheap under content-addressed storage). Whether a redeployment patches existing saves or requires a fresh world is a lifecycle/stewardship decision (SS7), not ontology.
 
-    |term[lineage-head-pinned-regula]
-      :status settled
-      :since 2026-07-11
+    |term[lineage-head-pinned-regula] :status open :since 2026-07-11
       :name lineage head ⟂ pinned regula
-      The settled answer to the sketch's moving-edge-vs-curated-set question:
-      the moving edge of the project's best current nomoi is the REGULA
-      LINEAGE HEAD; the curated, citable set a vivium builds against is its
-      PINNED regula@version (immutable). The three-way sub-question is
-      answered structurally: interface = the slot set (regula) · algorithm =
-      the nomos occupying a slot · target machine = backend identity in the
-      memo key (the CPU-reference determinism policy answered the third leg).
-      "vivarium status" reports conformance-to-pin and gap-to-head — the
-      big-picture instrument as a computed diff.
-      |carve the sketch's placeholder phrases ("SOTA stack",
-        "best-of-class library") were never terms and are retired —
-        SUPERSEDED.md 2026-07-11.
+      PARKED with the regula (DECISIONS[regula-vocabulary-deferred]). The DISTINCTION is sound and survives whatever the artifact is called; only the noun is deferred.
+
+      The moving edge of the project's best current nomos is the LINEAGE HEAD; the curated, citable set a vivium builds against is its PINNED version (immutable). The three-way sub-question is answered structurally: interface = the slot set · algorithm = the nomos occupying a slot · target machine = backend identity in the memo key (the CPU-reference determinism policy answered the third leg). `vivarium status` reports conformance-to-pin and gap-to-head — the big-picture instrument as a computed diff.
       |rel :to regula :kind versions-of
       |source doc/plan/regula-conformance-design.md SS4b
 
@@ -290,81 +279,48 @@
       Joseph's carve: the world-state's epistemic status is distinct from but correlated with the methodology of the algorithm itself; this mechanism makes the correlation exact and the distinction structural. Three strands at three grains: (1) DECLARED, on the nomos-version — approach code, physics tier, the four axes, gating probes, stamped once per version; (2) DERIVED, on the artifact — a memo's epistemic state is a weakest-link fold over its dependency cone plus its own run facts (convergence-epsilon, probe results): a hi-physics kernel on a low-B placeholder yields LOW-B STATE — algorithm quality never launders inputs; computable from the store because the complete key names the cone; (3) LIFECYCLE, on the run — causal vs iterating; the recorded epsilon at each freeze is the unLawfulness budget (SS7.2) as data. Landing order: declaration with the nomotheke (live since 2026-07-10); derivation with component E.
       |rel :to nomotheke :kind first-rung-in
 
-    |term[slot]
-      :status settled
-      :since 2026-07-11
-      A named system-role in the world-assembly, identified by its FLUX
-      INTERFACE (the ARCHITECTURE SS9 contract): what any occupant must
-      produce and consume. Nomoi are candidate occupants at different rungs —
-      the same slot filled at different rigor/performance/capability.
-      Granularity rule: one interface consumers couple to = one slot;
-      internal decomposition (EBM vs GCM) is rungs within it; separate
-      interfaces are separate slots.
+    |term[slot] :status open :since 2026-07-11
+      PARKED with the regula (DECISIONS[regula-vocabulary-deferred]). Post-collapse a promise's fluxed-quantity plus its `:kept-by` already carries what this reached for, so the OBJECT may not be needed at all — but the concept (a named system-role identified by its flux interface) is doing work in prose and is held rather than retired.
+
+      A named system-role in the world-assembly, identified by its FLUX INTERFACE (the ARCHITECTURE SS9 contract): what any occupant must produce and consume. Nomos are candidate occupants at different rungs — the same slot filled at different rigor/performance/capability. Granularity rule: one interface consumers couple to = one slot; internal decomposition (EBM vs GCM) is rungs within it; separate interfaces are separate slots.
       |rel :to nomos :kind occupied-by
-      |rel :to regula :kind demanded-by
       |source doc/plan/regula-conformance-design.md SS1
 
-    |term[permit]
-      :status settled
-      :since 2026-07-11
-      A declared, auditable ABSENCE: (absent slots, validity condition). The
-      validity condition names the fluxed quantities whose consumption VOIDS
-      it — when any nomos declares a consumed quantity in the void-set, the
-      audit reports the permit voided and the regula demands the slot be
-      filled before the consuming nomos may land. Canceling pairs (SS1) are
-      permits; so are grandfathered honest gaps (the atmosphere permit whose
-      retirement is the reservoir layer).
+    |term[permit] :status open :since 2026-07-11
+      PARKED with the regula (DECISIONS[regula-vocabulary-deferred]). The OBJECT is real and needed — the flux audit has to know which absences are declared — but post-collapse it lives on the MANIFEST rather than on a regula, and whether it keeps this name is deferred.
+
+      A declared, auditable ABSENCE: (absent slots, validity condition). The validity condition names the fluxed quantities whose consumption VOIDS it — when any nomos declares a consumed quantity in the void-set, the audit reports the permit voided and demands the slot be filled before the consuming nomos may land. Canceling pairs (SS1) are permits; so are grandfathered honest gaps (the atmosphere permit whose retirement is the reservoir layer).
       |rel :to canceling-pair :kind audit-form-of
-      |rel :to regula :kind carried-by
+      |rel :to manifest :kind carried-by
       |source doc/plan/regula-conformance-design.md SS3
 
-    |term[regula]
-      :status settled
-      :since 2026-07-11
+    |term[manifest] :status settled :since 2026-07-10
+      What THIS vivium is and chose — the per-world PRESCRIPTION, and the object that individuates one world from another (spec.rs: identity, label, demand). The seed is minted here, ONCE. Beacons live in its demand bucket. Post-collapse (DECISIONS[regula-collapses-to-order-and-manifest], Joseph) it is also the home for the world's permits and its `:order` / `:target-phase` — the prescriptive half of what a regula was reaching for. That expansion is DESIGNED, not yet built.
+      |confused the ORDINUM, which is DESCRIPTIVE (what a KIND of world requires, phase by phase, for every world of that kind) where the manifest is PRESCRIPTIVE (what THIS world chose). The two together are the collapsed regula: no third artifact between them.
+      |rel :to vivium :kind individuates
+      |rel :to beacon :kind carries
+      |rel :to ordinum :kind pins
+
+    |term[regula] :status open :since 2026-07-11
       :forms pl. regulae; keyed regula@version
-      The world-level conformance profile a vivium declares it follows: which
-      slots MUST be filled at what minimum rigor (with a pinned
-      ordinum@version as the floor for its target phase), which absences are
-      permitted (with void conditions), and the epistemological POSTURE — the
-      ceiling on what in-vivia results under it may claim (a result's actual
-      state stays its cone-fold; the posture only caps, never grants). Two
-      chapters: fidelity (internal — slots/permits/posture) and participation
-      (exo-facing — the access-matrix configuration's long-missing WHERE,
-      engagement modes admitted, realizability gates, stewardship duties).
-      Regulae NEST as kingdoms nest — a child kingdom's regula is constrained
-      by its parent's. The regula is a LINEAGE: each version immutable and
-      citable, the head carrying the current best nomoi (SS4). SUPREMACY: the
-      moratorium is program law ABOVE the regula layer — a constraint on the
-      space of valid regulae, never negotiable within one; the regula is its
-      enforcement locus. Etymology (Joseph): regula/regnum are cognates (PIE
-      h3reg-, regere) — the rule by which a regnum is a regnum; Kingdom =
-      English regnum. Reifies ARCHITECTURE axis 3 and gives the build-stack's
-      reserved "Primary Invariants" its concrete form; cited in the manifest.
-      |not the program's CHARTER-DRAFT ("charter" was rejected for exactly
-        that collision).
-      |confused regolith (near-sound only; unrelated roots — Gk. rhegos
-        "blanket" + lithos). Accepted with open eyes; if it ever needs
-        replacing, the fallback is some other synonym, explicitly not
-        covenant (Joseph, 2026-07-11).
+      NOT BUILT, and the naming is DEFERRED (DECISIONS[regula-vocabulary-deferred], Joseph). The concept is HELD, not retired: the ORDINUM (descriptive — what a KIND of world requires, phase by phase) and the MANIFEST (prescriptive — what THIS world chose) together carry what it reached for, and regula.rs was never written. Reach for an in-between artifact only if the two-artifact scheme genuinely strains.
+
+      The concept as designed: the world-level conformance profile a vivium declares it follows — which slots MUST be filled at what minimum rigor (with a pinned ordinum@version as the floor for its target phase), which absences are permitted (with void conditions), and the epistemological POSTURE, the ceiling on what in-vivia results under it may claim (a result's actual state stays its cone-fold; the posture only caps, never grants). Two chapters: fidelity (internal — slots/permits/posture) and participation (exo-facing — the access-matrix configuration's long-missing WHERE, engagement modes admitted, realizability gates, stewardship duties). Regulae NEST as kingdoms nest — a child kingdom's regula is constrained by its parent's. The regula is a LINEAGE: each version immutable and citable, the head carrying the current best nomoi (SS4). SUPREMACY: the moratorium is program law ABOVE the regula layer — a constraint on the space of valid regulae, never negotiable within one; the regula is its enforcement locus. Etymology (Joseph): regula/regnum are cognates (PIE h3reg-, regere) — the rule by which a regnum is a regnum; Kingdom = English regnum.
+      |not the program's CHARTER-DRAFT ("charter" was rejected for exactly that collision).
+      |confused regolith (near-sound only; unrelated roots — Gk. rhegos "blanket" + lithos). Accepted with open eyes; if it ever needs replacing, the fallback is some other synonym, explicitly not covenant (Joseph, 2026-07-11).
       |rel :to slot :kind demands
       |rel :to permit :kind carries
       |rel :to ordinum :kind pins
       |rel :to vivium :kind declared-by
-      |source doc/plan/regula-conformance-design.md
+      |source doc/plan/regula-conformance-design.md (the reasoning trail, no longer the plan)
 
-    |term[regula-terrestris]
-      :status settled
-      :since 2026-07-11
+    |term[regula-terrestris] :status open :since 2026-07-11
       :name Regula Terrestris
       :forms slug terrestris
-      The first regula: essentially-Earthlike-without-modeling-Earth — B
-      (physics) pinned high as slots fill; A (Earth-history) an anchor and
-      sanity-check, never a target (lawful first, Earth-shaped second, made a
-      posture); the moratorium woven throughout per the supremacy clause.
-      Terra = the world in full — sky and sea included, not soil.
-      |context collisions checked: species epithets only (Tribulus/Bombus
-        terrestris) — lowercase-after-genus, no genuine confusion. Preferred
-        over Tellurian (Joseph: wants more than solid ground).
+      PARKED with the regula (DECISIONS[regula-vocabulary-deferred]). The Terrestris ORDINUM is real and codified (tabularium/terrestris.ordinum.udon); what is deferred is whether the per-world prescriptive half ever wears this name.
+
+      The concept as designed: the first regula — essentially-Earthlike-without-modeling-Earth. B (physics) pinned high as slots fill; A (Earth-history) an anchor and sanity-check, never a target (lawful first, Earth-shaped second, made a posture); the moratorium woven throughout per the supremacy clause. Terra = the world in full — sky and sea included, not soil.
+      |context collisions checked: species epithets only (Tribulus/Bombus terrestris) — lowercase-after-genus, no genuine confusion. Preferred over Tellurian (Joseph: wants more than solid ground).
       |rel :to regula :kind first-instance-of
 
     |term[use-case-fidelity-contract] :status open

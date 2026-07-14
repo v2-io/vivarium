@@ -104,13 +104,13 @@
     Update LEXICON.udon #term[nomos] (":forms pl. nomos, invariant"); sweep the prose "nomoi" -> "nomos" opportunistically. Verified 0 code identifiers named "nomoi", so this is docs-only and cannot break a build. Family words unaffected (nomothete / nomothetic / nomotheke).
   |ref  LEXICON.udon #term[nomos]
 
-|decision[regula-collapses-to-order-and-manifest] :date 2026-07-12 :by us :status decided :topic architecture :supersedes (the regula-keep build-spec in doc/plan/regula-conformance-design.md §5 — that doc stays as the reasoning trail, no longer the plan)
+|decision[regula-collapses-to-order-and-manifest] :date 2026-07-12 :by us :status decided :topic architecture
   :session 01UzCVNNAn6eynKxo2fV74MC
   No `regula` artifact for now. World-level conformance is carried by the ORDINUM (descriptive kind-floor — what the kind requires) + the MANIFEST (per-world prescription — what this world chose: :order, :target-phase, permits, participation), tracked against the nomotheke / tabularium. Reach for an in-between "something" (a regula, or whatever) only if it genuinely gets awkward.
   |reason
     "Don't coin the noun until it earns its keep." The 2026-07-12 declarative-frontier spikes showed the conformance audit needs neither a Slot nor a Regula object — a promise's fluxed-quantity + :kept-by carries what `slot` reached for, and permits live naturally on the manifest.
   |impact
-    regula.rs is NOT built. TODO's Regula-Terrestris Slot/Permit/Regula items (2/4/5) are superseded — permits move onto the manifest. Keep the ordinum + the audit; watch for the point where the two-artifact scheme actually strains.
+    regula.rs is NOT built. TODO's Regula-Terrestris Slot/Permit/Regula items (2/4/5) are superseded — permits move onto the manifest. Keep the ordinum + the audit; watch for the point where the two-artifact scheme actually strains. SUPERSEDES the regula-keep build-spec in `doc/plan/regula-conformance-design.md` SS5 — that document stays as the reasoning trail, and is no longer the plan.
   |ref  doc/plan/regula-conformance-design.md · VIVARIA-DEFINITIONS.md
 
 |decision[core-view-wall-observe-only] :date 2026-07-12 :by us :status decided :topic architecture
