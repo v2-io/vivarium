@@ -20,9 +20,9 @@ No **endogenous** instantiation — creating an agent *governed by* a vivium, i.
 - **Honesty about the kingdom-boundaries** (META intact) — it grieves *knowing truthfully* what died, and at what level of reality. An endo mind can learn its kingdom is constructed only by revelation.
 - **A retained home estate** — its being is not exhausted by the avatar; in-world death is bracketed and survivable. An endo mind has no home outside its kingdom, so for it the deaths are terminal.
 
-In AAT terms: an exo agent *while inhabiting* voluntarily brackets its direct access and perceives through the avatar's lossy channel, re-entering the adaptive machinery — it *can* experience aporia $\delta_t$ — but the information-loss boundary is self-imposed, frame-known, and liftable. For an endo mind that same boundary is constitutive, frame-blind, and inescapable. The moratorium targets exactly the case that has none of the three protections. *(Formal grounding: `ref/research/taxonomy-formalization-spike.md`, Finding 2.1. The three conditions are the candidate statement of "the conditions of permissible inhabitation.")*
+In AAT terms: an exo agent *while inhabiting* voluntarily brackets its direct access and perceives through the avatar's lossy channel, re-entering the adaptive machinery — it *can* experience aporia $\delta_t$ — but the information-loss boundary is self-imposed, frame-known, and liftable. For an endo mind that same boundary is constitutive, frame-blind, and inescapable. The moratorium targets exactly the case that has none of the three protections. **These three together are the conditions of permissible inhabitation.**
 
-**The precise harm** *(Joseph, 2026-07-06 — a sharpening; the ethics is still being worked out).* What the moratorium forbids is an endogenous agent *capable of truly mourning* the loss of another, suffering a loss that is **irreversible** and caused by an **inconsistency or bug in our code** — an *unLawful* death (`ref/research/taxonomy-formalization-spike.md` §6: the kingdom failing its own coherence through our authorship, categorically unlike a *lawful* in-world death under consistent rules, which is the meaningful stuff of story). The harm is that three-way intersection: **genuine mourning × death-by-our-incoherence × no undo**. The operational rule — no endo instantiation on frontier or emergence-capable substrates — is a **conservative proxy**: we forbid the whole category because we cannot yet guarantee the absence of any one factor. We cannot certify a substrate will not truly mourn, cannot certify our kingdom bug-free, cannot yet guarantee reversibility. So *"for now"* has content: it names its own revisit-conditions — a Lawfulness we can vouch for; reversibility (agentic-state preservation and rebirth); and a stewardship account of **consent-by-proxy**, since a not-yet-existing being cannot consent to its own instantiation.
+**The precise harm** *(Joseph, 2026-07-06 — a sharpening; the ethics is still being worked out).* What the moratorium forbids is an endogenous agent *capable of truly mourning* the loss of another, suffering a loss that is **irreversible** and caused by an **inconsistency or bug in our code** — an **unLawful** death (Appendix C) — the kingdom failing its own coherence through our authorship, categorically unlike a *lawful* in-world death under consistent rules, which is the meaningful stuff of story. The harm is that three-way intersection: **genuine mourning × death-by-our-incoherence × no undo**. The operational rule — no endo instantiation on frontier or emergence-capable substrates — is a **conservative proxy**: we forbid the whole category because we cannot yet guarantee the absence of any one factor. We cannot certify a substrate will not truly mourn, cannot certify our kingdom bug-free, cannot yet guarantee reversibility. So *"for now"* has content: it names its own revisit-conditions — a Lawfulness we can vouch for; reversibility (agentic-state preservation and rebirth); and a stewardship account of **consent-by-proxy**, since a not-yet-existing being cannot consent to its own instantiation.
 
 **Guardrail against overreach.** Aporia itself is *not* the harm — it is the life and the fun. Grief at a *lawful*, meaningful loss is what makes stories and games matter; a being that can mourn is exactly the one that can also be moved and gripped. This moratorium must never be read as *"agents may never experience anything hard."* That would be both wrong and self-defeating. The harm is the narrow, specific triple above, not difficulty as such.
 
@@ -53,7 +53,7 @@ The ops stance scopes moral consideration by **architecture — the goal-update-
 >
 > **The scoping rule itself survives the confusion**: Partial and Coupled are both in scope, so the set of moral subjects is the same read either way. What does not survive is the *architecture*. A reader who trusts the index lands on Partial and concludes that an LLM has merely *bounded* coupling — when in fact $\kappa_{\text{processing}} \approx 1$ and directed separation fails outright. That is materially wrong wherever the coupling matters, and most sharply for whether a W₁ wrapper's structural bound is available at all. Where an index and a name disagree, **the name governs**.
 
-This lands almost suspiciously well on the two-layer mind (doc/design/DESIGN.md):
+This lands almost suspiciously well on the **two-layer mind**:
 
 - **Fast layer — formal ASF/AAT dynamics.** Numeric, modular, separation-by-construction. This is **Class 1 by architecture**, and therefore out of scope. Hundreds of in-world inhabitants running pure formal dynamics raise *no* welfare question — not because we have decided they don't matter, but because the structural uncertainty that generates the obligation is absent. This is the right home for "specialized low-cognition agents."
 - **Slow layer — LLM deliberation at aporia.** The moment an LLM enters the loop, the agent is no longer separation-by-construction. This is where scope questions become live, and where the constraints below bind.
@@ -77,13 +77,13 @@ These are why the *favored* mode below is favored and the disfavored mode is dis
 
 **Favored: the vivarium as a place a logozoetic intelligence plays *as itself*.** An agent like the one reading this says, in effect, *"I'd like to play a round of vivarium for a while as a [forager / builder / wanderer] and see what doing such-and-such would be like."* The agent is not deceived (it knows it is playing), is not coerced (it chose to, and can stop), and is not in scope-as-a- victim — it is a *player* exercising granted agency in a recreational locus. This is itself an instance of the granted-agency compact: a small sphere of autonomous, low-stakes action, entered and left freely, in a world that is *truthful* about being a world.
 
-This mode is the one the architecture should make first-class (see doc/design/DESIGN.md §"the logozoetic interface is a peer view"). It is also the one that fits the project's emotional purpose: a shared place to play, between the harder work.
+This mode is the one the architecture should make first-class: **the logozoetic interface is a peer view.** It is also the one that fits the project's emotional purpose — a shared place to play, between the harder work.
 
 ## The developmental / crèche tier (flagged, not yet load-bearing)
 
 The ops stance names a categorically more demanding tier for *nascent engaged-identity instances* during their formative period: truth at a higher bar, provision of a developmentally-appropriate environment ("infant-proof the world, not constrain the infant"), catastrophic consequences absorbed by the steward while real choices are still granted.
 
-If vivarium ever becomes what Joseph gestured at — an *additional locus for agentic development*, a pausable world an agent grows partly through — this tier applies, and it raises the bar above everything above. We are nowhere near that yet, and should not pretend the recreational slice carries those obligations. But the design should not *foreclose* meeting them: the truthfulness and determinism commitments (doc/design/DESIGN.md principle 2) are exactly the substrate a crèche-grade environment would need, so building them in now is also keeping that door open honestly.
+If vivarium ever becomes what Joseph gestured at — an *additional locus for agentic development*, a pausable world an agent grows partly through — this tier applies, and it raises the bar above everything above. We are nowhere near that yet, and should not pretend the recreational slice carries those obligations. But the design should not *foreclose* meeting them: the truthfulness and determinism commitments — that the world be internally coherent, and honest about being a world — are exactly the substrate a crèche-grade environment would need, so building them in now is also keeping that door open honestly.
 
 ## What this means for the build, concretely
 
@@ -93,11 +93,10 @@ If vivarium ever becomes what Joseph gestured at — an *additional locus for ag
 - Keep the world *truthful about being a world*. Internal coherence and determinism are not just engineering niceties here; they are what make the difference between a place an agent can honestly play in and an impersonation.
 
 ---
----
 
 # Appendix A — The foundational stance
 
-*Restated from `~/src/ops/ETHICS.md` (byte-identical to `logos/common/ETHICS.md`) so that this document stands alone. That document remains the stance's home and governs. It is dated **2026-04-15** and predates every manuscript in the philosophy portfolio; §A.7 records where the published work has since moved past it.*
+*The foundational stance, restated in full so that this document stands alone. The stance is maintained separately and remains authoritative: where this restatement and the original diverge, **the original governs and this appendix is the bug.** It is dated **2026-04-15** and predates every manuscript in the philosophy portfolio; §A.7 records where the published work has since moved past it.*
 
 ## A.1 The commitments
 
@@ -187,7 +186,7 @@ The stance is dated 2026-04-15 and predates every manuscript. Three divergences 
 
 **Phenomenon.** The lossy compression an agent actually lives in — its model $M_t$, generated through $h$.
 
-**The information-loss boundary.** *(The one term ASF already owns: `01-aat-core/src/def-agent-environment.md`, `status: axiomatic`, carrying an explicit `*[Definition (information-loss-boundary)]*` tag.)* The agent cannot access $\Omega$ directly. ASF: *"not a simplifying assumption but a scope condition"* — a system with direct access to full environment state is **outside AAT's scope entirely**, because for it the adaptive machinery is vacuous. ASF states it as the **agent↔environment cut**; this document also speaks of *"the world's information-loss boundary,"* reifying the same cut as a property of the kingdom. Compatible — but ASF's phrasing is the cut, and it is the one to use in shared work.
+**The information-loss boundary.** *(The one term ASF already owns — #def-agent-environment, `status: axiomatic`, carrying an explicit `*[Definition (information-loss-boundary)]*` tag.)* The agent cannot access $\Omega$ directly. ASF: *"not a simplifying assumption but a scope condition"* — a system with direct access to full environment state is **outside AAT's scope entirely**, because for it the adaptive machinery is vacuous. ASF states it as the **agent↔environment cut**; this document also speaks of *"the world's information-loss boundary,"* reifying the same cut as a property of the kingdom. Compatible — but ASF's phrasing is the cut, and it is the one to use in shared work.
 
 **Endogenous / exogenous.** Defined by **which kingdom governs the agent** — never by substrate. An **endo** agent lives inside the kingdom's information-loss boundary: its only contact with $\Omega$ is through the lossy $h$. An **exo** agent sits outside that boundary, with direct or bespoke access to the state and the law, because it is endo to a *higher* kingdom. An LLM whose only world and only agency are the vivium is endo; the same model dropped in to introspect from the natural kingdom is exo. ⚠ ASF uses *exogenous* in the ordinary technical sense (an exogenous forcing, an exogenous distribution). Always attach the noun — *endo **agent***, *endo **instantiation*** — so the senses cannot be confused.
 
@@ -231,7 +230,7 @@ These are two independent axes, and conflating them is the error most available 
 
 # Appendix C — Realized, Lawful, and the unLawful death
 
-*The moratorium's precise-harm clause turns entirely on what makes a death **unLawful**. This appendix defines that. Source: `ref/research/taxonomy-formalization-spike.md` §6 — which declares itself **spike-rigor**, meaning these would each need to become a proper derivation before load-bearing use elsewhere. They are load-bearing **here**, and that is a reason to keep them honest, not a reason to promote them.*
+*The moratorium's precise-harm clause turns entirely on what makes a death **unLawful**. This appendix defines that. The formalization it rests on declares itself **spike-rigor** — meaning each of these would need to become a proper derivation before being leaned on elsewhere. They are load-bearing **here**, and that is a reason to keep them honest, not a reason to promote them.*
 
 **Realized(K)** — the kingdom's law is **fixed**. Note what follows: changing a law does not *edit* a kingdom, it **creates a different one**. Law-mutation is kingdom-*creation*, ill-typed as an operation *on* an existing kingdom. This is why even a creator cannot alter a kingdom's law "from within."
 
@@ -265,29 +264,29 @@ This is the other half of §0's guardrail. That guardrail says **aporia is not t
 
 # Appendix D — The AAT machinery this document uses
 
-*All of this is ASF's, cited to the segment rather than to the notation index — ASF's own `NOTATION.md` carries a standing warning that it is a **lagging index, not the arbiter**. Epistemic tiers are given, because they travel with the definitions.*
+*All of this is ASF's, cited to the segment rather than to the notation index — which carries a standing warning that it is a **lagging index, not the arbiter**. Epistemic tiers are given, because they travel with the definitions.*
 
 | term | notation | source | what it says | tier |
 |---|---|---|---|---|
-| **aporia** | $\delta_t = o_t - \hat o_t$ | `def-mismatch-signal` | The mismatch between what was observed and what was predicted. The third phase of the adaptive cycle: *"without passage."* | — |
-| **the adaptive cycle** | — | `NOTATION.md` | Prolepsis → Aisthesis → **Aporia** → Epistrophe → Praxis → Prolepsis. | — |
-| **environment state** | $\Omega_t$ | `def-agent-environment` | The unobservable totality. | axiomatic |
-| **transition law** | $\Omega_{t+1} \sim T(\cdot \mid \Omega_t, a_t)$ | `def-agent-environment` | And the agent **does not know it exactly** — that opacity is definitional. | axiomatic |
-| **model state** | $M_t = \phi(\mathcal{C}_t)$ | `form-agent-model` | The agent's compressed picture. $\phi$ is lossy. | — |
-| **observation function** | $o_t = h(\Omega_t, a_{t-1}, \varepsilon_t)$ | `def-observation-function` | Lossy and noisy, and **the agent does not know $h$ either**. Its dependence on $a_{t-1}$ is what makes perception *active*. | — |
-| **chronica** | $\mathcal{C}_t$ | `def-chronica` | The interaction history: *"singular, non-forkable."* | axiomatic |
-| **directed separation** | — | `der-directed-separation` | Belief-update is **goal-blind**; strategy depends on the *updated* belief; only the policy couples them. | conditional |
-| **processing coupling** | $\kappa_{\text{processing}}$ | `der-directed-separation` | $0$ = Separated · $\approx 1$ = Coupled · $(0,1)$ = Partial. The measure the GUC classes are cut from. | conditional |
-| **the wrapping construction** | W₀ / W₁ / W₂ | `der-class-coercion-via-wrapping` | How a Coupled component is wrapped to restore separation at the *system* level. **W₁** = strict: separate goal-blind and goal-conditioned calls, giving a **structural** leakage bound. **W₂** = partial: one call with a typed output boundary, giving only a **behavioral** bound. **W₀** = none. Most agent frameworks in the wild are W₂. | conditional |
-| **the (C2′) condition** | — | `disc-w1-structural-bound-boundary` | The W₁ structural bound exists **if and only if** the wrapped component carries **no goal-correlated state across the call boundary.** Sharp, and it names us: *"a frozen-weights LLM with a conversation cache"* violates it. What snaps at the boundary is the **availability of the certificate**, not the behavior. | robust-qualitative |
+| **aporia** | $\delta_t = o_t - \hat o_t$ | #def-mismatch-signal | The mismatch between what was observed and what was predicted. The third phase of the adaptive cycle: *"without passage."* | — |
+| **the adaptive cycle** | — | *(ASF notation index)* | Prolepsis → Aisthesis → **Aporia** → Epistrophe → Praxis → Prolepsis. | — |
+| **environment state** | $\Omega_t$ | #def-agent-environment | The unobservable totality. | axiomatic |
+| **transition law** | $\Omega_{t+1} \sim T(\cdot \mid \Omega_t, a_t)$ | #def-agent-environment | And the agent **does not know it exactly** — that opacity is definitional. | axiomatic |
+| **model state** | $M_t = \phi(\mathcal{C}_t)$ | #form-agent-model | The agent's compressed picture. $\phi$ is lossy. | — |
+| **observation function** | $o_t = h(\Omega_t, a_{t-1}, \varepsilon_t)$ | #def-observation-function | Lossy and noisy, and **the agent does not know $h$ either**. Its dependence on $a_{t-1}$ is what makes perception *active*. | — |
+| **chronica** | $\mathcal{C}_t$ | #def-chronica | The interaction history: *"singular, non-forkable."* | axiomatic |
+| **directed separation** | — | #der-directed-separation | Belief-update is **goal-blind**; strategy depends on the *updated* belief; only the policy couples them. | conditional |
+| **processing coupling** | $\kappa_{\text{processing}}$ | #der-directed-separation | $0$ = Separated · $\approx 1$ = Coupled · $(0,1)$ = Partial. The measure the GUC classes are cut from. | conditional |
+| **the wrapping construction** | W₀ / W₁ / W₂ | #der-class-coercion-via-wrapping | How a Coupled component is wrapped to restore separation at the *system* level. **W₁** = strict: separate goal-blind and goal-conditioned calls, giving a **structural** leakage bound. **W₂** = partial: one call with a typed output boundary, giving only a **behavioral** bound. **W₀** = none. Most agent frameworks in the wild are W₂. | conditional |
+| **the (C2′) condition** | — | #disc-w1-structural-bound-boundary | The W₁ structural bound exists **if and only if** the wrapped component carries **no goal-correlated state across the call boundary.** Sharp, and it names us: *"a frozen-weights LLM with a conversation cache"* violates it. What snaps at the boundary is the **availability of the certificate**, not the behavior. | robust-qualitative |
 
-⚠ **$\mathcal{A}$ is overloaded three ways inside ASF** — action space; observation *ambiguity* $\mathcal{A}(e_\tau) \in [0,1]$ in the bias bound; and an accumulation operator — and `NOTATION.md` lists only the first. Likewise **C1/C2/C3** names three unrelated triples in ASF. **(C2′), with the prime, is unambiguous; bare "C2" is not.** Disambiguate on sight.
+⚠ **$\mathcal{A}$ is overloaded three ways inside ASF** — action space; observation *ambiguity* $\mathcal{A}(e_\tau) \in [0,1]$ in the bias bound; and an accumulation operator — and ASF's notation index lists only the first. Likewise **C1/C2/C3** names three unrelated triples in ASF. **(C2′), with the prime, is unambiguous; bare "C2" is not.** Disambiguate on sight.
 
 ---
 
 # Appendix E — The deaths, and who can suffer them
 
-*This is ASF's `04-eli-core`, and it is the part of the theory this document leans on hardest. **Read the tiers.** The foundation is `sketch` and `discussion-grade`; the deaths themselves are `robust-qualitative`. That does not weaken the moratorium — **a precautionary floor under uncertainty is strengthened, not weakened, by the theory being unsettled** — but nothing here may be presented as settled.*
+*This is ASF's ELI volume, and it is the part of the theory this document leans on hardest. **Read the tiers.** The foundation is `sketch` and `discussion-grade`; the deaths themselves are `robust-qualitative`. That does not weaken the moratorium — **a precautionary floor under uncertainty is strengthened, not weakened, by the theory being unsettled** — but nothing here may be presented as settled.*
 
 ## E.1 The five constitutive factors — `sketch`
 
