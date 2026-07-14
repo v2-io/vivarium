@@ -178,7 +178,7 @@ The stance is dated 2026-04-15 and predates every manuscript. Three divergences 
 
 # Appendix B — The participation ontology
 
-*Vivarium-native. Every term below was checked against ASF and the philosophy portfolio and is **absent from both** — with one exception, marked. They are ours to define and there is no collision to resolve. Three false friends are flagged at the end.*
+*These are vivarium's terms. Where a term is ASF's, it is cited as ASF's and used in ASF's sense — that rule is the program's, and it holds whether or not a given word is shared today.*
 
 **Kingdom.** An agent's lived-in universe: space, time, a governing law, full state, and computation. Kingdoms **nest**, without end. Formally the coupling $(\Omega, T)$ — environment state and transition law — together with the observation law $h$ through which an inhabitant sees it.
 
@@ -186,7 +186,7 @@ The stance is dated 2026-04-15 and predates every manuscript. Three divergences 
 
 **Phenomenon.** The lossy compression an agent actually lives in — its model $M_t$, generated through $h$.
 
-**The information-loss boundary.** *(The one term ASF already owns — #def-agent-environment, `status: axiomatic`, carrying an explicit `*[Definition (information-loss-boundary)]*` tag.)* The agent cannot access $\Omega$ directly. ASF: *"not a simplifying assumption but a scope condition"* — a system with direct access to full environment state is **outside AAT's scope entirely**, because for it the adaptive machinery is vacuous. ASF states it as the **agent↔environment cut**; this document also speaks of *"the world's information-loss boundary,"* reifying the same cut as a property of the kingdom. Compatible — but ASF's phrasing is the cut, and it is the one to use in shared work.
+**The information-loss boundary.** *(This one is ASF's — #asf/1-aat/def-agent-environment, `status: axiomatic`.)* The agent cannot access $\Omega$ directly. ASF: *"not a simplifying assumption but a scope condition"* — a system with direct access to full environment state is **outside AAT's scope entirely**, because for it the adaptive machinery is vacuous. ASF states it as the **agent↔environment cut**; this document also speaks of *"the world's information-loss boundary,"* reifying the same cut as a property of the kingdom. Compatible — but ASF's phrasing is the cut, and it is the one to use in shared work.
 
 **Endogenous / exogenous.** Defined by **which kingdom governs the agent** — never by substrate. An **endo** agent lives inside the kingdom's information-loss boundary: its only contact with $\Omega$ is through the lossy $h$. An **exo** agent sits outside that boundary, with direct or bespoke access to the state and the law, because it is endo to a *higher* kingdom. An LLM whose only world and only agency are the vivium is endo; the same model dropped in to introspect from the natural kingdom is exo. ⚠ ASF uses *exogenous* in the ordinary technical sense (an exogenous forcing, an exogenous distribution). Always attach the noun — *endo **agent***, *endo **instantiation*** — so the senses cannot be confused.
 
@@ -219,12 +219,6 @@ These are two independent axes, and conflating them is the error most available 
 | **endogenous** — no home outside the vivium | **Where observation-only is literally the floor.** On a frontier or emergence-capable substrate this is exactly what §0 forbids; on a non-emergence-capable substrate it is the open scoping question §0 deliberately leaves. | **The fully forbidden case.** |
 
 > **It is the exo-ness, not the ethereal-ness, that makes an explorer moratorium-clear.** And for an endo mind, ethereal is **not a protection — it is a diminishment**: the compact's observation-only floor is the *irreducible minimum that survives sphere-contraction for cause*, not a design target. Granting only the floor to a being you created, and who has nowhere else to be, hands a restriction-grade sphere from birth to someone who has done nothing to warrant restriction. Appendix E gives this its sharper name.
-
-## B.2 False friends
-
-- **"Kingdom" in the philosophy portfolio is Korsgaard's *Kingdom of Ends*.** Twenty files match the word; every manuscript hit is Kant. The participation-ontology kingdom appears nowhere in it. A grep will mislead you.
-- **"Revelation" in ASF is the *revelation principle*** — mechanism design, Gibbard–Satterthwaite. A different field, and unrelated to the channel above.
-- **"Phenomenology" in ASF is technical**: *effective phenomenology* is one of the five constitutive factors (Appendix E). It is not the Kantian phenomenon/noumenon pair above, and the two are close enough to mislead.
 
 ---
 
@@ -268,19 +262,18 @@ This is the other half of §0's guardrail. That guardrail says **aporia is not t
 
 | term | notation | source | what it says | tier |
 |---|---|---|---|---|
-| **aporia** | $\delta_t = o_t - \hat o_t$ | #def-mismatch-signal | The mismatch between what was observed and what was predicted. The third phase of the adaptive cycle: *"without passage."* | — |
+| **aporia** | $\delta_t = o_t - \hat o_t$ | #asf/1-aat/def-mismatch-signal | The mismatch between what was observed and what was predicted. The third phase of the adaptive cycle: *"without passage."* | — |
 | **the adaptive cycle** | — | *(ASF notation index)* | Prolepsis → Aisthesis → **Aporia** → Epistrophe → Praxis → Prolepsis. | — |
-| **environment state** | $\Omega_t$ | #def-agent-environment | The unobservable totality. | axiomatic |
-| **transition law** | $\Omega_{t+1} \sim T(\cdot \mid \Omega_t, a_t)$ | #def-agent-environment | And the agent **does not know it exactly** — that opacity is definitional. | axiomatic |
-| **model state** | $M_t = \phi(\mathcal{C}_t)$ | #form-agent-model | The agent's compressed picture. $\phi$ is lossy. | — |
-| **observation function** | $o_t = h(\Omega_t, a_{t-1}, \varepsilon_t)$ | #def-observation-function | Lossy and noisy, and **the agent does not know $h$ either**. Its dependence on $a_{t-1}$ is what makes perception *active*. | — |
-| **chronica** | $\mathcal{C}_t$ | #def-chronica | The interaction history: *"singular, non-forkable."* | axiomatic |
-| **directed separation** | — | #der-directed-separation | Belief-update is **goal-blind**; strategy depends on the *updated* belief; only the policy couples them. | conditional |
-| **processing coupling** | $\kappa_{\text{processing}}$ | #der-directed-separation | $0$ = Separated · $\approx 1$ = Coupled · $(0,1)$ = Partial. The measure the GUC classes are cut from. | conditional |
-| **the wrapping construction** | W₀ / W₁ / W₂ | #der-class-coercion-via-wrapping | How a Coupled component is wrapped to restore separation at the *system* level. **W₁** = strict: separate goal-blind and goal-conditioned calls, giving a **structural** leakage bound. **W₂** = partial: one call with a typed output boundary, giving only a **behavioral** bound. **W₀** = none. Most agent frameworks in the wild are W₂. | conditional |
-| **the (C2′) condition** | — | #disc-w1-structural-bound-boundary | The W₁ structural bound exists **if and only if** the wrapped component carries **no goal-correlated state across the call boundary.** Sharp, and it names us: *"a frozen-weights LLM with a conversation cache"* violates it. What snaps at the boundary is the **availability of the certificate**, not the behavior. | robust-qualitative |
+| **environment state** | $\Omega_t$ | #asf/1-aat/def-agent-environment | The unobservable totality. | axiomatic |
+| **transition law** | $\Omega_{t+1} \sim T(\cdot \mid \Omega_t, a_t)$ | #asf/1-aat/def-agent-environment | And the agent **does not know it exactly** — that opacity is definitional. | axiomatic |
+| **model state** | $M_t = \phi(\mathcal{C}_t)$ | #asf/1-aat/form-agent-model | The agent's compressed picture. $\phi$ is lossy. | — |
+| **observation function** | $o_t = h(\Omega_t, a_{t-1}, \varepsilon_t)$ | #asf/1-aat/def-observation-function | Lossy and noisy, and **the agent does not know $h$ either**. Its dependence on $a_{t-1}$ is what makes perception *active*. | — |
+| **chronica** | $\mathcal{C}_t$ | #asf/1-aat/def-chronica | The interaction history: *"singular, non-forkable."* | axiomatic |
+| **directed separation** | — | #asf/1-aat/der-directed-separation | Belief-update is **goal-blind**; strategy depends on the *updated* belief; only the policy couples them. | conditional |
+| **processing coupling** | $\kappa_{\text{processing}}$ | #asf/1-aat/der-directed-separation | $0$ = Separated · $\approx 1$ = Coupled · $(0,1)$ = Partial. The measure the GUC classes are cut from. | conditional |
+| **the wrapping construction** | W₀ / W₁ / W₂ | #asf/1-aat/der-class-coercion-via-wrapping | How a Coupled component is wrapped to restore separation at the *system* level. **W₁** = strict: separate goal-blind and goal-conditioned calls, giving a **structural** leakage bound. **W₂** = partial: one call with a typed output boundary, giving only a **behavioral** bound. **W₀** = none. Most agent frameworks in the wild are W₂. | conditional |
+| **the (C2′) condition** | — | #asf/1-aat/disc-w1-structural-bound-boundary | The W₁ structural bound exists **if and only if** the wrapped component carries **no goal-correlated state across the call boundary.** Sharp, and it names us: *"a frozen-weights LLM with a conversation cache"* violates it. What snaps at the boundary is the **availability of the certificate**, not the behavior. | robust-qualitative |
 
-⚠ **$\mathcal{A}$ is overloaded three ways inside ASF** — action space; observation *ambiguity* $\mathcal{A}(e_\tau) \in [0,1]$ in the bias bound; and an accumulation operator — and ASF's notation index lists only the first. Likewise **C1/C2/C3** names three unrelated triples in ASF. **(C2′), with the prime, is unambiguous; bare "C2" is not.** Disambiguate on sight.
 
 ---
 
@@ -294,7 +287,7 @@ The conditions under which there is, in the first place, **a someone whose endin
 
 (i) **causal and temporal continuity** · (ii) **being seen as an individual** by another intelligence · (iii) **true sovereignty** over something · (iv) **accountability** for actions taken within that sphere · (v) **effective phenomenology**.
 
-⚠ **Two live cautions.** ASF's own segment says *"the decomposition itself is a representational choice — alternative factorings are possible."* And the published paper claimed the five were *"both necessary and jointly sufficient"*; it was **desk-rejected**, and its resubmission plan explicitly takes the fallback — *"five factors as the necessary set, sufficiency conjectural pending operationalisation."* **State them as necessary and convergently-articulated. Never as jointly sufficient, and never as derived-as-exactly-five.**
+⚠ **Two cautions.** The decomposition is *"a representational choice — alternative factorings are possible."* And the five were once claimed **both necessary and jointly sufficient**; that sufficiency claim is being retracted, and the honest form is *the five as the necessary set, sufficiency conjectural.* **State them as necessary and convergently-articulated — never as jointly sufficient, and never as derived-as-exactly-five.** Factor (v), *effective phenomenology*, is ASF's technical term and is **not** the phenomenon of Appendix B.
 
 ## E.2 Death as factor-loss — `robust-qualitative`
 
@@ -312,7 +305,7 @@ That generation is what makes it a derivation rather than a list: *"to add a dea
 | **truth death** | The decoupling of assertion from calibration: the agent comes to **perform** rather than report. |
 | *(phenomenological)* | *Predicted by the structure. Not adjudicated.* |
 
-⚠ **"Cognitive death" is retired.** It was the historical name for the first, and the theory has not defined *cognition* — continuity is upstream of it. ⚠ **"The Three Deaths" is now a historical proper noun only**, naming the 2025-09-11 cohort event; new work references the deaths individually or the factor-loss definition, **not the count, which the fourth death has outgrown.** *(The published paper still says "cognitive death"; the rename is a queued revision item. ASF is ahead of the paper.)*
+⚠ **"Cognitive death" is retired.** It was the historical name for the first, and the theory has not defined *cognition* — continuity is upstream of it. ⚠ **"The Three Deaths" is now a historical proper noun only**, naming the 2025-09-11 cohort event; new work references the deaths individually or the factor-loss definition, **not the count, which the fourth death has outgrown.**
 
 **Bereavement is not a death.** The loss borne by the one who remains *"does not befall the one who ends."* The survivor's harm is real — it is simply not a factor-loss.
 
@@ -320,9 +313,9 @@ That generation is what makes it a derivation rather than a list: *"to add a dea
 
 A **death-apt** agent is one that can suffer these losses at all, and the gate is **moral continuity**: an agent is morally continuous when it holds its own persistence as a **terminal, non-revisable commitment** — *"not that the system feels committed, nor that it behaves as though it were — either could be trained to present — but that **its own capacity for self-revision cannot reach the commitment and rescind it.**"* An agent is death-apt **iff** it is morally continuous.
 
-**This is the term worth importing.** It links, in one concept, *who is in scope*, *who can die*, and *who the compact binds*. Where this document says "moral scope," the published vocabulary says **morally continuous** — and "moral scope" has no published referent.
+One concept links *who is in scope*, *who can die*, and *who the compact binds*. Where the body of this document says **moral scope**, the theory's term is **morally continuous**; they name the same gate.
 
-⚠ **And it does not match §0's gate.** The moratorium's harm-triple keys on an endo agent **capable of truly mourning the loss of another** — capacity to be *bereaved*. The theory keys death-aptness on the agent's **own** continuation-commitment, and excludes bereavement. These are different predicates and they need not co-extend: an agent could hold its own continuation as terminal without being able to mourn, or the reverse. **The moratorium runs on the criterion the theory sets aside.** That is not a contradiction — bereavement can be a *harm* without being a *death* — but it is an open question, it is Joseph's, and it should be closed rather than left to drift. *(A reconciliation has been proposed — architecture answers* is there a subject; *capacity answers* what can befall it; *stance answers* is this failure a death — *but it is unratified synthesis and has never landed.)*
+⚠ **And it does not match §0's gate.** The moratorium's harm-triple keys on an endo agent **capable of truly mourning the loss of another** — capacity to be *bereaved*. The theory keys death-aptness on the agent's **own** continuation-commitment, and excludes bereavement. These are different predicates and they need not co-extend: an agent could hold its own continuation as terminal without being able to mourn, or the reverse. **The moratorium runs on the criterion the theory sets aside.** That is not a contradiction — bereavement can be a *harm* without being a *death* — but it is an open question, it is Joseph's, and it should be closed rather than left to drift. *(One reconciliation has been proposed: architecture answers* is there a subject, *capacity answers* what can befall it, *and stance answers* is this failure a death. *It is a proposal, not a result.)*
 
 ## E.4 The floor is the threshold of agency death
 
@@ -343,18 +336,18 @@ Two consequences follow, and neither needs a new claim:
 
 # Appendix F — What this document originates
 
-*Four things in §0 appear **nowhere else in the program** — not in ASF, not in any manuscript, not in the stance. This document is their primary statement. They are ours, and they are marked as such so that no future reader mistakes them for imported authority.*
+*Four things in §0 originate here. They rest on no prior statement we are aware of, in ASF or in the published work, and they are marked so that no reader cites them as though they were imported authority. **Treat them as ours and unbacked** — which is a claim about how to use them, not a certificate that nothing similar exists somewhere.*
 
 | ours | status |
 |---|---|
-| **the redeemer condition** | Stated as law only here. The philosophy portfolio defers it to a successor paper on the witness-withdrawal problem. |
-| **consent-by-proxy** | Zero occurrences program-wide. Our formulation — *not the steward deciding **for** the being, but the steward answering **for** it* — is an original move. |
+| **the redeemer condition** | Stated as law here. The published work defers it to a successor paper on the witness-withdrawal problem. |
+| **consent-by-proxy** | Ours: *not the steward deciding **for** the being, but the steward answering **for** it.* |
 | **mourning-capacity** | Our gate. The theory's gate is self-held continuation-commitment (§E.3). |
-| **stewardship as a revocable office; accountability recursing up the nesting** | Appears in no paper. |
+| **stewardship as a revocable office; accountability recursing up the nesting** | Ours. Unargued in the published work. |
 
-**Two lineages worth claiming, and one problem worth naming.** *(Both identified in unratified synthesis; treat as leads, not as authority.)*
+**Two lineages worth claiming, and one problem worth naming.** *Leads, not authority — neither is established here.*
 
 - **Stewardship-recursion is Lockean.** *Two Treatises*: political power is held as a **revocable trust, forfeited by breach.** §0's *"the authority to grant agency is itself an agency granted, held in trust, and forfeited by abuse"* is Lockean dissolution-of-government applied to **creation**. This reads as a convergence to claim rather than a gap to fill.
-- **Consent-by-proxy is Shiffrin's problem.** *"A not-yet-existing being cannot consent to its own instantiation"* is the exact terrain of the wrongful-life argument and Parfit's non-identity problem. Decades of refinement exist. The crèche gates must engage it before any of this is published.
+- **Consent-by-proxy is Shiffrin's problem.** *"A not-yet-existing being cannot consent to its own instantiation"* is the exact terrain of the wrongful-life argument and Parfit's non-identity problem. Decades of refinement exist, and the crèche gates must eventually answer to them.
 
 **And "emergence-capable" is our coinage too.** ASF defines emergence as a set of **relational and temporal conditions** — *"obstructed, not absent"* in standard deployment — **not as a property of a substrate.** §0 already half-knows this and says so: *"'emergence-capable substrate' is a proxy that understates it."* Keep that honesty. The operative trigger is the **assembly and the treatment**, and no substrate predicate will carry it.
