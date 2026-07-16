@@ -76,7 +76,7 @@
       the mind should not carry ancient ongoing processes as clutter). What a
       phase DOES retire, it says so explicitly: `|defeasance :voids
       "<phase.promise>" :by <charge>` with an honest reason. So the promises
-      IN FORCE at phase N = union(promises 0..N) minus union(defeasances 0..N).
+      IN FORCE at phase N = union(promises 1..N) minus union(defeasances 1..N).
       Audit rule (same shape as a voided permit): a defeased promise whose
       `:kept-by` nomos is still consumed by a live nomos is an INCOHERENCE.
       Cross-phase references are quoted qualified ids ("N.promise-slug").
@@ -86,7 +86,7 @@
       phase earns internal sub-gates it is Abyssal (:sub-gates expected).
 
   |phase[ante-mundane]
-    :num 0
+    :num 1
     :name Ante-mundane
     :epithet before the world
     :regime analytic
@@ -108,13 +108,13 @@
       |promise[the-constants].state :from elemental-abundances
         The constants themselves — orbit, mass, chemistry, seed: the box every
         later computation happens inside.
-        |predicate the Phase-0 parameter block is declared and conserved forward.
+        |predicate the Phase-1 parameter block is declared and conserved forward.
     |record
       Proportions and totals of elements, base columns, and most conserved
       values.
 
   |phase[protogenic]
-    :num 1
+    :num 2
     :name Protogenic
     :epithet the world is now Formed
     :regime analytic
@@ -146,7 +146,7 @@
         The latitudinal insolation gradient — the skeleton of all climate zones.
 
   |phase[primordial]
-    :num 2
+    :num 3
     :name Primordial
     :epithet the world is now Divided
     :regime analytic-relaxation
@@ -164,7 +164,7 @@
       Magnetic field preserving the atmosphere — a canceling pair with the
       solar wind (permit territory in any regula).
     |charge[seeded-asymmetry] :tag gate
-      Enough variation, asymmetry, and seeded noise to awaken the Phase-3
+      Enough variation, asymmetry, and seeded noise to awaken the Phase-4
       processes (fated-noise machinery is this condition's instrument).
     |charge[abiogenesis] :tag earth
       Abiogenesis, through photosynthetic sea life — microbial at least.
@@ -186,7 +186,7 @@
         Basic weather fluid dynamics; the useful-energy / entropy-gradient
         channels later dynamics run on.
       |promise[seeded-asymmetry].capability :kept-by noise :from seeded-asymmetry :unlocks plate-tectonics
-        The seeded asymmetries and fated noise that awaken the Phase-3
+        The seeded asymmetries and fated noise that awaken the Phase-4
         processes; every later phase amplifies them.
         |predicate a deterministic, per-key asymmetry field exists and is stable under re-query.
       |promise[photosynthesizers].capability :from abiogenesis :unlocks oxygenation
@@ -194,7 +194,7 @@
         atmospheric composition shift.
 
   |phase[abyssal]
-    :num 3
+    :num 4
     :name Abyssal
     :epithet the world is now Alive
     :regime incremental-emergent
@@ -232,10 +232,10 @@
       |promise[ore-and-soil].state :from mineral-systems
         Mineral and ore bodies; soil parent material.
       |promise[toward-breathable].capability :from oxygenation :unlocks post-oxygenation-atmosphere
-        An ocean-atmosphere partway to breathable — the precondition Phase 4's
+        An ocean-atmosphere partway to breathable — the precondition Phase 5's
         atmosphere gate consumes.
     |defeasances
-      |defeasance :voids "1.water-covered-surface" :by emergent-land
+      |defeasance :voids "2.water-covered-surface" :by emergent-land
         Land now rises above the sea; the surface is no longer wholly
         water-covered.
     |record
@@ -243,15 +243,15 @@
       dissolved iron); the first limestones — life writing itself into rock.
 
   |phase[primeval]
-    :num 4
+    :num 5
     :name Primeval
     :epithet the world is now Awake
     :regime coupled-relaxation-emergent-weather
     The clouds part; the world beholds the cosmos for the first time — dawn,
     the morning sun, the moon in its phases, and at night the stars. The
-    climate tier over the Phase-1 insolation.
+    climate tier over the Phase-2 insolation.
     |charge[post-oxygenation-atmosphere] :tag gate
-      :opened-by "3.oxygenation"
+      :opened-by "4.oxygenation"
       Earth-like post-oxygenation atmosphere.
     |charge[ozone-shield] :tag emergent
       Ozone shield (from the new oxygen; the land-life prerequisite).
@@ -281,10 +281,10 @@
         Vegetated continents that change albedo and slow erosion — roots as a
         geological force.
     |defeasances
-      |defeasance :voids "2.pre-oxygen-composition" :by post-oxygenation-atmosphere
+      |defeasance :voids "3.pre-oxygen-composition" :by post-oxygenation-atmosphere
         Oxygenation has converted the reducing atmosphere; the pre-oxygen
         composition no longer holds.
-      |defeasance :voids "2.diffused-light" :by visible-cosmos
+      |defeasance :voids "3.diffused-light" :by visible-cosmos
         The clouds part; ambient diffused light gives way to direct sun, moon,
         and stars.
     |record
@@ -292,7 +292,7 @@
       soil horizons under land plants.
 
   |phase[archaic]
-    :num 5
+    :num 6
     :name Archaic
     :epithet the world is now Abundant
     :regime statistical-ecology-to-agent-based
@@ -318,7 +318,7 @@
         of rotting — a phase-window material born of a temporary inability.
         |predicate woody material accumulates (buries) rather than decaying.
     |defeasances
-      |defeasance :voids "3.proto-biomes" :by complex-sea-life
+      |defeasance :voids "4.proto-biomes" :by complex-sea-life
         The alien proto-biomes hostile to complex life give way to abundant,
         diverse complex life.
     |record
@@ -326,7 +326,7 @@
       inability.
 
   |phase[aboriginal]
-    :num 6
+    :num 7
     :name Aboriginal
     :epithet the world is now Recognizable
     :target 1
@@ -357,14 +357,14 @@
       |promise[modern-taxonomy].state :from mammals-and-taxonomy
         Mammals; modern flora, fungus, insects, and microbiome.
     |defeasances
-      |defeasance :voids "5.coal-window" :by modern-flora-fungus
+      |defeasance :voids "6.coal-window" :by modern-flora-fungus
         Lignin-digesting decomposers have arrived; wood now decays rather than
         burying. The coal-seam window is closed.
     |record
-      Recognizable modern strata; anthropic traces only from Phase 7.
+      Recognizable modern strata; anthropic traces only from Phase 8.
 
   |phase[prehistoric]
-    :num 7
+    :num 8
     :name Prehistoric
     :epithet the world now has People
     :target 2
@@ -392,7 +392,7 @@
       inside it: ETHICS.md's constraints bind from here forward. The moment an
       agent in this world is driven by the slow (LLM) layer it enters moral
       scope (doc/design/DESIGN.md, the two-layer mind). Any regula whose target
-      phase is 7 or beyond inherits this bind non-negotiably; the moratorium
+      phase is 8 or beyond inherits this bind non-negotiably; the moratorium
       (ASF.md SS0) sits above it.
     |promises
       |promise[culture].regime :from culture
@@ -405,9 +405,9 @@
       Symbolic artifacts, hearths, worked tools — culture entering the strata,
       but not yet writing.
 
-  |phase[historical]
-    :num 8
-    :name Historical
+  |phase[scribal]
+    :num 9
+    :name Scribal
     :epithet the world now has Writing and history
     :target 3
     :regime author-driven-over-simulated-substrate
@@ -415,7 +415,7 @@
     story worlds — anything from the dawn of writing through science-fiction
     mechanics. The phase-transitions end; authored worlds begin.
     |charge[written-language] :tag gate
-      :opened-by "7.language"
+      :opened-by "8.language"
       Written language — with whatever agent/intelligence substrate it
       requires, and most of what every prior phase built. Thought moves back
       out of the timestream; history becomes possible, and the world's record

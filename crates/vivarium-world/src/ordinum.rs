@@ -261,7 +261,7 @@ mod tests {
     fn parses_the_shipped_ordinum() {
         let o = terrestris();
         assert!(o.phases.len() >= 9, "expected the full ladder, got {}", o.phases.len());
-        let ab = o.phase(3).expect("abyssal");
+        let ab = o.phase(4).expect("abyssal");
         assert_eq!(ab.name, "Abyssal");
         assert!(ab.charges.iter().any(|c| c.slug == "emergent-land" && c.tag == "gate"));
     }
@@ -272,7 +272,7 @@ mod tests {
         // ITSELF — has a falsifiable predicate but NO nomos claims to keep it. That is
         // the #1 gap in the ladder, and it should be what drives the next nomos.
         let o = terrestris();
-        let ab = o.phase(3).unwrap();
+        let ab = o.phase(4).unwrap();
         let land = ab.promises.iter().find(|p| p.slug == "emerged-land").expect("emerged-land");
         assert!(land.predicate.is_some(), "it is specified — something could convict it");
         assert_eq!(land.kept_by, None, "and NOTHING keeps it — the gap the ladder is pointing at");
@@ -284,7 +284,7 @@ mod tests {
         // And the cross-check that makes the report trustworthy: a `:kept-by` must name
         // a nomos the nomotheke actually has, or the ladder is lying about its coverage.
         let o = terrestris();
-        let ab = o.phase(3).unwrap();
+        let ab = o.phase(4).unwrap();
         let ero = ab.promises.iter().find(|p| p.slug == "erosion-substrate").unwrap();
         assert_eq!(ero.kept_by.as_deref(), Some("erosion-tile"));
         assert_eq!(ero.maturity(), Maturity::Claimed, "erosion-tile is registered");

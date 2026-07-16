@@ -23,7 +23,7 @@
 //! Controls: drag spin (inertia) · wheel / -/= zoom · arrows spin · [ ] level ·
 //!           A auto-level · X relief factor · ,/. scrub solar hour · N/M scrub
 //!           day-of-year · P play the diurnal cycle · Y headlight-vs-ephemeris ·
-//!           R reset · Esc quit. The sun is the REAL Phase-1 ephemeris by
+//!           R reset · Esc quit. The sun is the REAL Phase-2 ephemeris by
 //!           default (terminator, seasons, polar day/night from planet.rs's
 //!           identities); the ethereal viewer scrubs time freely — a pure view
 //!           freedom, since the analytic regime makes any moment queryable.
@@ -483,12 +483,12 @@ impl Default for Orbit {
     }
 }
 
-/// Ethereal time-freedom over the Phase-1 sky (Joseph's ask, 2026-07-10). The
+/// Ethereal time-freedom over the Phase-2 sky (Joseph's ask, 2026-07-10). The
 /// analytic regime means ANY moment is queryable — the ephemeris is a pure
 /// function of (day, hour), so scrubbing time is a *view* freedom touching no
 /// world state ("declare causally, materialize lazily" cashing out as UX). An
-/// ethereal exo viewer sees the sun even though the in-world Phase-2 sky is
-/// diffuse (the clouds part at Phase 4): noumenal access, honestly labeled.
+/// ethereal exo viewer sees the sun even though the in-world Phase-3 sky is
+/// diffuse (the clouds part at Phase 5): noumenal access, honestly labeled.
 #[derive(Resource)]
 struct SunEphemeris {
     /// Day of year, 0..365.25 — 0 = northern vernal equinox (planet.rs convention).
@@ -724,7 +724,7 @@ fn input_update(
     }
     orbit.pitch = orbit.pitch.clamp(-1.55, 1.55);
 
-    // Ethereal time scrub (the Phase-1 sky): ,/. hour · N/M day · P play · Y headlight.
+    // Ethereal time scrub (the Phase-2 sky): ,/. hour · N/M day · P play · Y headlight.
     if keys.pressed(KeyCode::Comma) {
         eph.hour -= 6.0 * dt;
     }
@@ -889,7 +889,7 @@ fn camera_update(
         } else {
             // The REAL sky: light travels from the subsolar direction toward the
             // planet, so the terminator, the seasons, and polar day/night are the
-            // planet's actual Phase-1 rhythms, not stagecraft.
+            // planet's actual Phase-2 rhythms, not stagecraft.
             *s = Transform::default().looking_to(-sun_world_dir(&eph), Vec3::Y);
         }
     }

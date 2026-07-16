@@ -8,6 +8,15 @@
 > ordinum was authorized from. Its Design notes live on in `LEXICON.udon` §1; its
 > Algorithms & approaches ledger moved to `doc/design/DESIGN-SYSTEMS.md`. Do not
 > tactically depend on this file — read the ordinum.
+>
+> **⚠ Diverged from the ordinum since archiving (Joseph, 2026-07-16):** the live
+> ladder is now **1-indexed** (Ante-Mundane = Phase 1 … final phase = Phase 9;
+> every phase number in this file reads one lower than the live one), and the
+> final phase — "Phase 8 — Historical" below — is renamed **Scribal** (the
+> banner "Historical" implied accuracy-to-Earth; the boundary, writing-onward,
+> is unchanged). This file also carries material that never made it into the
+> ordinum, so it will be revisited; the divergence list above is expected to
+> grow until it is.
 
 *(Joseph's draft, 2026-07-03; second pass same day; boundary terminology settled 2026-07-04. **Phase** = a span in which a set of macro systems runs until converged; **phase-transition** = the regime-change at a **phase-gate**, where a phase's **Charge** (what it must deliver) is met and the next phase's systems spin up. "Phase" avoids three collisions on "epoch": geology's, the erosion solver's step unit, and ordinary usage. The boundary's earlier working name — "checkpoint" — is retired: it bundled three distinct things now named apart (the gate, the cached **memo**, the **Record**) and collided with ASF's agent-state checkpoint. See the plumbing note in Design notes.)*
 

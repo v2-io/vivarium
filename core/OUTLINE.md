@@ -81,5 +81,5 @@ As the segments for this outline are only beginning to be fleshed out, the quest
 
 #### 8. **Prehistoric**, e.g., **Hominid** & Holocene-like dynamics
 
-#### 9. **Modern**, e.g., Writing & Game-world-like Targets
+#### 9. **Scribal**, e.g., Writing & Game-world-like Targets
 

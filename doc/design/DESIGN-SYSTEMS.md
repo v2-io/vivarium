@@ -187,7 +187,7 @@ through* this? That is why we may run tectonics crude forever but must get river
 and biomes right — an agent fords a river and forages a biome; none has ever
 touched mantle convection. Work backward from what agents touch.
 
-### Geology & landscape (Phase 3, mostly)
+### Geology & landscape (Phase 4, mostly)
 
 | process | approach | physics | cost | agent-fidelity | status |
 | --- | --- | --- | --- | --- | --- |
@@ -199,7 +199,7 @@ touched mantle convection. Work backward from what agents touch.
 | hillslope creep (diffusion) | P | hi | O(n) | med | built |
 | glaciation · volcanism · karst · aeolian · coastal | P/S | med | varies | med (landforms) | — |
 
-### Water & sediment (Phase 3 — today's earned detail)
+### Water & sediment (Phase 4 — today's earned detail)
 
 | process | approach | physics | cost | agent-fidelity | status |
 | --- | --- | --- | --- | --- | --- |
@@ -214,7 +214,7 @@ touched mantle convection. Work backward from what agents touch.
 | hyperconcentrated / Bingham + flow-bulking | P | med | O(n) | med (flash-flood hazard) | named |
 | analytic hydrological init | A + R | hi | O(n log n) | indirect (clean worlds) | planned |
 
-### Climate & weather (Phase 2 base, Phase 4 modern) — the next system
+### Climate & weather (Phase 3 base, Phase 5 modern) — the next system
 
 | process | approach | physics | cost | agent-fidelity | status |
 | --- | --- | --- | --- | --- | --- |

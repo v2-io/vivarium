@@ -38,14 +38,14 @@
 /// **Seeded crustal asymmetry** (dimensionless) — the fated heterogeneity the world is
 /// divided by. Produced by the `noise` nomos (the KRNG: a pure function of (seed, key)),
 /// consumed by the surface prior which builds relief on it. This keeps the ordinum's
-/// Phase-2 `seeded-asymmetry` promise — found undeclared 2026-07-12 by the ordinum audit.
+/// Phase-3 `seeded-asymmetry` promise — found undeclared 2026-07-12 by the ordinum audit.
 pub const SEEDED_ASYMMETRY: &str = "seeded crustal asymmetry (dimensionless)";
 
 /// The surface-prior elevation field the initial-topography produces (m). Consumed by erosion.
 pub const SURFACE_ELEVATION: &str = "surface elevation field (m)";
 
 /// Top-of-atmosphere insolation (W/m²) — produced by the `planet` nomos from tilt,
-/// spin and orbit. The ordinum's Phase-1 `axial-rhythms` promise is kept by this.
+/// spin and orbit. The ordinum's Phase-2 `axial-rhythms` promise is kept by this.
 pub const INSOLATION: &str = "insolation (W/m2)";
 
 /// **Emerged land** — surface standing above sea level (m). The ordinum's Abyssal
@@ -55,7 +55,7 @@ pub const INSOLATION: &str = "insolation (W/m2)";
 ///
 /// **Fluvial erosion CONSUMES this** — you cannot carve a landscape that is under
 /// water. Nothing produces it yet, which is the honest truth: the world is in its
-/// Phase-1 `water-covered-surface` state, and Abyssal has not yet earned its land.
+/// Phase-2 `water-covered-surface` state, and Abyssal has not yet earned its land.
 /// Declaring the need is what makes the flux web tell that truth: the audit reports
 /// erosion's requirement as **UNMET**, so the world is mechanically unrunnable for
 /// erosion rather than silently no-op'ing on seabed (which is exactly what it was

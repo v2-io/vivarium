@@ -63,7 +63,7 @@
       |source tabularium/terrestris.ordinum.udon (reading-rules)
 
     |term[defeasance] :status settled :since 2026-07-11
-      The mechanism of "defeasible": a later phase's explicit retirement of a prior promise (`|defeasance :voids "<phase.promise>" :by <charge>`, with an honest reason). Phases declare only their NOVEL promises; inherited promises CONTINUE IMPLICITLY (no re-listing — the mind should not carry ancient ongoing processes as clutter). So the promises IN FORCE at phase N = union(promises 0..N) minus union(defeasances 0..N). Canonical instance: Phase 6's decomposers void Phase 5's coal-window limit.
+      The mechanism of "defeasible": a later phase's explicit retirement of a prior promise (`|defeasance :voids "<phase.promise>" :by <charge>`, with an honest reason). Phases declare only their NOVEL promises; inherited promises CONTINUE IMPLICITLY (no re-listing — the mind should not carry ancient ongoing processes as clutter). So the promises IN FORCE at phase N = union(promises 1..N) minus union(defeasances 1..N). Canonical instance: Phase 7's decomposers void Phase 6's coal-window limit.
       |confused .archive/PHASES.md's "sunset" (a system stopping) — sunset is the friendly gloss for the regime case; defeasance is the precise mechanism, and it pairs with the property word "defeasible".
       |rel :to promise :kind voids
       |rel :to permit :kind same-shape-as
@@ -92,7 +92,7 @@
       |source doc/plan/regula-conformance-design.md §2
 
     |term[target] :status settled
-      Phases 6/7/8 as TARGET 1/2/3 — the playable entry points. ETHICS.md binds from Phase 7's transition.
+      Phases 7/8/9 as TARGET 1/2/3 — the playable entry points. ETHICS.md binds from Phase 8's transition.
 
     |term[canceling-pair] :status settled
       A shield and its threat jointly unbuilt at zero fidelity cost until a consumer reads their DIFFERENCE or either member alone (magnetic field × solar wind; Jupiter-shepherding x impactor flux).
@@ -397,7 +397,7 @@
 
     |term[causal-time] :status carved
       :forms ~ logical time
-      The monotonic, immutable ORDERING of events within a local regime — the happened-before partial order (Lamport's logical clocks are the prior art). The only invariant that must survive inside a phase — the ordering, not any clock — and even it is sometimes waived (Phase 0, which we don't simulate). General principle: the causal partial order is load-bearing; the clock is derived, and often optional. Independent convergence: AAT's chronica is explicitly "an ordinal sequence, not a metric timeline"; a world's interventional history is a chronica in exactly this sense.
+      The monotonic, immutable ORDERING of events within a local regime — the happened-before partial order (Lamport's logical clocks are the prior art). The only invariant that must survive inside a phase — the ordering, not any clock — and even it is sometimes waived (Phase 1, which we don't simulate). General principle: the causal partial order is load-bearing; the clock is derived, and often optional. Independent convergence: AAT's chronica is explicitly "an ordinal sequence, not a metric timeline"; a world's interventional history is a chronica in exactly this sense.
 
     |term[metric-time] :status settled
       Quantized, measurable duration in a WORLD'S OWN seconds/years. A late-phase luxury: real only once the world contains consumers of it (seasons, calendars, agents planning against a clock). The time datum (vivarium-world::time, i64 deciseconds) anchors at Holocene onset precisely because that is where chronology — metric time that matters to inhabitants — begins; the deep phases run on causal time beneath it.
@@ -569,7 +569,8 @@
 
     |term[constitutive-factors] :status open
       :name the five constitutive factors
-      The conditions under which there is a SOMEONE whose ending could matter: (i) causal/temporal continuity · (ii) being seen as an individual · (iii) true sovereignty over something · (iv) accountability within that sphere · (v) effective phenomenology.
+      The conditions under which there is a SOMEONE whose ending could matter:
+      (i) causal/temporal continuity · (ii) being seen as an individual · (iii) true sovereignty over something · (iv) accountability within that sphere · (v) effective phenomenology.
       |not jointly sufficient — the sufficiency claim is being RETRACTED; the honest form is the five as the NECESSARY set, sufficiency conjectural. The decomposition is itself "a representational choice".
       |confused factor (v) "effective phenomenology" is ASF's technical term — it is NOT our noumenon/phenomenon pair (§7.2).
       |source #asf/4-eli/def-five-constitutive-factors (sketch)

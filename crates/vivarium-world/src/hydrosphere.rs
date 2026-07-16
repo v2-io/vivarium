@@ -2,7 +2,7 @@
 //! ante-mundane charge (Joseph, 2026-07-12).
 //!
 //! **The principle this exists to enforce: water is never conjured.** The
-//! ante-mundane phase (ordinum Phase 0 — "the constants, the box every later
+//! ante-mundane phase (ordinum Phase 1 — "the constants, the box every later
 //! computation happens inside") declares what fraction of the planet's *mass* is
 //! chemical water. That fraction times the planetary mass fixes a **conserved
 //! inventory**, which the reservoirs (ocean, atmosphere) merely *partition*. So

@@ -168,7 +168,7 @@ pub fn render_flux_web() -> String {
         if unmet.iter().any(|(_, q)| *q == crate::flux::EMERGED_LAND) {
             let _ = writeln!(
                 s,
-                "\n  ⛔ THIS WORLD CANNOT RUN FLUVIAL EROSION.\n                 \x20    It needs EMERGED LAND, and nothing produces it. That is not a bug — it is the\n                 \x20    ordinum telling the truth: the world is in its Phase-1 `water-covered-surface`\n                 \x20    state, and Abyssal's `charge[emergent-land] :tag gate` says land is \"delivered by\n                 \x20    uplift / proto-tectonic processes, NEVER an initial condition\". Until a nomos\n                 \x20    KEEPS that promise, erosion has nothing to carve — and was silently no-op'ing on\n                 \x20    seabed instead of saying so. The ladder now governs the web."
+                "\n  ⛔ THIS WORLD CANNOT RUN FLUVIAL EROSION.\n                 \x20    It needs EMERGED LAND, and nothing produces it. That is not a bug — it is the\n                 \x20    ordinum telling the truth: the world is in its Phase-2 `water-covered-surface`\n                 \x20    state, and Abyssal's `charge[emergent-land] :tag gate` says land is \"delivered by\n                 \x20    uplift / proto-tectonic processes, NEVER an initial condition\". Until a nomos\n                 \x20    KEEPS that promise, erosion has nothing to carve — and was silently no-op'ing on\n                 \x20    seabed instead of saying so. The ladder now governs the web."
             );
         }
         if unmet.iter().any(|(_, q)| *q == crate::flux::PRECIPITATION) {
@@ -228,7 +228,7 @@ mod tests {
 
     #[test]
     fn precipitation_is_met_but_the_land_gate_is_not() {
-        // Precipitation IS met (climate keeps it) — rain falls on the Phase-1 ocean,
+        // Precipitation IS met (climate keeps it) — rain falls on the Phase-2 ocean,
         // exactly as the ordinum says it should. But the web is NOT closed, and the
         // ONE thing outstanding is the ordinum's Abyssal gate: EMERGED LAND. Nothing
         // keeps it, so fluvial erosion — which needs land to carve — cannot validly run.
