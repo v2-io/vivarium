@@ -161,14 +161,13 @@ identity uses to think with, not the identity itself.*
 This buys latency (LLM off the per-tick path), determinism (fast layer
 reproducible; LLM calls are logged, replayable perturbations), and cost.
 
-### Open empirical question (the first thing worth testing when we get there)
+### An open empirical question
 
 *Guess / unverified:* whether LLM-induced perturbations stay legible enough that
 adaptation can still be measured cleanly, or whether they inject enough noise to
-wreck identifiability. This is the interesting research question and it is
-empirical. Do not assume the answer; the vivarium-as-AAT-sandbox framing depends
-on it. (For a *recreational* round this need not be resolved — it only matters if
-the calibration-lab use is pursued.)
+wreck identifiability. It is empirical, and nothing here has tested it — do not
+assume the answer. What it bears on is the calibration-lab use specifically: a
+*recreational* round need not resolve it.
 
 ## Engine — decided: Bevy
 
