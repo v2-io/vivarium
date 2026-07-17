@@ -3,20 +3,22 @@
 > **⚠ ARCHIVED 2026-07-11 — this is the reportatio, not the live artifact.** The
 > live, codified phase floor is `tabularium/terrestris.ordinum.udon` (the
 > Terrestris ordinum), which supersedes this prose and pins it at
-> `:reportatio-pin 42621d5`. This file is kept, frozen and unedited (Bequest-era
+> `:reportatio-pin 42621d5`. This file is kept, its body frozen and unedited (Bequest-era
 > terms — the ordinum renamed Bequest→Promise), as the honest first-guess the
 > ordinum was authorized from. Its Design notes live on in `LEXICON.udon` §1; its
 > Algorithms & approaches ledger moved to `doc/design/DESIGN-SYSTEMS.md`. Do not
 > tactically depend on this file — read the ordinum.
 >
 > **⚠ Diverged from the ordinum since archiving (Joseph, 2026-07-16):** the live
-> ladder is now **1-indexed** (Ante-Mundane = Phase 1 … final phase = Phase 9;
-> every phase number in this file reads one lower than the live one), and the
-> final phase — "Phase 8 — Historical" below — is renamed **Scribal** (the
+> ladder is now **1-indexed** (Ante-Mundane = Phase 1 … final phase = Phase 9), so
+> this file's phase HEADINGS (`Phase 0 — Ante-mundane` … `Phase 8`) each read one
+> lower than the live number. Body references are not all in the ordinum's sense —
+> line 136 cites *"the draft's Phase 3"* — so check the sense before mapping one.
+> The final phase — "Phase 8 — Historical" below — is renamed **Scribal** (the
 > banner "Historical" implied accuracy-to-Earth; the boundary, writing-onward,
 > is unchanged). This file also carries material that never made it into the
-> ordinum, so it will be revisited; the divergence list above is expected to
-> grow until it is.
+> ordinum (Joseph, 2026-07-16), so it will be revisited; the divergence list above is
+> expected to grow until it is.
 
 *(Joseph's draft, 2026-07-03; second pass same day; boundary terminology settled 2026-07-04. **Phase** = a span in which a set of macro systems runs until converged; **phase-transition** = the regime-change at a **phase-gate**, where a phase's **Charge** (what it must deliver) is met and the next phase's systems spin up. "Phase" avoids three collisions on "epoch": geology's, the erosion solver's step unit, and ordinary usage. The boundary's earlier working name — "checkpoint" — is retired: it bundled three distinct things now named apart (the gate, the cached **memo**, the **Record**) and collided with ASF's agent-state checkpoint. See the plumbing note in Design notes.)*
 

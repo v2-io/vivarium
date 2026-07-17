@@ -6,9 +6,9 @@
 >
 > It is program law and it is not restated here — the ethics and the dictionary carry it, and an inlined copy is a fork (`FORMAT.md` §5). It binds §3 hardest, because §3 is agent-seam design: **read it before that section, not after.**
 
-> [!warning] **§§2–3 are one session's synthesis, and no decision record ratifies them.**
+> [!warning] **§§2–3 are one session's synthesis.**
 >
-> They were written 2026-07-04 out of a morning's reading of ASF — verified against the cited segments where noted, marked as hypothesis where not. What is settled is narrower: the AAT symbols are vivarium's symbols ( #lexicon/term/law · #lexicon/note/collision-ledger). The mapping below is a proposal — load-bearing, in use, and un-adjudicated.
+> They were written 2026-07-04 out of a morning's reading of ASF — verified against the cited segments where noted, marked as hypothesis where not. What is settled is narrower, and positively: the AAT symbols are vivarium's symbols ( #lexicon/term/law · #lexicon/note/collision-ledger). Treat the mapping itself as proposed unless you find a ratification for it.
 >
 > **The section numbers are identifiers.** `DECISIONS.decision-log.udon`, `doc/plan/`, and `nomotheke.rs` cite `ASF.md §2` / `§7.1` / `§7.5` by number, and this file has no slug scheme. Renumbering silently redirects them.
 

@@ -106,7 +106,7 @@ consequences follow exactly from causes.
 The engineering meaning of "truthful" here is precise and load-bearing:
 
 - **Determinism with no hidden state.** The whole world is a pure function of
-  `(seed, key)`. Randomness comes only from a stateless keyed generator,
+  `(seed, step-count)`. Randomness comes only from a seeded PRNG inside the core,
   never the OS clock or thread scheduling. Asserted as a test in `vivarium-core`
   (bit-identical replay). This is what lets an agent trust the world the way it
   trusts arithmetic — and what distinguishes a genuine tether from impersonation.
