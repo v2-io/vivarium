@@ -65,7 +65,7 @@ to T — i.e., a sits *outside* that boundary (a is Endo to a higher kingdom K�
 > while knowing truthfully what died and at what level of reality), and a **retained home estate** (the
 > avatar's death is bracketed and survivable; the exo agent's being is not exhausted by it). The endo mind
 > lacks all three: no consent to instantiation, META only by revelation, no home outside its kingdom (deaths
-> terminal). **The moratorium (ASF.md §0) targets exactly the all-three-absent case** — a *stronger* grounding
+> terminal). **The moratorium (`ETHICS.md`) targets exactly the all-three-absent case** — a *stronger* grounding
 > than "exo = no aporia." AAT-scope relocates correctly: the machinery applies whenever the info-loss boundary
 > is in force — constitutively for the endo mind, voluntarily for the exo inhabitant. (An exo agent remains a
 > full AAT agent in its own kingdom K′, consistent with nesting.)
@@ -249,7 +249,7 @@ Formally: override the fated-noise output (ASF §8, noise = fn(seed,key)) for ch
 valid trajectory under T. **Replay:** a decided input → world becomes Open-with-recorded-forcing → must be logged, tagged *lawful-steering*
 (not law-violating). [candidate name — Joseph's call; slots into the Revelation/Intercession/Granted-Agency/Inhabitation series.]
 
-**9.3 Harm-side implication (sharpens ASF.md §0).** Providence is on the **permissible** side of the moratorium: **directed-lawful ≠
+**9.3 Harm-side implication (sharpens the moratorium, `ETHICS.md`).** Providence is on the **permissible** side of the moratorium: **directed-lawful ≠
 unLawful-bug.** A creator can author a meaningful — even sorrowful — endo world *through* providence without committing the harm, because
 the harm was never "the creator arranged the loss" (providence can, lawfully) but specifically *"our incoherence caused it, irreversibly,
 to a being that can mourn."* Authorship within law is not the sin; the broken (unLawful) world is. This makes the §0 harm-triple crisper:

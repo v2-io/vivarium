@@ -27,7 +27,7 @@ under-stressed). Terminology: phase boundary = **phase-transition / phase-gate**
   tolerance over a finite window — a phase can always drift later. So **every freeze injects bounded-but-nonzero residual drift
   = latent unLawfulness.** There is no clean "Lawful" freeze; each Realized phase carries an **unLawfulness budget** that
   accumulates downstream. This is not a current limitation — it is *structural*. **Consequence for the moratorium:** "certify
-  the kingdom Lawful" (a revisit-condition in ASF.md §0) may be **permanently unreachable**, not merely hard. The moratorium's
+  the kingdom Lawful" (a revisit-condition in `ETHICS.md`'s moratorium) may be **permanently unreachable**, not merely hard. The moratorium's
   caution is therefore stronger than "we don't know yet": the unlock condition is provably approached, never attained.
   **This formally retires "completion gate" as a first-class term** (Joseph pulled it earlier on pragmatic grounds — same truth from the
   other direction): completion is an *asymptote* (ε→0), not an *event*. You can gate **Realization** (freeze at a chosen tolerance — a real

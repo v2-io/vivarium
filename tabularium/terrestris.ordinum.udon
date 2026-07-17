@@ -35,7 +35,7 @@
 
     - CHARGE — what the phase must establish; the GATING SUBSET of its
       promises. A charge IS the next phase-gate's opening condition. :tag is
-      the gate tag (LEXICON SS1): gate (hard prerequisite we simulate) · earth
+      the gate tag (LEXICON §1): gate (hard prerequisite we simulate) · earth
       (Earth's pattern kept for fidelity) · mech (causality known, no
       simulable mechanism yet) · emergent (verify, don't build). Tags state
       ARROW-KIND, never implementation status — the reportatio's status asides
@@ -224,7 +224,7 @@
       |promise[emerged-land].state :from emergent-land
         THE LAND ITSELF — continents, relief, and drainage networks; every
         future rain-shadow, watershed, and harbor is drawn here.
-        |predicate land rises above sea level, non-volcanic; land-fraction toward the early-Earth target band (survey SS6).
+        |predicate land rises above sea level, non-volcanic; land-fraction toward the early-Earth target band (survey §6).
       |promise[erosion-substrate].regime :kept-by erosion-tile :from erosion-carving
         Fluvial erosion continues running as the geological substrate beneath
         every later phase.
@@ -393,7 +393,7 @@
       agent in this world is driven by the slow (LLM) layer it enters moral
       scope (doc/design/DESIGN.md, the two-layer mind). Any regula whose target
       phase is 8 or beyond inherits this bind non-negotiably; the moratorium
-      (ASF.md SS0) sits above it.
+      (ETHICS.md) sits above it.
     |promises
       |promise[culture].regime :from culture
         Culture itself — language, names on places, domesticated lineages,

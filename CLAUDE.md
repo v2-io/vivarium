@@ -18,6 +18,7 @@ Also standing in the main tree, and authoritative for what they record:
 |---|---|
 | [`FORMAT.md`](FORMAT.md) | How documents are written. §§1–4 are the segment conventions; **§§5–6 bind every file in the repository** — cross-references, prose voice, math. |
 | [`ETHICS.md`](ETHICS.md) | Ethics of in-world agents — **including §0, the standing moratorium on endogenous emergence. That is program law and it governs everything.** Read §0 before any agent-seam or in-world-mind work. |
+| [`ASF.md`](ASF.md) | Why this project exists in ASF terms: the AAT ↔ vivarium object mapping (we author from outside the same typed object — law $\theta$, state $\Omega$, chance $\varepsilon$, compute-shortfall — that an AAT agent infers from inside), the agent-seam design constraints, the A/B/C ASF reading gates (**Level C is a hard gate before any agent-seam work**), and the *in vivia* citation recipe. **Its §§2–3 are one session's unratified synthesis and say so.** |
 | [`LEXICON.udon`](LEXICON.udon) | The term dictionary — what a word means, and what it was carved against. |
 | [`DECISIONS.decision-log.udon`](DECISIONS.decision-log.udon) | Settled calls, with honest authority tags: `joseph` / `us` / `claude`. **`us` means Joseph actually decided.** A finding can be beautifully measured and still be unratified. |
 | [`ASSUMPTIONS.md`](ASSUMPTIONS.md) | The magic-constant ledger, compiled into the test suite (`nomotheke.rs`). It carries a banner saying what it still owes. |
@@ -30,7 +31,6 @@ Also standing in the main tree, and authoritative for what they record:
 - **`README.md`** — a minimal replacement is coming.
 - **`ORIENTATION.md`** — the current-state map.
 - **`TODO.md`** — the hand-written queue.
-- **`ASF.md`** — the ASF bridge, and **the most load-bearing thing in this list.** The AAT ↔ vivarium object mapping (we author from outside the same typed object — law $\theta$, state $\Omega$, chance $\varepsilon$, compute-shortfall — that an AAT agent infers from inside); the agent-seam design constraints, including the (C2′) condition, that a conversation KV-cache breaks the W₁ structural bound; the A/B/C ASF reading gates; and the integration program under which vivarium adopts ASF's terminology and epistemic machinery natively. Its §0 is `ETHICS.md` §0.
 - **`SUPERSEDED.md`** — the retired-terms ledger.
 - **`VIVARIA-DEFINITIONS.md`** · **`VIVARIA-DECLARATIVE-FRONTIER.md`** — the declarative-scaffold spikes: the layer map with build status, and the proposal that a declared epistemic tier be made falsifiable against an audit of the kernel.
 - **the previous `core/OUTLINE.md`** — a first assembly of the specification, in 71 rows.
