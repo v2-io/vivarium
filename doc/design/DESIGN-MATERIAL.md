@@ -81,10 +81,15 @@ and line-of-sight (a max), and each silently assumes its own. So:
   Erosion and hydrology move mass; conservation is the thing that must survive
   every LOD crossing. This is **finite-volume** thinking (store the cell-integrated
   conserved quantity), which is the correct frame for the physics.
-- **Surface elevation is a *derived* reading: top-of-topmost-solid, sampled at the
-  column's center** — a **finite-difference** node. *(Settled by code: the slabs
-  renderer already put mesh vertices at column centers, so this convention is
-  chosen; §14 just names it so a later tier can't quietly treat it as a mean/max.)*
+- **Surface elevation is a *derived* reading, and which reading is undeclared.**
+  The candidates are top-of-topmost-solid point-sampled at the column's center (a
+  finite-difference node — what the slabs renderer and `voxel.rs`'s bilinear
+  reconstruction assume), the cell average (what the conservation machinery
+  assumes), and band-limited (what `gen::initial_topography_m` produces). These are
+  three different quantities and the code reads one array as all three. ⚠ The fork
+  is OPEN and is resolved by decision, not by convention
+  (`DECISIONS[column-is-a-control-volume-with-sufficient-statistics]`, and the
+  2026-07-13 entry correcting it).
 - **`min` / `max` are carried alongside** for the consumers that need extremes
   (`max` → line-of-sight, occlusion, collision-ceiling; `min` → "fully above
   water"), and they bound how much the center-sample lies about sub-cell relief.
@@ -166,7 +171,7 @@ swaps along a ladder without touching consumers:
    `d`, grain density, confining pressure, shear rate), then DEM (per-particle
    contacts calibrated so emergent angle-of-repose ≈ `φ`).
 
-**The load-bearing validation:** **SHALSTAB** (Montgomery & Dietrich; USGS) couples
+**SHALSTAB** (Montgomery & Dietrich; USGS) couples
 slope-stability and water-routing **on the same per-cell state** — published
 evidence that one substrate's property interface serves *both* query families.
 **We do not fork the substrate per physics.**
@@ -352,14 +357,18 @@ result.
 
 ## 11. Settled vs. tentative (so future work knows what it may move)
 
-- **Settled (in code or by prior decision):** the column as primary unit; surface
-  elevation = center point-sample (renderer-committed); cubic 0.5 m voxels; the
+- **Settled (in code or by prior decision):** the column as primary unit; cubic 0.5 m voxels; the
   cube-sphere integer tile as canonical spatial key; the ~20 km shell; rich
   `Quantity` at seams / raw `f64` in loops.
-- **Research-backed:** the property set is very nearly spanning; the five additions
-  (split density, packing fraction, phase-state enum, incision threshold, regolith
-  thickness); the material-model ladder; one substrate serves both slope-stability
-  and hydrology (SHALSTAB).
+- ⚠ **OPEN — the column-semantics fork:** per quantity, is a stored value a point
+  sample, a cell average, or band-limited? The code answers three ways today, and
+  the fork is live *inside* the conservation operator (`pin_block_means` compares a
+  fine block mean against a coarse point sample). §4 states the stance; nothing
+  settles it.
+- **Research-backed:** the survey found five properties missing from the list core
+  already implied, and no others (split density, packing fraction, phase-state enum,
+  incision threshold, regolith thickness); the material-model ladder; one substrate
+  serves both slope-stability and hydrology (SHALSTAB).
 - **TENTATIVE — reserve, don't fix:** the exact schema of §9; the regenerable/
   irreducible split and body representation (§7); whether volume/mass or a hybrid
   is the stored primitive; the full mutation-log design; which high-rung properties

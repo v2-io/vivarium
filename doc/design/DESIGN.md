@@ -7,7 +7,7 @@
 > [`doc/design/DESIGN-REDUX.md`](../../doc/design/DESIGN-REDUX.md), the matter model →
 > [`doc/design/DESIGN-MATERIAL.md`](../../doc/design/DESIGN-MATERIAL.md), the phenomena/coupling map →
 > [`doc/design/DESIGN-SYSTEMS.md`](../../doc/design/DESIGN-SYSTEMS.md). Current implementation state →
-> [`ORIENTATION.md`](../../ORIENTATION.md). Where a claim is a guess it is marked —
+> `core/OUTLINE.md`. Where a claim is a guess it is marked —
 > do not promote it to a decision without testing. Ethics of in-world agents:
 > [`ETHICS.md`](../../ETHICS.md).
 
@@ -19,11 +19,11 @@ from the more rigorous agency work, the first game built since learning assembly
 thirty years ago. The fun *is* the objective, not a means to one. That reframes
 the engineering discipline below: **the fun is allowed to lead.**
 
-The one discipline that survives that reframe: a small number of decisions, if
+One discipline survives that reframe: a small number of decisions, if
 deferred, force a later rewrite painful enough to *kill the fun*. Only those get
 made early. The test for "make it now" is narrow — *would deferring this force a
 fun-killing rewrite later?* Everything that fails that test follows curiosity,
-not a roadmap. By that test, exactly three things qualify (the core/view wall,
+not a roadmap. By that test, three things qualify as it stands (the core/view wall,
 determinism-as-ontology, and the shared fidelity invariant — all below), and
 pleasingly none of them costs any fun now. Earlier drafts of this file said
 "build the agent seam first, while it's ugly." That was advice for a *ship-a-game*
@@ -44,9 +44,9 @@ window, pulling on different budgets:
 2. **World dynamics (DF-grade).** A *world-state* problem — geology, fluids,
    temperature, material-level items, emergent history. Wide, shallow-per-tick,
    tedious to get right, conceptually well-trodden.
-3. **Agents + community dynamics (ASF-grade).** The novel axis, and the one where
-   this project has something almost nobody building a game has: a *formal
-   theory* of adaptive/actuated agents.
+3. **Agents + community dynamics (ASF-grade).** This axis draws on a *formal
+   theory* of adaptive/actuated agents (ASF/AAT); axes 1 and 2 are conceptually
+   well-trodden and this one is not.
 
 The honest hazard: axes 1 and 2 are infinitely expandable. For a *shipping* goal
 that's a trap (they eat the agent budget). For a *recreational* goal it is mostly
@@ -106,15 +106,16 @@ consequences follow exactly from causes.
 The engineering meaning of "truthful" here is precise and load-bearing:
 
 - **Determinism with no hidden state.** The whole world is a pure function of
-  `(seed, step-count)`. Randomness comes only from a seeded PRNG inside the core,
+  `(seed, key)`. Randomness comes only from a stateless keyed generator,
   never the OS clock or thread scheduling. Asserted as a test in `vivarium-core`
   (bit-identical replay). This is what lets an agent trust the world the way it
   trusts arithmetic — and what distinguishes a genuine tether from impersonation.
 - **Conservation and consequence.** Causes have exact, reproducible effects;
   nothing appears from nowhere.
 
-This is why determinism is not merely a replay convenience: it is the property
-that makes the vivarium epistemically real. It is also the substrate a future
+This is why determinism is not merely a replay convenience: bit-identical replay
+is what lets a claim about this world be checked by re-running it, which is what
+the tether argument above rests on. It is also the substrate a future
 *developmental* use (ETHICS.md's crèche tier) would require, so building it in now
 keeps that door open honestly.
 
@@ -127,7 +128,10 @@ deficiencies.** It is the same shape as the cognitive-LOD problem (cheap mind
 at a distance, full ASF mind materialized on approach): one invariant, two
 substrates. The hard, research-flavored direction is **detail→abstract** —
 absorbing a fine-grained change (a dammed stream) back into the abstraction —
-and it remains the project's sharpest open problem.
+and it is open. ⚠ Its ranking AND its statement are both suspect —
+`doc/ARCHITECTURE.md` §8 carries the correction and Joseph's standing rule: do not
+trust any count or ranking of open problems until the census is derived rather
+than asserted.
 
 *(2026-07-03)* This section grew into its own document:
 [`doc/design/DESIGN-REDUX.md`](../../doc/design/DESIGN-REDUX.md) carries the developed form — the widened
@@ -148,7 +152,7 @@ identity uses to think with, not the identity itself.*
 
 - **Fast layer** — every tick, every agent. Pure formal ASF/AAT dynamics: needs,
   adaptation, goal-update coupling. Numeric, deterministic, hundreds of agents
-  cheap. **This is the simulation's truth.** Architecturally it is AAT **Class 1**
+  cheap. **The fast layer is the authoritative state: the slow layer may only perturb it, never bypass it.** Architecturally it is AAT **Class 1**
   (separation-by-construction) — and therefore *out of moral scope* (ETHICS.md).
 - **Slow layer** — rare, few agents. An LLM invoked only at decision-theoretically
   significant junctures — genuine *aporia* (high-conflict goal state, novel social
@@ -206,5 +210,4 @@ water + erosion physics → [`ref/hydrology/NOTES.md`](../../ref/hydrology/NOTES
 and [`ref/erosion-port/NOTES.md`](../../ref/erosion-port/NOTES.md). The clean-room
 world frame (`crates/vivarium-world`: cube-sphere CellId, tiered erosion
 telescope, conserved water) and its explorer (`spikes/worldview`) are the
-active stack — **start at [`ORIENTATION.md`](../../ORIENTATION.md)**, which is
-maintained as the single current-state document.
+active stack — **start at `CLAUDE.md`, then `core/OUTLINE.md`.**

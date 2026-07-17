@@ -1,6 +1,6 @@
 # The nomos contract — what a nomos must declare to be true-to-physics
 
-*Written 2026-07-13, out of the day the project audited its own kernels and found that **every single defect fell into one of five boxes — and the flux web only had the first one.***
+*Written 2026-07-13, after a day auditing the project's kernels. The defects found that day sort into five kinds; the flux web declares only the first. The five boxes were abstracted from those defects, so the sort is a restatement of that sample — not evidence the set is closed.*
 
 > **The purpose is not to fix `erosion.rs`.** It is to **generalize and secure the flux-web structure so that ANY nomos can be true-to-physics** (Joseph, 2026-07-13). MFD-8 is the corpse we dissected to learn the anatomy. This document is the anatomy.
 
@@ -24,7 +24,7 @@ The flux web today declares **one** thing: *"erosion consumes precipitation; cli
 
 ## ⚖ The argument, and it is not a wish-list
 
-**Every defect found on 2026-07-13 lands in exactly one of these boxes.** That is not a coincidence — **it is why that day took a day of forensic archaeology instead of five minutes of reading `vivarium status`.** We found each one *by hand*, because **nothing declares them.**
+**The defects found on 2026-07-13 sort into these five boxes** — the boxes were abstracted from those defects, so this restates the sample rather than showing the set is closed. What the table does show: each defect was found by hand, because nothing declares them. We found each one *by hand*, because **nothing declares them.**
 
 | the defect | the box that would have caught it, mechanically |
 |---|---|
@@ -72,7 +72,7 @@ Each box gets one file at `doc/design/nomos-contract/`. **The failure mode of a 
 
 1. **It answers *"how do I FIND OUT what's true here?"* — not *"here are the categories."*** **The declaration is the output; the file is how you EARN it.**
 2. **It carries its own PROBE.** *A declaration that cannot fail a build is a wish.* The file must say how to **validate** the claim, not merely how to write it.
-3. **It carries a FAILURE GALLERY** — the specimens, **including the ones where we got it wrong.** Agents pattern-match, and *"here is what the wrong answer looked like, and why it was seductive"* is the highest-value teaching content the project owns. **Every box has real specimens now, and they were all expensive.**
+3. **It carries a FAILURE GALLERY** — the specimens, **including the ones where we got it wrong.** Agents pattern-match, and *"here is what the wrong answer looked like, and why it was seductive"* does work a list of correct declarations does not. **Every box has real specimens now, and they were all expensive.**
 
 **Each file's shape:** the question · the fundamentals (the math, done, not gestured at) · the procedure · a worked specimen · **the probe** · the failure gallery · what to write in the declaration.
 
@@ -103,7 +103,7 @@ Each box gets one file at `doc/design/nomos-contract/`. **The failure mode of a 
 | agent | box | its richest specimens (all measured, all in DECISIONS) |
 |---|---|---|
 | **1** | **① quantities** | The flux web as built (`flux.rs`, `audit.rs`); the **ordinum governing it** (a nomos consuming an unkept promise ⇒ the world is *mechanically unrunnable*); the *"rain without a sky"* specimen; and the **deferred `:statistic`/`:exactness` contract**, which Jensen has now made **load-bearing, not optional**. Also: the **reachability check** the ordinum lacks (a promise whose keeper's *range* cannot reach its *predicate* — `uplift`). |
-| **2** | **② geometry** | Joseph's own metric set (area · edge · **centre-to-mid-edge arm** · angle · valence · **the joint STENCIL** · **curvature SPLIT in two** · strata volume). The **Jacobian**: *the fan is its shear; `cell_m²` is its determinant.* What converges away and what cannot (**the shear has no `N` in it**). The **coarse/fine carve** (at L25 the sphere is *gone*; at L2 the sagitta is **24% of the cell**). ⚠ **Failure gallery: we audited VALENCE (a coordinate fact) instead of ANGULAR SAMPLING (the physical claim) and burned months on a corner that was never the problem.** |
+| **2** | **② geometry** | Joseph's own metric set (area · edge · **centre-to-mid-edge arm** · angle · valence · **the joint STENCIL** · **curvature SPLIT in two** · strata volume). The **Jacobian**: *the fan is its shear; `cell_m²` is its determinant.* What converges away and what cannot (**the shear has no `N` in it**). The **coarse/fine carve** (at L25 the sphere is *gone*; at L2 the sagitta is **24% of the cell**). ⚠ **Failure gallery: we audited VALENCE (a coordinate fact) instead of ANGULAR SAMPLING (the physical claim) and audited a corner that was never the problem.** |
 | **3** | **③ semantics** | point-sample vs cell-average vs band-limited **≡ aliased vs anti-aliased** (a cell average **IS** a box filter — this is an identity, not an analogy). The **centroid identity** (a linear reconstruction about the centroid is **volume-exact by construction**). The **(1,6,1)/8 curvature term**. **Jensen — and that at `n=1` the gap is in `A^0.5` and `Cov(A,S)`, NOT in `S`.** ⚠ **Failure gallery: `DESIGN-MATERIAL` §4 DECLARED the semantics, wrote a guard whose stated purpose was to stop exactly this, and the code drifted through it anyway — *a declaration that cannot fail a build is a wish.*** |
 | **4** | **④ structure** | The structure table **and which rows CONFLICT** (energy- vs enstrophy-conserving are *different schemes*; a positivity limiter *destroys* the enstrophy budget — **erosion is unusually clean; a rotating fluid is the normal case**). Noether. The mimetic identities. **The seam law: structures cross IFF the restriction operator COMMUTES — and that covers only the LINEAR ones.** ⚠ **Failure gallery: `water.rs` IS well-balanced, IS staggered, HAS no null space, and routing DOES enforce acyclicity — ALL FOUR UNDECLARED, and we nearly "fixed" a scheme into losing them.** Probes: the **null-space/eigenvalue** probe (*the only instrument we have that shows what we CANNOT see*), still-lake, curl-on-contours, DAG. |
 | **5** | **⑤ claim** | **Modified equation analysis** (Warming & Hyett 1974) — Taylor-expand, read off the PDE, get **a term with a sign and a differential order**. **Even operators = diffusion; odd = advection — which is why θ CANNOT be the advective term its own comment claimed.** **Bias vs noise: a sign-definite operation cannot average out ⇒ it is a bias BY CONSTRUCTION.** ⚠ **Failure gallery: θ's comment asserted precisely what its own cited paper denies (¶52) · `p=1.1` manufactures the bias it was believed to cancel · Jarrett (a REGRESSION for estimating `n` from a MEASURED slope) used as a DYNAMICAL LAW, closing a positive feedback · and three one-sided clips nobody had even looked at.** |
