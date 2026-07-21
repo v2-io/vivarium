@@ -297,12 +297,17 @@ pub fn render(world: &World, roots: &[(String, String)], w: usize, lon0_deg: f64
     }
 
     // Footer: what the whole census reached (tiles per state), and the legend.
-    for &(f, oi, oj) in cov.initial_topo.iter() {
+    // Union every built origin — erosion/water without a matching initial-topo
+    // root still count (legacy `spine-tile` keys, partial rebuilds, version churn).
+    let mut origins: std::collections::HashSet<(u8, u32, u32)> = cov.initial_topo.iter().copied().collect();
+    origins.extend(cov.erosion.keys().copied());
+    origins.extend(cov.watered.iter().copied());
+    for &(f, oi, oj) in &origins {
         tally[cov.state(f, oi, oj) as usize] += 1;
     }
     // Unbuilt tiles are, by definition, not in the census — report the built
     // ladder only (honest: we can't count what was never materialised).
-    let built = cov.initial_topo.len().max(cov.erosion.len()).max(cov.watered.len());
+    let built = origins.len();
     let (n_spine_only, n_eroded, n_watered) = (tally[State::InitialTopography as usize], tally[State::Eroded as usize], tally[State::Watered as usize]);
     let cell_km = crate::sample::cell_size_m(level, Planet::EARTH.radius_m) / 1000.0;
     out.push_str(&format!(

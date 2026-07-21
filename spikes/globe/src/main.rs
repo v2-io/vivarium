@@ -1,23 +1,22 @@
-//! vivarium-globe — spin the planet, zoom in, see what the initial-topography puts above water.
+//! vivarium-globe — spin the planet, zoom in, see what the store has built.
 //!
 //! The Phase-2 "smallest-first visible win" (`doc/plan/abyssal-parity-plan.md`):
-//! the coarse fBm initial-topography rendered as a whole globe — continents and oceans, pre-
-//! erosion, pre-everything. Google-Earth verbs only: drag to spin, wheel to zoom.
+//! whole-globe surface from the store — **eroded when the builder has already
+//! memoized a fluvial tile**, otherwise the fBm initial-topography prior.
+//! Google-Earth verbs only: drag to spin, wheel to zoom.
 //!
 //! **The discipline this view exists to demonstrate** (the new frame, `store.rs` +
-//! `query.rs`): a view *only queries; it owns no world state*. Every elevation on
-//! screen arrived through [`query::initial_topography`] via a persistent [`Store`] — the
-//! first pull computes and memoizes; every later launch (and every zoom back out)
-//! is a store HIT, and the HUD counts both so you can watch the world being built
-//! once and reused. The only state living here is camera state and the meshes the
-//! pulled tiles were folded into.
+//! `query.rs`): a view *only queries; it owns no world state*. Elevations arrive
+//! through [`query::World::surface_prefer_eroded`] — hit the eroded root if present,
+//! else initial topography (which may still compute-and-memoize). The view never
+//! triggers a cold erosion run; that is the builder's job. The HUD reports hits
+//! and whether the surface is eroded or prior. Camera + meshes only live here.
 //!
-//! **Honesty line** (also on the HUD): this relief is the band-limited fBm surface
-//! *prior* — a placeholder that conserves nothing and encodes no tectonics or
-//! erosion. It decides land vs water and gives the eye something true-to-the-
-//! current-rung to hold; it is not earned terrain. Relief is exaggerated ×20 by
-//! default (standard cartographic practice — honest ×1 is a billiard ball, exactly
-//! like the real Earth) and the HUD states the factor.
+//! **Honesty line** (also on the HUD): the fBm prior is a placeholder that
+//! conserves nothing and encodes no tectonics; eroded tiles are fluvial carving
+//! on that prior (still not earned Abyssal land — see the ordinum's emerged-land
+//! gate). Relief is exaggerated ×20 by default (honest ×1 is a billiard ball)
+//! and the HUD states the factor.
 //!
 //! Run: `cargo run --release -p vivarium-globe`
 //! Controls: drag spin (inertia) · wheel / -/= zoom · arrows spin · [ ] level ·
@@ -82,6 +81,10 @@ struct FaceMesh {
     indices: Vec<u32>,
 }
 
+/// Builder-default erosion epochs — must match `vivarium build`'s default so a
+/// built world and the globe share keys. Views never invent a different run.
+const EROSION_EPOCHS: u32 = 40;
+
 /// A completed whole-globe build.
 struct GlobeMsg {
     level: u8,
@@ -93,6 +96,8 @@ struct GlobeMsg {
     tiles: Vec<Vec<f32>>,
     computed: usize,
     hits: usize,
+    /// How many of the six faces came from a store-hit eroded tile.
+    eroded_faces: usize,
     pull_s: f32,
     /// Fraction of cells above [`SEA_LEVEL_M`] (≈ by-area: equiangular cells
     /// subtend near-equal solid angles, max/min ≈ 1.41 — so "≈", not "=").
@@ -402,6 +407,7 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx
             let nx = 1usize << level;
             let mut computed = 0usize;
             let mut hits = 0usize;
+            let mut eroded_faces = 0usize;
             let mut land = 0usize;
             let mut total = 0usize;
             let mut tiles = Vec::with_capacity(6);
@@ -412,20 +418,31 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx
                     .map(|f| {
                         s.spawn(move || {
                             let face = Face::from_index(f);
-                            let (tile, src) = world.initial_topography(face, level, 0, 0, nx);
+                            let (tile, src, eroded) = world.surface_prefer_eroded(
+                                face,
+                                level,
+                                0,
+                                0,
+                                nx,
+                                EROSION_EPOCHS,
+                            );
                             let land = tile.iter().filter(|&&h| h as f64 > SEA_LEVEL_M).count();
                             let (mesh, fseam) = build_face(world, face, level, &tile, exag, audit);
-                            (mesh, tile, src, land, fseam)
+                            (mesh, tile, src, land, fseam, eroded)
                         })
                     })
                     .collect();
                 handles
                     .into_iter()
                     .map(|h| {
-                        let (fm, tile, src, l, fseam) = h.join().expect("face build panicked");
+                        let (fm, tile, src, l, fseam, eroded) =
+                            h.join().expect("face build panicked");
                         match src {
                             Source::Computed => computed += 1,
                             Source::Hit => hits += 1,
+                        }
+                        if eroded {
+                            eroded_faces += 1;
                         }
                         land += l;
                         total += tile.len();
@@ -446,6 +463,7 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx
                 tiles,
                 computed,
                 hits,
+                eroded_faces,
                 pull_s: t0.elapsed().as_secs_f32(),
                 land_frac: land as f32 / total.max(1) as f32,
                 seam,
@@ -529,6 +547,8 @@ struct BuiltStats {
     exag: f32,
     computed: usize,
     hits: usize,
+    /// Faces that landed from a store-hit eroded tile (0..=6).
+    eroded_faces: usize,
     pull_s: f32,
     land_frac: f32,
     seam: SeamStats,
@@ -613,7 +633,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "vivarium — globe (fBm initial-topography, pre-erosion)".into(),
+                title: "vivarium — globe (store surface: eroded if built)".into(),
                 resolution: bevy::window::WindowResolution::new(1280, 800),
                 ..default()
             }),
@@ -654,7 +674,7 @@ fn setup(mut commands: Commands) {
     commands.insert_resource(GlobalAmbientLight { color: Color::srgb(0.65, 0.72, 0.85), brightness: 240.0, affects_lightmapped_meshes: true });
 
     commands.spawn((
-        Text::new("pulling the initial-topography..."),
+        Text::new("pulling surface from store..."),
         TextFont { font_size: 14.0, ..default() },
         TextColor(Color::srgb(0.85, 0.87, 0.90)),
         Node { position_type: PositionType::Absolute, top: Val::Px(8.0), left: Val::Px(10.0), padding: UiRect::all(Val::Px(6.0)), ..default() },
@@ -860,6 +880,7 @@ fn apply_builds(
         exag: msg.exag,
         computed: msg.computed,
         hits: msg.hits,
+        eroded_faces: msg.eroded_faces,
         pull_s: msg.pull_s,
         land_frac: msg.land_frac,
         seam: msg.seam,
@@ -973,7 +994,7 @@ fn hud_update(
     let (lat, lon) = (geo.lat.to_degrees(), geo.lon.to_degrees());
     // ASCII only: Bevy's default font has no glyphs for middle-dot/degree/etc.
     let status = match (&state.built, state.inflight) {
-        (None, _) => "pulling the initial-topography...".to_string(),
+        (None, _) => "pulling surface from store...".to_string(),
         (Some(b), inflight) => {
             let cell_km = (r * std::f32::consts::FRAC_PI_2) / (1u32 << b.level) as f32;
             let s = &b.seam;
@@ -981,12 +1002,24 @@ fn hud_update(
                 (s.cross_sum / s.n.max(1) as f64) as f32,
                 (s.within_sum / s.n.max(1) as f64) as f32,
             );
+            let surface = if b.eroded_faces == 6 {
+                format!("eroded (all 6 faces, {EROSION_EPOCHS} ep)")
+            } else if b.eroded_faces > 0 {
+                format!("mixed: {}/6 eroded, rest fBm prior", b.eroded_faces)
+            } else {
+                "fBm prior (no eroded roots at this level)".to_string()
+            };
+            let honesty = if b.eroded_faces > 0 {
+                "fluvial on fBm prior -- not earned Abyssal land (emerged-land gate still open)"
+            } else {
+                "fBm surface prior -- placeholder: conserves nothing, no tectonics/erosion yet"
+            };
             format!(
-                "world \"{}\" (seed {:016x}) | initial-topography L{} | cell ~{cell_km:.0} km | pull {} computed / {} hit, {:.2} s | land ~{:.0}%{}\n\
+                "world \"{}\" (seed {:016x}) | {surface} L{} | cell ~{cell_km:.0} km | pull {} computed / {} hit, {:.2} s | land ~{:.0}%{}\n\
                  alt {alt:.0} km | centre {:.1}{} {:.1}{} | relief x{:.0} (1 = honest) | level {}\n\
                  {pick_line}\n\
                  face-seam dh: cross {c_mean:.0} m mean, {:.0} m max | within-face {w_mean:.0} m mean, {:.0} m max{}\n\
-                 fBm surface prior -- placeholder relief: conserves nothing, no tectonics/erosion yet\n\
+                 {honesty}\n\
                  drag spin | wheel zoom | [ ] level | A auto | X relief | S seam audit | R reset | Esc quit",
                 ident.name,
                 ident.seed,

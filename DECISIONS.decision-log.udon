@@ -923,3 +923,12 @@
     Second-order: the same session reported `DESIGN.md` as carrying the question "with better epistemic precision" on the strength of its `*Guess / unverified:*` tag alone, without reading the heading two lines above it, which was the same overclaim. **A tag on a paragraph does not make its frame honest, and spotting one honest marker is not an audit.**
     NOT edited: `.archive/CLAUDE.md:55–57` — frozen archaeology, and now the specimen. The archive is exactly where it belongs.
   |ref doc/design/DESIGN.md ("An open empirical question") · ASF.md §2 · .archive/CLAUDE.md:55-57 (the specimen) · FORMAT.md §6 (No absolutes) · corrects `asf-bridge-returns-to-the-live-tree` |impact
+
+|decision[segments-are-sole-claim-truth] :date 2026-07-20 :by joseph :status decided :topic process
+  :session grok-front-door-telos
+  CLAIM SEGMENTS UNDER core/src/ ARE THE SOLE SOURCE OF TRUTH FOR PROJECT CLAIMS. The slug is the identity; core/OUTLINE.md orders; FORMAT.md rules. Design prose, architecture notes, spikes, and session maps are substrate until their claims live in a segment. Fun is allowed; it must not mint unowned claims or outrank segment work this phase.
+  |reason
+    Joseph, 2026-07-20: the front door was smashed open (archive) without a real door built; multi-telos + empty core caused agent drift into code and rediscovery. Directive: "The slugs / the segments *shall be* the only source of truth going forward." Segment home: #scope-segment-canon.
+  |impact
+    CLAUDE.md and README rewritten as routers; first foundational segment batch landed under core/src/. Further work extracts claims from existing corpus into slugs; no new ORIENTATION-class state maps.
+  |ref core/src/scope-segment-canon.md · core/OUTLINE.md · CLAUDE.md

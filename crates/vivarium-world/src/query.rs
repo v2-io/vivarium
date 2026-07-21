@@ -262,6 +262,30 @@ impl<'s> World<'s> {
         (eroded, Source::Computed)
     }
 
+    /// View-facing surface pull: **prefer a store-hit eroded tile**, else fall
+    /// back to initial topography. Never triggers a cold erosion compute —
+    /// views must not invent work the builder has not done; they only *show*
+    /// what the store already holds (core/view wall: peers that query).
+    ///
+    /// Returns `(heights, source, eroded)` where `eroded` is true iff the
+    /// surface came from a memoized fluvial tile at `epochs`.
+    pub fn surface_prefer_eroded(
+        &self,
+        face: Face,
+        level: u8,
+        oi: u32,
+        oj: u32,
+        nx: usize,
+        epochs: u32,
+    ) -> (Vec<f32>, Source, bool) {
+        let key = self.erosion_key(face, level, oi, oj, nx, epochs);
+        if let Some(bytes) = self.store.get(&key) {
+            return (decode_f32(&bytes), Source::Hit, true);
+        }
+        let (tile, src) = self.initial_topography(face, level, oi, oj, nx);
+        (tile, src, false)
+    }
+
     /// The complete key for a water tile — upstream identity folded in through
     /// both dependency versions plus the erosion run length its bed came from.
     fn water_key(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize, erosion_epochs: u32, steps: u32) -> Key {
