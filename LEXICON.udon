@@ -352,7 +352,7 @@
     |note[aat-handshake]
       :name AAT handshake — the four axes ↔ typed ignorance
 
-      ASF/AAT's root ontology types the agent's epistemic target as state $\Omega$ / law $\theta$ / chance $\varepsilon$ / compute-shortfall — and vivarium authors the same object from the other side: B = $\theta$- fidelity · A = $\Omega$-trajectory fidelity · fated noise = authored $\varepsilon$ (frame-relative: chance inside, lookup outside) · the fidelity ladder = compute-shortfall management. A phase-transition promotes converged state into law (the invariance cut). Full mapping: ASF.md §2 (one session's synthesis, unratified — the symbols are settled, the mapping is not).
+      ASF/AAT's root ontology types the agent's epistemic target as state $\Omega$ / law $\theta$ / chance $\varepsilon$ / compute-shortfall — and vivarium authors the same object from the other side: B = $\theta$- fidelity · A = $\Omega$-trajectory fidelity · fated noise = authored $\varepsilon$ (frame-relative: chance inside, lookup outside) · the fidelity ladder = compute-shortfall management. A phase-transition promotes converged state into law (the invariance cut). Full mapping: #disc-aat-vivarium-object-map (one session's synthesis, unratified — the symbols are settled, the mapping is not).
 
     ; --- ASF-owned vocabulary: brief here, defined there ----------------------
     ; Adopted whole from ASF. Kept SHORT ON PURPOSE — enough to recognise the

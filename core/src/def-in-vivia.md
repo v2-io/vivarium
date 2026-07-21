@@ -31,4 +31,5 @@ ASF's software laboratory is high-identifiability because software exposes state
 
 ## Working Notes
 
-- Content-addressed store makes exact citation *possible*; generator-pinning and source-derived nomos versions remain open ( #lexicon/term/generator-pinning).
+- Operational citation bundle (seed + generator/nomos versions + phase memo + intervention script): #form-in-vivia-citation.
+- Content-addressed store makes exact citation *possible*; generator-pinning and source-derived nomos versions remain open ( #lexicon/term/generator-pinning · #form-complete-content-addressed-key).

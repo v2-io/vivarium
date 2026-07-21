@@ -35,4 +35,4 @@ Play and laboratory share coherence as the load-bearing property: a world that i
 
 ## Working Notes
 
-- Full AAT mapping remains partly unratified synthesis in `ASF.md` §2 — do not promote that mapping through this purpose segment.
+- Full AAT object map lives at #disc-aat-vivarium-object-map (`discussion-grade`, unratified synthesis) — do not promote that mapping through this purpose segment.
