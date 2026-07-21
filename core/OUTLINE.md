@@ -29,13 +29,13 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
 | scope | Project Critical | [#scope-segment-canon](src/scope-segment-canon.md) | Segments are the sole source of truth for project claims | draft |
-| discussion | Project | [#disc-vivarium-purpose](src/disc-vivarium-purpose.md) | Dual purpose: play and *in vivia* laboratory; claim truth outranks demo polish this phase | draft |
 | definition | Project | [#def-vivium](src/def-vivium.md) | A vivium is one citable world-artifact | draft |
 | definition | Project | [#def-in-vivia](src/def-in-vivia.md) | *In vivia*: empirical register between toy model and field data | draft |
 | scope | Project Critical | [#scope-moratorium-endogenous-emergence](src/scope-moratorium-endogenous-emergence.md) | No endogenous frontier / emergence-capable minds | draft |
 | postulate | Project Critical | [#post-determinism-as-ontology](src/post-determinism-as-ontology.md) | Determinism as ontology; fated noise | draft |
 | formulation | Project Critical | [#form-core-view-wall](src/form-core-view-wall.md) | Core / view wall; views observe only | draft |
 | postulate | Project Critical | [#post-represent-by-consequence](src/post-represent-by-consequence.md) | Represent by consequence | draft |
+| discussion | Project | [#disc-vivarium-purpose](src/disc-vivarium-purpose.md) | Dual purpose: play and *in vivia* laboratory; claim truth outranks demo polish this phase | draft |
 | normative | Ops Critical | [#norm-declaration-must-convict](src/norm-declaration-must-convict.md) | A declaration that cannot fail is a wish | draft |
 | normative | Ops Critical | [#norm-probes-before-claims](src/norm-probes-before-claims.md) | Probes before claims | draft |
 | normative | Ops Critical | [#norm-decision-authority](src/norm-decision-authority.md) | Authority tags; evidence ≠ who decided | draft |

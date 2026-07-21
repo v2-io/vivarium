@@ -19,7 +19,7 @@ A measurement that modern Earth would call a defect may be the ordinum's promise
 
 ## Epistemic Status
 
-**Max attainable: robust-qualitative** for the method; **exact** for the specific Joseph decision that the water-covered measurement confirms the ladder rather than refuting the hydrosphere. Stage `draft`. Full ordinum semantics belong in tabularium-backed segments; this segment states the reading discipline.
+**Max attainable: robust-qualitative** for the general method (FE §1); **exact** for the water-world instance (FE §2). Authority split: FE §2 is `DECISIONS[water-world-is-the-promise-not-the-bug]` (`:by joseph`, decided). The general ladder-before-modern-Earth guard is `DECISIONS[check-the-ladder-not-modern-earth]` (`:by claude`, decided) — a codified generalisation of Joseph's correction, not a Joseph-tagged method stamp. Stage `draft`. Full ordinum semantics belong in tabularium-backed segments; this segment states the reading discipline.
 
 ## Discussion
 

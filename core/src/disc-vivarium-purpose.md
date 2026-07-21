@@ -7,6 +7,9 @@ depends:
   - scope-segment-canon
   - def-vivium
   - def-in-vivia
+  - post-determinism-as-ontology
+  - form-core-view-wall
+  - post-represent-by-consequence
 ---
 
 # What vivarium is for
@@ -28,7 +31,7 @@ Currently `discussion-grade`, stage `draft`. Do not cite this segment as proving
 
 ## Discussion
 
-Early design text led with recreation so that agent-seam-first shipping advice would not kill the fun. Later work made the laboratory role load-bearing for Archema. Neither cancels the other: a world that is fun *because* it is coherent is the same coherence the laboratory needs. The failure mode to avoid is treating "fun now" as license to leave law and claims implicit in code and chat.
+Play and laboratory share coherence as the load-bearing property: a world that is fun because it is internally consistent is the same consistency *in vivia* citation needs. The failure mode is treating "fun now" as license to leave law and claims implicit in code and chat.
 
 ## Working Notes
 

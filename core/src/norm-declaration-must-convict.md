@@ -1,7 +1,7 @@
 ---
 slug: norm-declaration-must-convict
 type: normative
-status: exact
+status: robust-qualitative
 stage: draft
 depends:
   - scope-segment-canon
@@ -19,7 +19,7 @@ Epistemic honesty about world law is enforced when declarations can break the bu
 
 ## Epistemic Status
 
-**Max attainable: exact** as a normative standard for the project. Self-applied: the project has already recorded that "epistemic honesty enforced in code" was true of some surfaces and a wish for others (`doc/theory/discretisation-and-information.md` and related audit notes). Stage `draft`. Do not read this segment as asserting that *all* declarations are already mechanized — only that unmechanized declarations must not be sold as enforced.
+**Max attainable: exact** once the generalisation is fully ratified; **currently `robust-qualitative`** as standing method. Grounding: (1) Joseph's acceptance-test discipline for promises — a promise with no falsifiable predicate cannot be marked kept — is live in the ordinum / flux machinery and `DECISIONS[ordinum-governs-the-flux-web]` (`:by joseph`); (2) nomotheke / ASSUMPTIONS compile declarations into tests on several surfaces; (3) the slogan form "a declaration that cannot fail is a wish" is project packaging of that family (theory notes + FORMAT open questions), not a standalone Joseph decision slug. The step from *promises* to *all nomos self-description* is the method this segment asserts. Stage `draft`. Do not read this as asserting that *all* declarations are already mechanized — only that unmechanized ones must not be sold as enforced.
 
 ## Discussion
 

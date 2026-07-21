@@ -30,7 +30,7 @@ Currently `exact` as project law for this phase (Joseph, 2026-07-20: segments sh
 
 ## Discussion
 
-Hand-maintained "current state" documents grow and go stale by the same property, then get cited as law. Empty `core/` after the 2026-07-13 archiving left a vacuum next to a rich executable tree; agents filled the vacuum with code and new maps. This scope rule closes the vacuum: the door is the outline and the segments, not a summary of them.
+Hand-maintained "current state" documents grow and go stale by the same property, then get cited as law. A claim channel that is empty while the executable tree is rich invites agents to fill the vacuum with code and new maps. This scope rule closes the vacuum: the door is the outline and the segments, not a summary of them.
 
 Fun and exploration remain legitimate. They are constrained only where they would mint a claim outside a slug.
 
