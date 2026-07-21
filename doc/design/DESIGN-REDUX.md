@@ -519,8 +519,8 @@ origin trail: `.archive/architecture-migration-2026-07-03.md`).
 The requirement that makes the ladder practical: **memoize each aspect's progress
 to disk, keyed so that the model's own identity and version are part of the key —
 not just its data inputs.** This is the Nix insight (a derivation's hash includes
-its *recipe* — Nix's word for what we call a **nomos** — so changing it rebuilds
-exactly that and its dependents).
+its *recipe* — Nix's word for what we call a **nomos**, claim home `#def-nomos` —
+so changing it rebuilds exactly that and its dependents).
 Then swapping erosion-v1 (single hardness) for erosion-v2 (layered hardness)
 changes erosion's key ⇒ **its cached outputs and everything downstream invalidate;
 everything else stays cached. No more, no less.** Independent aspects are
@@ -533,7 +533,8 @@ replay, probes), backend identity in the nomos key (GPU bit-reproducibility
 is per-device, not universal), and agreement validated by probe within a
 written tolerance. Plan: `doc/plan/water-parallelism.md`.
 
-**Correctness discipline (this is where it's actually hard):**
+**Correctness discipline (this is where it's actually hard):** claim home `#form-complete-content-addressed-key` — key completeness, the over-key/under-key asymmetry, determinism as the precondition, and the hand-stamped-version weak link all live there. The elaboration below is source.
+
 - **The key must capture every input that affects the output** — upstream data,
   the model identity+version, coupling parameters, the seed. *Under*-keying ⇒
   stale cache ⇒ silent corruption (the classic build-cache bug); *over*-keying ⇒

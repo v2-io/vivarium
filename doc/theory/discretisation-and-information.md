@@ -10,6 +10,8 @@
 
 ## 0. The Prime Question
 
+*Claim home: `#disc-prime-question` (the question, and that its answer is modified-equation analysis — a term with a sign and a differential order, not a disposition). Porting rule: `#disc-algorithms-disguise-physics`. This section is **source and teaching**: the worked MFD specimen below is why the claim is believed, and it stays here. Cite the segments for the law.*
+
 > # **"What physical claim is this algorithm actually making?"**
 
 Published algorithms are **not physics**. They are physics **traded against computation**, on a substrate — flat, uniform, globally time-synchronised, square — that vivarium **is not**. Their coordinate assumptions are **disguised physical claims**, and *the claim* is what we port. Never the paper.
