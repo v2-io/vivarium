@@ -8,7 +8,9 @@ The specification of what vivarium is and must do, written as **segments** in `c
 >
 > Per `#scope-segment-canon`, settled project claims live in segments. Design prose, architecture notes, and spikes are sources and instruments — not parallel canon.
 
-**Every session:** [`CLAUDE.md`](../CLAUDE.md) · this outline · [`LEXICON.udon`](../LEXICON.udon) for terms you touch · [`ETHICS.md`](../ETHICS.md) §0 before any agent-seam work.
+**Every session:** [`CLAUDE.md`](../CLAUDE.md) · this outline · [`LEXICON.udon`](../LEXICON.udon) for terms you touch · [`ETHICS.md`](../ETHICS.md) §0 / `#scope-moratorium-endogenous-emergence` · ASF gates `#scope-asf-reading-gates` (Level C hard-gates agent-seam work).
+
+**Cross-member refs** use `#asf/1-aat/<slug>` etc. (FORMAT §5.2) — never bare paths, never `ASF.md §N` as law.
 
 ### Aspect (provisional)
 
@@ -32,7 +34,10 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | definition | Project | [#def-vivium](src/def-vivium.md) | A vivium is one citable world-artifact | draft |
 | definition | Project | [#def-in-vivia](src/def-in-vivia.md) | *In vivia*: empirical register between toy model and field data | draft |
 | scope | Project Critical | [#scope-moratorium-endogenous-emergence](src/scope-moratorium-endogenous-emergence.md) | No endogenous frontier / emergence-capable minds | draft |
+| scope | Project Critical | [#scope-asf-reading-gates](src/scope-asf-reading-gates.md) | ASF familiarity gates A/B/C; Level C hard-gates agent-seam work | draft |
+| discussion | Project | [#disc-aat-vivarium-object-map](src/disc-aat-vivarium-object-map.md) | AAT ↔ vivarium object map (unratified synthesis; not exact) | draft |
 | postulate | Project Critical | [#post-determinism-as-ontology](src/post-determinism-as-ontology.md) | Determinism as ontology; fated noise | draft |
+| scope | Project | [#scope-agent-seam-constraints](src/scope-agent-seam-constraints.md) | Late-phase agent-seam constraints holder (not primary until Level C) | draft |
 | formulation | Project Critical | [#form-core-view-wall](src/form-core-view-wall.md) | Core / view wall; views observe only | draft |
 | postulate | Project Critical | [#post-represent-by-consequence](src/post-represent-by-consequence.md) | Represent by consequence | draft |
 | discussion | Project | [#disc-vivarium-purpose](src/disc-vivarium-purpose.md) | Dual purpose: play and *in vivia* laboratory; claim truth outranks demo polish this phase | draft |
@@ -52,6 +57,7 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | --- | --- | --- | --- | --- |
 | definition | Project | [#def-nomos](src/def-nomos.md) | A nomos is one keyed, versioned article of world-law | draft |
 | formulation | Machine Critical | [#form-complete-content-addressed-key](src/form-complete-content-addressed-key.md) | Complete key; over-key never under-key | draft |
+| formulation | Project | [#form-in-vivia-citation](src/form-in-vivia-citation.md) | Operational *in vivia* citation: seed + versions + phase memo + intervention script | draft |
 | formulation | Machine Critical | [#form-flux-web](src/form-flux-web.md) | Nomoi couple by matched flux quantities; unmet = unrunnable | draft |
 | formulation | Project Critical | [#form-ordinum-governs-flux-web](src/form-ordinum-governs-flux-web.md) | Ladder promises are flux; `:kept-by` is the producer | draft |
 | observation | Physics | [#obs-hydrosphere-box-nomos](src/obs-hydrosphere-box-nomos.md) | Box nomos proves representation-agnostic contract | draft |

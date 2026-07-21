@@ -21,7 +21,8 @@ Every settled claim about what vivarium is, must do, or may conclude lives in a 
    - **Assumptions ledger** — magic constants and their anchors: `ASSUMPTIONS.md` (executable guards pair with it).
    - **Segment method** — how claims are written and promoted: `FORMAT.md` (conventions for the claim channel, not a second purpose law).
    - **Phase floor (data)** — Terrestris charges/promises: `tabularium/terrestris.ordinum.udon` until fully segmented; OUTLINE §VII points here.
-   - **ASF reading gates** — Level A/B/C for vivarium work: `ASF.md` §5 until a dedicated segment owns them; Level C remains a hard gate for agent-seam work.
+   - **ASF reading gates** — Level A/B/C for vivarium work: #scope-asf-reading-gates (Level C is a hard gate before agent-seam work). `ASF.md` is a historical non-authoritative router only — not a claim home.
+   - **Foreign Archema claims** — cite as `#asf/1-aat/<slug>` etc. (FORMAT §5.2); do not restate ASF mathematics in vivarium segments.
    - **Executable state** — code, store roots, and probes *convict or implement* claims; they do not replace the claim text.
 4. **Replacement.** When a segment lands or is corrected, it **replaces** prior prose homes for that claim. Old text is deleted, reduced to a one-line pointer, or archived — not kept as a softened twin.
 5. **Session success.** Work that does not move a segment (or produce a probe / decision a segment will cite) does not advance claim-truth, however useful it is for play or engineering.

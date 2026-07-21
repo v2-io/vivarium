@@ -27,5 +27,6 @@ The moratorium exists so world-building and play can proceed without solving ful
 
 ## Working Notes
 
-- Level-C ASF reading before agent-seam work remains binding (`ASF.md` §5); this segment does not restate the reading list.
+- Level-C ASF reading before agent-seam work remains binding ( #scope-asf-reading-gates); this segment does not restate the reading list.
+- Late-phase agent-seam design constraints: #scope-agent-seam-constraints (not primary work until Level C).
 - Full segmentation of ETHICS.md (harm triple, stewardship, redeemer) is future work; until then cite `ETHICS.md` for those claims.

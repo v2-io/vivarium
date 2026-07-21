@@ -152,19 +152,44 @@ Past-work narration (*"previously carried X," "the audit recommended a soften"*)
 
 **References carry no path.** A path is a location and it rots; a slug is an identity and it does not. Archiving one file dangled three pointers across two repositories in a single afternoon.
 
+### 5.1 Same-member and dictionary
+
 | form | target |
 |---|---|
-| `#slug-name` | a segment in this project |
-| `#lexicon/term/<slug>` · `#lexicon/note/<slug>` | an entry in `LEXICON.udon` |
-| `#asf/term/<slug>` | an ASF **terminology entry** — its dictionary-grade definition |
-| `#asf/<volume>/<slug>` | an ASF **claim segment**; volumes shorten to `1-aat` · `2-tst` · `3-llm` · `4-eli` |
-| `#logos/<paper>` · `#logos/common/<slug>` | the philosophy portfolio |
+| `#slug-name` | a segment in **this** project (`core/src/slug-name.md`) |
+| `#lexicon/term/<slug>` · `#lexicon/note/<slug>` | an entry in this project's `LEXICON.udon` |
 
-**Put a space before every `#`.** Obsidian registers a link only when the `#` is preceded by whitespace — so write `( #asf/1-aat/def-chronica)`, never `(#asf/…)`.
+### 5.2 Cross-member (Archema) — the program identity scheme
 
-**Verify a slug exists before citing it.** A dead cross-reference is worse than none.
+One scheme for all Archema members. **Member namespace + local identity.** Do not invent a second wikilink dialect that disagrees with this.
 
-**Forward references to unwritten segments are expected and correct.** They are dependency markers, not broken links.
+| form | target |
+|---|---|
+| `#asf/<volume>/<slug>` | ASF **claim segment**. Volumes: `1-aat` · `2-tst` · `3-llm` · `4-eli` (aligned with `asf/0N-*-core/`, not bare `aat`) |
+| `#asf/term/<slug>` | ASF **terminology** entry (dictionary-grade definition) |
+| `#vivarium/<slug>` | Vivarium claim segment (for use *from* other members; inside vivarium, bare `#slug` is enough) |
+| `#logos/<paper>` · `#logos/common/<slug>` | Philosophy portfolio |
+| `#archema/<…>` | Program-root claims if/when they exist (charter, concept-matrix rows — reserved) |
+
+**Canonical example:** directed separation is `#asf/1-aat/der-directed-separation` (slug is `der-…` not `def-…` — use the real ASF slug).
+
+**Prose form (required in files).** Always the hash form above, with a **space before `#`** so Obsidian treats it as a tag/link start: write `( #asf/1-aat/def-chronica)`, never `(#asf/…)`.
+
+**Optional Obsidian wikilink alias (display only).** If a vault prefers brackets, map 1:1 to the same identity — do not invent a third spelling:
+
+```text
+[[#asf/1-aat/der-directed-separation]]
+```
+
+Not `[[asf/aat#def-directed-separation]]`, not path-based `[[../../asf/01-aat-core/src/...]]`. Paths rot; volume tokens and slugs are the identity. Angle-bracket placeholders (`[[<asf/aat>#…]]`) are for human sketches only — never land them in canon.
+
+**Outline tables.** In `core/OUTLINE.md`, foreign claims appear as the same hash form in the Tag column or a `depends (foreign)` note — e.g. Level-C prerequisites listed as `#asf/1-aat/der-directed-separation`. Do not put bare local-looking slugs for foreign segments.
+
+**`depends:` frontmatter.** Lists **this member's** segment slugs only (files that must exist under `core/src/`). Foreign prerequisites are **not** `depends:` rows (tooling and promotion assume local files). Cite them in Formal Expression / Epistemic Status / Discussion as `#asf/…` instead. If a claim is unstatable without a foreign segment, say so in Epistemic Status and list the `#asf/…` identities there.
+
+**Verify a slug exists before citing it.** A dead cross-reference is worse than none. For `#asf/…`, verify against `~/src/archema-io/asf/` (segment file or terminology entry).
+
+**Forward references to unwritten segments are expected and correct.** They are dependency markers, not broken links — including forward `#asf/…` only when the upstream slug is known to be planned; prefer citing live ASF slugs.
 
 ### Do not restate a definition that lives elsewhere
 

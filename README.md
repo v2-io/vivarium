@@ -10,11 +10,14 @@ Deterministic constructed worlds (cube-sphere planet) for play and for *in vivia
 
 | Authority | File |
 |---|---|
-| Project claims | `core/src/*.md` |
+| Project claims | `core/src/*.md` (ordered by [`core/OUTLINE.md`](core/OUTLINE.md)) |
 | Term dictionary | [`LEXICON.udon`](LEXICON.udon) |
 | Who decided | [`DECISIONS.decision-log.udon`](DECISIONS.decision-log.udon) |
-| Ethics / moratorium | [`ETHICS.md`](ETHICS.md) |
+| Ethics / moratorium | [`ETHICS.md`](ETHICS.md) · `#scope-moratorium-endogenous-emergence` |
 | Assumptions ledger | [`ASSUMPTIONS.md`](ASSUMPTIONS.md) |
+| ASF reading gates | `#scope-asf-reading-gates` (Level C hard-gates agent-seam work) |
+
+[`ASF.md`](ASF.md) is a thin historical router only — **not** claim canon; do not cite its old section numbers as law.
 
 ## Run (instruments, not canon)
 

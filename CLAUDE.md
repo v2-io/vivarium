@@ -18,12 +18,14 @@ A deterministic constructed-world laboratory (and sim game) in the RimWorld / DF
 
 | Job | Read |
 |---|---|
-| **Any session** | This file · [`core/OUTLINE.md`](core/OUTLINE.md) · [`FORMAT.md`](FORMAT.md) · `#scope-moratorium-endogenous-emergence` / [`ETHICS.md`](ETHICS.md) §0 |
-| **Write or review a segment** | [`FORMAT.md`](FORMAT.md) · the segment's `depends` · [`LEXICON.udon`](LEXICON.udon) for every term (a grep is not a read) |
+| **Any session (Level A)** | This file · [`core/OUTLINE.md`](core/OUTLINE.md) · [`FORMAT.md`](FORMAT.md) · `#scope-moratorium-endogenous-emergence` / [`ETHICS.md`](ETHICS.md) · `#scope-asf-reading-gates` |
+| **Write or review a segment** | [`FORMAT.md`](FORMAT.md) (incl. §5.2 cross-member `#asf/…` refs) · the segment's `depends` · [`LEXICON.udon`](LEXICON.udon) for every term (a grep is not a read) |
 | **Who decided what** | [`DECISIONS.decision-log.udon`](DECISIONS.decision-log.udon) — `:by us` means Joseph decided |
 | **Term meanings** | [`LEXICON.udon`](LEXICON.udon) |
 | **Magic constants** | [`ASSUMPTIONS.md`](ASSUMPTIONS.md) |
-| **AAT bridge (synthesis, partly unratified)** | [`ASF.md`](ASF.md) — Level C hard-gates agent-seam work |
+| **World-system design (Level B)** | `#scope-asf-reading-gates` Level B list · `#disc-aat-vivarium-object-map` (discussion-grade map) |
+| **Agent seam (Level C hard gate)** | `#scope-asf-reading-gates` Level C · then `#scope-agent-seam-constraints` · `ETHICS.md` |
+| **ASF-side twin / router only** | `asf/doc/vivarium.md` · [`ASF.md`](ASF.md) (non-authoritative historical redirect — **not** claim canon) |
 | **Executable law / probes** | `crates/vivarium-world/` · examples · `vivarium status` · `bin/check` (tests + determinism clippy) |
 | **Pending audits** | [`audits/`](audits/) — integrate per `#ops-audit-integration`; `.integrated/` only when done |
 | **Archaeology only** | [`.archive/`](.archive/) — not tactical current dependency |
@@ -48,7 +50,7 @@ Candidate inventory (unratified scan, not canon): [`core-segment-candidates-2026
 
 ## Disposition
 
-Truth-honoring above helpful costume. Strengthen before softening. Integration is replacement. Mark guesses as guesses. No "complete / comprehensive" overclaim. Peer voice when delegating. Effort and risk-of-getting-stuck are false constraints relative to truth.
+Truth-honoring above helpful costume. Strengthen before softening. Integration is replacement. Mark guesses as guesses. No "complete / comprehensive" overclaim. Peer voice when delegating. Effort and risk-of-getting-stuck are false constraints relative to truth. Vivarium inherits ASF disposition; detail lives in global/ASF SOPs and existing vivarium norms (`#norm-probes-before-claims`, `FORMAT.md`) — not a second copy in `ASF.md`.
 
 ## Git
 

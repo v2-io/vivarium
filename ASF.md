@@ -1,86 +1,44 @@
-# vivarium ⇄ ASF — how this project fits the bigger picture
+# vivarium ⇄ ASF — non-authoritative router
 
-*The bridge between vivarium and the **Agentic Systems Framework** — `~/src/archema-io/asf/`, ASF, with **Adaptation and Actuation Theory** (AAT) at its mathematical core. Three jobs: say what vivarium is **for** in ASF terms (§§1–2), name what binds development here (§§3–4), and set the ASF-familiarity gates for working on vivarium at all (§5). The ASF-side twin of this document is `asf/doc/vivarium.md`.*
+*Historical bridge file. **Not claim canon.** Do not cite section numbers as law.*
 
-> [!danger] **`ETHICS.md`'s Standing Moratorium Imperative governs this document.**
->
-> It is program law and it is not restated here — the ethics and the dictionary carry it, and an inlined copy is a fork (`FORMAT.md` §5). It binds §3 hardest, because §3 is agent-seam design: **read it before that section, not after.**
+Vivarium is a supporting project for **ASF/AAT** (`~/src/archema-io/asf/`). Worlds are authored so quantities the theory needs can be known by construction. **Sole claim truth for vivarium project claims:** segments under `core/src/` ( #scope-segment-canon · `core/OUTLINE.md` · `FORMAT.md`).
 
-> [!warning] **§§2–3 are one session's synthesis.**
->
-> They were written 2026-07-04 out of a morning's reading of ASF — verified against the cited segments where noted, marked as hypothesis where not. What is settled is narrower, and positively: the AAT symbols are vivarium's symbols ( #lexicon/term/law · #lexicon/note/collision-ledger). Treat the mapping itself as proposed unless you find a ratification for it.
->
-> **The section numbers are identifiers.** `DECISIONS.decision-log.udon`, `doc/plan/`, and `nomotheke.rs` cite `ASF.md §2` / `§7.1` / `§7.5` by number, and this file has no slug scheme. Renumbering silently redirects them.
+> [!danger] **Standing Moratorium** — `ETHICS.md` / #scope-moratorium-endogenous-emergence. Bind before any agent-seam work.
 
-## 1. The one-paragraph fit
+## Where the claims live now
 
-AAT is a theory of agents that persist by tracking a changing world: a reality model $M_t$ corrected at tempo $\mathcal{T}$ against disturbance rate $\rho$, with objectives $O_t$ and strategy $\Sigma_t$ layered above, and hard results about when tracking holds ( #asf/1-aat/result-persistence-condition — $\mathcal{T} \gt \rho/\lVert\delta_{\text{critical}}\rVert$), what it costs, and what breaks it. **Vivarium builds the world those agents will live in — with every quantity the theory needs authored, known, and dialable.** TST (ASF volume 02) calls software AAT's *"privileged high-identifiability calibration laboratory"* because software *happens* to expose its state. Vivarium is the second laboratory, with a stronger warrant: identifiability **by construction** — the *in vivia* register ( #lexicon/term/vivium). Joseph's statement of the bet, 2026-07-04: *"simulation results epistemically nearer to real-world empirical results than toy simulations."* That is conditional on the fidelity program actually succeeding, and the phase ladder is how it gets there honestly.
-
-## 2. The conceptual bridge — one object, two sides of the knowing-relation
-
-The connection is not an analogy. AAT's root-ontology work (`asf/spikes/epistemic-target-ontology/`) types the agent's epistemic target as $S_t = (\Omega_t, \theta)$ — fast **state** plus persistent **law** — with **chance** $\varepsilon$ defined as what remains fresh once everything persistent is named into $\theta$, and **compute-shortfall** as a fourth, ratio-type ignorance (knowing the generator ≠ being able to run it faster than reality). Vivarium constructs exactly this object from the other side:
-
-| AAT (the agent infers, from inside) | vivarium (we author, from outside) |
+| Topic | Segment (cite these) |
 |---|---|
-| law $\theta$ — transition/observation structure | the physics and the constants; each phase's **Promise**. Phase 1's *"the constants themselves — the box every later computation happens inside"* is verbatim a $\theta$-slot declaration |
-| state $\Omega_t$ | the live world state — terrain, water, weather, populations |
-| chance $\varepsilon$ | **fated noise** ( #lexicon/term/fated-noise) — a pure function of (seed, key) |
-| compute-shortfall | the **fidelity ladder** and lazy memoized evaluation; the runtime is a compute-shortfall manager end to end |
-| the chronica $\mathcal{C}_t$ ( #asf/1-aat/def-chronica) | a world's **interventional history** ( #lexicon/term/interventional-history) |
+| ASF reading gates Level A / B / C; Level C hard gate | #scope-asf-reading-gates |
+| AAT ↔ vivarium object map (unratified synthesis) | #disc-aat-vivarium-object-map |
+| Operational *in vivia* citation bundle | #form-in-vivia-citation · #def-in-vivia |
+| Agent-seam constraints (late-phase holder) | #scope-agent-seam-constraints |
+| Purpose (play + laboratory) | #disc-vivarium-purpose |
+| Determinism / fated noise | #post-determinism-as-ontology |
 
-Four consequences follow. They are the synthesis this document's header warns about, not ratified results:
+**ASF mathematics:** cite `#asf/…` slugs. Do not re-prove AAT in vivarium.
 
-- **A phase-transition is the promotion of converged state into law.** Each phase runs until its outputs are invariant under everything faster — at which point they *are* $\theta$ for all later dynamics. The AAT spike's rule for what belongs in $\theta$ — *"the cut is invariance, not slowness; the tower derives by self-similar application"* — is precisely our phase-transition semantics, and the transition is *incremental* (a few systems sunset, several spin up, most carry forward), so it revises the law-set rather than swapping it. **The phase ladder implements AAT's timescale tower by construction.**
-- **The phase ladder is a $\rho$-schedule.** Phase 7 (Aboriginal — *the substrate stabilizes beneath the agent seam*) in AAT terms: successive phases deliver worlds of decreasing disturbance rate until Pleistocene-grade agents with achievable tempo satisfy the persistence condition. Timescale separation — the hydrology lesson this project paid for — is what makes late-phase $\rho$ low.
-- **The aleatoric boundary is frame-relative, and vivarium makes that operational.** Fated noise is genuine chance *to the inside agent* and a deterministic lookup *to us*. The same holds for the whole $\theta/\Omega$ split: GA-1's verified *observationally-equivalent twin* result (`asf/spikes/epistemic-target-ontology/01-ga1-verification.md`) says fresh-noise assumptions are properties of the chosen **state description**, not of the system — and vivarium is the place where the description is explicitly chosen. **We are the housing rule.**
-- **The two-layer mind's open empirical question is an AAT question.** `doc/design/DESIGN.md` carries it, tagged as the guess it is: whether LLM-induced perturbations on the formal agent state stay legible enough to measure adaptation cleanly, or inject enough noise to wreck identifiability. In AAT terms it is $\theta$-identifiability under $\Omega$-perturbation. The bias bound ($\lVert\Delta M_{\text{bias}}\rVert \le C \cdot \kappa \cdot \mathcal{A}$) says the damage scales with architectural coupling × observation *ambiguity* — and we author $\mathcal{A}$, which makes the question **dialable** here rather than only askable. The GA-1 asymmetry (transition-law ignorance flows safely through the state floor; observation-law ignorance breaks freshness) is testable here because we choose which side to perturb.
+**ASF-side twin** of what vivarium offers the framework: `asf/doc/vivarium.md`.
 
-## 3. What the agent layer inherits (design constraints, not suggestions)
+## Historical section redirect
 
-When the agent seam is built (Phase 7 / `doc/design/DESIGN.md`'s two-layer mind), it is an implementation of specific ASF machinery, and should be developed against the segments rather than from memory of them.
+Older prose and `DECISIONS` may still say `ASF.md §N`. Redirect only:
 
-- **The two-layer mind is the wrapping construction** ( #lexicon/term/wrapping-regime · #asf/1-aat/der-class-coercion-via-wrapping · #asf/3-llm/der-logogenic-as-wrapping). The slow LLM layer is the Coupled component; the fast formal layer is the wrapper that restores directed separation at the agent level. **The design choice to make deliberately: W₁ (strict) wrapping is available to us from day one, because we control the whole interface.** The (C2′) condition is what makes it a choice rather than a gift — it names our own architecture, so aporia calls must be stateless or state-partitioned, or the structural bound is not there to have. shoshin is W₂; **vivarium can be the first native-W₁ testbed.**
-- **Vivarium agents satisfy AAT's awkward assumptions by construction.** The formal layer is natively Separated (we author the estimator/planner split); the bounded-signaling assumption holds *exactly* — the action space **is** the agent's entire external interface, with no prosody or latency leakage; GA-1 holds if we build the observation channel honestly. **Where AAT must assume, vivarium instantiates.**
-- **Ground truth for every AAT quantity.** $U_M$, $\delta_t$, $\eta^\ast$, $\mathcal{T}$, $\rho$ per region, per-dimension mismatch — all exactly computable here, because we hold $\Omega$ and $\theta$. #asf/3-llm/obs-evaluation-metrics estimates these in the wild; vivarium measures them. Also directly runnable at scale: the behavioral $\hat\kappa$ estimator (the same event under different goal states, measuring how far the epistemic content diverges), which ASF notes *appears* never to have been run. Its stated confound is a design constraint on us before we run it — the probe must hold $M_{\tau^-}$ fixed across goal conditions, or it confounds goal-conditioned processing with a different prior ( #asf/1-aat/der-directed-separation).
-- **Before agents step in parallel: the RNG.** Fated-noise discipline is realized for the *world* — `crates/vivarium-world/src/noise.rs` is stateless and keyed on (seed, key). `vivarium-core`'s generator (`lib.rs`) is still a **stepped stream** keyed on (seed, number-of-steps-taken), which parallel agents break the first time they step concurrently, and per-agent splittable seeds are undecided (`ref/architecture-audit.md` §1, open). **This is fated-noise discipline applied to minds, and it is a prerequisite of the seam rather than a cleanup after it.**
-- **Our fork design and ASF's forking segment should co-develop.** #asf/4-eli/hyp-checkpoint-forking-failure-modes (`discussion-grade`, `draft`) is *about our save/fork machinery*: forking is locally cheap and systemically catastrophic — identity bifurcation, accountability fragmentation. Vivarium is where that hypothesis has a testbed, and #lexicon/term/forks is our side of it, currently unreconciled with it.
-- **The crèche direction — a locus initially** (Joseph, 2026-07-04). ASF names AAT-grounded experiential training environments ( #asf/3-llm/hyp-experiential-training) with a $\rho$-lowered developmental period, and vivarium *could* become one — but is, for now, deliberately only the **locus**: the place where such an environment could exist. `ETHICS.md`'s crèche tier states what that would demand of us; what it does not state is the AAT shape of the environment itself. **Decisions about the agent seam should avoid foreclosing the possibility; nothing should assume it.**
+| Former section | Content now |
+|---|---|
+| §1 one-paragraph fit | #disc-vivarium-purpose (+ ASF volumes for theory) |
+| §2 object map + consequences | #disc-aat-vivarium-object-map (table; consequences = Working Notes only) |
+| §3 agent-layer constraints | #scope-agent-seam-constraints |
+| §4 ASF ops principles | Not restated in core — global / ASF SOPs + #norm-probes-before-claims, FORMAT §6, CLAUDE disposition |
+| §5 reading gates | #scope-asf-reading-gates |
+| §6 cross-pollination | `asf/doc/vivarium.md` + program charter |
+| §7.1–7.4 integration program | LEXICON collision discipline; FORMAT tiers; not rival canon here |
+| §7.5 / §7 item 5 citation recipe | #form-in-vivia-citation |
 
-## 4. ASF operational principles that bind vivarium development
+## Explicit non-authority
 
-Vivarium already inherits Joseph's global disposition. These ASF-specific disciplines transfer with full force (source: `asf/doc/sop/agents.sop.md` + project memory).
-
-1. **Strengthen before softening; effort is a false constraint.** Before any "honest fudge" is accepted (rain rate, eddy constants), attempt the principled version. Our own physics-not-knobs habit is this principle discovered independently; ASF states the general form.
-2. **Integration is replacement.** A refuted model or claim is deleted, not kept-softened-with-a-pointer, and labels track current truth-status rather than provenance. We already practice this in code — the kill-switch deletion — and `FORMAT.md` §6 binds our prose to it too.
-3. **Working theory belongs in canon at honest tier.** ASF's stage ladder (draft → deps-verified → claims-verified → …) and tier vocabulary (exact / robust-qualitative / heuristic / conditional) are worth speaking natively; #lexicon/term/epistemic-axes is our domain instantiation, and the two vocabularies should stay handshake-compatible ( #lexicon/note/aat-handshake).
-4. **The Gate-2 tribunal for discussion claims.** Of every explanatory claim in our research and design docs: does it *follow* from the physics/theory, is it *labeled* as hypothesis with a falsification route, or does it merely sound insightful? **Plausible-but-ungrounded explanations are worse than gaps.** Our oxygenation scaffold's tag table is this discipline in miniature.
-5. **Respectful pedagogy / mental-model-first, with isomorphic analogs.** Framing docs lead with the scaffold, then the precise structure; the analog must survive perturbation (the bathtub standard). Joseph's 2026-07-04 placement principle applies with it: mental-model weight proportional to structural importance, not to dependency order.
-6. **Peer voice when delegating; probes before claims** — the ASF lint-before-claim habit generalized. Our form is *"no physics claim without its probe run"*, and *"a probe that cannot fail is not a probe."*
-7. **TST is live here.** The developer or agent working on vivarium is itself an AAT agent whose observation channel is our instruments. *"Build the instrument before tuning by feel"* is TST's $Q \to U_o \to \eta^\ast \to \mathcal{T}$ chain in practice; instruments-first is not a preference, it is what keeps *our* tempo above *this project's* $\rho$.
-
-## 5. Prerequisites — ASF familiarity gates for working on vivarium
-
-*(The gate Joseph asked for, 2026-07-04. Levels are cumulative. "Read" means read-for-comprehension. Anything landing in the ASF tree is bound by ASF's own SOP set — `asf/doc/sop/agents.sop.md`, to which its `CLAUDE.md` / `AGENTS.md` / `GEMINI.md` are symlinks — not by vivarium's conventions.)*
-
-**Level A — every session, before any vivarium work.** This file, plus vivarium's own front door as always. Cost: minutes. You now know vivarium is an ASF instrument and where the theory lives.
-
-**Level B — before designing any world *system*** (a phase's physics, climate, ecology, the run-modes/provenance machinery). Read in `asf/`: the root orientation (disposition + conventions); `01-aat-core/OUTLINE.md` Part I (the adaptive-systems spine); the three Part-I anchor segments — #asf/1-aat/result-mismatch-decomposition · #asf/1-aat/result-persistence-condition · #asf/1-aat/def-adaptive-tempo; and skim `spikes/epistemic-target-ontology/00-spike.md` (the typed ontology this document leans on). Cost: an attentive hour. You now know what $\rho$, $\theta$, and the persistence condition demand of a world that will host agents — which quietly changes how you build weather.
-
-**Level C — before touching the agent seam** (cognitive LOD, the two-layer mind, agent observation/action channels, save/fork semantics for inhabited worlds). Add: #asf/1-aat/der-directed-separation in full (the GUC classes, W₁/W₂, bounded-signaling); `03-llm-core/OUTLINE.md` (the scope lattice + bias bound); `04-eli-core/OUTLINE.md` preface + §04.3 (deaths and defenses) alongside our `ETHICS.md`; and the GA-1 verification (`spikes/epistemic-target-ontology/01-ga1-verification.md`), so the housing choices you make in agent perception are made knowingly. Cost: a day of real reading. **This level is a hard gate: the agent seam is the project's reason to exist, and it must not be built from an unread theory.**
-
-**Recurring dives (the per-cycle gate).** At natural junctures — opening a new world system, closing a spike, promoting a design doc — ask: *which ASF segment is this an instance of?* If the answer is "none", that is either a gap worth reporting upstream (**vivarium is allowed to *find* holes in AAT — that is half its value**) or a sign the work has drifted from the bet. Either way, write the answer down where the work lives.
-
-## 6. Where cross-pollination flows (and its current direction)
-
-Today, mostly ASF → vivarium: the theory names what we should build and what to measure. Soon, vivarium → ASF: measured persistence-threshold crossings, the $\hat\kappa$ estimates, the GA-1 housing experiment, tempo-race data under authored irreducibility — empirical grist no other environment can produce at this fidelity-to-legibility ratio. The ASF-side statement of what vivarium offers (immediate / short-term / future) lives at `asf/doc/vivarium.md`; progress pointers live there too and should be kept current from this side whenever a milestone lands.
-
-## 7. The integration program — mechanisms, not just a mapping
-
-*(Joseph, 2026-07-04: the bridge should be a plan to **update and start using ASF mechanisms** — integrating findings so both projects are raised to the highest combined epistemic-honesty bar — not merely a key between vocabularies. §§1–6 are the key; this section is the program. The minimum bar beneath all of it: no conflicting, contradictory, or confusing terminology or conceptual differences between the projects.)*
-
-1. **One terminology, two teaching voices.** Where the two projects touch the same object, vivarium's LEXICON **defers to ASF's term**; the standing carves and cessions are recorded in #lexicon/note/collision-ledger, and a retirement goes to the graveyard ledger (`.archive/SUPERSEDED.md`) so a dead term and a live term never share a home. New vivarium coinages get an ASF collision-check **before** settling. Vivarium's glosses and pedagogy are kept — **the referent unifies, the voice does not have to.**
-2. **Adopt AAT's epistemic machinery natively.** Vivarium research docs (`ref/research/`, the oxygenation-style scaffolds) adopt the AAT tier vocabulary — *exact / robust-qualitative / heuristic / conditional* — and equation-level tags where formal claims appear. #lexicon/term/epistemic-axes is the domain-side extension of the same system (axes A/B ↔ the typed target; D ↔ stage/verification). **Probe-verified is our *claims-verified*.**
-3. **Findings flow upstream as canon, at honest tier.** Vivarium results that instantiate or stress AAT — the $\rho$-schedule reading, transition-as-law-promotion, frame-relative $\varepsilon$, and every future measured result — are offered to ASF as segment content: Discussion paragraphs, domain-table rows, worked examples, or new segments at `discussion-grade`/`conditional` per ASF's working-theory-belongs-in-canon discipline. Proposed through Joseph or an ASF-resident session (their format, lint, and tier rules bind); **never left stranded in vivarium docs where ASF's canonical channels cannot find them.**
-4. **The HUD becomes an ASF instrument.** Live analytical ASF processing in the view (Joseph's direction): per-region $\rho$, per-agent $\mathcal{T}$ and persistence margin ($\alpha R - \rho$, the adaptive reserve), mismatch-decomposition readouts once agents perceive — the fidelity-tint / budget-gauge / Froude-gauge instrument culture extended to AAT quantities. The water-budget gauge is the existence proof: we already render conservation honesty in real time, and rendering persistence honesty is the same move on the agent layer.
-5. **Cross-bundling: studies couple to explicit vivia.** An ASF empirical or simulation claim can cite a *specific* world-artifact — **seed + generator versions + phase memo + intervention script** — as its reproducible substrate, and content-addressed storage makes the citation **exact**. That is the operational meaning of results ***in vivia*** ( #lexicon/term/vivium): a third empirical register between toy model and field study, with the transfer assumptions stated. `doc/plan/regula-conformance-design.md` §3 is where the enforcement layer for it was sketched.
-6. **What stays open.** The additional (non-world-building) gates a real crèche would need (§3); which upstream segments receive the first vivarium-sourced rows (candidates: #asf/1-aat/result-persistence-condition's domain table, #asf/1-aat/der-directed-separation's $\hat\kappa$ working note, #asf/3-llm/obs-evaluation-metrics); and the root-ontology landing upstream, which this document tracks but does not gate on.
+- This file is a **router**, not a second front door.
+- **Do not** treat former section numbers as current law.
+- Unratified synthesis stays discussion-grade in its segment; do not invent Joseph ratification from the 2026-07-04 bridge session.
+- Disposition history: live interim home after 2026-07-16 re-home; claim content extracted to `core/` thereafter. Archaeology of full prior text: git history / `.archive/` if present.
