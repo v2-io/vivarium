@@ -35,7 +35,7 @@
 //! phase state exists yet (the ordinum's phases are world-global). The legend
 //! says so out loud.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::gen::{self, SEA_LEVEL_M};
 use crate::planet::Planet;
@@ -60,11 +60,11 @@ struct Coverage {
     level: u8,
     nx: usize,
     /// `(face, oi, oj)` origins that have a initial_topo tile.
-    initial_topo: std::collections::HashSet<(u8, u32, u32)>,
+    initial_topo: BTreeSet<(u8, u32, u32)>,
     /// `(face, oi, oj)` → erosion `epochs` (needed to re-pull the eroded field).
-    erosion: HashMap<(u8, u32, u32), u32>,
+    erosion: BTreeMap<(u8, u32, u32), u32>,
     /// `(face, oi, oj)` origins that have a settled water tile.
-    watered: std::collections::HashSet<(u8, u32, u32)>,
+    watered: BTreeSet<(u8, u32, u32)>,
 }
 
 /// Pull one `key=value` field out of a canonical store-key string.
@@ -191,8 +191,8 @@ pub fn render(world: &World, roots: &[(String, String)], w: usize, lon0_deg: f64
 
     // Per-tile field caches (pulled through the sanctioned query path, memoised
     // in the store — "depend by key", never re-derived from raw internals).
-    let mut spine_cache: HashMap<(u8, u32, u32), Vec<f32>> = HashMap::new();
-    let mut eroded_cache: HashMap<(u8, u32, u32), Vec<f32>> = HashMap::new();
+    let mut spine_cache: BTreeMap<(u8, u32, u32), Vec<f32>> = BTreeMap::new();
+    let mut eroded_cache: BTreeMap<(u8, u32, u32), Vec<f32>> = BTreeMap::new();
 
     // Coverage tallies for the footer (tiles per state → % of the census).
     let mut tally = [0usize; 4];
@@ -299,7 +299,7 @@ pub fn render(world: &World, roots: &[(String, String)], w: usize, lon0_deg: f64
     // Footer: what the whole census reached (tiles per state), and the legend.
     // Union every built origin — erosion/water without a matching initial-topo
     // root still count (legacy `spine-tile` keys, partial rebuilds, version churn).
-    let mut origins: std::collections::HashSet<(u8, u32, u32)> = cov.initial_topo.iter().copied().collect();
+    let mut origins: BTreeSet<(u8, u32, u32)> = cov.initial_topo.iter().copied().collect();
     origins.extend(cov.erosion.keys().copied());
     origins.extend(cov.watered.iter().copied());
     for &(f, oi, oj) in &origins {

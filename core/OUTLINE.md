@@ -41,6 +41,7 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | normative | Ops Critical | [#norm-decision-authority](src/norm-decision-authority.md) | Authority tags; evidence ≠ who decided | draft |
 | discussion | Model Critical | [#disc-algorithms-disguise-physics](src/disc-algorithms-disguise-physics.md) | Port the physical claim, not the paper costume | draft |
 | discussion | Ops Critical | [#disc-check-the-ladder](src/disc-check-the-ladder.md) | Check the phase ladder before modern-Earth priors | draft |
+| normative | Ops | [#ops-audit-integration](src/ops-audit-integration.md) | Audit reports: verify, adjudicate, integrate, then `.integrated/` | draft |
 | | | | *(#gap) Epistemology ladder / weak-tier-in-canon* | missing |
 | | | | *(#gap) Strengthen-before-soften as vivarium segment* | missing |
 | | | | *(#gap) Full ETHICS segmentation (harm triple, redeemer, …)* | missing |

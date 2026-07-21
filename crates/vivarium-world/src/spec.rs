@@ -51,6 +51,10 @@ impl WorldSpec {
 
     /// A fresh seed for a *new* world — the one moment entropy is welcome
     /// (recorded in the manifest immediately; deterministic ever after).
+    ///
+    /// Not world-law: identity *minting* is outside the fated causal path.
+    /// After the seed is written, every draw is pure of (seed, key).
+    #[allow(clippy::disallowed_methods)] // SystemTime::now — mint only; see above
     pub fn fresh_seed() -> u64 {
         let nanos = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

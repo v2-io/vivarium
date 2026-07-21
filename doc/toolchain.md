@@ -4,30 +4,7 @@
 
 ## Adopt now (habit-forming, near-zero cost, painful to retrofit)
 
-**1. Clippy disallowed-lists — the determinism bans, mechanized.** `clippy.toml` at workspace root (warn-by-default; the config alone activates it):
-
-```toml
-[[disallowed-methods]]
-path = "std::time::SystemTime::now"
-reason = "breaks determinism — world-law code is keyed-hash only (PROCESS.udon determinism-proscriptions)"
-[[disallowed-methods]]
-path = "std::time::Instant::now"
-reason = "same — instrument timing belongs in views/probes, never world-law"
-[[disallowed-methods]]
-path = "rand::thread_rng"
-reason = "all randomness is a keyed hash of (seed, key) — use noise::hash2/hash3"
-[[disallowed-methods]]
-path = "rand::rng"
-reason = "rand 0.9 rename of thread_rng; ban both"
-[[disallowed-types]]
-path = "std::collections::HashMap"
-reason = "iteration order is nondeterministic — IndexMap, BTreeMap, or a sorted Vec"
-[[disallowed-types]]
-path = "std::collections::HashSet"
-reason = "same"
-```
-
-**The ban is decorative until wired**: `cargo clippy --all-targets -D warnings` must run wherever tests run (a `bin/check` script until CI exists). Known limits: no purchase on HashMaps inside dependencies' APIs, trait-dispatched equivalents, or LLVM-level float reassociation. *Retrofit argument: zero cost on today's clean slate; the moment `rand` creeps in from habit, removal is a project.*
+**1. Clippy disallowed-lists — the determinism bans, mechanized.** ✅ **Wired 2026-07-21.** Root `clippy.toml` carries the bans; `bin/check` runs lib tests + `cargo clippy -p vivarium-world --lib` with `-D clippy::disallowed_methods -D clippy::disallowed_types`. Requires `rustup component add clippy`. Identity minting (`WorldSpec::fresh_seed`) is the sole allowed `SystemTime::now` (annotated). Examples/probes still use `HashMap` — not under this gate yet. Full-workspace `-D warnings` (incl. Bevy spikes) is deferred.
 
 **2. `#[must_use]` on `Quantity`, `Unit`, and every conservation-carrying return.** One attribute; catches silently-dropped computed quantities at compile time.
 

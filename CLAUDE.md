@@ -24,7 +24,8 @@ A deterministic constructed-world laboratory (and sim game) in the RimWorld / DF
 | **Term meanings** | [`LEXICON.udon`](LEXICON.udon) |
 | **Magic constants** | [`ASSUMPTIONS.md`](ASSUMPTIONS.md) |
 | **AAT bridge (synthesis, partly unratified)** | [`ASF.md`](ASF.md) — Level C hard-gates agent-seam work |
-| **Executable law / probes** | `crates/vivarium-world/` · examples · `vivarium status` |
+| **Executable law / probes** | `crates/vivarium-world/` · examples · `vivarium status` · `bin/check` (tests + determinism clippy) |
+| **Pending audits** | [`audits/`](audits/) — integrate per `#ops-audit-integration`; `.integrated/` only when done |
 | **Archaeology only** | [`.archive/`](.archive/) — not tactical current dependency |
 
 Supporting prose (`doc/ARCHITECTURE.md`, `doc/design/*`, `doc/theory/*`, plans) remains useful **as source material for segments**. Do not treat it as a parallel canon. When a segment lands, it replaces the claim's home; the old prose is demoted to pointer or archive.

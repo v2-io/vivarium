@@ -1,0 +1,27 @@
+# Determinism bans for world-law code (doc/toolchain.md §Adopt now).
+# Enforced via: cargo clippy -p vivarium-world --lib -- -D warnings
+# (or bin/check). Views/spikes are not gated the same way yet.
+
+[[disallowed-methods]]
+path = "std::time::SystemTime::now"
+reason = "breaks determinism — world-law code is fated/keyed only (#post-determinism-as-ontology)"
+
+[[disallowed-methods]]
+path = "std::time::Instant::now"
+reason = "instrument timing belongs in views/probes, never world-law"
+
+[[disallowed-methods]]
+path = "rand::thread_rng"
+reason = "all randomness is keyed (seed, key) — use noise KRNG/DRNG"
+
+[[disallowed-methods]]
+path = "rand::rng"
+reason = "rand 0.9 rename of thread_rng; ban both"
+
+[[disallowed-types]]
+path = "std::collections::HashMap"
+reason = "iteration order is nondeterministic — BTreeMap, IndexMap, or sorted Vec"
+
+[[disallowed-types]]
+path = "std::collections::HashSet"
+reason = "same — use BTreeSet or sorted Vec"

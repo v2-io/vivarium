@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Epistemic gate for world-law code (doc/toolchain.md).
+# Tests + clippy determinism bans. Not full-workspace -D warnings yet.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+echo "== cargo test -p vivarium-world --lib =="
+cargo test -p vivarium-world --lib
+
+echo "== cargo clippy -p vivarium-world --lib (determinism bans deny) =="
+cargo clippy -p vivarium-world --lib -- \
+  -D clippy::disallowed_methods \
+  -D clippy::disallowed_types
+
+echo "bin/check: ok"
