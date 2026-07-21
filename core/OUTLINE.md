@@ -52,10 +52,12 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | --- | --- | --- | --- | --- |
 | definition | Project | [#def-nomos](src/def-nomos.md) | A nomos is one keyed, versioned article of world-law | draft |
 | formulation | Machine Critical | [#form-complete-content-addressed-key](src/form-complete-content-addressed-key.md) | Complete key; over-key never under-key | draft |
+| formulation | Machine Critical | [#form-flux-web](src/form-flux-web.md) | Nomoi couple by matched flux quantities; unmet = unrunnable | draft |
+| formulation | Project Critical | [#form-ordinum-governs-flux-web](src/form-ordinum-governs-flux-web.md) | Ladder promises are flux; `:kept-by` is the producer | draft |
+| observation | Physics | [#obs-hydrosphere-box-nomos](src/obs-hydrosphere-box-nomos.md) | Box nomos proves representation-agnostic contract | draft |
 | discussion | Model Critical | [#disc-prime-question](src/disc-prime-question.md) | Prime Question = modified-equation analysis | draft |
 | | | | *(#gap) Nomotheke as registry contract* | missing |
-| | | | *(#gap) Ordinum / phase ladder as claim segments* | missing |
-| | | | *(#gap) Flux web and conserved quantities* | missing |
+| | | | *(#gap) Full Terrestris phase-content segments* | missing |
 | | | | *(#gap) Manifest / vivium identity* | missing |
 
 ## III. Runtime, environment, and CLI
