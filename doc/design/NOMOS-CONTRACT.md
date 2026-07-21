@@ -92,7 +92,7 @@ Each box gets one file at `doc/design/nomos-contract/`. **The failure mode of a 
 
 **Common brief for all five** (each is one agent, they are independent, run them in parallel):
 
-> Onboard: `CLAUDE.md` (Level A — the **Prime Question**, and note it is a **COMPUTATION**: modified equation analysis) · `ORIENTATION.md`'s **HANDOFF** block · **this file** · `doc/theory/discretisation-and-information.md` · `DECISIONS.decision-log.udon` — **the authority legend, then ALL of 2026-07-12/13** (that is your source material; ~20 entries, nearly all `:by claude :status proposed`) · `ASSUMPTIONS.md` · project memory (does NOT autoload) · the spikes in `msc/`.
+> Onboard: `CLAUDE.md` (telos: segments sole claim truth) · `core/OUTLINE.md` · **this file** · `doc/theory/discretisation-and-information.md` (Prime Question = modified-equation **computation**, not a disposition) · `DECISIONS.decision-log.udon` — **the authority legend, then ALL of 2026-07-12/13** (source material; ~20 entries, nearly all `:by claude :status proposed`) · `ASSUMPTIONS.md` · project memory (does NOT autoload) · the spikes in `msc/`. Archaeology only: `.archive/ORIENTATION.md` HANDOFF residue — not a tactical current dependency.
 >
 > **Write ONE file: `doc/design/nomos-contract/0N-<box>.md`. It is a PROCEDURE, NOT A TAXONOMY.** Its shape: **the question · the fundamentals (do the math, do not gesture at it) · the procedure · a worked specimen · THE PROBE · the failure gallery · what to write in the declaration.**
 >

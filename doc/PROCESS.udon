@@ -28,12 +28,16 @@
     |norm[doc-placement]
       :kind prescription
       Every document has exactly one home, chosen at creation: root = front
-      doors (README, CLAUDE, ORIENTATION, TODO) + the ethics/moratorium unit
-      (ASF.md, ETHICS.md) + the three ledgers (LEXICON, SUPERSEDED, ASSUMPTIONS);
-      doc/ = durable thinking (ARCHITECTURE; design/ plan/ theory/); the codified phase floor is tabularium/*.ordinum.udon;
-      ref/ = true reference, consulted not onboarded; msc/ = session
-      reflections; .archive/ = accounted-for retirements. A new doc that fits
-      none of these is a taxonomy question to raise, not a root file to drop.
+      doors (README, CLAUDE) + claim core (core/OUTLINE.md, core/src/ segments —
+      sole claim truth, #scope-segment-canon) + the ethics/moratorium unit
+      (ASF.md, ETHICS.md) + the three ledgers (LEXICON, ASSUMPTIONS; SUPERSEDED
+      lives under .archive/ until re-homed); doc/ = durable thinking substrate
+      (ARCHITECTURE; design/ plan/ theory/ — source until segmented); the
+      codified phase floor is tabularium/*.ordinum.udon; ref/ = true reference,
+      consulted not onboarded; msc/ = session reflections and audits;
+      .archive/ = accounted-for retirements (incl. former ORIENTATION/TODO). A
+      new doc that fits none of these is a taxonomy question to raise, not a
+      root file to drop.
 
     |norm[sunset-freely]
       :kind prescription
@@ -68,10 +72,12 @@
 
     |norm[present-tense-bodies]
       :kind prescription
-      Current-state documents (ORIENTATION, ARCHITECTURE, this file) change
-      their bodies; they do not grow by addenda. History lives in git; retired
-      terms and sections live in SUPERSEDED.md; still-open fragments relocate to
-      TODO.md before the old text goes.
+      Current-state documents (ARCHITECTURE as substrate, this file, CLAUDE as
+      router) change their bodies; they do not grow by addenda. Claim truth
+      changes by editing segments. History lives in git and DECISIONS; retired
+      terms live in .archive/SUPERSEDED.md (or LEXICON |carve); open work is
+      named as OUTLINE gaps or DECISIONS proposals — not a hand-maintained
+      ORIENTATION/TODO state map.
 
     |norm[ledger-duty]
       :kind prescription

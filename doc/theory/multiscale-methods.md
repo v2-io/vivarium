@@ -165,15 +165,16 @@ error-driven refinement; consumer-dependent sufficient statistics (§5 — the
 literature usually fixes one R per method; we want R per consumer);
 fated-lookup closure (§3 above); phase-memos as content-addressed storage.
 
-**Genuinely open (the one hard research problem, ORIENTATION):**
-**detail→abstract** — an irreducible *micro edit* (an agent digs a canal)
-must propagate *upward* through R into every memoized macro that summarized
-it, with correct invalidation. The mature methods are all forward/downward;
-upward re-summarization after micro perturbation is closest to data
-assimilation (state estimation from observations), and nobody does it with
-memo-invalidation semantics. This is where vivarium is off the map — and it
-is also precisely the AAT question (does a perturbation stay legible), which
-is presumably not a coincidence.
+**Genuinely open (not ranked — see `doc/ARCHITECTURE.md` §8 and Joseph's rule
+that open-problem censuses are untrusted until derived from `core/`):**
+**detail→abstract / nonlinear closure for non-local flux** — an irreducible
+*micro edit* (an agent digs a canal) must propagate *upward* through R into
+every memoized macro that summarized it, with correct invalidation. The mature
+methods are all forward/downward; upward re-summarization after micro
+perturbation is closest to data assimilation, and nobody does it with
+memo-invalidation semantics. Plausibly the same shape as the AAT legibility
+question. Statement of the problem itself may still need rename (ARCHITECTURE
+§8); do not treat the old ORIENTATION superlative ranking as law.
 
 ---
 

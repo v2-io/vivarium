@@ -1,6 +1,8 @@
 # vivarium — ARCHITECTURE
 
-*v0.3, 2026-07-10. The consolidating overview — mental-model-first; the derivations live in the docs it points to: `doc/theory/multiscale-methods.md` (the R/L/closure operator algebra), `doc/theory/multiscale-seams.md` (position AND time at the seams), `doc/design/DESIGN-REDUX.md` (runtime / fidelity / storage), `doc/design/DESIGN-MATERIAL.md` (matter model), `doc/design/DESIGN-SYSTEMS.md` (phenomena graph), `tabularium/terrestris.ordinum.udon` (world-phases, codified), `LEXICON.udon` (vocabulary), `ASF.md` (the AAT bridge). Status marked inline: **settled** / **stance** / **open** / **gap** (designed, not yet built). Vocabulary is `LEXICON.udon`-canonical throughout (fated noise, KRNG/DRNG, Realized, Brooding, lawful-steering, exploration/participation).*
+*Source / consolidating overview — **not claim canon.** Settled claims live in `core/src/` (`core/OUTLINE.md` · `#scope-segment-canon`). Use this file as extraction substrate and mental-model map; when a segment exists, the segment wins.*
+
+*v0.3, 2026-07-10 (body). Derivations and detail still pointed here: `doc/theory/multiscale-methods.md`, `doc/theory/multiscale-seams.md`, `doc/design/DESIGN-REDUX.md`, `doc/design/DESIGN-MATERIAL.md`, `doc/design/DESIGN-SYSTEMS.md`, `tabularium/terrestris.ordinum.udon`, `LEXICON.udon`, `ASF.md`. Status marked inline: **settled** / **stance** / **open** / **gap**. Vocabulary is `LEXICON.udon`-canonical.*
 
 > [!note]
 > Erosion and hydrology appear below only as **two early instances of many more systems to come** — the systems that happen to exist in code, not the subject. The subject is the general machinery that lets an arbitrary number of interdependent systems be developed in parallel, each principled.
@@ -11,13 +13,11 @@
 
 ## Layer 0 — the whole architecture in one paragraph
 
-Vivarium builds worlds under **one principle on three axes.** The principle: **represent by consequence** — spend simulation, precision, and storage only where a consumer depends on it. The three axes it runs along:
+**Principle claim home:** `#post-represent-by-consequence` — spend simulation, precision, and storage only where a consumer depends on it.
 
-1. **The substrate machinery** — *how any one system is computed.* A world is a **multiscale, heterogeneous, multirate coupled dynamical system**: each aspect runs its own model on its own grid and rate, joined to its neighbours only by **conserved fluxes across seams**, evaluated lazily and memoized. (§§1–5.)
-2. **The developmental ladder** — *the order systems come online, and how they become law.* A world is built as a sequence of **phases**; each phase runs its coupled systems to convergence and freezes the result into a **Realized** macro that *is the law* the next phase reads. A system's algorithms are needed exactly when a downstream phase's **Charge** reads them. (§6.)
-3. **Use-case as fidelity contract** — *what the finished world is for.* A vivium is consumed by many use-cases (exploration, games, Earth-simulation, hypothesis-testing, AAT-calibration), and the use-case *is* a statement of which fidelity axes must be honest. (§7.)
+**Three axes** (elaborated below; not all fully segmented): (1) **substrate machinery** — multiscale, multirate systems joined by conserved fluxes, lazy memoized evaluation (§§1–5); (2) **developmental ladder** — phases freeze converged state into law the next phase reads (§6; ordinum); (3) **use-case as fidelity contract** — what the world is for sets which fidelity axes must be honest (§7; `#disc-vivarium-purpose`, `#def-in-vivia`).
 
-The software layer — a content-addressed, memoized query graph whose **save-file is the memo store** — is how axis 1 is made runnable and reusable. And **AAT is one privileged use-case on axis 3, not the telos**: vivarium authors from the outside ($\theta$, $\Omega$, $\varepsilon$) exactly what an adaptive agent infers from the inside, so calibration is uniquely well-served (ground truth by construction) — but most of world-building produces substrate no agent ever touches, and after a target the space forks wide into stories and games. The bridge is real; it is not the point.
+The software layer — content-addressed memo store as save file — is how axis 1 is made runnable. **AAT calibration is one privileged use-case on axis 3, not the project's only telos** (`#disc-vivarium-purpose`).
 
 ---
 
@@ -52,7 +52,7 @@ The one axis that organizes the zoo: *where does the missing information (the cl
 
 ## 3. What is distinctively ours — the closure choice *(stance)*
 
-The literature's $L$ *samples* the missing measure (Monte-Carlo, ensemble mean, max-entropy) — equation-free even notes $L$ is non-unique and any choice heals. **Ours is none of these: the missing detail is a deterministic pure function of identity — *fated lifting*.** Lifting doesn't sample a realization; it looks up the one **fated** by (seed, key) — the **fated noise** of `LEXICON.udon` §3, realized by a KRNG/DRNG. Consequences, in order: (1) **memoization becomes sound** — if $L$ sampled, two evaluations would disagree and caching would change the world; fated lifting is what lets the entire memo architecture exist (the seeding discipline and the caching architecture are one decision); (2) **determinism-as-ontology** — the world is a pure function of (seed, keys), trustable the way arithmetic is trustable, which is what makes it an epistemically real laboratory rather than an impersonation; (3) **our "ensembles" are degenerate** (one world per seed) — for distributional claims we vary the *seed*, not the *cell*.
+The literature's $L$ *samples* the missing measure (Monte-Carlo, ensemble mean, max-entropy) — equation-free even notes $L$ is non-unique and any choice heals. **Ours is fated lifting** — claim home `#post-determinism-as-ontology`; dictionary `#lexicon/term/fated-noise`. Consequences for this architecture (substrate, not a second law): (1) **memoization is sound** — two evaluations of the same key agree; (2) the world is a pure function of (seed, keys); (3) **ensembles are over seeds**, not re-rolls of a cell.
 
 Three further twists we own: **lazy, backwards-from-now** coupler pulls (the literature pulls forward-in-time); **observer-driven refinement** (attention, not an error estimate); and **consumer-dependent restriction**: the literature fixes one $R$ per method; we want **$R$ per consumer** (hydrology needs conserved totals, line-of-sight needs max, display needs mean). So a macro cell honestly carries `{mean, min, max, conserved-totals}` with each field flagged *guaranteed* vs *approximate*. **Store the wrong statistic and the fine materialization silently corrupts the macro** — the failure mode consumer-dependent restriction exists to prevent, and a systems-theory fact (representativity error), not a coding detail.
 
@@ -111,7 +111,7 @@ A phase-transition promotes converged state into law (the invariance cut, §6); 
 
 ## 8. Invariants, gaps, and the open-problem inventory
 
-**Three spine invariants the implementation may never trade away** *(settled)*: (1) **the core/view wall** — `vivarium-world` knows nothing about pixels; every view (renderer, logozoetic agent interface, headless logger) is a peer adapter that only *queries*; (2) **determinism-as-ontology via fated lifting** (§3) — *gap:* the agent-layer RNG is not yet fated (per-agent splittable seeds are the standing prerequisite, `architecture-audit.md` #1); (3) **the complete content-addressed key** (§5).
+**Three spine invariants the implementation may never trade away:** (1) **core/view wall** — claim home `#form-core-view-wall`; (2) **determinism-as-ontology via fated lifting** — claim home `#post-determinism-as-ontology` (agent-layer RNG gap named there); (3) **complete content-addressed key** (§5) — *not yet a segment* (OUTLINE §II gap); until segmented, treat §5 as source, not a second home for (1)–(2).
 
 **Status-quo gaps** (designed, not built — the build path in `doc/plan/abyssal-parity-plan.md`): the **store + nomos layer** (§5); the **coarse global spine** as dependency planner (§4, §6); **tile nomoi with flux boundary conditions** replacing today's hardcoded edge policy — *this is also the seam fix*: the present code seeds every patch's drainage at its own area and hardcodes edge-outlets, so tiles are non-composable and the seam pathologies (`seam_ridge` red) are the visible signature; the **query front-end** the view queries through, so navigation and persistence fall out; the **RNG fix** before agents. (Today's `spikes/worldview` is a physics testbench, not this runtime — one fixed patch, re-seeds from the raw prior on movement. The kernels are proven; the world-frame around them is unbuilt.)
 

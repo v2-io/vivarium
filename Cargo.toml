@@ -1,18 +1,14 @@
 # Workspace root.
 #
-# The split below is the load-bearing architectural decision (doc/design/DESIGN.md §"core
-# knows nothing about rendering"): `vivarium-core` is the simulation and has NO
-# rendering dependency; `vivarium-app` is one *view* over it. Future views — a
-# headless trajectory logger, a logozoetic (language) interface an agent plays
-# through — are peers of `vivarium-app`, never children of it. Keep that wall
-# intact: if `vivarium-core` ever gains a `bevy` dependency, something has gone
-# wrong.
+# Core/view wall — claim home #form-core-view-wall: the world frame has NO
+# rendering dependency; views are peers. Live frame: vivarium-world. Older
+# vivarium-core is migration residue. If vivarium-world gains a bevy dependency,
+# something has gone wrong.
 [workspace]
 resolver = "2"
-# One core, many views (doc/design/DESIGN.md): `vivarium-core` (the sim) + `vivarium-world`
-# (the clean-room frame it will migrate onto) + views. `spikes/slabs` is the
-# current state-of-the-art exploration view (2026-07-01) and the only live spike;
-# the rest were archived as superseded — see `spikes/FINDINGS.md` and `ORIENTATION.md`.
+# vivarium-world (frame) + vivarium-core (legacy) + views. Live exploration views:
+# spikes/{globe,worldview,slabs}. Superseded engine spikes: archive/ — see
+# spikes/FINDINGS.md. Claim outline: core/OUTLINE.md.
 members = ["crates/vivarium-core", "crates/vivarium-world", "crates/vivarium-app", "spikes/slabs", "spikes/worldview", "spikes/globe"]
 # Everything under archive/ is out of the build. (Excluded so cargo never tries to
 # resolve their `workspace = true` inheritances.)

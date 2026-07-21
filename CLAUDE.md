@@ -12,7 +12,7 @@
 
 ## What this is
 
-A deterministic constructed-world laboratory (and sim game) in the RimWorld / DF lineage: cube-sphere planet, fated noise, content-addressed store. Member of **Archema** (`~/src/archema-io/`). Supporting project for **ASF/AAT** — worlds where every quantity the theory needs can be authored and dialable (*in vivia*: between toy model and field data). See `#def-vivium` and `#def-in-vivia` once present.
+A deterministic constructed-world laboratory (and sim game) in the RimWorld / DF lineage: cube-sphere planet, fated noise, content-addressed store. Member of **Archema** (`~/src/archema-io/`). Supporting project for **ASF/AAT** — worlds where every quantity the theory needs can be authored and dialable. See `#def-vivium` and `#def-in-vivia`.
 
 ## Where to read (by job)
 

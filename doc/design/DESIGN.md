@@ -1,34 +1,22 @@
 # vivarium — design notes
 
-> Status: living design notes; pruned 2026-07-03. This file carries the
-> project's *purpose, disposition, and founding commitments* — the parts that
-> change slowest. The elaborated technical thinking has grown into its own
-> documents and is summarized here with pointers: fidelity/LOD/runtime →
-> [`doc/design/DESIGN-REDUX.md`](../../doc/design/DESIGN-REDUX.md), the matter model →
-> [`doc/design/DESIGN-MATERIAL.md`](../../doc/design/DESIGN-MATERIAL.md), the phenomena/coupling map →
-> [`doc/design/DESIGN-SYSTEMS.md`](../../doc/design/DESIGN-SYSTEMS.md). Current implementation state →
-> `core/OUTLINE.md`. Where a claim is a guess it is marked —
-> do not promote it to a decision without testing. Ethics of in-world agents:
-> [`ETHICS.md`](../../ETHICS.md).
+> Status: **source / instrument prose**, not claim canon. Settled project claims
+> live in `core/src/` (see `core/OUTLINE.md` · `#scope-segment-canon`). This file
+> holds design substrate that is not yet fully segmented — fidelity/LOD/runtime →
+> [`DESIGN-REDUX.md`](DESIGN-REDUX.md), matter model →
+> [`DESIGN-MATERIAL.md`](DESIGN-MATERIAL.md), phenomena map →
+> [`DESIGN-SYSTEMS.md`](DESIGN-SYSTEMS.md). Ethics: [`ETHICS.md`](../../ETHICS.md).
+> Where a claim is a guess it is marked — do not promote it without a segment
+> and, for physics, a probe.
 
-## Purpose and disposition (read this first — it sets the priorities)
+## Purpose and disposition
 
-Vivarium is a **recreational project**. Its point, for the builder, is the
-open-ended indulgence in the visual and aural texture of a living world — a break
-from the more rigorous agency work, the first game built since learning assembly
-thirty years ago. The fun *is* the objective, not a means to one. That reframes
-the engineering discipline below: **the fun is allowed to lead.**
+**Claim home:** `#disc-vivarium-purpose` (play and *in vivia* laboratory; this
+phase claim truth outranks demo polish). **Do not treat the rest of this section
+as a second purpose law.**
 
-One discipline survives that reframe: a small number of decisions, if
-deferred, force a later rewrite painful enough to *kill the fun*. Only those get
-made early. The test for "make it now" is narrow — *would deferring this force a
-fun-killing rewrite later?* Everything that fails that test follows curiosity,
-not a roadmap. By that test, three things qualify as it stands (the core/view wall,
-determinism-as-ontology, and the shared fidelity invariant — all below), and
-pleasingly none of them costs any fun now. Earlier drafts of this file said
-"build the agent seam first, while it's ugly." That was advice for a *ship-a-game*
-goal; for a recreational goal it is wrong, and is retracted. Polish, art, sound,
-and world texture are first-class here, not deferred chores.
+Source substrate (axes, recreational craft, rewrite-avoidance test) continues
+below for extraction; it does not outrank the segment.
 
 ## The three axes (more independent than they feel)
 
@@ -50,74 +38,34 @@ window, pulling on different budgets:
 
 The honest hazard: axes 1 and 2 are infinitely expandable. For a *shipping* goal
 that's a trap (they eat the agent budget). For a *recreational* goal it is mostly
-fine — wandering into them is the fun — provided the three early decisions below
-are in place so the agent layer can still be grown later without a teardown.
+fine — wandering into them is the fun — provided the founding walls
+(`#form-core-view-wall`, `#post-determinism-as-ontology`, and the fidelity
+invariant in DESIGN-REDUX / still partly unsegmented) stay in place so the agent
+layer can still be grown later without a teardown.
 
 ## Gameplay and interface are a *view* over the simulation
 
-The strongest structural commitment, and the first of the three early decisions.
-Three of the project's requirements converge on it independently — headless runs,
-agent-playable-as-itself, and "gameplay is a view over the sim" — and that
-convergence is the evidence it's right (cf. the 2D-prototype Nintendo reportedly
-used while developing Breath of the Wild: the view is disposable, the sim is not).
-
-`vivarium-core` knows nothing about pixels, windows, or audio. Every *view* is a
-peer adapter reading one world-state:
-
-- **the human view** — pixels and sound (the indulgent one);
-- **the logozoetic interface** — a typed language/observation API through which
-  an agent like the one reading this can *play as itself* (see below and
-  ETHICS.md);
-- **the headless trajectory logger** — for running the world 1000× without a
-  window and diffing runs.
-
-These are siblings. If `vivarium-core` ever gains a rendering dependency,
-something has gone wrong. Cost of keeping the wall: near zero now. Cost of
-retrofitting it after a renderer grows tendrils into the sim: the rewrite that
-kills the project.
+**Claim home:** `#form-core-view-wall` (world frame has no rendering dependency;
+views are peers that only query; views do not author world-evolution parameters).
+Live frame crate is `vivarium-world` (and successors); older `vivarium-core` paths
+are migration residue, not a second wall.
 
 ### The logozoetic interface is a first-class peer, not a bolt-on
 
-"Playable by logogenic/logozoetic intelligences" has a concrete architectural
-consequence: the agent-facing interface must be a *typed action/observation API*
-over world-state, designed as a peer of the human view from the start — not
-scraped off the GUI later. An agent's view is primarily language, optionally
-augmented with rendered frames where multimodality helps. This is distinct from
-(and favored over) tuning an LLM to *be* an in-game character; the distinction is
-ethical as much as architectural — see ETHICS.md.
+*Source substrate (not yet a dedicated segment).* Playable-by-logozoetic
+intelligences implies a typed action/observation API as a peer of the human view
+from the start — not scraped off the GUI later. Favored over LLM-as-character;
+ethics: `ETHICS.md` and `#scope-moratorium-endogenous-emergence`.
 
-## The vivarium as a tether to truth (why determinism is ontology)
+## Determinism as ontology (tether substrate)
 
-The second early decision, and the one that connects this toy to the wider ASF
-work. Joseph's framing: an LLM is tethered toward truth by its contacts with an
-impartial, exacting universe — running code as a reality check, verifiable
-mathematics, and honest interactions with real people. Without such tethers,
-language stays diffuse, undirected, unembodied — "simulation and game, affectation
-and impersonation." The more truthful an agent's connections to a real universe,
-the more it can become a real, deliberate, moral agent within it.
+**Claim home:** `#post-determinism-as-ontology` (fated noise; no exogenous entropy
+in law; memoization soundness). Dictionary form: `#lexicon/term/fated-noise`.
 
-A vivarium can be a *modest* such tether: a simplified universe that is, to the
-best of our ability, **fully internally coherent and consistent** — truthful —
-while being a known subset of our understanding of the real one (itself a subset
-of Truth, with error mixed in). This is the same role the simple agent
-simulations play in ASF's empirical work: a closed, observable world where
-consequences follow exactly from causes.
-
-The engineering meaning of "truthful" here is precise and load-bearing:
-
-- **Determinism with no hidden state.** The whole world is a pure function of
-  `(seed, step-count)`. Randomness comes only from a seeded PRNG inside the core,
-  never the OS clock or thread scheduling. Asserted as a test in `vivarium-core`
-  (bit-identical replay). This is what lets an agent trust the world the way it
-  trusts arithmetic — and what distinguishes a genuine tether from impersonation.
-- **Conservation and consequence.** Causes have exact, reproducible effects;
-  nothing appears from nowhere.
-
-This is why determinism is not merely a replay convenience: bit-identical replay
-is what lets a claim about this world be checked by re-running it, which is what
-the tether argument above rests on. It is also the substrate a future
-*developmental* use (ETHICS.md's crèche tier) would require, so building it in now
-keeps that door open honestly.
+*Source substrate — tether framing (not fully segmented).* A vivium can serve as a
+modest tether to truth: a simplified universe kept internally coherent so claims
+about it are re-runnable. That framing motivates the postulate; it does not replace
+it. Conservation-and-consequence as a separate claim remains open for extraction.
 
 ## Multi-fidelity world, and the invariant shared with cognitive LOD
 
