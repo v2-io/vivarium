@@ -28,6 +28,7 @@ A deterministic constructed-world laboratory (and sim game) in the RimWorld / DF
 | **ASF-side twin / router only** | `asf/doc/vivarium.md` · [`ASF.md`](ASF.md) (non-authoritative historical redirect — **not** claim canon) |
 | **Executable law / probes** | `crates/vivarium-world/` · examples · `vivarium status` · `bin/check` (tests + determinism clippy) |
 | **Pending audits** | [`audits/`](audits/) — integrate per `#ops-audit-integration`; `.integrated/` only when done |
+| **Consolidation intuition** | [`CONSOLIDATION-STATUS.md`](CONSOLIDATION-STATUS.md) — big-picture residual estimate (**not** claim canon; core wins on conflict) |
 | **Archaeology only** | [`.archive/`](.archive/) — not tactical current dependency |
 
 Supporting prose (`doc/ARCHITECTURE.md`, `doc/design/*`, `doc/theory/*`, plans) remains useful **as source material for segments**. Do not treat it as a parallel canon. When a segment lands, it replaces the claim's home; the old prose is demoted to pointer or archive.

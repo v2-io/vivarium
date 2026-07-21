@@ -109,3 +109,5 @@ Phase structure is codified in [`tabularium/terrestris.ordinum.udon`](../tabular
 ## Transitional note
 
 A large true corpus still lives outside `core/` (`doc/`, `LEXICON.udon`, `DECISIONS`, code, `.archive/`). That corpus is **source material**. Until a claim has a slug, do not treat the old prose as law — extract it, or leave it marked unowned. The Jul 14 candidate list is an unratified scan to speed extraction, not a second outline.
+
+Pacing / residual intuition (not canon): [`CONSOLIDATION-STATUS.md`](../CONSOLIDATION-STATUS.md).

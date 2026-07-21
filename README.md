@@ -19,6 +19,8 @@ Deterministic constructed worlds (cube-sphere planet) for play and for *in vivia
 
 [`ASF.md`](ASF.md) is a thin historical router only — **not** claim canon; do not cite its old section numbers as law.
 
+Big-picture residual / ice vs segment intuition (not law): [`CONSOLIDATION-STATUS.md`](CONSOLIDATION-STATUS.md).
+
 ## Run (instruments, not canon)
 
 ```bash
