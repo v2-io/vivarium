@@ -58,6 +58,15 @@ impl Key {
         Key(format!("{nomos}@{version}"))
     }
 
+    /// Fold every direct dependency's name+version into the key so a dep bump
+    /// invalidates consumers ( #form-complete-content-addressed-key ).
+    pub fn with_dep_versions(mut self, nomos: &crate::nomotheke::NomosDecl) -> Self {
+        for d in nomos.deps {
+            self = self.field(d.name, d.version);
+        }
+        self
+    }
+
     /// Fold one input into the key. Chainable.
     pub fn field(mut self, name: &str, value: impl std::fmt::Display) -> Self {
         use std::fmt::Write;

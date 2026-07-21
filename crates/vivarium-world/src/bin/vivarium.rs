@@ -69,15 +69,38 @@ fn main() {
     std::process::exit(code);
 }
 
+/// Non-flag tokens in order (world dir, optional name, …), skipping values that
+/// belong to known flags (`--level L`, `--epochs E`). Bare non-flag tokens that
+/// are not values of a preceding flag remain positionals — so
+/// `build --epochs 0 /path` resolves to `/path`, not `0`.
+fn positionals(rest: &[String]) -> Vec<&str> {
+    let flag_takes_value = |a: &str| a == "--level" || a == "--epochs" || a == "--width" || a == "--lon0";
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < rest.len() {
+        let a = rest[i].as_str();
+        if a.starts_with('-') {
+            if flag_takes_value(a) {
+                i += 2; // skip flag and its value
+                continue;
+            }
+            i += 1; // bare switch (--allow-unmet, --color, …)
+            continue;
+        }
+        out.push(a);
+        i += 1;
+    }
+    out
+}
+
 /// Resolve which world to act on, matching the globe's convention so
 /// `vivarium status` and `vivarium-globe` look at the SAME world by default:
-/// an explicit non-flag positional wins, else `$VIVARIUM_WORLD`, else the shared
-/// default `${XDG_CACHE_HOME:-~/.cache}/vivarium/globe-world`.
+/// the first non-flag positional wins (not merely `rest[0]` — flags may lead),
+/// else `$VIVARIUM_WORLD`, else the shared default
+/// `${XDG_CACHE_HOME:-~/.cache}/vivarium/globe-world`.
 fn world_dir(rest: &[String]) -> PathBuf {
-    if let Some(first) = rest.first() {
-        if !first.starts_with('-') {
-            return PathBuf::from(first);
-        }
+    if let Some(p) = positionals(rest).first() {
+        return PathBuf::from(p);
     }
     if let Ok(p) = std::env::var("VIVARIUM_WORLD") {
         return PathBuf::from(p);
@@ -88,9 +111,9 @@ fn world_dir(rest: &[String]) -> PathBuf {
     cache.join("vivarium").join("globe-world")
 }
 
-/// True when the first token is an explicit world dir (a non-flag positional).
+/// True when an explicit world dir appears as a non-flag positional.
 fn dir_is_explicit(rest: &[String]) -> bool {
-    rest.first().map(|f| !f.starts_with('-')).unwrap_or(false)
+    !positionals(rest).is_empty()
 }
 
 fn flag(rest: &[String], name: &str) -> Option<u32> {
@@ -99,8 +122,13 @@ fn flag(rest: &[String], name: &str) -> Option<u32> {
 
 fn cmd_new(rest: &[String]) -> i32 {
     let dir = world_dir(rest);
-    // Name is the positional AFTER an explicit dir; otherwise a label default.
-    let name = if dir_is_explicit(rest) { rest.get(1).map(String::as_str).unwrap_or("unnamed") } else { "unnamed" };
+    // Name is the second non-flag positional when dir is explicit; else default.
+    let pos = positionals(rest);
+    let name = if dir_is_explicit(rest) {
+        pos.get(1).copied().unwrap_or("unnamed")
+    } else {
+        "unnamed"
+    };
     match WorldSpec::load(&dir) {
         Ok(Some(spec)) => {
             println!("vivium already exists: \"{}\" seed {} — identity is never re-minted.", spec.name, spec.seed);

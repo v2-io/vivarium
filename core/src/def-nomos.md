@@ -16,7 +16,7 @@ A **nomos** is one keyed, versioned, executable article of world-law — the gra
 
 A **nomos** (pl. *nomos*, invariant — #lexicon/term/nomos; `DECISIONS[nomos-plural-invariant]`, `:by joseph`) is the memoizable invocation unit that embodies one article of world-law. Concretely:
 
-1. **Identity.** It has a stable name and a version string. The pair mints the world-law store key (`NomosDecl::key`); an undeclared algorithm has no sanctioned path into that namespace.
+1. **Identity.** It has a stable name and a version string. The pair mints the **key stem** (`NomosDecl::key`); callers fold in seed, coordinates, and upstream identities to form the complete key ( #form-complete-content-addressed-key ). An undeclared algorithm has no sanctioned path into the world-law namespace.
 2. **Executability.** It runs a **kernel** (the numerical code) for one **system** (the phenomenon-level role) at a chosen **rung** of that system's fidelity ladder. Dictionary forms: #lexicon/term/kernel, #lexicon/term/system, #lexicon/term/rung.
 3. **Memoizability under fated keys.** Evaluation is pure in its keyed inputs ( #post-determinism-as-ontology): same complete key ⇒ same bytes; content-addressed memoization changes cost, never the world.
 4. **Declaration.** Every nomos declares itself in the **nomotheke** (the registry of nomos-as-data). The declaration is the load-bearing self-description, not optional documentation. At minimum it states:
@@ -25,7 +25,7 @@ A **nomos** (pl. *nomos*, invariant — #lexicon/term/nomos; `DECISIONS[nomos-pl
    - **deps** — upstream nomos whose outputs feed this one (nomos→nomos);
    - **consumes** — fluxed quantities required in (role-level needs, independent of who supplies them);
    - **promises** — quantities handed forward, each with an explicit **conservation** claim (conserved / exports-at-boundary / not-tracked);
-   - **epistemic tags** — the four axes of #lexicon/term/epistemic-axes as declared on this version: Earth-history fidelity, physics fidelity, relation type, and implementation status (including approach code A/R/S/T/P);
+   - **epistemic tags** — Earth-history fidelity, physics fidelity, relation type, and implementation status (including approach code), as fields on the declaration; the dictionary form #lexicon/term/epistemic-axes is still `:status open` (do not treat that entry as settled law);
    - **assumptions** — verbatim anchors into `ASSUMPTIONS.md` for every magic constant the article leans on.
 5. **Composition.** A phase is a choreography of nomos; **law** ( #lexicon/term/law) is composed of them. A nomos is not the whole phase ladder, not the store, and not a view.
 

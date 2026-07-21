@@ -414,6 +414,28 @@ mod tests {
     }
 
     #[test]
+    fn key_with_dep_versions_embeds_each_dep_identity() {
+        // Same shape as consumed⇒in-deps, for keys: a complete key built via
+        // `with_dep_versions` must name every direct dep. Catches the class of
+        // under-keying where NOISE/HYDROSPHERE versions were omitted while
+        // still listed in `deps` (2026-07-21 auditor measurement).
+        use crate::store::Key;
+        for n in NOMOTHEKE {
+            let k = Key::new(n.name, n.version).with_dep_versions(n);
+            let s = k.as_str();
+            for d in n.deps {
+                assert!(
+                    s.contains(&format!("{}={}", d.name, d.version)),
+                    "{}: key {s:?} missing dep identity field {}={}",
+                    n.name,
+                    d.name,
+                    d.version
+                );
+            }
+        }
+    }
+
+    #[test]
     fn consumed_and_met_implies_in_deps() {
         // The complete-key invariant (DESIGN-REDUX §12): if a nomos consumes a
         // quantity that some registered nomos produces, that producer MUST be in

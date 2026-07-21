@@ -5,6 +5,7 @@ status: exact
 stage: draft
 depends:
   - post-determinism-as-ontology
+  - def-nomos
 ---
 
 # Complete content-addressed key
@@ -21,13 +22,13 @@ Every memo is keyed by everything that affects it; an incomplete key is silent c
 
 ## Epistemic Status
 
-**Max attainable: exact** as architecture law under determinism-as-ontology — falsified by a memo served after an input or law change that did not change the key, or by treating cache-disable / manual flush as the iteration safety valve.
+**Max attainable: exact** as architecture **law** under determinism-as-ontology. The law is falsified if we treat an incomplete key as complete, or treat cache-disable / manual flush as the iteration safety valve. **Present practice can under-key without falsifying the law** — that is compliance debt, not a warrant to soften the claim (strengthen-before-soften: fix the keys and the guards first).
 
 **Known incomplete surfaces (compliance and MVP debt; not a soften of the law):**
 
 1. **Hand-stamped nomos versions.** Store keys take a version string at construction; fill paths still depend on human-bumped constants of the `FILL_ALGO_VERSION` class. A forgotten bump mid-iteration serves a stale memo that lies. Source-derived nomos-version hashing is designed and queued; it is not yet the mechanism in force.
 2. **64-bit FNV-1a is not collision-safe at scale.** The store's content hash is MVP-grade FNV-1a; the module docs state it is fine for demo object counts and **not** collision-safe at scale. Replacing it before the store holds unrecomputable artifacts is named engineering advice in code — **not** a DECISIONS entry. Do not treat BLAKE3 (or any specific successor hash) as decided unless and until DECISIONS records it.
-3. **Completeness is doctrine more than enforcement.** Under-keying is the named unsafe failure. Nomotheke pins a consumed⇒in-deps rule in tests; nothing fully checks that every byte-affecting input is folded into the key string. That enforcement gap does not license under-keying.
+3. **Completeness is doctrine more than full enforcement.** Under-keying is the named unsafe failure. Nomotheke pins consumed⇒in-deps; a dep-identity-in-key test is the next guard. Live under-keying (e.g. a dep version omitted from a consumer key so a bump serves stale hits) is a **bug against this law**, not evidence the law is wrong.
 
 Stage `draft`. Sources for this extraction: ARCHITECTURE §5, DESIGN-REDUX §11–13 (key and memoization clauses), `store.rs` module honesty — none of those remain claim homes once this segment stands.
 

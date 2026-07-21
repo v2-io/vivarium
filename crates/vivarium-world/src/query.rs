@@ -77,6 +77,7 @@ impl<'s> World<'s> {
 
     /// The complete key for a initial-topography tile: every input folded in (§12).
     fn initial_topography_key(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> Key {
+        // deps include NOISE — bumping noise version must invalidate this tile.
         INITIAL_TOPOGRAPHY
             .key()
             .field("seed", self.seed)
@@ -85,6 +86,7 @@ impl<'s> World<'s> {
             .field("oi", oi)
             .field("oj", oj)
             .field("nx", nx)
+            .with_dep_versions(&INITIAL_TOPOGRAPHY)
     }
 
     /// System #1 — the fBm coarse initial-topography: a `nx × nx` tile of band-limited
@@ -159,7 +161,7 @@ impl<'s> World<'s> {
             .field("oi", oi)
             .field("oj", oj)
             .field("nx", nx)
-            .field("hydro", HYDROSPHERE.version)
+            .with_dep_versions(&CLIMATE)
     }
 
     /// The climate nomos — a `nx × nx` precipitation field (m/yr). v0 is UNIFORM:
@@ -204,9 +206,7 @@ impl<'s> World<'s> {
             .field("oj", oj)
             .field("nx", nx)
             .field("epochs", epochs)
-            .field("initial-topography", INITIAL_TOPOGRAPHY.version)
-            .field("uplift", UPLIFT.version)
-            .field("climate", CLIMATE.version)
+            .with_dep_versions(&EROSION)
     }
 
     /// System #2 — the fluvial-erosion tier, *composed on the initial-topography through the
@@ -299,9 +299,7 @@ impl<'s> World<'s> {
             .field("nx", nx)
             .field("eepochs", erosion_epochs)
             .field("steps", steps)
-            .field("erosion", EROSION.version)
-            .field("initial-topography", INITIAL_TOPOGRAPHY.version)
-            .field("climate", CLIMATE.version)
+            .with_dep_versions(&WATER)
     }
 
     /// System #3 — conserved shallow water settled on the eroded bed, *composed
