@@ -111,7 +111,7 @@ A phase-transition promotes converged state into law (the invariance cut, §6); 
 
 ## 8. Invariants, gaps, and the open-problem inventory
 
-**Three spine invariants the implementation may never trade away:** (1) **core/view wall** — claim home `#form-core-view-wall`; (2) **determinism-as-ontology via fated lifting** — claim home `#post-determinism-as-ontology` (agent-layer RNG gap named there); (3) **complete content-addressed key** (§5) — *not yet a segment* (OUTLINE §II gap); until segmented, treat §5 as source, not a second home for (1)–(2).
+**Three spine invariants the implementation may never trade away:** (1) **core/view wall** — claim home `#form-core-view-wall`; (2) **determinism-as-ontology via fated lifting** — claim home `#post-determinism-as-ontology`; (3) **complete content-addressed key** — claim home `#form-complete-content-addressed-key` (§5 remains source elaboration).
 
 **Status-quo gaps** (designed, not built — the build path in `doc/plan/abyssal-parity-plan.md`): the **store + nomos layer** (§5); the **coarse global spine** as dependency planner (§4, §6); **tile nomoi with flux boundary conditions** replacing today's hardcoded edge policy — *this is also the seam fix*: the present code seeds every patch's drainage at its own area and hardcodes edge-outlets, so tiles are non-composable and the seam pathologies (`seam_ridge` red) are the visible signature; the **query front-end** the view queries through, so navigation and persistence fall out; the **RNG fix** before agents. (Today's `spikes/worldview` is a physics testbench, not this runtime — one fixed patch, re-seeds from the raw prior on movement. The kernels are proven; the world-frame around them is unbuilt.)
 

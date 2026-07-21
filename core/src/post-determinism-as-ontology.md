@@ -19,7 +19,11 @@ The world is a pure function of identity: stochastic detail is fated by seed and
 
 ## Epistemic Status
 
-**Max attainable: axiomatic** for the project as authored — a founding choice that makes laboratory replay possible, not a claim that nature is deterministic at this grain. Day-one commitment (DESIGN.md founding decisions; reaffirmed throughout). **Known incomplete surface:** agent-layer RNG in older `vivarium-core` paths is not fully fated (stepped stream; parallel agents break it); ethereal exploration does not require that fix, but participation does. Stage `draft`.
+**Max attainable: axiomatic** for the project as authored — a founding choice that makes laboratory replay possible, not a claim that nature is deterministic at this grain. Day-one commitment (DESIGN.md founding decisions; reaffirmed throughout). Stage `draft`.
+
+**Known incomplete surfaces (not softens of the postulate):**
+1. **Agent-layer RNG** in older `vivarium-core` paths is not fully fated (stepped stream; parallel agents break it). Ethereal exploration does not require that fix; participation does.
+2. **`spikes/worldview`** paces some evolution by wall-clock and viewer motion (telescope re-anchor / settle cadence). Containment: writes under `~/.cache/vivarium/worldview`, not a canon store root — so it does not corrupt a citable vivium. Still past "camera feel only" for that spike's local field. View-wall face of the same code: `#form-core-view-wall`.
 
 ## Discussion
 

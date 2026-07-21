@@ -18,6 +18,10 @@ Every settled claim about what vivarium is, must do, or may conclude lives in a 
    - **Terms** — headword meaning and carve lines: `LEXICON.udon`.
    - **Decisions** — who decided, status, and the decision statement: `DECISIONS.decision-log.udon`.
    - **Standing moratorium** — full ethical argument: `ETHICS.md` until absorbed; the segment `#scope-moratorium-endogenous-emergence` is the core pointer and scope claim.
+   - **Assumptions ledger** — magic constants and their anchors: `ASSUMPTIONS.md` (executable guards pair with it).
+   - **Segment method** — how claims are written and promoted: `FORMAT.md` (conventions for the claim channel, not a second purpose law).
+   - **Phase floor (data)** — Terrestris charges/promises: `tabularium/terrestris.ordinum.udon` until fully segmented; OUTLINE §VII points here.
+   - **ASF reading gates** — Level A/B/C for vivarium work: `ASF.md` §5 until a dedicated segment owns them; Level C remains a hard gate for agent-seam work.
    - **Executable state** — code, store roots, and probes *convict or implement* claims; they do not replace the claim text.
 4. **Replacement.** When a segment lands or is corrected, it **replaces** prior prose homes for that claim. Old text is deleted, reduced to a one-line pointer, or archived — not kept as a softened twin.
 5. **Session success.** Work that does not move a segment (or produce a probe / decision a segment will cite) does not advance claim-truth, however useful it is for play or engineering.

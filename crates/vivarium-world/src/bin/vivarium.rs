@@ -54,8 +54,11 @@ fn main() {
             eprintln!("  (world-dir optional: defaults to $VIVARIUM_WORLD, else ~/.cache/vivarium/globe-world");
             eprintln!("   — the same world vivarium-globe opens, so status/build/globe agree by default)");
             eprintln!("  new [dir] [name]                    individuate a world (manifest + seed)");
-            eprintln!("  build [dir] [--level L] [--epochs E]  builder v0: whole-world sweep at L (default 7)");
+            eprintln!("  build [dir] [--level L] [--epochs E] [--allow-unmet]");
+            eprintln!("                                       builder v0: whole-world sweep at L (default 7)");
             eprintln!("                                       then erosion at E epochs (default 40; 0 = skip)");
+            eprintln!("                                       refuses erosion/water while flux needs are unmet");
+            eprintln!("                                       unless --allow-unmet (provisional; still logs the waiver)");
             eprintln!("  status [dir]                        fidelity pyramid + flux/requisite audit");
             eprintln!("  info [dir] [--width W] [--lon0 DEG] [--color|--no-color]");
             eprintln!("                                       whole-sphere Hammer-oval globe, coloured by build-state");
@@ -158,10 +161,35 @@ fn wallclock() -> String {
     format!("t+{s}")
 }
 
+/// Nomos for a builder phase name, if that phase is a declared nomos sweep.
+fn phase_nomos(phase: &str) -> Option<&'static vivarium_world::nomotheke::NomosDecl> {
+    use vivarium_world::nomotheke::{EROSION, INITIAL_TOPOGRAPHY, WATER};
+    match phase {
+        "initial-topography" => Some(&INITIAL_TOPOGRAPHY),
+        "erosion" => Some(&EROSION),
+        "water" => Some(&WATER),
+        _ => None,
+    }
+}
+
+/// Unmet flux quantities that would make this phase's nomos (and its direct
+/// dep chain) unprincipled to run — the builder admission check.
+fn phase_unmet_quantities(phase: &str) -> Vec<&'static str> {
+    let Some(n) = phase_nomos(phase) else {
+        return Vec::new();
+    };
+    audit::requisite_chain(n)
+        .into_iter()
+        .filter(|line| matches!(line.supply, audit::Supply::Unmet))
+        .map(|line| line.quantity)
+        .collect()
+}
+
 fn cmd_build(rest: &[String]) -> i32 {
     let dir = world_dir(rest);
     let level = flag(rest, "--level").unwrap_or(7).min(20) as u8;
     let epochs = flag(rest, "--epochs").unwrap_or(40);
+    let allow_unmet = rest.iter().any(|a| a == "--allow-unmet");
 
     let spec = match WorldSpec::load_or_create(&dir, "unnamed") {
         Ok(s) => s,
@@ -173,7 +201,7 @@ fn cmd_build(rest: &[String]) -> i32 {
 
     // Single-builder discipline: hold builder.lock; if a LIVE builder holds it,
     // attach instead of failing (Joseph's preferred UX). A stale lock (dead pid)
-    // is reclaimed.
+    // is reclaimed. (Atomic create_new + RAII still owed — de-novo audit P1.)
     let lock_path = dir.join("builder.lock");
     if let Ok(text) = std::fs::read_to_string(&lock_path) {
         if let Ok(pid) = text.trim().parse::<i32>() {
@@ -187,6 +215,14 @@ fn cmd_build(rest: &[String]) -> i32 {
         eprintln!("error: cannot write {}", lock_path.display());
         return 1;
     }
+    // Ensure the lock is cleared on every return path after we own it.
+    struct LockGuard<'a>(&'a Path);
+    impl Drop for LockGuard<'_> {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(self.0);
+        }
+    }
+    let _lock = LockGuard(&lock_path);
 
     let store = match Store::open(&dir) {
         Ok(s) => s,
@@ -204,8 +240,12 @@ fn cmd_build(rest: &[String]) -> i32 {
     let mut out = BuilderLog { log: log_file, status_path: dir.join("status.json") };
 
     out.line(&format!(
-        "builder v0 on vivium \"{}\" (seed {}) — initial-topography sweep L{level}, {}x{} tiles/face-row, erosion {epochs} epochs",
-        spec.name, spec.seed, TILE_NX, TILE_NX
+        "builder v0 on vivium \"{}\" (seed {}) — initial-topography sweep L{level}, {}x{} tiles/face-row, erosion {epochs} epochs{}",
+        spec.name,
+        spec.seed,
+        TILE_NX,
+        TILE_NX,
+        if allow_unmet { " (--allow-unmet)" } else { "" }
     ));
 
     // The whole-world degenerate beacon: every face, tiled at TILE_NX.
@@ -217,6 +257,29 @@ fn cmd_build(rest: &[String]) -> i32 {
         if phase != "initial-topography" && epochs == 0 {
             out.line("erosion + water skipped (--epochs 0)");
             break;
+        }
+        // Admission: refuse phases whose flux requisites are unmet unless waived.
+        // `status` already prints this truth; the builder must not materialize
+        // artifacts the formal contract calls unrunnable (de-novo audit P0).
+        let unmet = phase_unmet_quantities(phase);
+        if !unmet.is_empty() {
+            if allow_unmet {
+                out.line(&format!(
+                    "{phase}: WAIVED unmet flux needs ({}) — artifacts are provisional; do not cite as lawful",
+                    unmet.join("; ")
+                ));
+            } else {
+                out.line(&format!(
+                    "{phase}: REFUSED — unmet flux needs: {}. re-run with --allow-unmet for provisional materialization, or keep a producer for these quantities first.",
+                    unmet.join("; ")
+                ));
+                out.status("refused", done, total);
+                eprintln!(
+                    "error: phase `{phase}` refused — unmet flux: {}\n  (vivarium status explains the web; --allow-unmet to force provisional)",
+                    unmet.join("; ")
+                );
+                return 2;
+            }
         }
         done = 0;
         out.status(phase, 0, total);
@@ -247,7 +310,6 @@ fn cmd_build(rest: &[String]) -> i32 {
     }
     out.status("idle", done, total);
     out.line("build complete — the store is the save; explorers see everything already.");
-    let _ = std::fs::remove_file(&lock_path);
     0
 }
 

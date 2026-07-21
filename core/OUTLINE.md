@@ -50,10 +50,12 @@ The specification of what vivarium is and must do, written as **segments** in `c
 
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
-| | | | *(#gap) Nomos definition and nomotheke contract* | missing |
+| definition | Project | [#def-nomos](src/def-nomos.md) | A nomos is one keyed, versioned article of world-law | draft |
+| formulation | Machine Critical | [#form-complete-content-addressed-key](src/form-complete-content-addressed-key.md) | Complete key; over-key never under-key | draft |
+| discussion | Model Critical | [#disc-prime-question](src/disc-prime-question.md) | Prime Question = modified-equation analysis | draft |
+| | | | *(#gap) Nomotheke as registry contract* | missing |
 | | | | *(#gap) Ordinum / phase ladder as claim segments* | missing |
 | | | | *(#gap) Flux web and conserved quantities* | missing |
-| | | | *(#gap) Complete content-addressed key* | missing |
 | | | | *(#gap) Manifest / vivium identity* | missing |
 
 ## III. Runtime, environment, and CLI

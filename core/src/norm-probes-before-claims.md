@@ -3,8 +3,7 @@ slug: norm-probes-before-claims
 type: normative
 status: exact
 stage: draft
-depends:
-  - norm-declaration-must-convict
+depends: []
 ---
 
 # Probes before claims
