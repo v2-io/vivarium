@@ -39,5 +39,5 @@ This is one of the three walls that keep parallel system work and fidelity-ladde
 ## Working Notes
 
 - **Ice once this is home.** ARCHITECTURE §5 complete-key paragraph and spine-invariant (3) pointer-to-§5 → one-line claim home ` #form-complete-content-addressed-key `. DESIGN-REDUX §12 key-completeness / over-key / manual-version weak link / "key, never caution" clauses → same. Leave §11 (lazy query-graph runtime shape), §12 ladder methodology that is not key law, and §13 save-directory layout in source until those claims have segments.
-- **Adjacent unsegmented.** Save-file-is-memo-store; pervasive disk memoization as directive; #lexicon/term/generator-pinning as definition segment; store MVP restrictions (no GC, no manifest, no run-mode enforcement) as observation; complete-key completeness-unenforced as observation.
+- **Adjacent.** Save-file-is-memo-store → landed as `#form-store-as-save` (prefer that slug; any `form-save-is-memo-store` fork is a dual-home to delete). Still open: #lexicon/term/generator-pinning as definition segment; store MVP restrictions as observation; complete-key completeness-unenforced as observation.
 - **Do not invent.** BLAKE3 and IR-hash are not decided. Over-key is the cost asymmetry of the formulation, not an extra Joseph seal beyond the 2026-07-09 key-not-caution directive.

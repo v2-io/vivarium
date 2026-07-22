@@ -1,5 +1,7 @@
 # Multiscale & heterogeneous methods — the generalized frame, and where vivarium sits in it
 
+> **Claim homes (not this file).** Operator algebra $U,u,R,L$ + three laws → `#form-rl-closure-algebra`. Seam fluxes-not-states / one discipline two axes → `#form-seam-flux-exchange`. Fated lifting closure → `#post-determinism-as-ontology`. This document is **source and teaching** (method zoo, literature map, novelty inventory). Do not cite it as parallel law.
+
 *(Written 2026-07-03 for the lexicon effort. Purpose: the design docs cite the
 field — §4 names AMR/HMM/equation-free, §11 says "HMM made lazy" — but never
 teach the general structure, so each vivarium construct has looked like a
@@ -33,13 +35,14 @@ Every multiscale method, whatever its name, is built from:
 Two consistency laws make the pair honest:
 
 1. **R ∘ L = identity on U** — reconstruct then summarize must give back what
-   the macro claimed. (This is exactly our *fidelity invariant* and the §5
-   sufficient-statistic seam; our mean-**pinning** of fine erosion tiers is
-   R∘L=id enforced on the mean, live.)
+   the macro claimed. (Claim home: `#form-rl-closure-algebra`. This is the
+   *fidelity invariant* / sufficient-statistic seam. ⚠ **Not live in code:**
+   mean-pinning is **not** $R\circ L=\mathrm{id}$ on the mean —
+   `DECISIONS[mean-pin-does-not-preserve-block-means]`. Aspiration + compliance debt.)
 2. **Conservative exchange** — when a conserved quantity crosses a seam
    (scale-to-scale or aspect-to-aspect), exchange **fluxes, not states**, and
-   the fluxes must balance exactly. Earth-system couplers stake everything on
-   this; so does our water budget.
+   the fluxes must balance exactly (claim home: `#form-seam-flux-exchange`).
+   Earth-system couplers stake everything on this; so does our water budget.
 
 And one premise underneath it all:
 

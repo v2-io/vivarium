@@ -14,21 +14,13 @@ verified before any external citation.*
 
 ## 0. The one principle
 
-**Spend representation — pixels, bits, precision, simulation, cognition — only
-where it has consequence, and make the representation carry its own honesty about
-what is exact versus approximate.**
+**Claim home:** `#post-represent-by-consequence` (spend representation only where
+a consumer depends on it; carry honesty about exact vs approximate). Fidelity
+cash-out: `#form-fidelity-invariant`. Core/view wall: `#form-core-view-wall`.
 
-This is not a performance trick bolted onto a "real" world model; it *is* the
-world model. It descends from the oldest thread in the project — the
-`neworld` (2009) *Vision-and-Philosophy* manifesto, which observed that complex
-graphics "confine the space of ideas that can be easily implemented within that
-graphical style." The lesson generalizes past graphics: **any representation
-that is more detailed than its consequences warrant taxes two budgets at once —
-the *compute* budget and the *design/creative* budget.** Cheap-where-it-doesn't-
-matter is what lets depth and emergence inherit the room that abstraction frees.
-(This is why the renderer must stay a disposable *view* behind the core/view
-wall — see the workspace `Cargo.toml`. A rigid, expensive view would do to
-vivarium exactly what the manifesto warns of.)
+Source substrate (neworld 2009 Vision-and-Philosophy thread; compute + design
+budget tax; cheap-where-it-doesn't-matter) continues below for extraction. This
+section is not a second principle law.
 
 The rest of this document is that principle pushed through the practical lenses.
 
@@ -36,10 +28,9 @@ The rest of this document is that principle pushed through the practical lenses.
 
 ## 1. The fidelity invariant, restated and widened
 
-`doc/design/DESIGN.md` states it once: **fidelity is lazily materialized, and any
-materialization must be statistically consistent with the abstraction it
-replaces, with known, bounded deficiencies.** *(established as the project's core
-commitment.)*
+**Claim home:** `#form-fidelity-invariant` (lazy materialization; statistical
+consistency with known bounded deficiencies; co-fidelity corollary; four
+substrates). Elaboration below is source substrate, not a second home.
 
 The widening: it is **one invariant over four substrates**, not four problems.
 
@@ -89,6 +80,11 @@ The interesting failures will cluster at (3): the model runs, looks plausible,
 and silently fails to reproduce the macro it replaced.
 
 ### 2b. The reconciliation harness, concretized: regime probes *(added 2026-07-03, empirically grounded)*
+
+**Claim trail:** general probe discipline is `#norm-probes-before-claims`. Domain
+TDD / "regime probes ship with every rung; known issues get the probe first" is
+still an extract candidate (no dedicated segment yet). Specimens below are
+instruments, not law.
 
 The harness case (3) demands existed for one day before proving itself. The
 2026-07-02 "travelling blob" hunt (multi-metre water solitons winding down
@@ -309,6 +305,11 @@ up-invalidation in 4 is genuinely research.
 ---
 
 ## 8. Honest stochasticity — jitter baked into the coordinates
+
+**Claim home (ontology):** `#post-determinism-as-ontology` and
+`#lexicon/term/fated-noise`. Coordinate-keyed jitter as the *world-side*
+implementation of that postulate is elaboration below; do not treat this section
+as a second determinism law.
 
 **Artificial neatness is itself a dishonesty.** Real phenomena carry jitter, and
 often heavy-tailed / fractal distributions; a perfectly smooth or regular field
@@ -622,6 +623,12 @@ of exactly the recomputation that layer forces, and no more.*
 ---
 
 ## 13. Storage and save-format (they are the same thing)
+
+**Claim home:** `#form-store-as-save` (memo store = portable save;
+invalidation vs eviction; regenerable/irreducible frame; run-mode root
+discipline; pervasive memo default). Complete-key law:
+`#form-complete-content-addressed-key`. Elaboration below is source substrate
+(directory shape, thin/fat policy notes, mutation-log reservation).
 
 The memo store is **not a disposable system cache — it is the world's portable
 saved state.** A world evolved and played in a region must be pick-up-able on

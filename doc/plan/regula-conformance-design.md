@@ -23,6 +23,8 @@ Pinning discipline (this is what makes the floor survive PHASES' expected fluidi
 
 ## 3. Permitted absences and the requisite closure — incoherence as a computed error
 
+> **Claim homes for the flux machinery this reasons about:** `#form-flux-web` (unmet consume/promise), `#form-ordinum-governs-flux-web` (ladder promises as flux). This plan file is a **reasoning trail** for regula/permit design — not a second claim home.
+
 .archive/PHASES.md design notes carry the principle in prose: a canceling pair (magnetic field × solar wind; Jupiter-shepherding × impactor flux; the deferred moon) "stays jointly unbuilt at zero fidelity cost **until a consumer queries the difference or either member alone**." That condition is mechanically checkable against the nomotheke:
 
 > **A permit = (absent slots, validity condition).** The validity condition names the fluxed quantities whose consumption voids it. When any nomos declares a consumed quantity in the permit's void-set (auroras, compass bearing through a real field, UV-at-surface, tides, moonlight), the audit reports the permit **voided** — the regula then demands the slot be filled *before* the consuming nomos may land.

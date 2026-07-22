@@ -18,14 +18,17 @@ proposal, not a fixed API.*
 
 ## 1. The one principle, applied to matter
 
-**Representation follows consequence** (`doc/design/DESIGN-REDUX.md` §0). We do not pick "how
-to store elevation" in the abstract; we work backward from the *queries* a
-human-scale world must answer — climbability, slumping, foot-placement,
-reachability, lateral pressure, fluidity, cohesion — and the properties those
-queries read *are* the data model. Corollary, and the hardest thing to keep hold
-of: **a cell is a sufficient statistic, not a number** (§5). "Elevation 8000" is
-not a fact; it is a *reading*, and different consumers need different readings, so
-the honest unit carries a small tuple with declared meaning, not one scalar.
+**Claim homes:** `#post-represent-by-consequence` · `#form-column-control-volume`
+(column as control volume + sufficient statistic + declared semantics) ·
+`#form-fidelity-invariant`. Design elaboration below is source substrate.
+
+We do not pick "how to store elevation" in the abstract; we work backward from
+the *queries* a human-scale world must answer — climbability, slumping,
+foot-placement, reachability, lateral pressure, fluidity, cohesion — and the
+properties those queries read *are* the data model. Corollary: **a cell is a
+sufficient statistic, not a number** (§5). "Elevation 8000" is not a fact; it is
+a *reading*, and different consumers need different readings, so the honest unit
+carries a small tuple with declared meaning, not one scalar.
 
 ---
 
@@ -55,6 +58,9 @@ applied to the vertical.
 ---
 
 ## 3. The column is the primary unit *(settled — it's the name in core and in the 2009 neworld notes)*
+
+**Claim home:** `#form-column-control-volume`. Frame only — implementation and
+per-quantity semantics remain open as named in that segment.
 
 A **column** at a cube-sphere tile is a **stratigraphic column**: an ordered stack
 of strata, bedrock at the bottom, up through soil/regolith, with standing water

@@ -2,6 +2,13 @@
 
 *Written 2026-07-13, after a day auditing the project's kernels. The defects found that day sort into five kinds; the flux web declares only the first. The five boxes were abstracted from those defects, so the sort is a restatement of that sample — not evidence the set is closed.*
 
+> **Status:** source / procedure design, not claim canon. Settled claim homes for
+> pieces already segmented: box ① quantities → `#form-flux-web` (+
+> `#form-ordinum-governs-flux-web`); box ⑤ claim / Prime Question →
+> `#disc-prime-question`; convictability of declarations →
+> `#norm-declaration-must-convict`; nomos grain → `#def-nomos`. Boxes ②–④ and the
+> five-box schema itself remain extraction candidates (see consolidation mining).
+
 > **The purpose is not to fix `erosion.rs`.** It is to **generalize and secure the flux-web structure so that ANY nomos can be true-to-physics** (Joseph, 2026-07-13). MFD-8 is the corpse we dissected to learn the anatomy. This document is the anatomy.
 
 ---
@@ -52,6 +59,11 @@ The flux web today declares **one** thing: *"erosion consumes precipitation; cli
 ---
 
 ## ⚠ The cross-cutting rule: every box returns a VERDICT, and the verdict is BIAS or NOISE
+
+**Claim home:** `#norm-bias-vs-noise` (see also
+`DECISIONS[bias-vs-noise-is-the-decisive-audit]`; pairs with
+`#disc-prime-question` after the modified equation is known). This section is
+source elaboration, not a second home.
 
 This is not a sixth box. It is the **adjudication rule shared by all of them**, and it decides *severity* everywhere:
 

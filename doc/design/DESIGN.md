@@ -39,9 +39,9 @@ window, pulling on different budgets:
 The honest hazard: axes 1 and 2 are infinitely expandable. For a *shipping* goal
 that's a trap (they eat the agent budget). For a *recreational* goal it is mostly
 fine — wandering into them is the fun — provided the founding walls
-(`#form-core-view-wall`, `#post-determinism-as-ontology`, and the fidelity
-invariant in DESIGN-REDUX / still partly unsegmented) stay in place so the agent
-layer can still be grown later without a teardown.
+(`#form-core-view-wall`, `#post-determinism-as-ontology`, and
+`#form-fidelity-invariant`) stay in place so the agent layer can still be grown
+later without a teardown.
 
 ## Gameplay and interface are a *view* over the simulation
 
@@ -69,29 +69,18 @@ it. Conservation-and-consequence as a separate claim remains open for extraction
 
 ## Multi-fidelity world, and the invariant shared with cognitive LOD
 
-The third early decision: one invariant governs *all* level-of-detail —
-**fidelity is lazily materialized, and any materialization must be
-statistically consistent with the abstraction it replaces, with known, bounded
-deficiencies.** It is the same shape as the cognitive-LOD problem (cheap mind
-at a distance, full ASF mind materialized on approach): one invariant, two
-substrates. The hard, research-flavored direction is **detail→abstract** —
-absorbing a fine-grained change (a dammed stream) back into the abstraction —
-and it is open. ⚠ Its ranking AND its statement are both suspect —
-`doc/ARCHITECTURE.md` §8 carries the correction and Joseph's standing rule: do not
-trust any count or ranking of open problems until the census is derived rather
-than asserted.
+**Claim home:** `#form-fidelity-invariant` (lazy materialization; statistical
+consistency with known bounded deficiencies; co-fidelity / earned detail; two
+axes spatial+temporal). **Do not treat the rest of this section as a second
+fidelity law.**
 
-*(2026-07-03)* This section grew into its own document:
-[`doc/design/DESIGN-REDUX.md`](../../doc/design/DESIGN-REDUX.md) carries the developed form — the widened
-invariant and its **co-fidelity corollary** (detail must be *earned*: the
-finest simulated tier is authoritative over painted detail), the two LOD axes
-and the four temporal regimes, multirate coupling, sufficient-statistic seams,
-regime probes as domain TDD, honest stochasticity, the lazy query graph, the
-fidelity ladder, and the save-store. The volumetric data model (columns,
-strata, voxels-as-views, bodies) likewise lives in
-[`doc/design/DESIGN-MATERIAL.md`](../../doc/design/DESIGN-MATERIAL.md). Both were validated in first
-live-fire use by the 2026-07-02 water system (see `ref/hydrology/` and the
-inline 2026-07-03 amendments there).
+Source substrate continues in
+[`doc/design/DESIGN-REDUX.md`](DESIGN-REDUX.md) (LOD axes, multirate, seams,
+regime probes, lazy query graph, fidelity ladder, save-store) and
+[`doc/design/DESIGN-MATERIAL.md`](DESIGN-MATERIAL.md) (columns, strata, voxels-
+as-views, bodies; claim home for the column frame: `#form-column-control-volume`).
+Open frontier **detail→abstract** remains open; do not trust open-problem counts
+or rankings until the census is derived (`doc/ARCHITECTURE.md` §8).
 
 ## The two-layer mind (proposed agent architecture)
 

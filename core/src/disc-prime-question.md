@@ -34,7 +34,7 @@ The failure mode the method blocks is arguing about the algorithm one *imagines*
 
 ## Working Notes
 
-- **Pointer-only once this lands:** `doc/theory/discretisation-and-information.md` **§0** (definition of the Prime Question and the "if you cannot answer…" requirement) — keep the long MFD teaching specimen there or under measurement homes, but stop treating §0 as the claim's authority. **§1** remains the home of bias-vs-noise until that cut has its own segment; cite the DECISION, do not fork the rule here.
+- **Pointer-only once this lands:** `doc/theory/discretisation-and-information.md` **§0** (definition of the Prime Question and the "if you cannot answer…" requirement) — keep the long MFD teaching specimen there or under measurement homes, but stop treating §0 as the claim's authority. Bias-vs-noise cut is `#norm-bias-vs-noise` (theory §1 is teaching source only).
 - **`msc/research-structure-preserving/README.md` §1.2** (Prime Question ≡ modified-equation analysis; Warming & Hyett) becomes a literature pointer into this segment for project law; survey detail stays in the recon doc.
 - **`doc/design/NOMOS-CONTRACT.md` box ⑤** still needs procedure + `NomosDecl` fields; this segment states the claim-side requirement only — does not invent schema.
 - **LEXICON:** `modified-equation` / `backward-error-analysis` still unlanded; proposed under the structure-preserving DECISION, not ratified here.

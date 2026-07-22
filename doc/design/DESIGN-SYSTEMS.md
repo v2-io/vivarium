@@ -2,7 +2,13 @@
 
 *The concrete aspect-list for the multirate coupling (`doc/design/DESIGN-REDUX.md` §4) and a build-order guide. Each system is a tier in the lazy query graph (§11); the ones that must run share the property substrate of `doc/design/DESIGN-MATERIAL.md` §5.*
 
-*Status: **timescales and size-scales are established** (standard Earth-system values, high confidence); **crude-payoff and high-fidelity-difficulty are my judgment** (medium confidence — worth a research-hardening pass if we want rigor).
+> **Status: source / inventory, not claim canon.** Multirate coupling, fidelity
+> ladder, and column/material substrate have claim homes when segmented
+> (`#form-fidelity-invariant`, `#form-column-control-volume`, flux/ordinum
+> segments). This file is the phenomena map + build-order judgment + approach
+> ledger — extract candidates case-by-case; do not quote status columns as law.
+
+*Epistemic notes: **timescales and size-scales are established** (standard Earth-system values, high confidence); **crude-payoff and high-fidelity-difficulty are judgment** (medium confidence — worth a research-hardening pass if we want rigor).
 "vivarium" column is current status.*
 
 ## The systems

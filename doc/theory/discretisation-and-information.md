@@ -48,6 +48,8 @@ Recover the physical claim and the honest kernel falls out immediately: take the
 
 ## 1. The first question after the Prime Question
 
+*Claim home: `#norm-bias-vs-noise` (order of questions, admissible remedies, seams inherit the cut). This section is **source and teaching** — worked remedy table and MFD-era texture. Cite the segment for the law.*
+
 When an algorithm's assumption *is* violated on our topology, the first question is **not** "how large is the error."
 
 > # **Is it a BIAS, or is it NOISE?**

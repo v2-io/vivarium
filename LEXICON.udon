@@ -456,7 +456,7 @@
     |term[realized-kingdom] :status settled
       A kingdom whose LAW IS IMMUTABLE. That is the whole definition — it says nothing about whether the law is good, only that it no longer changes. Realization is a THRESHOLD (fix the law at a chosen tolerance).
       |not "Deployed" — reserved, to be refined later as an actual deployment process, distinct from merely being Realized/ready.
-      |confused lawful-kingdom — Realized ⟂ Lawful, deliberately independent: a natural-modeling kingdom is MERELY REALIZED, converging toward Lawful, never self-certifiably complete (Gödel: a system cannot prove its own consistency from inside — "Lawful" is a noumenal property an endo agent cannot self-verify, exactly N-VIS = Revelation). Each Realization carries a residual unLawfulness budget (doc/plan/vivium-operational-workflow.md, BREAK-2).
+      |confused lawful-kingdom — Realized ⟂ Lawful, deliberately independent: a natural-modeling kingdom is MERELY REALIZED, converging toward Lawful, never self-certifiably complete (Gödel: a system cannot prove its own consistency from inside — "Lawful" is a noumenal property an endo agent cannot self-verify, exactly N-VIS = Revelation). Each Realization carries a residual unLawfulness budget (claim home #disc-unlawfulness-budget; source doc/plan/vivium-operational-workflow.md BREAK-2).
 
     |term[lawful-kingdom] :status open
       A kingdom whose law is internally SELF-CONSISTENT and coherent — no glitches, no contradictions. An ASYMPTOTE ($\varepsilon \to 0$), never an event.

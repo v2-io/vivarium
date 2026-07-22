@@ -18,7 +18,7 @@ Spend simulation, precision, and storage only where a consumer depends on the re
 
 ## Epistemic Status
 
-**Max attainable: axiomatic** as project stance. Stated as the consolidating principle of `doc/ARCHITECTURE.md`. Stage `draft`. Sub-claims (lazy memo graph, phase freezes, consumer-dependent restriction statistics) need their own segments before they inherit this postulate's authority; this file does not smuggle them in as proved.
+**Max attainable: axiomatic** as project stance. Stated as the consolidating principle of `doc/ARCHITECTURE.md`. Stage `draft`. Fidelity cash-out now has `#form-fidelity-invariant`. Remaining sub-claims (lazy memo graph, phase freezes, consumer-dependent restriction statistics beyond the fidelity segment) need their own segments before they inherit this postulate's authority; this file does not smuggle them in as proved.
 
 ## Discussion
 
@@ -26,4 +26,4 @@ The opposite failure is familiar: compute everything at finest grain "to be safe
 
 ## Working Notes
 
-- Architecture §1 still overclaims $R \circ L = \mathrm{id}$ in places later corrected by measurement; do not treat those sentences as this postulate. Correctness of multiscale operators is a separate claim family.
+- Multiscale operator honesty is a separate claim family: `#form-rl-closure-algebra` (and `#form-seam-flux-exchange`). Architecture §1 / theory still carry historical overclaim residue; the segment owns the corrected law + compliance debt.

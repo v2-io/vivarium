@@ -1,5 +1,7 @@
 # Vivium Operational Workflow — derived, and stress-broken, from the ontology
 
+> **Claim home for BREAK-2 / unLawfulness budget:** `#disc-unlawfulness-budget`. Save ≡ memo: `#form-store-as-save`. Moratorium: `#scope-moratorium-endogenous-emergence`. This file remains a **reasoning trail** (pipeline, capability ladder, collected breaks) — not parallel claim law.
+
 *2026-07-06. Turns the participation ontology + AAT grounding + moratorium into an operating pipeline:
 what you actually *do* to build, freeze, publish, participate-in, and fork a vivium; what each stage
 *forces*; and — the point — **where it breaks**. Supersedes the framing of `.archive/taxonomy-bdd-stress-test.md`,
