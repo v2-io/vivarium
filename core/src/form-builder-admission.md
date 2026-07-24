@@ -42,6 +42,6 @@ Status can print "unmet" while a naive builder still writes eroded tiles — tha
 
 ## Working Notes
 
-- **Promoted** from consolidation-wave draft (now `.super-archive/from-msc/consolidation-wave-2026-07-21/`); store sibling #form-store-as-save.
+- Store sibling #form-store-as-save ; unbuilt daemon #detail-builder-daemon .
 - **Dual homes demoted carefully:** `#detail-builder-daemon` header (admission + observe-only + store bus); `query.rs` observe-only surface; abyssal-parity explorer roles. Unbuilt daemon / beacons / demand spool remain plan design — not claimed by this segment.
 - Pair with maturity CLI display debt on #form-ordinum-governs-flux-web — different surface, same "show the convicting truth" telos.
