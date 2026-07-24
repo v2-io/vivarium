@@ -97,7 +97,7 @@ Each box gets one file at `doc/design/nomos-contract/`. **The failure mode of a 
 
 **Common brief for all five** (each is one agent, they are independent, run them in parallel):
 
-> Onboard: `CLAUDE.md` (telos: segments sole claim truth) · `core/OUTLINE.md` · **this file** · `doc/theory/discretisation-and-information.md` (Prime Question = modified-equation **computation**, not a disposition) · `DECISIONS.decision-log.udon` — **the authority legend, then ALL of 2026-07-12/13** (source material; ~20 entries, nearly all `:by claude :status proposed`) · `ASSUMPTIONS.md` · project memory (does NOT autoload) · the spikes in `msc/`. Archaeology only: `.super-archive/from-archive/ORIENTATION.md` HANDOFF residue — not a tactical current dependency.
+> Onboard: `CLAUDE.md` (telos: segments sole claim truth) · `core/OUTLINE.md` · **this file** · `#disc-prime-question` (Prime Question = modified-equation **computation**, not a disposition; teaching archaeology in graduated discretisation) · `DECISIONS.decision-log.udon` — **the authority legend, then ALL of 2026-07-12/13** (source material; ~20 entries, nearly all `:by claude :status proposed`) · `ASSUMPTIONS.md` · project memory (does NOT autoload) · the spikes in `msc/`. Archaeology only: `.super-archive/from-archive/ORIENTATION.md` HANDOFF residue — not a tactical current dependency.
 >
 > **Write ONE file: `doc/design/nomos-contract/0N-<box>.md`. It is a PROCEDURE, NOT A TAXONOMY.** Its shape: **the question · the fundamentals (do the math, do not gesture at it) · the procedure · a worked specimen · THE PROBE · the failure gallery · what to write in the declaration.**
 >
@@ -147,4 +147,4 @@ Joseph's plural was doing real work. **We already run four distinct discretisati
 
 ---
 
-*Sources: `DECISIONS.decision-log.udon` (2026-07-12/13, the whole run) · `doc/theory/discretisation-and-information.md` · `msc/` (the eight spikes and audits of 2026-07-13) · `ASSUMPTIONS.md`.*
+*Sources: `DECISIONS.decision-log.udon` (2026-07-12/13, the whole run) · `.super-archive/from-theory/discretisation-and-information.md` · `msc/` (the eight spikes and audits of 2026-07-13) · `ASSUMPTIONS.md`.*

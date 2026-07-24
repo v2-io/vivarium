@@ -2,6 +2,14 @@
 
 *Present-tense index of graduated substrate. Not claim law. Newest batches first.*
 
+## 2026-07-24 batch 7 — discretisation + MATERIAL + SYSTEMS
+
+| Path | From | Superseded by / ice |
+|------|------|---------------------|
+| `from-theory/discretisation-and-information.md` (+ `fig/`) | `doc/theory/…` | Peals: structure map, info dictionary, FVM detail, MFD worked-example (+ prior law homes). §5–7 impact/grid leads → history / `#form-grid-equiangular-staggered` WN. |
+| `from-design/DESIGN-MATERIAL.md` | `doc/design/…` | Column / material / CellId frames in core; TENTATIVE schema → column+material WN. |
+| `from-design/DESIGN-SYSTEMS.md` | `doc/design/…` | Inventory → `#detail-phenomena-systems-map`; multirate/material/probe laws in core. |
+
 ## 2026-07-24 batch 6 — DESIGN-REDUX graduate
 
 | Path | From | Superseded by / ice |
@@ -58,7 +66,7 @@
 | Location | Contents |
 |----------|----------|
 | `.archive/` | `SUPERSEDED.md` (active ledger) + `README.md` (index) |
-| Live `doc/` | DESIGN-MATERIAL, SYSTEMS, NOMOS-CONTRACT, discretisation (partially pealed), plan, ARCHITECTURE, toolchain (REDUX + multiscale theory graduated) |
+| Live `doc/` | NOMOS-CONTRACT, plan/, ARCHITECTURE, toolchain, PROCESS (design thick middle graduated) |
 | Live instruments | spikes, DECISIONS, `ref/` primaries |
 
 ## Provenance audit 2026-07-23

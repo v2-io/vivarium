@@ -1,5 +1,5 @@
 //! The Cartesian patch — the dense working substrate automata run on
-//! (`doc/design/DESIGN-MATERIAL.md` §8; `ref/research/spatial-key-bench.md`).
+//! (`.super-archive/from-design/DESIGN-MATERIAL.md` §8; `ref/research/spatial-key-bench.md`).
 //!
 //! A Hilbert [`CellId`] *addresses* a region; *inside*, cells are a plain
 //! row-major array so a stencil's neighbours are `idx±1` — ~80× faster than

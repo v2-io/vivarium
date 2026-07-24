@@ -39,4 +39,4 @@ Without this specimen, the Prime Question stays abstract and MFD stays “a know
 ## Working Notes
 
 - **Numbers and cube-control rule:** only #obs-cube-locked-kernel-bias .
-- **Source peel:** `doc/theory/discretisation-and-information.md` §0 worked example (present-best).
+- **Source peel:** `.super-archive/from-theory/discretisation-and-information.md` §0 worked example (present-best).

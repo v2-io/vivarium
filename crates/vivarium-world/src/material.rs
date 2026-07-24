@@ -1,4 +1,4 @@
-//! Materials — the property bundle every physics rung reads (`doc/design/DESIGN-MATERIAL.md`
+//! Materials — the property bundle every physics rung reads (`.super-archive/from-design/DESIGN-MATERIAL.md`
 //! §5), and a material *identity* that is a point on the refinement ladder (§6).
 //!
 //! [`MaterialId`] is the small, storable identity kept in strata; [`Material`] is
@@ -117,7 +117,7 @@ impl MaterialId {
     pub fn phase(self) -> Phase { self.material().phase }
 
     /// Whether this material is loose/mobile (powder or paste) — the regolith the
-    /// erosion/hydrology tiers can move (`doc/design/DESIGN-MATERIAL.md` §3's `r`).
+    /// erosion/hydrology tiers can move (`.super-archive/from-design/DESIGN-MATERIAL.md` §3's `r`).
     pub fn is_loose(self) -> bool { matches!(self.phase(), Phase::Powder | Phase::Paste) }
 }
 

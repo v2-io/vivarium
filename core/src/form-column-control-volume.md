@@ -35,6 +35,11 @@ Calling a column a heightfield pixel collapses conservation, rendering, and coll
 
 ## Working Notes
 
-- **Dual homes demoted:** DESIGN-MATERIAL §§2–5; DESIGN-REDUX §5 / §14; ARCHITECTURE §5 column sentence; archive CLAUDE banner. DECISIONS column-is-a-control-volume remains ratification history, not claim home.
+- **Dual homes demoted:** DESIGN-MATERIAL graduated (`.super-archive/from-design/DESIGN-MATERIAL.md`); REDUX §14; ARCHITECTURE §5 column sentence. DECISIONS column-is-a-control-volume remains ratification history, not claim home.
 - **Do not invent** a fixed property schema or close the point/mean/band-limited fork without Joseph or a convicting design.
-- Sibling extracts: sufficient-statistic flux contract; CellId/chunk/patch binding; body overlay regenerable/irreducible.
+- **TENTATIVE schema shapes (from graduated MATERIAL §7/§9 — reserve, do not harden):**
+  - `Stratum { material, thickness, saturation, … }` as run-length storage primitive; `Column { tile, strata, water_depth }` with elevation/$(b,d,r)$/overburden **derived**.
+  - `Body { shape, material, provenance }` overlay (regenerable worldgen vs irreducible user edit) — law-closure of body *effects* → #sketch-detail-abstract-reversion .
+  - **Interface-state slot** on column (not bulk stratum): colmation, armoring, later crusts/snowpack — live partially in `water.rs`; schema placement open.
+  - Volume/mass vs hybrid stored primitive unfixed.
+- Sibling: #form-material-property-interface property tables; #form-cellid-chunk-patch binding.

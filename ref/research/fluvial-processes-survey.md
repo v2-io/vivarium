@@ -4,7 +4,7 @@
 2026-07-03, preserved as project reference. External links are AS GIVEN and
 UNVERIFIED — verify any before external citation (project discipline). The
 distilled inventory with our implementation status lives in
-`doc/design/DESIGN-SYSTEMS.md` §Sediment & fluvial phenomena; this file keeps the fuller
+`.super-archive/from-design/DESIGN-SYSTEMS.md` §Sediment & fluvial phenomena; this file keeps the fuller
 source material and the reference trail.*
 
 ## The process taxonomy (survey 1)

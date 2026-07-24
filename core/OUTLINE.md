@@ -123,6 +123,7 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | detail | Math | [#detail-info-theoretic-discretisation](src/detail-info-theoretic-discretisation.md) | Sampling / anti-alias / Jensen-vs-aliasing / fated-jitter / multires dictionary (present-best) | draft |
 | detail | Math | [#detail-fvm-control-volume](src/detail-fvm-control-volume.md) | Cardiff FVM taxonomy: constructions, volume-exact reconstruction, null-space probe | draft |
 | worked-example | Model | [#worked-example-mfd-prime-question](src/worked-example-mfd-prime-question.md) | MFD as disguised geometric claim — Prime Question specimen | draft |
+| detail | Project | [#detail-phenomena-systems-map](src/detail-phenomena-systems-map.md) | Systems inventory, multirate bands, build-order judgment, fluvial ladder, approach ledger | draft |
 | | | | *(#gap) Hydrosphere, climate, erosion, water nomoi (beyond box + #form-derived-sea-level)* — residual: wire pour/freeboard keeper into nomotheke; full field nomos segments | missing |
 
 ## VI. Process and contribution

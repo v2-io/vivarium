@@ -118,7 +118,7 @@ impl CubeCoord {
 // ---- CellId: the canonical spatial key (S2-style Hilbert cube-sphere cell) ----
 //
 // A `u64` packing (face, level, Hilbert-distance) — the *canonical* address for
-// columns, memo keys, and the save store (`doc/design/DESIGN-MATERIAL.md` §8): exact,
+// columns, memo keys, and the save store (`.super-archive/from-design/DESIGN-MATERIAL.md` §8): exact,
 // drift-free, hashable, and Hilbert-ordered so a region is a contiguous id range
 // (storage/streaming locality). The curve orders *chunks*; a chunk's interior is a
 // plain Cartesian array, so per-cell Hilbert ops never happen in a hot loop — see
@@ -190,7 +190,7 @@ fn hilbert_d2xy(n: u32, mut d: u64) -> (u32, u32) {
 
 impl CellId {
     /// The cell at integer face-cell coords `(i, j)` (each in `0..2^level`) — the
-    /// form Cartesian patches address in (`doc/design/DESIGN-MATERIAL.md` §8).
+    /// form Cartesian patches address in (`.super-archive/from-design/DESIGN-MATERIAL.md` §8).
     pub fn from_face_ij(face: Face, i: u32, j: u32, level: u8) -> CellId {
         debug_assert!(level <= MAX_LEVEL);
         let l = level as u32;

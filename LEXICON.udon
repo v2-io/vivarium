@@ -151,7 +151,7 @@
       |source .super-archive/from-design/DESIGN-REDUX.md §11-13
 
     |term[system] :status settled
-      The phenomenon-level unit a phase runs — erosion, hydrology, climate (doc/design/DESIGN-SYSTEMS.md rows; the ARCHITECTURE §9 contract is what one declares to join the machine).
+      The phenomenon-level unit a phase runs — erosion, hydrology, climate (.super-archive/from-design/DESIGN-SYSTEMS.md rows; the ARCHITECTURE §9 contract is what one declares to join the machine).
       |rel :to rung :kind climbs
       |rel :to slot :kind fills-via-nomos
 
@@ -173,7 +173,7 @@
       |not cognate with noumenon — nomos is from nemein (to allot), noumenon from noein (to think); but the nomoi + seed literally constitute the world's noumenon (§7.2), so the near-homophony is free resonance, deliberately enjoyed.
 
     |term[patch] :status settled
-      The Cartesian stencil substrate — a chunk interior as a flat row-major array with a halo carrying cross-chunk/face neighbours, so hot loops never branch. Column/Stratum and CellId — the matter and spatial keys — are defined in doc/design/DESIGN-MATERIAL.md and used here unchanged.
+      The Cartesian stencil substrate — a chunk interior as a flat row-major array with a halo carrying cross-chunk/face neighbours, so hot loops never branch. Column/Stratum and CellId — the matter and spatial keys — are defined in .super-archive/from-design/DESIGN-MATERIAL.md and used here unchanged.
 
     |term[detail-must-be-earned] :status settled
       Principle (Joseph): never paint sub-simulation detail the physics did not produce; the finest SIMULATED tier is authoritative and painted coordinate-noise detail yields to any simulated field overlapping it.

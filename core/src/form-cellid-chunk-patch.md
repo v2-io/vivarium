@@ -36,5 +36,5 @@ This is the machine-side complement of the grid formulation: the grid segment sa
 
 ## Working Notes
 
-- **Dual-home demote:** DESIGN-MATERIAL §8 address block gets a claim-home banner; bench rationale stays in `ref/research/spatial-key-bench.md`.
+- **Dual-home demote:** DESIGN-MATERIAL graduated (address block → this segment); bench rationale stays in `ref/research/spatial-key-bench.md`.
 - Residual: promote closed-form spherical cell area (`msc/spike-wavelet-store/src/area.rs`) into `measure.rs` per #obs-cube-locked-kernel-bias trail — same wiring wave as face keys.

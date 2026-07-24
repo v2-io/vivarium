@@ -4,7 +4,7 @@
 hurts the automata inner loop (erosion et al. are stencil/neighbor-bound). Source:
 [`spatial-key-bench.rs`](spatial-key-bench.rs) (`rustc -O -C target-cpu=native`).
 Numbers below are one dev machine — treat the **ratios** as the durable result, not
-the absolute Mcells/s. Feeds `doc/design/DESIGN-MATERIAL.md` §8.*
+the absolute Mcells/s. Feeds `.super-archive/from-design/DESIGN-MATERIAL.md` §8.*
 
 ## Results
 

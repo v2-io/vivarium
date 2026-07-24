@@ -39,6 +39,7 @@ The interface bet is what keeps "features are compositions, not new engines" tru
 
 ## Working Notes
 
-- **Dual-home demote:** DESIGN-MATERIAL §§5–6 and DESIGN-REDUX §15 get claim-home banners; property tables and schema sketch stay TENTATIVE source.
-- **Interface-state slot:** colmation **and** armoring/colmation depth are live in `water.rs` (`armor`, `armor_depth`, `armor_shield`); schema-as-interface placement still residual — do not claim the full Material/Stratum schema is fixed.
-- Sibling: scaffolding-with-a-demolition-date (explicit fields that parameterize what finer rungs will emerge — armor, colmation) belongs to #form-fidelity-ladder 's climb story; noted there.
+- **Dual-home demote:** DESIGN-MATERIAL graduated (`.super-archive/from-design/DESIGN-MATERIAL.md`); REDUX §15. Property list research home: `ref/research/material-models-survey.md`.
+- **TENTATIVE property inventory (reserve):** per-material statics as in FE(1); interface-state (colmation/armoring live in `water.rs`); per-column dynamics; derived geometry. Concrete Rust `Material`/`Stratum`/`Column`/`Body` field lists from graduated MATERIAL §9 are **starting sketches, not API**.
+- **Materialization:** fine detail = fated coherent noise × macro amplitude — not order-dependent neighbour growth ( #post-determinism-as-ontology ). Non-local features need real simulation.
+- Sibling: scaffolding-with-a-demolition-date (armor, colmation) on #form-fidelity-ladder ; fluvial next-rungs inventory on #detail-phenomena-systems-map .

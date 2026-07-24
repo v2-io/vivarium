@@ -2,7 +2,7 @@
 
 *Source / consolidating overview — **not claim canon.** Settled claims live in `core/src/` (`core/OUTLINE.md` · `#scope-segment-canon`). Use this file as extraction substrate and mental-model map; when a segment exists, the segment wins.*
 
-*v0.3, 2026-07-10 (body). Derivations and detail still pointed here: `.super-archive/from-theory/multiscale-seams.md`, `.super-archive/from-design/DESIGN-REDUX.md`, `doc/design/DESIGN-MATERIAL.md`, `doc/design/DESIGN-SYSTEMS.md`, `tabularium/terrestris.ordinum.udon`, `LEXICON.udon`, `ASF.md`. Graduated teaching zoo: `.super-archive/from-theory/multiscale-methods.md`. Status marked inline: **settled** / **stance** / **open** / **gap**. Vocabulary is `LEXICON.udon`-canonical.*
+*v0.3, 2026-07-10 (body). Derivations and detail still pointed here: `.super-archive/from-theory/multiscale-seams.md`, `.super-archive/from-design/DESIGN-REDUX.md`, `.super-archive/from-design/DESIGN-MATERIAL.md`, `.super-archive/from-design/DESIGN-SYSTEMS.md`, `tabularium/terrestris.ordinum.udon`, `LEXICON.udon`, `ASF.md`. Graduated teaching zoo: `.super-archive/from-theory/multiscale-methods.md`. Status marked inline: **settled** / **stance** / **open** / **gap**. Vocabulary is `LEXICON.udon`-canonical.*
 
 > [!note]
 > Erosion and hydrology appear below only as **two early instances of many more systems to come** — the systems that happen to exist in code, not the subject. The subject is the general machinery that lets an arbitrary number of interdependent systems be developed in parallel, each principled.
@@ -57,7 +57,7 @@ This is how the §1 algebra is made runnable. The runtime is a **demand-driven, 
 
 **The save-file *is* the memo store** *(claim home `#form-store-as-save`; source `.super-archive/from-design/DESIGN-REDUX.md` §13)* — git-repo-shaped, content-addressed: `manifest` · `objects/<hash>` (immutable) · `roots` (current hash per `(aspect, tile, level, time)`) · `mutations/` (append-only, the irreducible truth). Copy the folder → the world moves. Invalidation is correctness (by content hash); eviction is space (LRU on immutable blobs — deleting one costs a recompute, never correctness), so **memoize pervasively**, at every tier and rate. **The run-modes carve** (`LEXICON.udon` §3) is the store's typing job — the strictly-causal / replay / discardable-iteration / live-play distinction maps to **Closed vs Open-with-recorded-forcing** (§6/§7 ontology) plus the pre-participation **non-intervention** register; an iteration run must never write a canon `root`.
 
-The substrate the graph addresses *(settled; `doc/design/DESIGN-MATERIAL.md`)*: a cube-sphere **`CellId(u64)`** Hilbert key orders **chunks**; a chunk's interior is a plain Cartesian array (stencils at ~6 Gcells/s, measured); **halos** carry cross-chunk neighbours (same-face live; cross-face unbuilt — #form-cellid-chunk-patch). The **column** (a stack of real-valued **strata**) is the storage unit *(claim home `#form-column-control-volume`)*; **voxels** are a materialized *view*; **bodies** overlay cross-cutting masses; elevation is always *derived*, its meaning *declared* (§3).
+The substrate the graph addresses *(settled; `.super-archive/from-design/DESIGN-MATERIAL.md`)*: a cube-sphere **`CellId(u64)`** Hilbert key orders **chunks**; a chunk's interior is a plain Cartesian array (stencils at ~6 Gcells/s, measured); **halos** carry cross-chunk neighbours (same-face live; cross-face unbuilt — #form-cellid-chunk-patch). The **column** (a stack of real-valued **strata**) is the storage unit *(claim home `#form-column-control-volume`)*; **voxels** are a materialized *view*; **bodies** overlay cross-cutting masses; elevation is always *derived*, its meaning *declared* (§3).
 
 ---
 
@@ -126,4 +126,4 @@ To add a world-system and have the machine compose it, declare its place in the 
 
 ---
 
-*Founding DESIGN and DESIGN-REDUX are graduated (`.super-archive/from-design/`). Claim law is `core/`. Live design companions: DESIGN-MATERIAL / DESIGN-SYSTEMS / NOMOS-CONTRACT. Theory residual: discretisation-and-information (partially pealed). Build sequence: `doc/plan/abyssal-parity-plan.md`. Future instances inherit what we leave.*
+*Founding DESIGN and DESIGN-REDUX are graduated (`.super-archive/from-design/`). Claim law is `core/`. Live design residual: NOMOS-CONTRACT (procedure + defect table). DESIGN-MATERIAL / SYSTEMS / REDUX / multiscale theory / discretisation graduated. Build sequence: `doc/plan/abyssal-parity-plan.md`. Future instances inherit what we leave.*

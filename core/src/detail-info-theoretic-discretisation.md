@@ -51,6 +51,6 @@ Agents who only hold “declare the structure” still re-litigate anti-aliasing
 
 ## Working Notes
 
-- **Source peel:** `doc/theory/discretisation-and-information.md` §3 present-best only; long correction blocks stay history in the graduated source.
+- **Source peel:** `.super-archive/from-theory/discretisation-and-information.md` §3 present-best only; long correction blocks stay history in the graduated source.
 - **Sibling measurements:** #obs-mean-pin-manufactures-seam ; wavelet-store DECISIONS; water validity-envelope DECISIONS (not re-proved here).
 - **Do not re-promote:** Jensen≡aliasing; FDT-determined jitter amplitude for $\theta$; “store details ⇒ seam never happens.”
