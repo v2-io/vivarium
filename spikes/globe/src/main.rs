@@ -44,8 +44,9 @@
 //!      worldview verification idiom).
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use bevy::asset::RenderAssetUsages;
 use bevy::ecs::message::{MessageReader, MessageWriter};
@@ -56,6 +57,7 @@ use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 
 use vivarium_world::erosion;
 use vivarium_world::gen;
+use vivarium_world::hydrosphere::Hydrosphere;
 use vivarium_world::sea_level;
 use vivarium_world::planet::Planet;
 use vivarium_world::query::{RegionCensus, World};
@@ -109,6 +111,9 @@ struct GlobeMsg {
     census: RegionCensus,
     /// Whether stale-source tiles were blended in (VIVARIUM_INCLUDE_STALE=1).
     include_stale: bool,
+    /// True while this surface used the coarse provisional sea (the real L8 pour
+    /// had not landed yet) — first light before the async refine.
+    sea_provisional: bool,
     /// How many of the six faces had any cell covered by a store erosion tile.
     eroded_faces: usize,
     pull_s: f32,
@@ -404,11 +409,74 @@ fn build_face(
     (FaceMesh { positions, normals, colors, indices }, seam)
 }
 
+/// A **view-side provisional** derived sea level, poured at a coarse level so it
+/// returns in well under a second — the never-block first-light stand-in for the
+/// real `sea_level::derived_sea_level_m` (an L8 pour of ~393k isostasy-freeboard
+/// evals, which today is seconds-to-minutes and must NOT sit on the critical path
+/// to the first frame; `#form-builder-admission` FE(4)). Same pour algorithm as
+/// `sea_level::pour_ocean`, read-only over the pub `tectonic_surface_m`, at
+/// `level` (≈L5) instead of L8. It is a *coarse estimate*, honestly labeled on the
+/// HUD as "provisional" until the real value refines in and triggers a rebuild;
+/// the store-side memoize-at-build half (so no pour is needed at all) is the
+/// remaining owed piece, deliberately left to the sea_level/builder owners.
+fn provisional_sea_m(seed: u64, level: u8) -> f64 {
+    let planet = Planet::EARTH;
+    let ocean_km3 = Hydrosphere::of(&planet).ocean_km3;
+    let n = 1usize << level;
+    let r_km = planet.radius_m / 1000.0;
+    let cell_area = (4.0 * std::f64::consts::PI * r_km * r_km) / (6.0 * (n * n) as f64);
+    let mut heights: Vec<f64> = Vec::with_capacity(6 * n * n);
+    let (mut lo, mut hi, mut mean_acc) = (f64::MAX, f64::MIN, 0.0f64);
+    for f in 0..6u8 {
+        let face = Face::from_index(f);
+        for j in 0..n {
+            for i in 0..n {
+                let u = ((i as f64 + 0.5) / n as f64) * 2.0 - 1.0;
+                let v = ((j as f64 + 0.5) / n as f64) * 2.0 - 1.0;
+                let cell = CubeCoord { face, u, v }.cell(level);
+                let h = sea_level::tectonic_surface_m(seed, cell, level);
+                heights.push(h);
+                lo = lo.min(h);
+                hi = hi.max(h);
+                mean_acc += h;
+            }
+        }
+    }
+    let total_area = cell_area * heights.len() as f64;
+    let mean_h = mean_acc / heights.len() as f64;
+    let held = |s: f64| -> f64 { heights.iter().filter(|&&h| h < s).map(|&h| (s - h) * cell_area / 1000.0).sum() };
+    if ocean_km3 > held(hi) {
+        // Basins cannot hold the inventory: total water-world (ordinum promise).
+        return mean_h + ocean_km3 * 1000.0 / total_area;
+    }
+    let (mut a, mut b) = (lo, hi);
+    for _ in 0..48 {
+        let m = 0.5 * (a + b);
+        if held(m) < ocean_km3 {
+            a = m;
+        } else {
+            b = m;
+        }
+    }
+    0.5 * (a + b)
+}
+
 /// The worker: owns the World (store + seed), serves (level, exag) build requests,
 /// one at a time, latest result wins on the ECS side. Faces build in parallel
 /// (they share only the Store, which is safe: worst case two threads compute the
 /// same object and the put is idempotent).
-fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx: Sender<GlobeMsg>) {
+///
+/// **Never-block sea (view-side):** first light renders on a coarse
+/// [`provisional_sea_m`] immediately; a side thread computes the real L8
+/// `derived_sea_level_m`, swaps it into `sea_bits`, and self-pokes a rebuild via
+/// `self_poke` so the surface refines without the pour ever blocking the frame.
+fn spawn_worker(
+    world_dir: PathBuf,
+    seed: u64,
+    rx: Receiver<(u8, f32, bool)>,
+    tx: Sender<GlobeMsg>,
+    self_poke: Sender<(u8, f32, bool)>,
+) {
     std::thread::spawn(move || {
         let store = match Store::open(&world_dir) {
             Ok(s) => s,
@@ -418,7 +486,26 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx
             }
         };
         let world = World::new(&store, seed);
-        let sea_m = sea_level::derived_sea_level_m(seed) as f32;
+        // Never-block first light: start on a coarse provisional sea NOW, refine to
+        // the real L8 derived sea on a side thread and self-poke a rebuild when it
+        // lands. `sea_bits` holds the current f64 sea as bits; `sea_ready` flips
+        // true once the real value is in.
+        let sea_bits = Arc::new(AtomicU64::new(provisional_sea_m(seed, 4).to_bits()));
+        let sea_ready = Arc::new(AtomicBool::new(false));
+        let last_req: Arc<Mutex<Option<(u8, f32, bool)>>> = Arc::new(Mutex::new(None));
+        {
+            let (sea_bits, sea_ready, last_req, poke) =
+                (sea_bits.clone(), sea_ready.clone(), last_req.clone(), self_poke.clone());
+            std::thread::spawn(move || {
+                let real = sea_level::derived_sea_level_m(seed);
+                sea_bits.store(real.to_bits(), Ordering::Relaxed);
+                sea_ready.store(true, Ordering::Relaxed);
+                // Re-trigger the latest build so the surface refines to the real sea.
+                if let Some(req) = *last_req.lock().unwrap() {
+                    let _ = poke.send(req);
+                }
+            });
+        }
         // Silent staleness is the ribbon's root cause: after ANY vivarium-world
         // source edit the store's tiles are stale-by-source-hash, and the old
         // `load_eroded_regions` loaded them anyway — blending stale-carved cells
@@ -428,6 +515,9 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx
         let include_stale = std::env::var("VIVARIUM_INCLUDE_STALE").map(|v| v == "1").unwrap_or(false);
         while let Ok((level, exag, audit)) = rx.recv() {
             let t0 = std::time::Instant::now();
+            *last_req.lock().unwrap() = Some((level, exag, audit));
+            let sea_m = f64::from_bits(sea_bits.load(Ordering::Relaxed)) as f32;
+            let sea_provisional = !sea_ready.load(Ordering::Relaxed);
             // Reload each request so a builder running alongside the globe is visible.
             let census = world.eroded_region_census();
             let regions = if include_stale {
@@ -501,6 +591,7 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx
                 store_eroded_tiles,
                 census,
                 include_stale,
+                sea_provisional,
                 eroded_faces,
                 pull_s: t0.elapsed().as_secs_f32(),
                 land_frac: land as f32 / total.max(1) as f32,
@@ -585,6 +676,7 @@ struct BuiltStats {
     store_eroded_tiles: usize,
     census: RegionCensus,
     include_stale: bool,
+    sea_provisional: bool,
     /// Faces with any cell covered by a store erosion tile (0..=6).
     eroded_faces: usize,
     pull_s: f32,
@@ -667,7 +759,7 @@ fn main() {
     );
     let (req_tx, req_rx) = std::sync::mpsc::channel::<(u8, f32, bool)>();
     let (res_tx, res_rx) = std::sync::mpsc::channel::<GlobeMsg>();
-    spawn_worker(dir.clone(), spec.seed, req_rx, res_tx);
+    spawn_worker(dir.clone(), spec.seed, req_rx, res_tx, req_tx.clone());
 
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -928,6 +1020,7 @@ fn apply_builds(
         store_eroded_tiles: msg.store_eroded_tiles,
         census: msg.census,
         include_stale: msg.include_stale,
+        sea_provisional: msg.sea_provisional,
         eroded_faces: msg.eroded_faces,
         pull_s: msg.pull_s,
         land_frac: msg.land_frac,
@@ -1077,8 +1170,13 @@ fn hud_update(
             } else {
                 String::new()
             };
+            let sea_state = if b.sea_provisional {
+                " | sea: PROVISIONAL (coarse) -> refining to derived L8"
+            } else {
+                " | sea: derived L8"
+            };
             let census_line = format!(
-                "tiles: {} fresh / {} stale / {} total (src {src8}) | {:.1}% cells prior-fallback{stale_note}",
+                "tiles: {} fresh / {} stale / {} total (src {src8}) | {:.1}% cells prior-fallback{stale_note}{sea_state}",
                 cen.fresh, cen.stale, cen.total, b.prior_fallback_frac * 100.0,
             );
             // Present truth: the solid prior IS the tectonic surface (bathymetry +
