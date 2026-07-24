@@ -2,7 +2,8 @@
 
 > **Not claim canon.** Settled claims: `core/OUTLINE.md` · `core/src/`.  
 > This file is a **router** into segments and remaining design volumes.  
-> Full historical body graduated where pealed — see `.super-archive/` MANIFEST if a prose home is needed for archaeology.
+> Full pre-pointer body (including complete two-layer-mind prose):  
+> [`.super-archive/from-design/DESIGN.md`](../../.super-archive/from-design/DESIGN.md).
 
 | Topic | Claim / sketch home | Further substrate |
 |-------|---------------------|-------------------|
