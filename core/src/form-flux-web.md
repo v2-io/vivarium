@@ -28,7 +28,7 @@ Nomos couple only through a shared vocabulary of fluxed quantities: one produces
 
 Live: vocabulary module, `Consume`/`Promise` with statistic + exactness on `NomosDecl`, `audit::producer_of` / `unmet_across_registry` / `requisite_chain` / `statistic_match_across_registry`, builder gate. Stage `draft`.
 
-**Known incomplete / compliance debt:** (1) a cross-scale *level* component on the statistic contract (needs mean at-least-L19) is deferred until a cross-scale consumer exists; (2) maturity of ladder promises not yet displayed in CLI; (3) provisional root tags under waived admission — end-to-end bin integration residual ( #form-builder-admission ); (4) freeboard / emerged-land producer residual under #form-derived-sea-level when the live graph lags the claim.
+**Known incomplete / compliance debt:** (1) a cross-scale *level* component on the statistic contract (needs mean at-least-L19) is deferred until a cross-scale consumer exists; (2) freeboard / emerged-land producer residual under #form-derived-sea-level when the live graph lags the claim.
 
 ## Discussion
 

@@ -253,6 +253,96 @@ pub fn terrestris() -> Ordinum {
     Ordinum::parse(TERRESTRIS)
 }
 
+/// Render the shipped ordinum's promise-maturity report as text — the section
+/// `vivarium status` prints so Joseph can *see* which promises are in-progress
+/// vs not-started (the ask that made `ordinum.rs` exist). Kept here (not in the
+/// CLI) so the wording is unit-testable, and it reads the SAME `Maturity` the
+/// engine computes — no second ladder.
+pub fn render_maturity() -> String {
+    render_maturity_of(&terrestris())
+}
+
+/// The maturity report for a given ordinum (factored out so a test can drive a
+/// fixture, and so the shipped path cannot silently diverge from the tested one).
+pub fn render_maturity_of(o: &Ordinum) -> String {
+    use std::fmt::Write as _;
+    let mut s = String::new();
+    let _ = writeln!(
+        s,
+        "promise maturity (the ordinum ladder — what each phase must deliver, and how far it has climbed):"
+    );
+    let _ = writeln!(
+        s,
+        "  ladder: NOT-STARTED → specified → claimed → KEPT   (Kept is not shown: predicates are prose; a probe must convict it per cycle)"
+    );
+
+    let (mut n_claimed, mut n_specified, mut n_notstarted, mut n_broken) = (0, 0, 0, 0);
+    let mut queue: Vec<(u32, &str)> = Vec::new(); // specified, no keeper — the ladder's asks
+    let mut broken: Vec<(u32, &str, String)> = Vec::new();
+
+    for ph in &o.phases {
+        if ph.promises.is_empty() {
+            continue;
+        }
+        let _ = writeln!(s, "\n  Phase {} — {}", ph.num, ph.name);
+        for p in &ph.promises {
+            let m = p.maturity();
+            match m {
+                Maturity::Claimed => n_claimed += 1,
+                Maturity::Specified => {
+                    n_specified += 1;
+                    queue.push((ph.num, &p.slug));
+                }
+                Maturity::NotStarted => n_notstarted += 1,
+                Maturity::BrokenKeeper => {
+                    n_broken += 1;
+                    broken.push((ph.num, &p.slug, p.kept_by.clone().unwrap_or_default()));
+                }
+            }
+            let keeper = match &p.kept_by {
+                Some(k) => format!("← {k}"),
+                None => String::new(),
+            };
+            let uncheckable = if p.is_uncheckable() { "  (un-checkable — no predicate)" } else { "" };
+            let class = if p.class.is_empty() { String::new() } else { format!(".{}", p.class) };
+            let _ = writeln!(
+                s,
+                "    [{:<13}] {:<22} {:<12} {keeper}{uncheckable}",
+                m.label(),
+                p.slug,
+                class
+            );
+        }
+    }
+
+    let _ = writeln!(
+        s,
+        "\n  tally: {n_claimed} claimed · {n_specified} specified · {n_notstarted} not-started{}",
+        if n_broken > 0 { format!(" · {n_broken} BROKEN-KEEPER") } else { String::new() }
+    );
+    if queue.is_empty() {
+        let _ = writeln!(s, "  queue: none specified-without-a-keeper — the ladder's next ask is prose promises gaining predicates.");
+    } else {
+        let _ = writeln!(
+            s,
+            "  queue (specified, no keeper — the ladder's next asks, a look-up not session taste):"
+        );
+        for (num, slug) in &queue {
+            let _ = writeln!(s, "    Phase {num} · {slug}");
+        }
+    }
+    if !broken.is_empty() {
+        let _ = writeln!(
+            s,
+            "  ⚠ BROKEN-KEEPER — the ladder is lying about its own coverage; fix before trusting it:"
+        );
+        for (num, slug, keeper) in &broken {
+            let _ = writeln!(s, "    Phase {num} · {slug} :kept-by '{keeper}' — no such nomos in the nomotheke");
+        }
+    }
+    s
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -294,6 +384,40 @@ mod tests {
         let ero = ab.promises.iter().find(|p| p.slug == "erosion-substrate").unwrap();
         assert_eq!(ero.kept_by.as_deref(), Some("erosion-tile"));
         assert_eq!(ero.maturity(), Maturity::Claimed, "erosion-tile is registered");
+    }
+
+    #[test]
+    fn maturity_report_reads_the_engine_not_a_second_ladder() {
+        // The display debt closed (#form-ordinum-governs-flux-web): the report is
+        // rendered straight from `Promise::maturity()`, so it cannot drift from the
+        // engine. Pin the load-bearing facts a reader relies on rather than the
+        // exact layout (which is allowed to evolve).
+        let text = render_maturity();
+        // The two Abyssal promises the segments track by name, at their real rungs.
+        assert!(
+            text.contains("emerged-land") && text.contains("← isostasy"),
+            "emerged-land shows its Claimed keeper"
+        );
+        assert!(
+            text.contains("erosion-substrate") && text.contains("← erosion-tile"),
+            "erosion-substrate shows its Claimed keeper"
+        );
+        // The honest ceiling is stated, not silently dropped: Kept is not displayed.
+        assert!(text.contains("Kept is not shown"), "the Claimed≠Kept honesty note is present");
+        // No second ladder: only the engine's four rung labels may appear.
+        assert!(text.contains("tally:"), "a rung tally is reported");
+        // If the shipped ordinum ever grows a :kept-by naming a missing nomos, the
+        // report must shout it — mirror of `no_promise_in_the_ladder_names_a_nonexistent_nomos`.
+        let broken = terrestris()
+            .phases
+            .iter()
+            .flat_map(|ph| &ph.promises)
+            .any(|p| p.maturity() == Maturity::BrokenKeeper);
+        assert_eq!(
+            broken,
+            text.contains("BROKEN-KEEPER"),
+            "the report's BROKEN-KEEPER section fires iff the ladder actually has one"
+        );
     }
 
     #[test]

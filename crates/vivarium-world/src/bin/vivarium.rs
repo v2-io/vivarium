@@ -34,6 +34,7 @@ use std::path::{Path, PathBuf};
 
 use vivarium_world::audit;
 use vivarium_world::nomotheke;
+use vivarium_world::ordinum;
 use vivarium_world::query::{Source, World};
 use vivarium_world::spec::WorldSpec;
 use vivarium_world::sphere::Face;
@@ -204,13 +205,29 @@ fn phase_nomos(phase: &str) -> Option<&'static vivarium_world::nomotheke::NomosD
 /// dep chain) unprincipled to run — the builder admission check.
 fn phase_unmet_quantities(phase: &str) -> Vec<&'static str> {
     let Some(n) = phase_nomos(phase) else {
-        return Vec::new();
+        return maybe_forced_unmet(phase, Vec::new());
     };
-    audit::requisite_chain(n)
+    let real = audit::requisite_chain(n)
         .into_iter()
         .filter(|line| matches!(line.supply, audit::Supply::Unmet))
         .map(|line| line.quantity)
-        .collect()
+        .collect();
+    maybe_forced_unmet(phase, real)
+}
+
+/// Test/diagnostic seam: `VIVARIUM_TEST_FORCE_UNMET=<phase>` injects a synthetic
+/// unmet quantity for that phase's admission check. It can only make admission
+/// **stricter** (add an unmet need) — never weaker — so it cannot launder an
+/// unlawful build into a lawful one; the worst it can do is refuse a phase that
+/// would otherwise pass. It exists because the shipped registry is closed (no
+/// phase is Unmet as-built), which would otherwise leave the binary's refuse and
+/// waiver-to-provisional paths untestable end to end (#form-builder-admission
+/// residuals). Absent the env var this is a no-op.
+fn maybe_forced_unmet(phase: &str, mut real: Vec<&'static str>) -> Vec<&'static str> {
+    if std::env::var("VIVARIUM_TEST_FORCE_UNMET").as_deref() == Ok(phase) {
+        real.push("test-forced-unmet");
+    }
+    real
 }
 
 fn cmd_build(rest: &[String]) -> i32 {
@@ -479,6 +496,11 @@ fn cmd_status(rest: &[String]) -> i32 {
     // read off the nomotheke with nothing running (the fidelity pyramid says
     // what EXISTS; this says what each nomos NEEDS and whether it is supplied).
     println!("\n{}", audit::render_flux_web().trim_end());
+    // The ordinum ladder's maturity — which promises are claimed vs specified vs
+    // not-started (the thing Joseph asked to SEE that drives nomos creation from a
+    // look-up rather than session taste, #form-ordinum-governs-flux-web). Read off
+    // the same `Promise::maturity()` engine the tests pin — no second ladder.
+    println!("\n{}", ordinum::render_maturity().trim_end());
     0
 }
 

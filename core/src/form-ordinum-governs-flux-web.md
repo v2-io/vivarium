@@ -24,9 +24,9 @@ The phase ladder's promises *are* flux quantities, and `:kept-by` *is* the produ
 
 ## Epistemic Status
 
-**Max attainable: exact** for the governing join Joseph decided (`DECISIONS[ordinum-governs-the-flux-web]`, `:by joseph`, decided). Engine: `ordinum.rs` maturity computation + flux/audit wiring. Stage `draft`.
+**Max attainable: exact** for the governing join Joseph decided (`DECISIONS[ordinum-governs-the-flux-web]`, `:by joseph`, decided). Engine + display: `ordinum.rs` maturity computation (over the flux/audit wiring), rendered by `vivarium status` via `ordinum::render_maturity` — the report reads the same `Promise::maturity()` the engine computes, so there is no second ladder. Stage `draft`.
 
-**Known incomplete:** (1) CLI does not yet display the maturity report Joseph asked to *see* (engine exists; display does not). (2) Full phase-content segmentation of the Terrestris ordinum is open (OUTLINE §VII; Abyssal piloted). (3) `emerged-land` is **Claimed** by isostasy ( #form-isostasy-column ) but not **Kept** until Record-style predicates convict per cycle.
+**Known incomplete:** (1) Full phase-content segmentation of the Terrestris ordinum is open (OUTLINE §VII; Abyssal piloted). (2) `emerged-land` is **Claimed** by isostasy ( #form-isostasy-column ) but not **Kept** until Record-style predicates convict per cycle.
 
 ## Discussion
 
@@ -35,5 +35,4 @@ Before this join, a "closed flux web" could print clean while erosion silently n
 ## Working Notes
 
 - DECISIONS ordinum-governs entry is history of *why*; claim home is this segment. Live floor is `tabularium/terrestris.ordinum.udon` data only (historical PHASES reportatio is ice provenance, not a read dependency).
-- Display debt: wire maturity into `vivarium status` (or sibling command) without inventing a second ladder.
 - Emerged-land keeper path extracted to #form-derived-sea-level ; drop residual banner when nomotheke promises the flux.

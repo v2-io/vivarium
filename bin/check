@@ -7,6 +7,9 @@ cd "$(dirname "$0")/.."
 echo "== cargo test -p vivarium-world --lib =="
 cargo test -p vivarium-world --lib
 
+echo "== cargo test -p vivarium-world --test cli_admission =="
+cargo test -p vivarium-world --test cli_admission
+
 echo "== cargo clippy -p vivarium-world --lib (determinism bans deny) =="
 cargo clippy -p vivarium-world --lib -- \
   -D clippy::disallowed_methods \

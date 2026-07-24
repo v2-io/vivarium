@@ -26,16 +26,14 @@ The builder may materialize only what the flux contract allows (or explicitly wa
 
 ## Epistemic Status
 
-**Max attainable: exact** for admission + observe-only pull as architecture under the flux web and core/view wall. Live: `bin/vivarium.rs` phase admission via `audit::requisite_chain` (refuse exit 2; waiver log line); `query::World::surface_prefer_eroded`. Stage `draft`.
+**Max attainable: exact** for admission + observe-only pull as architecture under the flux web and core/view wall. Live: `bin/vivarium.rs` phase admission via `audit::requisite_chain` (refuse exit 2; waiver log line); waived phases set `World::set_provisional_writes` so roots carry the third-line `provisional` flag, `vivarium status` prints the counts, and the Hit path surfaces `Source::HitProvisional` (waived bytes cannot launder into a lawful Hit); `query::World::surface_prefer_eroded`. Both the refuse path and the waiver→provisional→`status` chain are convicted at the binary boundary by `tests/cli_admission.rs` (argv → process → exit-code / stdout), and the lib walks put-provisional → census → HitProvisional. Stage `draft`.
 
 **Known incomplete (open — do not soft-close):**
 
-1. **Provisional tag (closed at lib level, 2026-07-24).** Waived phases set `World::set_provisional_writes`; roots carry the third-line `provisional` flag; `vivarium status` prints counts; the Hit path surfaces `Source::HitProvisional` (waived bytes cannot launder into a lawful Hit), and a lib test walks put-provisional → census → HitProvisional end-to-end. Still open: a bin-level argv→status walk of the same chain.
-2. **No integration test of the refuse path** (gate lives in the binary; lib exercises `requisite_chain` only).
-2b. **Query `put` errors are swallowed** (`let _ =` on memo puts) — surfacing them is an API-shape change, deferred; a failed memo put today degrades to recompute, never wrong bytes.
-3. **Full builder daemon** (beacon cones, demand spool, restart-in-place) is design-grade in #detail-builder-daemon , not this segment's built surface. Do not read FE(1)–FE(4) as claiming that design is shipped.
-4. **Lock TOCTOU / atomic create** still engineering debt.
-5. Worldview spike still hybrid-evolves on explorer paths — compliance debt on #form-core-view-wall , not a license to dissolve FE(4).
+1. **Query `put` errors are swallowed** (`let _ =` on memo puts) — surfacing them is an API-shape change, deferred; a failed memo put today degrades to recompute, never wrong bytes.
+2. **Full builder daemon** (beacon cones, demand spool, restart-in-place) is design-grade in #detail-builder-daemon , not this segment's built surface. Do not read FE(1)–FE(4) as claiming that design is shipped.
+3. **Lock TOCTOU / atomic create** still engineering debt.
+4. Worldview spike still hybrid-evolves on explorer paths — compliance debt on #form-core-view-wall , not a license to dissolve FE(4).
 
 ## Discussion
 
@@ -45,4 +43,4 @@ Status can print "unmet" while a naive builder still writes eroded tiles — tha
 
 - Store sibling #form-store-as-save ; unbuilt daemon #detail-builder-daemon .
 - **Dual homes demoted carefully:** `#detail-builder-daemon` header (admission + observe-only + store bus); `query.rs` observe-only surface; abyssal-parity explorer roles. Unbuilt daemon / beacons / demand spool remain plan design — not claimed by this segment.
-- Pair with maturity CLI display debt on #form-ordinum-governs-flux-web — different surface, same "show the convicting truth" telos.
+- Sibling on #form-ordinum-governs-flux-web (the maturity report `vivarium status` now renders) — different surface, same "show the convicting truth" telos.
