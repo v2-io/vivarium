@@ -49,6 +49,18 @@ Candidate inventory (unratified scan, not canon): [`core-segment-candidates-2026
 6. **Code and views are secondary this phase** unless a segment's Working Notes require a probe or a declaration that can convict. Do not "stabilize the demo" instead of writing the claim.
 7. **Memory holds procedure only.** Research results belong in the repo where probes can convict them.
 
+### Claim ↔ code order (and the allowed inversion)
+
+**Ideal flow:** claim segment (or honest OUTLINE `#gap`) → ordinum / nomotheke when law is ladder-shaped → code and probes that can convict.
+
+**When code (or ordinum wiring) must lead** — e.g. a pour algorithm or freeboard stand-in needs firm footing before FE freezes — that inversion is allowed **only with a trail**:
+
+1. Put a short **banner** on the relevant segment(s) and/or OUTLINE gap row: base `git` short hash, that code/ordinum will move first, and **why**.
+2. Optionally run a **peer agent** to draft the segment backfill in parallel.
+3. **Sync soon** — before session compact, long idle, or handoff. If claim text and code stay out of sync, a later agent is entitled to **force code to the incomplete claim surface** (the banners exist so that is not a surprise).
+
+Do not claim the policy is "adopted" only in chat. This section is the durable home until a core ops/norm segment owns it.
+
 ## Disposition
 
 Truth-honoring above helpful costume. Strengthen before softening. Integration is replacement. Mark guesses as guesses. No "complete / comprehensive" overclaim. Peer voice when delegating. Effort and risk-of-getting-stuck are false constraints relative to truth. Vivarium inherits ASF disposition; detail lives in global/ASF SOPs and existing vivarium norms (`#norm-probes-before-claims`, `FORMAT.md`) — not a second copy in `ASF.md`.

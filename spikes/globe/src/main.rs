@@ -43,7 +43,8 @@ use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 
-use vivarium_world::gen::{self, SEA_LEVEL_M};
+use vivarium_world::gen;
+use vivarium_world::sea_level;
 use vivarium_world::planet::Planet;
 use vivarium_world::query::World;
 use vivarium_world::spec::WorldSpec;
@@ -94,8 +95,7 @@ struct GlobeMsg {
     /// How many of the six faces had any cell covered by a store erosion tile.
     eroded_faces: usize,
     pull_s: f32,
-    /// Fraction of cells above [`SEA_LEVEL_M`] (≈ by-area: equiangular cells
-    /// subtend near-equal solid angles, max/min ≈ 1.41 — so "≈", not "=").
+    /// Fraction of cells above derived sea (≈ by-area).
     land_frac: f32,
     /// The SEAM INSTRUMENT (see [`seam_stats`]). The view's mesh bridges face
     /// edges C0 — which would quietly *hide* a world-side cross-face-prior
@@ -226,11 +226,11 @@ fn seam_stats(world: &World, face: Face, level: u8, tile: &[f32]) -> (SeamStats,
 ///
 /// Returned in *linear* RGB: the mesh COLOR attribute is linear, and feeding it
 /// sRGB washes everything toward white (the first-light screenshot's defect).
-fn shade(h_m: f32) -> [f32; 4] {
+fn shade(h_m: f32, sea_m: f32) -> [f32; 4] {
     let lerp3 = |a: [f32; 3], b: [f32; 3], t: f32| {
         [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
     };
-    let rel = h_m - SEA_LEVEL_M as f32;
+    let rel = h_m - sea_m;
     let c = if rel <= 0.0 {
         let t = (-rel / 3800.0).clamp(0.0, 1.0).powf(0.65);
         lerp3([0.25, 0.49, 0.62], [0.015, 0.07, 0.20], t)
@@ -259,6 +259,7 @@ fn build_face(
     tile: &[f32],
     exag: f32,
     audit: bool,
+    sea_m: f32,
 ) -> (FaceMesh, SeamStats) {
     let nx = 1usize << level;
     let n1 = nx + 1; // rendered corners per edge
@@ -277,7 +278,7 @@ fn build_face(
             let v = ((gj as f64 - 1.0) / nx as f64) * 2.0 - 1.0;
             let d = CubeCoord { face, u, v }.to_unit();
             let hm = h[gidx(gi, gj)];
-            let r = (r_km + ((hm - SEA_LEVEL_M as f32).max(0.0) / 1000.0) * exag) as f64;
+            let r = (r_km + ((hm - sea_m).max(0.0) / 1000.0) * exag) as f64;
             gpos[gidx(gi, gj)] = Vec3::new((d[0] * r) as f32, (d[1] * r) as f32, (d[2] * r) as f32);
         }
     }
@@ -327,7 +328,7 @@ fn build_face(
             let g = gidx(i + 1, j + 1);
             positions[idx(i, j) as usize] = gpos[g].to_array();
             normals[idx(i, j) as usize] = gnorm[g].normalize_or_zero().to_array();
-            let mut col = shade(h[g]);
+            let mut col = shade(h[g], sea_m);
             if audit {
                 let t = (excess[j * n1 + i] / 1000.0).clamp(0.0, 1.0);
                 if t > 0.0 {
@@ -397,6 +398,7 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx
             }
         };
         let world = World::new(&store, seed);
+        let sea_m = sea_level::derived_sea_level_m(seed) as f32;
         while let Ok((level, exag, audit)) = rx.recv() {
             let t0 = std::time::Instant::now();
             // Reload each request so a builder running alongside the globe is visible.
@@ -419,8 +421,9 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx
                             // never a cold fluvial run and never a full-face key miss.
                             let (tile, eroded) =
                                 world.assemble_surface_tile(face, level, 0, 0, nx, regions);
-                            let land = tile.iter().filter(|&&h| h as f64 > SEA_LEVEL_M).count();
-                            let (mesh, fseam) = build_face(world, face, level, &tile, exag, audit);
+                            let land = tile.iter().filter(|&&h| h > sea_m).count();
+                            let (mesh, fseam) =
+                                build_face(world, face, level, &tile, exag, audit, sea_m);
                             (mesh, tile, land, fseam, eroded)
                         })
                     })
@@ -964,7 +967,7 @@ fn hud_update(
         let (face, i, j, _) = cc.cell(*lvl).to_face_ij();
         let nx = 1usize << lvl;
         let h = tiles[face.index() as usize][j as usize * nx + i as usize];
-        let rel = h - SEA_LEVEL_M as f32;
+        let rel = h - sea_level::derived_sea_level_m(ident.seed) as f32;
         let g = cc.to_geo();
         let (glat, glon) = (g.lat.to_degrees(), g.lon.to_degrees());
         Some(format!(

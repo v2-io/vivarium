@@ -16,7 +16,8 @@
 //!
 //! Run: `cargo run --release -p vivarium-world --example globe_ascii`
 
-use vivarium_world::gen::{initial_topography_m, SEA_LEVEL_M};
+use vivarium_world::gen::initial_topography_m;
+use vivarium_world::sea_level::derived_sea_level_m;
 use vivarium_world::sphere::CubeCoord;
 
 fn env_or<T: std::str::FromStr>(name: &str, default: T) -> T {
@@ -42,8 +43,9 @@ fn main() {
     let rx = normalize(cross(up, n));
     let ry = cross(n, rx);
 
+    let sea = derived_sea_level_m(seed);
     println!(
-        "from-space, looking down ({:.2},{:.2},{:.2}) — seed {seed}, L{level}, `+` = face boundary",
+        "from-space, looking down ({:.2},{:.2},{:.2}) — seed {seed}, L{level}, sea={sea:.0} m (derived), `+` = face boundary (overdraw, not elevation)",
         n[0], n[1], n[2]
     );
     const RAMP: &[u8] = b" .:-=+*#%@";
@@ -69,10 +71,10 @@ fn main() {
             let cc = CubeCoord::from_unit(d);
             faces[j * w + i] = cc.face.index();
             let elev = initial_topography_m(seed, cc.cell(level), level);
-            let ch = if elev < SEA_LEVEL_M {
+            let ch = if elev < sea {
                 '~'
             } else {
-                let t = ((elev - SEA_LEVEL_M) / 2200.0).clamp(0.0, 1.0);
+                let t = ((elev - sea) / 2200.0).clamp(0.0, 1.0);
                 RAMP[(t * (RAMP.len() - 1) as f64) as usize] as char
             };
             row.push(ch);

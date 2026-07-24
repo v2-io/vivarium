@@ -254,17 +254,37 @@ impl Fluvial {
         x == 0 || y == 0 || x == nx - 1 || y == nx - 1
     }
 
-    /// Outlets: the grid edge plus every cell at or below sea level — the coast
-    /// the rivers run to. Recomputed per epoch (erosion moves the waterline).
+    /// Outlets: coast (`h ≤ sea`) always; **tile-edge sinks only when this tile
+    /// is a proper partial domain** (does not cover a whole cube face).
+    ///
+    /// Edge outlets are the principled incomplete-tile base level until flux-BC
+    /// (plan Phase-3). When the builder sweeps a **full face** as one tile
+    /// (`oi=oj=0`, `nx = 2^level`), those edges *are* cube seams — treating them
+    /// as sinks carves artificial trenches around every face (measured ~300 m
+    /// edge–interior gap after 20 epochs). Full-face tiles therefore use
+    /// coast-only outlets so sphere continuity from the prior is not destroyed.
     fn outlets(&self) -> Vec<bool> {
         let nx = self.nx;
         let sea = sea_level::derived_sea_level_m(self.seed) as f32;
+        let face_n = 1usize << self.level;
+        let full_face = self.origin == (0, 0) && nx == face_n;
         let mut out = vec![false; nx * nx];
         for y in 0..nx {
             for x in 0..nx {
                 let i = y * nx + x;
-                out[i] = Self::is_edge(nx, x, y) || self.h[i] <= sea;
+                let edge_sink = !full_face && Self::is_edge(nx, x, y);
+                out[i] = edge_sink || self.h[i] <= sea;
             }
+        }
+        // All-land full-face tile: need at least one sink for Priority-Flood.
+        if full_face && !out.iter().any(|&o| o) {
+            let mut best = (f32::INFINITY, 0usize);
+            for (i, &h) in self.h.iter().enumerate() {
+                if h < best.0 {
+                    best = (h, i);
+                }
+            }
+            out[best.1] = true;
         }
         out
     }
@@ -332,6 +352,7 @@ impl Fluvial {
     /// D8 steepest-descent receiver per cell; outlets drain to themselves.
     fn receivers(&self, outlets: &[bool]) -> Vec<usize> {
         let nx = self.nx;
+        let nxi = nx as i32;
         let mut recv = vec![0usize; nx * nx];
         for y in 0..nx {
             for x in 0..nx {
@@ -343,8 +364,16 @@ impl Fluvial {
                 let hi = self.h[i];
                 let (mut best, mut best_slope) = (i, 0.0f32);
                 for (dx, dy) in NEIGHBORS {
-                    let j = (y as i32 + dy) as usize * nx + (x as i32 + dx) as usize;
-                    let dist = if dx != 0 && dy != 0 { self.cell_m * std::f32::consts::SQRT_2 } else { self.cell_m };
+                    let (nx_, ny_) = (x as i32 + dx, y as i32 + dy);
+                    if nx_ < 0 || ny_ < 0 || nx_ >= nxi || ny_ >= nxi {
+                        continue;
+                    }
+                    let j = ny_ as usize * nx + nx_ as usize;
+                    let dist = if dx != 0 && dy != 0 {
+                        self.cell_m * std::f32::consts::SQRT_2
+                    } else {
+                        self.cell_m
+                    };
                     let slope = (hi - self.h[j]) / dist;
                     if slope > best_slope {
                         best_slope = slope;

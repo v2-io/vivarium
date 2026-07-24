@@ -21,7 +21,8 @@
 //!
 //! Run: `cargo run --release -p vivarium-world --example hypsometry`
 
-use vivarium_world::gen::{initial_topography_m, SEA_LEVEL_M};
+use vivarium_world::gen::initial_topography_m;
+use vivarium_world::sea_level::derived_sea_level_m;
 use vivarium_world::spec::WorldSpec;
 use vivarium_world::sphere::{CellId, Face};
 
@@ -42,13 +43,14 @@ fn main() {
     let level: u8 = std::env::var("HYPSO_LEVEL").ok().and_then(|v| v.parse().ok()).unwrap_or(7);
     let nx = 1u32 << level;
 
+    let sea = derived_sea_level_m(seed);
     let mut h: Vec<f64> = Vec::with_capacity((6 * nx as usize) * nx as usize);
     for f in 0..6u8 {
         let face = Face::from_index(f);
         for j in 0..nx {
             for i in 0..nx {
                 let cell = CellId::from_face_ij(face, i, j, level);
-                h.push(initial_topography_m(seed, cell, level) - SEA_LEVEL_M);
+                h.push(initial_topography_m(seed, cell, level) - sea);
             }
         }
     }
