@@ -38,7 +38,7 @@ World-law algorithms enter the store only through declared nomos. The registry i
 
 1. **Reverse ASSUMPTIONS coverage.** Ledger rows need not appear on any nomos; kernels can lean on ledger-listed constants without an `assumptions:` anchor (e.g. water frame hardcodes not fully listed on WATER).
 2. **Under-declaration of non-flux deps.** Example: uplift kernel uses fated noise with empty `deps` — not caught by consumed⇒in-deps.
-3. **Source-derived versions** remain unmechanized; box *fields* are live ( #sketch-nomos-declaration-boxes FE(3)) but content conviction beyond structural tests is open ( #def-nomos epistemic limits).
+3. **Content conviction of the declaration boxes** is open: box *fields* are live ( #sketch-nomos-declaration-boxes FE(3)) but earning their content beyond structural tests is open ( #def-nomos epistemic limits). (Source-derived versions are now mechanized — the build-time whole-crate source digest folded into every key stem, #form-complete-content-addressed-key FE(4); bit-perfect per-nomos attribution stays open.)
 4. Generic pull-query engine beyond hand-written per-nomos methods is unbuilt.
 
 ## Discussion

@@ -33,6 +33,7 @@ pub mod erosion;
 pub mod water;
 pub mod sample;
 pub mod measure;
+pub mod source_hash;
 pub mod store;
 pub mod query;
 pub mod spec;

@@ -54,6 +54,16 @@
 use crate::flux;
 use crate::store::Key;
 
+/// The build-time, whole-crate source digest (`build.rs` → `#form-complete-content-addressed-key`
+/// FE(4), `#detail-epistemics-toolchain` FE(5)). Folded into every world-law key
+/// stem below, so a change to *any* kernel source in this crate invalidates the
+/// memos it could affect — the hand-stamped `version` strings no longer carry
+/// correctness alone (a forgotten bump can't serve a stale memo). Coarse by
+/// design (whole-crate covers transitive in-crate deps with no hand-maintained
+/// source→nomos map; over-key is the safe direction). Algorithm + rationale:
+/// [`crate::source_hash`].
+pub const SRC_HASH: &str = env!("VIVARIUM_SRC_HASH");
+
 /// Physics-fidelity tier (LEXICON §5 axis B — the load-bearing propagated one).
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Tier {
@@ -335,8 +345,13 @@ pub struct NomosDecl {
 impl NomosDecl {
     /// Mint the store key stem for this nomos — the ONLY sanctioned way a
     /// world-law computation gets a key (callers fold in seed + coordinates).
+    ///
+    /// The stem is `name@version|src=<whole-crate source digest>`: the
+    /// hand-stamped `version` is the human-legible algorithm era, and [`SRC_HASH`]
+    /// is the build-derived safety net so a *forgotten* version bump still
+    /// invalidates stale memos ( #form-complete-content-addressed-key FE(4)).
     pub fn key(&self) -> Key {
-        Key::new(self.name, self.version)
+        Key::new(self.name, self.version).field("src", SRC_HASH)
     }
 
     /// Derived physics tier of this nomos's *output state*: the weakest link
@@ -705,7 +720,7 @@ pub static EROSION: NomosDecl = NomosDecl {
 /// System #3 — conserved shallow water settling on the eroded bed.
 pub static WATER: NomosDecl = NomosDecl {
     name: "water-tile",
-    version: "water-2026-07-10a", // predates the 07-23 sea_m default change — parameter-vs-algorithm versioning rule unwritten (hand-stamp debt, #form-complete-content-addressed-key)
+    version: "water-2026-07-10a", // human-legible label lags the 07-23 sea_m default change; correctness no longer rests on it — the build-time SRC_HASH (see NomosDecl::key) already moved when water.rs/sea_level.rs changed, so no stale memo lies. Open only as a labeling nicety: parameter-vs-algorithm bump convention (#form-complete-content-addressed-key)
     system: "surface-water",
     approach: Approach::Relaxation,
     earth_fidelity: Tier::Low, // real hydraulics, ~10x rain-cycle fudge, bounded (not converged) fill
@@ -853,6 +868,46 @@ mod tests {
     fn declarations_mint_the_keys() {
         assert!(INITIAL_TOPOGRAPHY.key().as_str().starts_with("initial-topography@initial-topography-2026-07-10b-sphere3d"));
         assert!(EROSION.key().as_str().starts_with("erosion-tile@erosion-2026-07-24a-p1-true-cell-area"));
+    }
+
+    #[test]
+    fn every_nomos_key_folds_the_source_hash() {
+        // The mechanism is wired: every world-law key stem carries the
+        // build-time source digest, and the digest is a real hash, not the
+        // "could not read the tree" sentinel. Without this, a forgotten version
+        // bump would silently serve a stale memo ( #form-complete-content-addressed-key FE(4)).
+        assert!(!SRC_HASH.is_empty(), "VIVARIUM_SRC_HASH was not injected by build.rs");
+        assert_ne!(
+            SRC_HASH,
+            crate::source_hash::SRC_HASH_SENTINEL,
+            "build.rs could not hash src/ — keys are unprotected against source drift"
+        );
+        for n in NOMOTHEKE {
+            let s = n.key();
+            assert!(
+                s.as_str().contains(&format!("src={SRC_HASH}")),
+                "{}: key {:?} does not fold the source digest",
+                n.name,
+                s.as_str()
+            );
+        }
+    }
+
+    #[test]
+    fn injected_source_hash_matches_live_source() {
+        // The staleness convictor: re-derive the whole-crate digest from the
+        // source tree on disk NOW and assert it equals the value build.rs baked
+        // in. `cargo test` rebuilds first, so build.rs (via its rerun-if-changed
+        // over every src file) will have recomputed — the two must agree. If the
+        // rerun-if-changed wiring ever breaks, the baked-in hash goes stale while
+        // this live recompute moves, and this test goes RED: exactly "a kernel
+        // source change that failed to change the key" ( #norm-probes-before-claims ).
+        let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let live = crate::source_hash::digest_dir(&src).expect("read src/ at test time");
+        assert_eq!(
+            live, SRC_HASH,
+            "baked-in VIVARIUM_SRC_HASH is stale vs live source — build.rs did not re-hash"
+        );
     }
 
     #[test]

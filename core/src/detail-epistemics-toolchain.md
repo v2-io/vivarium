@@ -28,7 +28,7 @@ What to adopt early because it shapes habits (structural) vs what to bolt on whe
 
 4. **Skip (recorded).** `uom` (no runtime Exactness analog; opposite to `Quantity`); `dimensioned` (stale); `insta` (value snapshots train wrong habit vs invariant probes); heavy proof tools (`creusot`/`prusti`/`verus`) disproportionate for hand-tuned f64 kernels.
 
-5. **Highest-value unbuilt structural item.** Build-time nomos-version hash (`build.rs` source-hashing into keys) under #form-complete-content-addressed-key / #form-store-as-save .
+5. **Build-time nomos-version hash — wired.** `build.rs` hashes every `.rs` in `vivarium-world/src` into `VIVARIUM_SRC_HASH`, folded into every key stem by `NomosDecl::key`; a kernel edit invalidates its memos with no hand-bump ( #form-complete-content-addressed-key FE(4) / #form-store-as-save ). Probed in `source_hash.rs` (change-sensitivity) and `nomotheke.rs` (`every_nomos_key_folds_the_source_hash`, `injected_source_hash_matches_live_source` — the live-recompute staleness convictor). Whole-crate is the coarse safe floor; per-nomos attribution deferred (would reintroduce a hand-maintained source→nomos map).
 
 ## Epistemic Status
 
