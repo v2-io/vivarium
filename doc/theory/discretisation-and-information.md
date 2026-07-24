@@ -475,7 +475,7 @@ So the **volume under the interpolating mesh differs from $\sum h_i A_i$ by a CU
 
 5. **DECIDE THE COLUMN SEMANTICS.** This is the fork everything else waits on: **point-sample vs cell-average vs band-limited, declared per quantity.** Until it is decided, **every mesh question is unanswerable and the code answers it three ways.**
 6. **Carry a sufficient statistic, not a mean** — at minimum a **sub-grid variance** — with an **exactness** contract. Jensen (§3.3) makes this **non-optional**, and Mori–Zwanzig (§3.4) makes it the thing that **sets the jitter amplitude**.
-7. **Spike the multiresolution/wavelet store** (§3.7). Highest-leverage item in this document: it may make the coarse↔fine seam an **identity** and **[⊘]** may retire `detail→abstract`.
+7. **Spike the multiresolution/wavelet store** (§3.7). *Done 2026-07-13* (`msc/spike-wavelet-store/`; `DECISIONS[wavelet-store-spiked-the-seam-is-not-the-details]`): representation half confirmed (state up-invalidation bit-exact, lossy compression exactly conservative); dynamics half refuted (the seam is double-evolve, not discarded details; the open problem restated at `#sketch-detail-abstract-reversion`).
 8. **Staggering is BACK, and it is compatible with our quadtree** (§7).
 
 ---

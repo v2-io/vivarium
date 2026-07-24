@@ -90,4 +90,4 @@ B next (unlocks §3's map + is independently the analytic-init home); C is the l
 - **Time-index semantics across tiles**: neighbor tiles evolved to different sim-ages is the differential-aging problem generalized (seam_ridge measured it at 4.3×). The spine's causal-time bookkeeping (which tile is at which epoch,
   what flux era it exported) must be part of the key or the islands go incoherent.
 - **How coarse can the spine be** before its drainage topology is wrong enough to mis-draw the dependency islands (a divide misplaced at L12 puts a tile in the wrong catchment)? Wants a measurement: basin-partition stability across levels.
-- The detail→abstract frontier (§6) is *still* not on this path — tiles here are generated, not agent-edited. It stays the one open research problem, deferred.
+- The reversion frontier is *still* not on this path — tiles here are generated, not agent-edited. Its open half (nonlinear closure for a non-local flux, `#sketch-detail-abstract-reversion`) stays deferred.

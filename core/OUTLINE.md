@@ -40,7 +40,7 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | formulation | Project Critical | [#form-fidelity-invariant](src/form-fidelity-invariant.md) | Fidelity is lazy; materializations prove the macro with bounded deficiencies | draft |
 | formulation | Model | [#form-reductionist-fallback-cases](src/form-reductionist-fallback-cases.md) | Three reasons to leave pure reductionism; case C needs regime probes first | draft |
 | formulation | Model | [#form-fidelity-ladder](src/form-fidelity-ladder.md) | Climb to discover, descend to surrogate; model identity in the key | draft |
-| sketch | Model | [#sketch-detail-abstract-reversion](src/sketch-detail-abstract-reversion.md) | Open: reversion / discrete-edit up-invalidation — not primacy | draft |
+| sketch | Model | [#sketch-detail-abstract-reversion](src/sketch-detail-abstract-reversion.md) | Reversion frame; open: nonlinear closure for non-local flux (state half retired as measured) | draft |
 | sketch | Project | [#sketch-nomos-declaration-boxes](src/sketch-nomos-declaration-boxes.md) | Nomos boxes ②–④ geometry/semantics/structure — exploratory schema | draft |
 | discussion | Project | [#disc-vivarium-purpose](src/disc-vivarium-purpose.md) | Dual purpose: play and *in vivia* laboratory; claim truth outranks demo polish this phase | draft |
 | sketch | Project | [#sketch-three-project-axes](src/sketch-three-project-axes.md) | Graphics / world / agents as independent budgets — exploratory map | draft |

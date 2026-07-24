@@ -105,9 +105,9 @@ So the real design decision is **which invariants must survive downscaling**, an
 1. **Spatial seam** (LOD boundary, one instant) — no cracks/pops + statistical match. *Established* (geomorphing, mesh stitching).
 2. **Temporal downscaling seam** (macro-epoch → fine-epoch handoff) — the fine sim's initial condition must be a valid downscaling of the macro end-state. *Established-ish*: this is regional-climate-model nesting, with a **known artifact** — spin-up transients near the boundary.
 3. **Aspect-coupling seam** (geology↔hydrology↔ecology↔…) — flux exchange on a schedule. *Established* (Earth-system couplers; §4).
-4. **Reversion / upscaling seam** (fine + edits → macro) — dynamics-upscaling is *mature* (HMM, two-way nesting, Vandenbulcke & Barth 2019); the **open** residue is discrete-edit up-invalidation into a memoized macro (= §6; sketch home above).
+4. **Reversion / upscaling seam** (fine + edits → macro) — dynamics-upscaling is *mature* (HMM, two-way nesting, Vandenbulcke & Barth 2019); the **open** residue is the nonlinear closure for a non-local flux (`#sketch-detail-abstract-reversion` — state up-invalidation measured solved 2026-07-13).
 
-Lean on prior art for 1–3 *and* the dynamics half of 4; only the discrete-edit up-invalidation in 4 is genuinely research.
+Lean on prior art for 1–3 *and* the dynamics half of 4; only the law-closure residue in 4 is genuinely research.
 
 ---
 
@@ -322,6 +322,6 @@ The material model is its own fidelity ladder (§12), and the property set below
 ## Status — established vs. frontier (so future work knows where to lean)
 
 - **Stand on prior art:** the fidelity invariant's forward direction (§1–2), spatial + temporal LOD (§3), multirate multi-aspect coupling (§4), three of the four seams (§7.1–7.3), coordinate-hashed stochasticity (§8), posit numerics (§9), the lazy-memoized query-graph runtime and content-addressed model-swap (§11–12), and the git/Nix-shaped content-addressed save-store (§13) — all real, proven architectures. *(Tentative within §13: the regenerable/irreducible split and GC policy, and the full mutation-log design — reserved, not fixed.)*
-- **The frontier / our research:** *not* dynamics-upscaling — that is mature (HMM, superparameterization, two-way nesting, Vandenbulcke & Barth 2019, whose "representativity error" is our §5). The genuinely novel residue is narrower and singular: **upscaling irreducible discrete agent edits into a content-addressed, memoized macro with correct up-invalidation** (§5↔§6, §7.4, §11 seam 3), together with the non-locality of simulation-LOD (§3). One thing from several sides: **detail→abstract**.
+- **The frontier / our research:** *not* dynamics-upscaling — that is mature (HMM, superparameterization, two-way nesting, Vandenbulcke & Barth 2019, whose "representativity error" is our §5). The genuinely novel residue (`#sketch-detail-abstract-reversion` — restated 2026-07-13 after the wavelet-store spike): **the nonlinear closure for a non-local flux** — state up-invalidation is measured solved; it is the *law* that does not commute with restriction — together with the non-locality of simulation-LOD (§3).
 - **Nearest concrete step it implies:** give the erosion tier a complete content-addressed memo key (inputs + model-version + seed) and pull-based evaluation, so it stops being an eagerly-baked fixed patch (the audit's finding) and becomes the first rung of a swappable ladder. That single change exercises §5, §8, §11, and §12 at once on a system we already have.
 - **Adoption:** claims from this file become law only as segments in `core/src/` (`#scope-segment-canon`); the founding DESIGN it elaborated is graduated (`.super-archive/from-design/DESIGN.md`).

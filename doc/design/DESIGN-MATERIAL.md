@@ -113,7 +113,7 @@ Crucially this keeps **saves playable across a fidelity bump**: because refineme
 
 ## 7. Bodies — the overlay *(our stance; TENTATIVE shape)*
 
-Cross-cutting masses (granite plutons, veins, caves = void, boulders, built structures) are modeled as **bodies overlaid on the strata substrate**, not decomposed into the columns they intersect. The effective material at `(tile, altitude)` is *body-if-present, else strata*. This is the same base+overlay as core's sparse edits, and it is where the **regenerable vs. irreducible** distinction (§`DESIGN-REDUX` §13, itself TENTATIVE) lands: a worldgen intrusion is a *regenerable* body; a user-dug tunnel is an *irreducible* one. The detail→abstract frontier (§6) is exactly "absorb a body's effect back into the macro."
+Cross-cutting masses (granite plutons, veins, caves = void, boulders, built structures) are modeled as **bodies overlaid on the strata substrate**, not decomposed into the columns they intersect. The effective material at `(tile, altitude)` is *body-if-present, else strata*. This is the same base+overlay as core's sparse edits, and it is where the **regenerable vs. irreducible** distinction (§`DESIGN-REDUX` §13, itself TENTATIVE) lands: a worldgen intrusion is a *regenerable* body; a user-dug tunnel is an *irreducible* one. Absorbing a body's effect back into the macro is the reversion frontier (`#sketch-detail-abstract-reversion` — the open half is the law closure, not state up-invalidation).
 
 ---
 
@@ -197,6 +197,6 @@ Fine detail (a gold vein, sub-stratum texture) is materialized **statelessly** a
 - ⚠ **OPEN — the column-semantics fork:** per quantity, is a stored value a point sample, a cell average, or band-limited? The code answers three ways today, and the fork is live *inside* the conservation operator (`pin_block_means` compares a fine block mean against a coarse point sample). §4 states the stance; nothing settles it.
 - **Research-backed:** the survey found five properties missing from the list core already implied, and no others (split density, packing fraction, phase-state enum, incision threshold, regolith thickness); the material-model ladder; one substrate serves both slope-stability and hydrology (SHALSTAB).
 - **TENTATIVE — reserve, don't fix:** the exact schema of §9; the regenerable/ irreducible split and body representation (§7); whether volume/mass or a hybrid is the stored primitive; the full mutation-log design; which high-rung properties to carry now vs. defer.
-- **Open frontier (unchanged):** absorbing an irreducible body/edit back into the macro model with correct up-invalidation (detail→abstract, `DESIGN-REDUX` §6).
+- **Open frontier (restated 2026-07-13):** the nonlinear closure for a non-local flux when absorbing a body/edit's *effect* into the macro law (`#sketch-detail-abstract-reversion`; state up-invalidation itself is measured solved).
 
 *This document does not supersede anything; it is where the matter-model thinking is worked out. Adopt the schema deliberately, and update this file when usage teaches us better — future instances inherit what we leave.*
