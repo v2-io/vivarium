@@ -29,13 +29,29 @@
 //! Kept** (the emerged-land Record's hard clauses only). Relief is exaggerated
 //! ×20 by default (honest ×1 is a billiard ball) and the HUD states the factor.
 //!
+//! **Deep-time playback** (`DECISIONS[craton-nucleation-and-deep-time-playback-
+//! ruled-in-scope]`; the store IS the time machine — `#form-store-as-save` FE(4)):
+//! press **T** to watch the planet age along the mantle-thermal cooling ladder
+//! (`mantle_thermal::abyssal_epochs`) — hot near-water-world → cooling basins →
+//! emerged cratons. The epoch axis is the LAW's ladder; the view only *selects*
+//! which materialized epoch to observe (`#form-core-view-wall` FE(4): observe-
+//! only, no authored evolution). Each epoch's heavy law values are warmed on a
+//! background thread; the worker only ever builds an already-warm epoch, so a
+//! scrub never blocks the frame (`#form-builder-admission` FE(4)). The epoch
+//! surface is the PURE isostatic tectonic surface at that mantle T_p (no fluvial
+//! tiles — those are present-only); epochs are discrete (no cosmetic
+//! interpolation). Env `VIVARIUM_PLAYBACK=1` (+ `VIVARIUM_EPOCH=<idx>`) boots
+//! straight into a scripted epoch for verification shots.
+//!
 //! Run: `cargo run --release -p vivarium-globe`
 //! Controls: drag spin (inertia) · wheel / -/= zoom · arrows spin · [ ] level ·
 //!           A auto-level · X relief factor · ,/. scrub solar hour · N/M scrub
 //!           day-of-year · P play the diurnal cycle · Y headlight-vs-ephemeris ·
-//!           O overhead north pole · R reset · Esc quit. The sun is the REAL
-//!           Phase-2 ephemeris by default (terminator, seasons, polar day/night
-//!           from planet.rs's identities); the ethereal viewer scrubs time freely.
+//!           O overhead north pole · R reset · Esc quit ·
+//!           **T deep-time playback · K play/pause epoch sweep · J/L step epoch**.
+//!           The sun is the REAL Phase-2 ephemeris by default (terminator,
+//!           seasons, polar day/night from planet.rs's identities); the ethereal
+//!           viewer scrubs both solar time and deep time freely.
 //! Env: VIVARIUM_WORLD (world dir = manifest + store; default
 //!      ~/.cache/vivarium/globe-world — a fresh seed is minted and *persisted*
 //!      on first run, deterministic ever after; point at another world dir to
@@ -58,12 +74,14 @@ use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 use vivarium_world::erosion;
 use vivarium_world::gen;
 use vivarium_world::hydrosphere::Hydrosphere;
+use vivarium_world::mantle_thermal::{abyssal_epochs, potential_temp_c, present_abyssal};
 use vivarium_world::sea_level;
 use vivarium_world::planet::Planet;
 use vivarium_world::query::{RegionCensus, World};
 use vivarium_world::spec::WorldSpec;
 use vivarium_world::sphere::{CellId, CubeCoord, Face};
 use vivarium_world::store::Store;
+use vivarium_world::time::Time as WorldTime;
 
 /// Render unit = 1 km (f32-safe at planetary scale: km magnitudes ≈ 6.4e3, where
 /// f32 still resolves sub-metre; metres would put us at 6.4e6 with ~0.5 m ulps).
@@ -129,6 +147,42 @@ struct GlobeMsg {
     /// instead: the whole-globe twin of gen.rs's seam-continuity probe.
     /// Healthy = cross ≈ within on both mean and max.
     seam: SeamStats,
+    /// Present when this build is a **deep-time playback** epoch (not the live
+    /// present view) — the epoch's identity for the HUD/timeline.
+    epoch: Option<EpochInfo>,
+}
+
+/// One build request handed to the worker. `epoch = None` is the live present
+/// view (eroded-tile assembly, the existing default); `Some` is a deep-time
+/// playback build of a **materialized** law epoch.
+#[derive(Clone, Copy, PartialEq)]
+struct BuildReq {
+    level: u8,
+    exag: f32,
+    audit: bool,
+    epoch: Option<EpochReq>,
+}
+
+/// A deep-time epoch build request. The epoch axis is the LAW's cooling ladder
+/// (`mantle_thermal::abyssal_epochs`), never a view-invented time — the view
+/// only *selects which materialized epoch to observe* (`#form-core-view-wall`
+/// FE(4): observe-only, no authored evolution). `tp` and `sea_m` are the epoch's
+/// warmed law values, passed in so the worker never runs a cold pour on the
+/// build path (`#form-builder-admission` FE(4), never-block).
+#[derive(Clone, Copy, PartialEq)]
+struct EpochReq {
+    idx: usize,
+    tp: f64,
+    sea_m: f32,
+    age_ga: f32,
+}
+
+/// The identity of a played-back epoch, for the HUD/timeline.
+#[derive(Clone, Copy)]
+struct EpochInfo {
+    idx: usize,
+    age_ga: f32,
+    tp_c: f32,
 }
 
 /// Corner-grid elevations for one face, with a one-corner **ghost ring**:
@@ -152,7 +206,21 @@ struct GlobeMsg {
 /// rung it is — the initial-topography IS the prior. When the initial-topography matures past that,
 /// out-of-face cells must come from neighbour-face tile pulls instead; noted so
 /// the shortcut can't silently outlive its premise.)
-fn cell_value(world: &World, face: Face, level: u8, tile: &[f32], ci: i64, cj: i64) -> f32 {
+///
+/// `epoch_tp`: `None` = present live view (ghost = the present prior,
+/// `gen::initial_topography_m`, unchanged); `Some(tp)` = deep-time playback (ghost
+/// = the epoch's tectonic surface at that mantle temperature — the same pure law
+/// `tectonic_surface_at_tp` the in-face tile is built from, so seams stay honest
+/// across faces at every epoch).
+fn cell_value(
+    world: &World,
+    face: Face,
+    level: u8,
+    tile: &[f32],
+    ci: i64,
+    cj: i64,
+    epoch_tp: Option<f64>,
+) -> f32 {
     let nx = 1usize << level;
     let n = nx as i64;
     if ci >= 0 && ci < n && cj >= 0 && cj < n {
@@ -162,7 +230,10 @@ fn cell_value(world: &World, face: Face, level: u8, tile: &[f32], ci: i64, cj: i
         let cv = ((cj as f64 + 0.5) / nx as f64) * 2.0 - 1.0;
         let dir = CubeCoord { face, u: cu, v: cv }.to_unit();
         let cell = CubeCoord::from_unit(dir).cell(level);
-        gen::initial_topography_m(world.seed(), cell, level) as f32
+        match epoch_tp {
+            None => gen::initial_topography_m(world.seed(), cell, level) as f32,
+            Some(tp) => sea_level::tectonic_surface_at_tp(world.seed(), cell, level, tp) as f32,
+        }
     }
 }
 
@@ -177,17 +248,17 @@ fn cell_value(world: &World, face: Face, level: u8, tile: &[f32], ci: i64, cj: i
 /// engine-side per-face-fBm deficiency, ~2–3 km cliffs), the bridge renders a
 /// one-cell V-trench — and the seam *instrument* ([`seam_stats`], HUD + S
 /// paint) keeps that disagreement loudly visible rather than smoothed away.
-fn corner_heights(world: &World, face: Face, level: u8, tile: &[f32]) -> Vec<f32> {
+fn corner_heights(world: &World, face: Face, level: u8, tile: &[f32], epoch_tp: Option<f64>) -> Vec<f32> {
     let nx = 1usize << level;
     let gn = nx + 3; // corners −1 ..= nx+1
     let mut h = vec![0.0f32; gn * gn];
     for gj in 0..gn {
         for gi in 0..gn {
             let (ki, kj) = (gi as i64 - 1, gj as i64 - 1); // corner coords
-            let sum = cell_value(world, face, level, tile, ki - 1, kj - 1)
-                + cell_value(world, face, level, tile, ki, kj - 1)
-                + cell_value(world, face, level, tile, ki - 1, kj)
-                + cell_value(world, face, level, tile, ki, kj);
+            let sum = cell_value(world, face, level, tile, ki - 1, kj - 1, epoch_tp)
+                + cell_value(world, face, level, tile, ki, kj - 1, epoch_tp)
+                + cell_value(world, face, level, tile, ki - 1, kj, epoch_tp)
+                + cell_value(world, face, level, tile, ki, kj, epoch_tp);
             h[gj * gn + gi] = sum * 0.25;
         }
     }
@@ -213,7 +284,7 @@ struct SeamStats {
 /// steep on both measures and stays dark; a genuine discontinuity is loud on
 /// cross alone and lights up — the instrument discriminates, it doesn't just
 /// flag mountains that happen to touch an edge.
-fn seam_stats(world: &World, face: Face, level: u8, tile: &[f32]) -> (SeamStats, Vec<f32>) {
+fn seam_stats(world: &World, face: Face, level: u8, tile: &[f32], epoch_tp: Option<f64>) -> (SeamStats, Vec<f32>) {
     let nx = 1usize << level;
     let n1 = nx + 1;
     let n = nx as i64;
@@ -221,9 +292,9 @@ fn seam_stats(world: &World, face: Face, level: u8, tile: &[f32]) -> (SeamStats,
     let mut st = SeamStats::default();
     // (in-cell, ghost-cell, within-neighbour, the two bounding corners) per edge cell.
     let mut edge = |ic: (i64, i64), gc: (i64, i64), wc: (i64, i64), ca: (usize, usize), cb: (usize, usize)| {
-        let h = cell_value(world, face, level, tile, ic.0, ic.1);
-        let d_cross = (h - cell_value(world, face, level, tile, gc.0, gc.1)).abs();
-        let d_within = (h - cell_value(world, face, level, tile, wc.0, wc.1)).abs();
+        let h = cell_value(world, face, level, tile, ic.0, ic.1, epoch_tp);
+        let d_cross = (h - cell_value(world, face, level, tile, gc.0, gc.1, epoch_tp)).abs();
+        let d_within = (h - cell_value(world, face, level, tile, wc.0, wc.1, epoch_tp)).abs();
         st.cross_max = st.cross_max.max(d_cross);
         st.within_max = st.within_max.max(d_within);
         st.cross_sum += d_cross as f64;
@@ -285,13 +356,14 @@ fn build_face(
     exag: f32,
     audit: bool,
     sea_m: f32,
+    epoch_tp: Option<f64>,
 ) -> (FaceMesh, SeamStats) {
     let nx = 1usize << level;
     let n1 = nx + 1; // rendered corners per edge
     let gn = nx + 3; // + ghost ring (normals only)
     let r_km = radius_km();
-    let h = corner_heights(world, face, level, tile);
-    let (seam, excess) = seam_stats(world, face, level, tile);
+    let h = corner_heights(world, face, level, tile, epoch_tp);
+    let (seam, excess) = seam_stats(world, face, level, tile, epoch_tp);
 
     // Positions over the WHOLE ghost grid (normals need them); colors and the
     // final vertex buffer use only the interior n1 × n1 slice.
@@ -461,21 +533,50 @@ fn provisional_sea_m(seed: u64, level: u8) -> f64 {
     0.5 * (a + b)
 }
 
-/// The worker: owns the World (store + seed), serves (level, exag) build requests,
-/// one at a time, latest result wins on the ECS side. Faces build in parallel
-/// (they share only the Store, which is safe: worst case two threads compute the
-/// same object and the put is idempotent).
+/// One whole-face height tile at a **deep-time epoch** — the epoch's tectonic
+/// surface (`sea_level::tectonic_surface_at_tp`, bathymetry + the freeboard the
+/// epoch's mantle temperature earns) sampled per cell. Observe-only: a pure read
+/// of the cooling-chain law (the same read `examples/emerging_land.rs` walks),
+/// never a store write and never a cold pour — `tp`'s heavy global integrals are
+/// warmed off the build path before any epoch is offered to the worker.
 ///
-/// **Never-block sea (view-side):** first light renders on a coarse
-/// [`provisional_sea_m`] immediately; a side thread computes the real L8
-/// `derived_sea_level_m`, swaps it into `sea_bits`, and self-pokes a rebuild via
-/// `self_poke` so the surface refines without the pour ever blocking the frame.
+/// Deliberately NOT eroded-tile-assembled: fluvial tiles exist only for the
+/// present epoch, so playback shows the pure isostatic epoch surface (stated on
+/// the HUD). The present epoch coincides exactly with the live world's prior
+/// (`tectonic_surface_at_tp(…, MANTLE_TP_C) ≡ gen::initial_topography_m`, the
+/// coherence pin), minus those present-only carved tiles.
+fn epoch_surface_tile(world: &World, face: Face, level: u8, nx: usize, tp: f64) -> Vec<f32> {
+    let mut tile = Vec::with_capacity(nx * nx);
+    for j in 0..nx as u32 {
+        for i in 0..nx as u32 {
+            let cell = CellId::from_face_ij(face, i, j, level);
+            tile.push(sea_level::tectonic_surface_at_tp(world.seed(), cell, level, tp) as f32);
+        }
+    }
+    tile
+}
+
+/// The worker: owns the World (store + seed), serves build requests one at a
+/// time, latest result wins on the ECS side. Faces build in parallel (they share
+/// only the Store, which is safe: worst case two threads compute the same object
+/// and the put is idempotent).
+///
+/// Two build modes (`BuildReq::epoch`):
+/// - **`None` — present live view** (unchanged): eroded-tile assembly + the
+///   staleness census, on a never-block sea. First light renders on a coarse
+///   [`provisional_sea_m`] immediately; a side thread computes the real L8
+///   `derived_sea_level_m`, swaps it into `sea_bits`, and self-pokes a rebuild
+///   so the surface refines without the pour ever blocking the frame.
+/// - **`Some(epoch)` — deep-time playback**: the pure epoch tectonic surface
+///   ([`epoch_surface_tile`]) at a **materialized** law epoch, with the epoch's
+///   pre-warmed sea. No cold compute reaches this path — the ECS only offers
+///   epochs whose global integrals a background warmer has already computed.
 fn spawn_worker(
     world_dir: PathBuf,
     seed: u64,
-    rx: Receiver<(u8, f32, bool)>,
+    rx: Receiver<BuildReq>,
     tx: Sender<GlobeMsg>,
-    self_poke: Sender<(u8, f32, bool)>,
+    self_poke: Sender<BuildReq>,
 ) {
     std::thread::spawn(move || {
         let store = match Store::open(&world_dir) {
@@ -492,7 +593,7 @@ fn spawn_worker(
         // true once the real value is in.
         let sea_bits = Arc::new(AtomicU64::new(provisional_sea_m(seed, 4).to_bits()));
         let sea_ready = Arc::new(AtomicBool::new(false));
-        let last_req: Arc<Mutex<Option<(u8, f32, bool)>>> = Arc::new(Mutex::new(None));
+        let last_req: Arc<Mutex<Option<BuildReq>>> = Arc::new(Mutex::new(None));
         {
             let (sea_bits, sea_ready, last_req, poke) =
                 (sea_bits.clone(), sea_ready.clone(), last_req.clone(), self_poke.clone());
@@ -500,9 +601,13 @@ fn spawn_worker(
                 let real = sea_level::derived_sea_level_m(seed);
                 sea_bits.store(real.to_bits(), Ordering::Relaxed);
                 sea_ready.store(true, Ordering::Relaxed);
-                // Re-trigger the latest build so the surface refines to the real sea.
+                // Re-trigger the latest build so the surface refines to the real sea
+                // — but only if the view is still on the present (a playback epoch
+                // carries its own warmed sea; poking a present build would flip it).
                 if let Some(req) = *last_req.lock().unwrap() {
-                    let _ = poke.send(req);
+                    if req.epoch.is_none() {
+                        let _ = poke.send(req);
+                    }
                 }
             });
         }
@@ -513,20 +618,30 @@ fn spawn_worker(
         // Default is now the HONEST current-source surface; VIVARIUM_INCLUDE_STALE=1
         // restores the old silent-blend behaviour for side-by-side diagnosis.
         let include_stale = std::env::var("VIVARIUM_INCLUDE_STALE").map(|v| v == "1").unwrap_or(false);
-        while let Ok((level, exag, audit)) = rx.recv() {
+        while let Ok(req) = rx.recv() {
             let t0 = std::time::Instant::now();
-            *last_req.lock().unwrap() = Some((level, exag, audit));
-            let sea_m = f64::from_bits(sea_bits.load(Ordering::Relaxed)) as f32;
-            let sea_provisional = !sea_ready.load(Ordering::Relaxed);
-            // Reload each request so a builder running alongside the globe is visible.
-            let census = world.eroded_region_census();
-            let regions = if include_stale {
-                world.load_eroded_regions()
-            } else {
-                world.load_current_eroded_regions()
-            };
-            let store_eroded_tiles = regions.len();
+            *last_req.lock().unwrap() = Some(req);
+            let BuildReq { level, exag, audit, epoch } = req;
             let nx = 1usize << level;
+
+            // The two surfaces the worker knows how to build: (in-face tile,
+            // ghost-sampling tp, sea, whether that tile is an eroded assembly).
+            let (sea_m, sea_provisional, epoch_tp, census, regions, store_eroded_tiles) = match epoch {
+                None => {
+                    let sea_m = f64::from_bits(sea_bits.load(Ordering::Relaxed)) as f32;
+                    let sea_provisional = !sea_ready.load(Ordering::Relaxed);
+                    let census = world.eroded_region_census();
+                    let regions = if include_stale {
+                        world.load_eroded_regions()
+                    } else {
+                        world.load_current_eroded_regions()
+                    };
+                    let n = regions.len();
+                    (sea_m, sea_provisional, None, census, regions, n)
+                }
+                Some(e) => (e.sea_m, false, Some(e.tp), RegionCensus::default(), Vec::new(), 0),
+            };
+
             let mut eroded_faces = 0usize;
             let mut land = 0usize;
             let mut total = 0usize;
@@ -540,24 +655,32 @@ fn spawn_worker(
                     .map(|f| {
                         s.spawn(move || {
                             let face = Face::from_index(f);
-                            // Observe-only assemble: builder's 64×64 tiles + prior,
-                            // never a cold fluvial run and never a full-face key miss.
-                            let (tile, eroded) =
-                                world.assemble_surface_tile(face, level, 0, 0, nx, regions);
+                            // Present: observe-only eroded assembly (builder's 64×64
+                            // tiles + prior). Epoch: the pure epoch tectonic surface.
+                            // Neither cold-runs long evolution (`#form-builder-admission`
+                            // FE(4)).
+                            let (tile, eroded) = match epoch_tp {
+                                None => world.assemble_surface_tile(face, level, 0, 0, nx, regions),
+                                Some(tp) => (epoch_surface_tile(world, face, level, nx, tp), false),
+                            };
                             let land = tile.iter().filter(|&&h| h > sea_m).count();
                             // Per-cell coverage: cells with no covering region are
                             // painted from the instant prior — the loud fallback count.
+                            // (Playback has no regions, so fallback == whole tile; it's
+                            // not shown for epoch builds.)
                             let mut fallback = 0usize;
-                            for j in 0..nx as u32 {
-                                for i in 0..nx as u32 {
-                                    let cid = CellId::from_face_ij(face, i, j, level);
-                                    if erosion::tier_at(cid, regions).is_none() {
-                                        fallback += 1;
+                            if epoch_tp.is_none() {
+                                for j in 0..nx as u32 {
+                                    for i in 0..nx as u32 {
+                                        let cid = CellId::from_face_ij(face, i, j, level);
+                                        if erosion::tier_at(cid, regions).is_none() {
+                                            fallback += 1;
+                                        }
                                     }
                                 }
                             }
                             let (mesh, fseam) =
-                                build_face(world, face, level, &tile, exag, audit, sea_m);
+                                build_face(world, face, level, &tile, exag, audit, sea_m, epoch_tp);
                             (mesh, tile, land, fseam, eroded, fallback)
                         })
                     })
@@ -597,6 +720,7 @@ fn spawn_worker(
                 land_frac: land as f32 / total.max(1) as f32,
                 prior_fallback_frac: prior_fallback as f32 / total.max(1) as f32,
                 seam,
+                epoch: epoch.map(|e| EpochInfo { idx: e.idx, age_ga: e.age_ga, tp_c: e.tp as f32 }),
             };
             if tx.send(msg).is_err() {
                 return; // view closed
@@ -683,6 +807,8 @@ struct BuiltStats {
     land_frac: f32,
     prior_fallback_frac: f32,
     seam: SeamStats,
+    /// Present when the landed build is a deep-time playback epoch.
+    epoch: Option<EpochInfo>,
 }
 
 /// What the globe should be showing vs what it is showing.
@@ -693,8 +819,11 @@ struct GlobeState {
     exag_i: usize,
     /// Seam-audit paint mode (S): cross-face disagreement in magenta.
     audit: bool,
-    /// (level, exag, audit) of the last *requested* build; None until first request.
-    requested: Option<(u8, f32, bool)>,
+    /// Deep-time playback mode (T) — the globe shows a materialized law epoch
+    /// instead of the live present surface.
+    playback: bool,
+    /// The last *requested* build; None until first request.
+    requested: Option<BuildReq>,
     inflight: bool,
     built: Option<BuiltStats>,
 }
@@ -703,12 +832,66 @@ impl Default for GlobeState {
     fn default() -> Self {
         // VIVARIUM_AUDIT=1 starts in seam-audit paint mode (scripted verification).
         let audit = std::env::var("VIVARIUM_AUDIT").map(|v| v == "1").unwrap_or(false);
-        GlobeState { auto_level: true, level: 8, exag_i: 2, audit, requested: None, inflight: false, built: None }
+        // VIVARIUM_PLAYBACK=1 boots straight into deep-time playback (scripted
+        // epoch shots; pair with VIVARIUM_EPOCH=<idx> to pick the epoch).
+        let playback = std::env::var("VIVARIUM_PLAYBACK").map(|v| v == "1").unwrap_or(false);
+        GlobeState {
+            auto_level: true,
+            level: 8,
+            exag_i: 2,
+            audit,
+            playback,
+            requested: None,
+            inflight: false,
+            built: None,
+        }
+    }
+}
+
+/// Deep-time playback state — the epoch axis is the LAW's cooling ladder
+/// (`mantle_thermal::abyssal_epochs`), so the view only *selects* which
+/// materialized epoch to observe (`#form-core-view-wall` FE(4): observe-only, no
+/// authored evolution). Each epoch's heavy law values (`derived_sea_level_at_tp`
+/// and the ledger integrals it warms) are computed on a background thread; the
+/// worker is only ever offered epochs already `ready`, so no cold pour reaches
+/// the build path (never-block, `#form-builder-admission` FE(4)).
+#[derive(Resource)]
+struct DeepTime {
+    /// Ages (Ga before Holocene origin), one per epoch, hot → cool along the
+    /// emergence direction (`abyssal_epochs` is time-ordered: increasing t).
+    ages_ga: Vec<f32>,
+    /// Mantle potential temperature (°C) per epoch — the pure law read.
+    tps: Vec<f64>,
+    /// Currently-selected epoch index.
+    idx: usize,
+    /// The present-Abyssal epoch's index (coincides with the live world).
+    present_idx: usize,
+    /// Auto-sweep hot → cool (K); loops.
+    playing: bool,
+    /// Seconds dwelt on the current epoch while playing.
+    dwell: f32,
+    /// Seconds per epoch during a sweep.
+    dwell_per: f32,
+    /// Per-epoch warmed derived sea (m) as f64 bits; valid once `ready[i]`.
+    sea_bits: Arc<Vec<AtomicU64>>,
+    /// Per-epoch: has the background warmer computed this epoch's law values?
+    ready: Arc<Vec<AtomicBool>>,
+}
+
+impl DeepTime {
+    fn ready(&self, i: usize) -> bool {
+        self.ready.get(i).map(|r| r.load(Ordering::Relaxed)).unwrap_or(false)
+    }
+    fn sea_m(&self, i: usize) -> f32 {
+        f64::from_bits(self.sea_bits[i].load(Ordering::Relaxed)) as f32
+    }
+    fn warmed_count(&self) -> usize {
+        (0..self.ages_ga.len()).filter(|&i| self.ready(i)).count()
     }
 }
 
 #[derive(Resource)]
-struct BuildTx(Sender<(u8, f32, bool)>);
+struct BuildTx(Sender<BuildReq>);
 #[derive(Resource)]
 struct BuildRx(Mutex<Receiver<GlobeMsg>>);
 /// The viewed world's identity, for the HUD (name + seed from its manifest).
@@ -757,9 +940,12 @@ fn main() {
         spec.seed,
         dir.display()
     );
-    let (req_tx, req_rx) = std::sync::mpsc::channel::<(u8, f32, bool)>();
+    let (req_tx, req_rx) = std::sync::mpsc::channel::<BuildReq>();
     let (res_tx, res_rx) = std::sync::mpsc::channel::<GlobeMsg>();
     spawn_worker(dir.clone(), spec.seed, req_rx, res_tx, req_tx.clone());
+
+    // The deep-time epoch ladder (the LAW's cooling chain) + its background warmer.
+    let deep_time = build_deep_time(spec.seed);
 
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -778,9 +964,68 @@ fn main() {
         .insert_resource(WorldIdent { name: spec.name, seed: spec.seed })
         .insert_resource(TilesRes::default())
         .insert_resource(SunEphemeris::default())
+        .insert_resource(deep_time)
         .add_systems(Startup, setup)
-        .add_systems(Update, (input_update, level_update, apply_builds, camera_update, hud_update, maybe_screenshot))
+        .add_systems(Update, (input_update, epoch_update, level_update, apply_builds, camera_update, hud_update, maybe_screenshot))
         .run();
+}
+
+/// Build the deep-time epoch ladder from the mantle-thermal cooling chain and
+/// spawn the background warmer. The warmer computes each epoch's heavy law values
+/// (`derived_sea_level_at_tp`, which internally warms the rock-mass-ledger and
+/// pour integrals so per-cell `tectonic_surface_at_tp` reads are cheap afterward)
+/// off the render/build path, marking each `ready` as it lands — the never-block
+/// discipline applied to time instead of space. Order: present first (so toggling
+/// into playback lands instantly on the world we know), then hot → cool so the
+/// emergence sequence's opening is ready first.
+fn build_deep_time(seed: u64) -> DeepTime {
+    let epochs: Vec<WorldTime> = abyssal_epochs();
+    let present = present_abyssal();
+    let ages_ga: Vec<f32> = epochs.iter().map(|t| (-t.years() / 1.0e9) as f32).collect();
+    let tps: Vec<f64> = epochs.iter().map(|&t| potential_temp_c(t)).collect();
+    let present_idx = epochs.iter().position(|&t| t == present).unwrap_or(0);
+
+    let sea_bits: Arc<Vec<AtomicU64>> = Arc::new(epochs.iter().map(|_| AtomicU64::new(0)).collect());
+    let ready: Arc<Vec<AtomicBool>> = Arc::new(epochs.iter().map(|_| AtomicBool::new(false)).collect());
+
+    // Warm order: present, then hot → cool (dedup present).
+    let mut order: Vec<usize> = vec![present_idx];
+    order.extend((0..epochs.len()).filter(|&i| i != present_idx));
+
+    {
+        let (sea_bits, ready, tps) = (sea_bits.clone(), ready.clone(), tps.clone());
+        std::thread::spawn(move || {
+            for i in order {
+                // The heavy step: warms this epoch's derived sea AND (inside it) the
+                // rock-mass-ledger + pour integrals, so the worker's per-cell
+                // `tectonic_surface_at_tp` reads are memo-cheap once `ready`.
+                let s = sea_level::derived_sea_level_at_tp(seed, tps[i]);
+                sea_bits[i].store(s.to_bits(), Ordering::Relaxed);
+                ready[i].store(true, Ordering::Relaxed);
+                // No poke needed: the ECS polls `ready` each frame (epoch_update /
+                // level_update re-request the moment a waited-on epoch lands).
+            }
+        });
+    }
+
+    // VIVARIUM_EPOCH=<idx> picks the starting epoch for scripted playback shots.
+    let start_idx = std::env::var("VIVARIUM_EPOCH")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .filter(|&i| i < epochs.len())
+        .unwrap_or(present_idx);
+
+    DeepTime {
+        ages_ga,
+        tps,
+        idx: start_idx,
+        present_idx,
+        playing: false,
+        dwell: 0.0,
+        dwell_per: 1.3,
+        sea_bits,
+        ready,
+    }
 }
 
 fn setup(mut commands: Commands) {
@@ -958,12 +1203,71 @@ fn input_update(
     }
 }
 
+/// Deep-time playback control (`#form-core-view-wall` FE(4): observe-only — the
+/// view selects which materialized law epoch to show, it does not author how the
+/// world evolves). Keys: **T** toggle playback (entering jumps to the hot
+/// water-world start and auto-plays the emergence), **K** play/pause the sweep,
+/// **J/L** step one epoch back/forward (manual scrub pauses the sweep). The sweep
+/// runs hot → cool and loops; if the next epoch is not yet warm it *buffers* on
+/// the current one until the background warmer lands it — an honest "materializing"
+/// hold, never a skip to an uncomputed frame.
+fn epoch_update(
+    time: Res<Time>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut state: ResMut<GlobeState>,
+    mut dt: ResMut<DeepTime>,
+) {
+    if keys.just_pressed(KeyCode::KeyT) {
+        state.playback = !state.playback;
+        if state.playback {
+            dt.idx = 0; // hottest / earliest epoch — the near-water-world
+            dt.playing = true;
+            dt.dwell = 0.0;
+        } else {
+            dt.playing = false;
+        }
+    }
+    if !state.playback {
+        return;
+    }
+
+    let n = dt.ages_ga.len();
+    if keys.just_pressed(KeyCode::KeyK) {
+        dt.playing = !dt.playing;
+        dt.dwell = 0.0;
+    }
+    if keys.just_pressed(KeyCode::KeyJ) {
+        dt.playing = false;
+        dt.idx = (dt.idx + n - 1) % n;
+    }
+    if keys.just_pressed(KeyCode::KeyL) {
+        dt.playing = false;
+        dt.idx = (dt.idx + 1) % n;
+    }
+
+    if dt.playing {
+        dt.dwell += time.delta_secs();
+        if dt.dwell >= dt.dwell_per {
+            let next = (dt.idx + 1) % n;
+            if dt.ready(next) {
+                dt.idx = next;
+                dt.dwell = 0.0;
+            }
+            // else: hold (buffering) until the warmer lands `next`.
+        }
+    }
+}
+
 /// Resolution-on-zoom: pick the sampling level from altitude (finer initial-topography levels
 /// as you approach — each level's fBm runs more octaves, so detail is *pulled*,
-/// not interpolated), and request a rebuild whenever (level, exag) drifts from
-/// what is built. One build in flight; the desired-vs-built check re-fires until
-/// they agree, so latest always wins.
-fn level_update(orbit: Res<Orbit>, mut state: ResMut<GlobeState>, tx: Res<BuildTx>) {
+/// not interpolated), and request a rebuild whenever the desired build drifts
+/// from what is built. One build in flight; the desired-vs-built check re-fires
+/// until they agree, so latest always wins.
+///
+/// In playback the desired build is the current **warm** epoch; if the selected
+/// epoch is not yet materialized this requests nothing (holding the last surface)
+/// and retries next frame — the never-block hold.
+fn level_update(orbit: Res<Orbit>, mut state: ResMut<GlobeState>, tx: Res<BuildTx>, dt: Res<DeepTime>) {
     if state.auto_level {
         let r = radius_km();
         let alt = (orbit.dist - r).max(120.0);
@@ -972,11 +1276,32 @@ fn level_update(orbit: Res<Orbit>, mut state: ResMut<GlobeState>, tx: Res<BuildT
         let l = (quarter / target_cell).log2().ceil() as i32;
         state.level = l.clamp(LEVEL_MIN as i32, LEVEL_MAX as i32) as u8;
     }
-    let want = (state.level, EXAG_STEPS[state.exag_i], state.audit);
-    if !state.inflight && state.requested != Some(want) {
-        if tx.0.send(want).is_ok() {
-            state.requested = Some(want);
-            state.inflight = true;
+    let (level, exag, audit) = (state.level, EXAG_STEPS[state.exag_i], state.audit);
+    let want: Option<BuildReq> = if state.playback {
+        if dt.ready(dt.idx) {
+            Some(BuildReq {
+                level,
+                exag,
+                audit,
+                epoch: Some(EpochReq {
+                    idx: dt.idx,
+                    tp: dt.tps[dt.idx],
+                    sea_m: dt.sea_m(dt.idx),
+                    age_ga: dt.ages_ga[dt.idx],
+                }),
+            })
+        } else {
+            None // selected epoch still materializing — hold, retry next frame
+        }
+    } else {
+        Some(BuildReq { level, exag, audit, epoch: None })
+    };
+    if let Some(want) = want {
+        if !state.inflight && state.requested != Some(want) {
+            if tx.0.send(want).is_ok() {
+                state.requested = Some(want);
+                state.inflight = true;
+            }
         }
     }
 }
@@ -1026,6 +1351,7 @@ fn apply_builds(
         land_frac: msg.land_frac,
         prior_fallback_frac: msg.prior_fallback_frac,
         seam: msg.seam,
+        epoch: msg.epoch,
     });
 }
 
@@ -1089,6 +1415,7 @@ fn hud_update(
     orbit: Res<Orbit>,
     eph: Res<SunEphemeris>,
     state: Res<GlobeState>,
+    dt: Res<DeepTime>,
     ident: Res<WorldIdent>,
     tiles: Res<TilesRes>,
     windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
@@ -1225,7 +1552,78 @@ fn hud_update(
             if eph.play != 0.0 { "PLAYING" } else { "paused" },
         )
     };
-    text.0 = format!("{status}\n{sun_line}");
+    if state.playback {
+        // Deep-time playback overrides the present-view status with an epoch block
+        // and a timeline of the LAW's cooling ladder.
+        let n = dt.ages_ga.len();
+        let idx = dt.idx.min(n.saturating_sub(1));
+        let land = state.built.as_ref().map(|b| b.land_frac * 100.0);
+        // The epoch actually drawn (the landed build's own identity — may lag
+        // `dt.idx` during a fast scrub; showing it is the honest choice).
+        let drawn = state.built.as_ref().and_then(|b| b.epoch);
+        let next_ready = dt.ready((idx + 1) % n);
+        let play_note = if dt.playing {
+            if next_ready { "PLAYING (hot->cool, loops)" } else { "PLAYING -- buffering next epoch..." }
+        } else {
+            "paused"
+        };
+        // Timeline: each epoch as an age tick. []=selected, *=present-Abyssal
+        // (coincides with the live world), ()=still materializing.
+        let ticks: Vec<String> = (0..n)
+            .map(|i| {
+                let a = dt.ages_ga[i];
+                let present = if i == dt.present_idx { "*" } else { "" };
+                if i == idx {
+                    format!("[{a:.2}{present}]")
+                } else if dt.ready(i) {
+                    format!(" {a:.2}{present} ")
+                } else {
+                    format!("({a:.2}{present})")
+                }
+            })
+            .collect();
+        let head = if let Some(e) = drawn {
+            format!(
+                "DEEP-TIME PLAYBACK  t {:.2} Ga  T_p {:.0} C  sea {:.0} m (derived L8)  land ~{}%  | {play_note}",
+                e.age_ga,
+                e.tp_c,
+                dt.sea_m(e.idx),
+                land.map(|l| format!("{l:.1}")).unwrap_or_else(|| "?".into()),
+            )
+        } else {
+            format!(
+                "DEEP-TIME PLAYBACK  t {:.2} Ga  T_p {:.0} C  | materializing this epoch... | {play_note}",
+                dt.ages_ga[idx], dt.tps[idx],
+            )
+        };
+        let honesty = "epoch surface = pure isostatic tectonic surface at this mantle T_p (no fluvial tiles -- present-only); discrete LAW epochs (mantle_thermal::abyssal_epochs), no cosmetic interpolation";
+        let timeline = format!(
+            "epoch {}/{}  warmed {}/{}   {}   Ga <- earlier | later ->",
+            idx + 1,
+            n,
+            dt.warmed_count(),
+            n,
+            ticks.join(" "),
+        );
+        let cell_km = state
+            .built
+            .as_ref()
+            .map(|b| (r * std::f32::consts::FRAC_PI_2) / (1u32 << b.level) as f32);
+        let detail = format!(
+            "world \"{}\" (seed {:016x}){} | alt {alt:.0} km | relief x{:.0}",
+            ident.name,
+            ident.seed,
+            cell_km.map(|c| format!(" | cell ~{c:.0} km")).unwrap_or_default(),
+            EXAG_STEPS[state.exag_i],
+        );
+        text.0 = format!(
+            "{head}\n{timeline}\n{honesty}\n{detail}\n\
+             T exit playback | K play/pause | J/L step epoch | drag spin | wheel zoom | X relief | R reset | Esc quit\n\
+             {sun_line}"
+        );
+    } else {
+        text.0 = format!("{status}\n{sun_line}\nT = deep-time playback (watch the land rise)");
+    }
 }
 
 /// The worldview verification idiom: VIVARIUM_AUTOSHOT=1 waits for the first
