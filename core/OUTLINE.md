@@ -67,6 +67,7 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | formulation | Model Critical | [#form-column-control-volume](src/form-column-control-volume.md) | Column is a control volume with sufficient statistics (frame; impl open) | draft |
 | observation | Physics | [#obs-hydrosphere-box-nomos](src/obs-hydrosphere-box-nomos.md) | Box nomos proves representation-agnostic contract | draft |
 | discussion | Model Critical | [#disc-prime-question](src/disc-prime-question.md) | Prime Question = modified-equation analysis | draft |
+| | | | *(#gap) Derived sea level (pour ocean → waterline) + bathymetry vs freeboard* — **code-first from `ce55ddf`**: implement pour + freeboard/`emerged land` keeper before freezing FE; backfill segment soon | missing |
 | | | | *(#gap) Full Terrestris phase-content segments* | missing |
 | | | | *(#gap) Manifest / vivium identity* | missing |
 
@@ -90,7 +91,7 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | formulation | Math Critical | [#form-rl-closure-algebra](src/form-rl-closure-algebra.md) | Multiscale $U,u,R,L$ + three honesty laws; $R\circ L=\mathrm{id}$ with compliance debt | draft |
 | formulation | Math Critical | [#form-seam-flux-exchange](src/form-seam-flux-exchange.md) | Seams exchange fluxes, not states; one discipline on space × time | draft |
 | | | | *(#gap) Grid / staggering (measurements vs open verdict)* | missing |
-| | | | *(#gap) Hydrosphere, climate, erosion, water nomoi (beyond box observation)* | missing |
+| | | | *(#gap) Hydrosphere, climate, erosion, water nomoi (beyond box observation)* — partial code-first trail `ce55ddf`: sea-level pour + emerged-land freeboard before full nomos segments | missing |
 
 ## VI. Process and contribution
 

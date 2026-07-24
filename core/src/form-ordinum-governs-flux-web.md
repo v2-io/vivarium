@@ -12,6 +12,8 @@ depends:
 
 # The ordinum governs the flux web
 
+> [!warning] **Code-first trail (not yet claim-complete)** — base `ce55ddf` (2026-07-23). FE(5) still names Abyssal `emerged-land` as an **unkept** queue item; work in progress will add a keeper (freeboard / isostatic stand-in, not full plate tectonics) and must update this segment so "what to build next" matches the nomotheke. Until then, live code ahead of this FE is provisional. Segment backfill required before compact.
+
 The phase ladder's promises *are* flux quantities, and `:kept-by` *is* the producer. A nomos that consumes an unkept promise makes the world mechanically unrunnable for that work — the ladder is not decorative.
 
 ## Formal Expression

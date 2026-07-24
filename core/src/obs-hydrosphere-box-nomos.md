@@ -11,6 +11,8 @@ depends:
 
 # Hydrosphere is a box nomos on the same contract
 
+> [!warning] **Code-first trail (not yet claim-complete)** — base `ce55ddf` (2026-07-23). **Derived sea level** (ocean stock poured into solid hypsometry) is being implemented in `sea_level.rs` / gen; it is **not** weather-cycle bootstrap (insolation and climate already have their chains). This observation still only claims the box stock + precip edge. A sibling formulation for derived sea level / bathymetry vs freeboard will backfill; do not read unfinished pour code as canon of this segment.
+
 The hydrosphere article is a global reservoir (no grid): conserved water inventory from ante-mundane mass fraction, partitioned ocean/atmosphere. It proves the store/nomotheke/flux contract is representation-agnostic.
 
 ## Formal Expression

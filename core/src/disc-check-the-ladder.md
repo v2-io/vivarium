@@ -9,6 +9,8 @@ depends:
 
 # Check the phase ladder before modern Earth
 
+> [!warning] **Code-first trail (not yet claim-complete)** — base commit `ce55ddf` (2026-07-23 session). Implementing **derived sea level** (pour ocean into hypsometry) and **Abyssal freeboard / `emerged land` keeper** in code before freezing new FE here. Why: need a convictable pour + flux wiring before segment text hardens. This segment still owns only the **reading discipline** and water-world worked form; it does **not** yet own the engineering path. Backfill expected before session compact; if not, force code to this incomplete claim surface.
+
 A measurement that modern Earth would call a defect may be the ordinum's promise kept. Read the developmental ladder before rewriting the prior.
 
 ## Formal Expression
@@ -28,3 +30,4 @@ The failure mode is competent measurement plus the wrong reference class: "33% l
 ## Working Notes
 
 - Open nuance recorded in prior work: the ordinum does not make itself unfalsifiable; model/ladder mismatch can indict either side. Early-continents literature adjudicates when both are in play.
+- **Backfill targets after code footing:** formulation for derived sea level (not weather bootstrap); freeboard/isostatic stand-in as Abyssal keeper of `emerged land` (full density-column tectonics later); clear split bathymetry prior vs freeboard.
