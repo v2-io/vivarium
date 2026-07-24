@@ -44,9 +44,9 @@ Emerged land is earned by mass-conserving lithospheric freeboard — crust and d
 
 **Max attainable:** **exact** for the architectural claim that elevation must be a mass-conserving reading of a lithosphere column if Abyssal freeboard is to be keepable; **empirical / literature** for the Chowdhury–Cawood–Mulder 2025 mechanism narrative and numeric predicate bands; **heuristic** for any particular rate law until modelled and probed.
 
-**Currently `robust-qualitative`:** nomos shape and "uplift-as-rate-producer is the wrong article" are **council-accepted** (`DECISIONS[isostasy-is-the-uplift-nomos-and-the-keel-is-half-of-it]`, `:council 2026-07-24`); strictly-positive live rate field is **code-verified** (`DECISIONS[uplift-is-structurally-incapable-of-keeping-its-promise]`); freeboard may-be-negative is live on the stand-in path. Differentiation rate law and full column implementation are **open**. Not a Joseph `:by joseph` row for every clause — architecture accepted at council; literature citations ride the decision's primary-read chain.
+**Currently `robust-qualitative`:** nomos shape and "uplift-as-rate-producer is the wrong article for freeboard" are **council-accepted** (`DECISIONS[isostasy-is-the-uplift-nomos-and-the-keel-is-half-of-it]`, `:council 2026-07-24`). **v1 implementation** (column + Airy read + pour wiring + Claimed keeper) is **code- and test-verified** (`lithosphere.rs` convictions; ordinum Claimed test; land-fraction pour still in band). The build ledger entry for this rung is **proposed** (design accepted; build verdict fresh — not yet council-sealed as engineering). Differentiation rate law, mantle-thermal *nomos*, water loading, and rock-mass return remain **open** (FE(8)). Architecture accepted at council; literature citations ride the decision's primary-read chain.
 
-Stage `draft`. **Implementation claim (bounded):** the `lithosphere` and `isostasy` nomos are live and registered (`lithosphere.rs`, nomotheke, `LITHO_COLUMN` flux edge, keeper edge in the ordinum) with the v1 scope FE(7) states — inventory stand-in, real balance read. Not claimed: anything in FE(8).
+Stage `draft`. **Implementation claim (bounded):** `lithosphere` and `isostasy` are live and registered with the v1 scope FE(7) states — inventory stand-in (physics Low), balance read (physics Med), freeboard may be negative by construction. **Not claimed:** Kept; anything in FE(8); plate emergence.
 
 ## Discussion
 
@@ -54,8 +54,9 @@ Sea level already pours a conserved ocean against solid hypsometry. Without a ma
 
 ## Working Notes
 
-- **Live modules:** `uplift.rs` (`uplift_rate_m_per_epoch`, `freeboard_m`); pour/sea-level in `sea_level.rs`; erosion consumes `ROCK_UPLIFT_RATE`.
-- **Do not re-open:** baking bimodal land into the bathymetry prior; plate state-fields as the path to first freeboard; citing iced DESIGN-MATERIAL as law (column law is #form-column-control-volume ).
-- **Landed 2026-07-24:** column schema + keel; isostasy producer; range-spans-zero reachability test; craton-fraction calibration conviction; zero-mean mass-balance test; cooling-monotonicity test; keeper edge in ordinum. **Next convicting work:** rock-mass return from erosion; mantle-thermal as a nomos; water loading; a generic range/reachability check in the BrokenKeeper family (the emerged-land instance is covered by the lithosphere tests, not yet generic machinery).
-- **Primary literature home on the decision:** Chowdhury, Cawood & Mulder 2025 (relata: chowdhury-2025-subaerial); early-continents survey in `ref/research/` for Record targets.
-- Sibling: live erosion recipe #detail-erosion-composition ; Abyssal phase home #detail-phase-abyssal ; open mantle-thermal nomos; router successor under #obs-cube-locked-kernel-bias .
+- **Live modules:** `lithosphere.rs` (column + `freeboard_m`); `sea_level.rs` pour; `uplift.rs` **rate only**; nomotheke `LITHOSPHERE` / `ISOSTASY`; erosion consumes `ROCK_UPLIFT_RATE` and emerged-land geometry from isostasy.
+- **Do not re-open:** fBm freeboard as land keeper; baking bimodal land into the bathymetry prior; plate state-fields as the path to first freeboard; claiming Kept from Claimed alone.
+- **Regression guards (tests):** range spans zero; mean freeboard ≡ 0 at any $T_p$; cooling grows craton/ocean contrast; keel share > 15%; craton-fraction calibration band; ordinum Claimed-by-isostasy (history of unkept-is-the-point in the test comment).
+- **Next convicting work:** rock-mass return from erosion; mantle-thermal as a nomos; water loading; generic BrokenKeeper range/reachability machinery; Record-style land-fraction predicate probe (Claimed → Kept path).
+- **Primary literature:** Chowdhury, Cawood & Mulder 2025 (relata: chowdhury-2025-subaerial); early-continents survey for Record targets.
+- Sibling: #detail-erosion-composition ; #detail-phase-abyssal ; open mantle-thermal; router under #obs-cube-locked-kernel-bias .

@@ -37,8 +37,8 @@ Claim-adjacent home for Abyssal charges, promises, and defeasances: what the lad
 
 | Promise | Class | `:kept-by` / gloss | Maturity (honest) |
 |---|---|---|---|
-| `emerged-land` | state | No `:kept-by` in ordinum (gloss); **live path** freeboard stand-in + pour ( #form-derived-sea-level ); **keepable shape** column isostasy ( #form-isostasy-column ) | Specified (predicate prose); **not Kept** — stand-in cannot reach literature freeboard predicate; rate field strictly positive (code-verified) |
-| `erosion-substrate` | regime | `:kept-by erosion-tile` | **Claimed** — real nomos runs crude fluvial composition; **not Kept** without a convicting predicate probe that later phases truly stand on that bed |
+| `emerged-land` | state | `:kept-by isostasy` (ordinum + nomotheke); pour reads column freeboard ( #form-derived-sea-level , #form-isostasy-column ) | **Claimed** (2026-07-24) — real keeper, range can span basins/land, mass-balance zero-mean tested; **not Kept** — literature freeboard / land-fraction predicate not verified per cycle; inventory still a differentiation stand-in |
+| `erosion-substrate` | regime | `:kept-by erosion-tile` | **Claimed** — real nomos runs crude fluvial composition ( #detail-erosion-composition ); **not Kept** without a convicting predicate probe that later phases truly stand on that bed |
 | `ore-and-soil` | state | gloss | Named only |
 | `toward-breathable` | capability | gloss; unlocks Primeval atmosphere gate | Named only |
 
@@ -64,4 +64,5 @@ Abyssal is where the project's dual purpose first feels like a *world*: land, ri
 
 - **Data authority:** `tabularium/terrestris.ordinum.udon` `|phase[abyssal]`. Engine parse: `ordinum.rs`.
 - **Next phase homes:** Primordial (water cycle / sea-level datum) is the natural sibling pilot; Ante-Mundane parameter block after that.
-- **Reachability audit:** BrokenKeeper class for keeper range vs promise predicate remains open instrument work (named on isostasy decisions).
+- **Reachability:** emerged-land instance covered by `lithosphere` range-spans-zero test; generic BrokenKeeper range machinery still open.
+- **Regression:** ordinum test was unkept-is-the-point; now Claimed-by-isostasy with that history in the comment — do not flip back to unkept without retiring the keeper.

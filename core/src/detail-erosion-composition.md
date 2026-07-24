@@ -48,8 +48,8 @@ What the shipped `erosion-tile` nomos **is** today: one composed crude rung (upl
    | Uniform $A$ for drainage | **retired** for seed/deposit $A$ | #obs-cube-locked-kernel-bias FE(3) present tense |
    | Priority-Flood $\varepsilon$-fill | sign-definite mass mint in sinks | nomotheke unphysical term |
    | Creep $k$ clamp | fidelity compromise, not $z=2$ substeps | nomotheke; #sketch-dynamic-exponent-seams |
-   | Rock-mass export without column return | missing conservation | #form-isostasy-column ; ASSUMPTIONS |
-   | Strictly-positive uplift rate alone | cannot keep basins/freeboard predicate | #form-isostasy-column |
+   | Rock-mass export without column return | missing conservation / rebound | #form-isostasy-column FE(8); ASSUMPTIONS |
+   | Uplift **rate** field strictly positive | diagnostic carving driver only — freeboard is isostasy's job | #form-isostasy-column ; live `uplift.rs` |
 
 6. **Open successor (not adopted).** Kill diagonals → real edge fluxes → Coatléven-style vector reconstruction for magnitude+direction from one object; separate non-orthogonality fix for face gradients ( #obs-routing-curl-spiral remedy stack). Until then, cube-face attractors can still manufacture geography — cube control remains mandatory for any "emergent plates" claim.
 
