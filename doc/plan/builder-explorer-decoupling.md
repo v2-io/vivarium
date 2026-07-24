@@ -6,11 +6,11 @@
 
 ---
 
-## 0. The load-bearing guarantee first — build-order independence *(settled; property + invariant)*
+## 0. The load-bearing guarantee first — build-order independence
 
-Two builds of the same spec, advanced along different demand orders (different explorers, different beacons, different walking routes), converge to **byte-identical state wherever both have materialized**. This is not aspiration; it is a property of the frame: every memo is a pure function of its complete key, so computation order changes only *which* entries exist so far, never their values.
+**Claim home:** `#form-depend-by-key-never-latest` (build-order independence; depend by complete key only; fidelity dial in the planner, not the nomos). Elaboration below is source; do not treat this section as a second law home.
 
-**The invariant that preserves it** (the one rule that must survive plan-Phase-3's flux-BC tiles): **a nomos may depend on a neighbour only *by key*** — a specific `(tile, level, time-index)` chosen by the dependency map — **never on "the finest/latest available."** "Use the best data we happen to have" is the tempting optimization that would silently make the world a function of the walking route. The fidelity dial lives in the *demand planner* (which keys get scheduled), never in the *nomos* (which keys get read).
+Two builds of the same spec, advanced along different demand orders, converge to byte-identical state wherever both have materialized — pure functions of complete keys. Neighbour dependencies are by key from the dependency map, never “finest/latest available.”
 
 Native-representation memos (LEXICON §2) fit unchanged: keys name **artifacts** (nomos outputs — a drainage-graph object, a slab-set), not grid cells; the canonical frame is how *queries* address the world, not how *dependencies* must be shaped. The one tension to manage is **invalidation granularity** — a large native object invalidates all its dependents at its own grain (over-keying: safe, possibly wasteful) — so a native system chooses its memo grain to match its consumers' cones (per-basin, not one global graph).
 

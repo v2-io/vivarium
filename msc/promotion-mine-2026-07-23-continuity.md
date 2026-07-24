@@ -13,6 +13,8 @@
 | `#obs-mean-pin-manufactures-seam` | PROBE 6–7; DECISIONS mean-pin | mean-pin obs |
 | `#obs-cube-locked-kernel-bias` | MFD fan; uniform cell-area A; DECISIONS | cube-locked obs |
 | `#form-manifest-prescribes-vivium` | regula-collapse `:by us`; VIVARIA-DEFINITIONS L3 | manifest form |
+| `#norm-regime-probes` | DESIGN-REDUX §2b | regime probes |
+| `#form-depend-by-key-never-latest` | builder-explorer §0 | depend-by-key |
 
 ## Dual-home demoted this wave
 
@@ -27,17 +29,15 @@
 
 | # | Slug | Source | Notes |
 |---|------|--------|-------|
-| 1 | `#norm-regime-probes` | DESIGN-REDUX §2b | Every rung ships probes; sensitivity already owns discrimination |
-| 2 | `#form-lazy-query-graph` | REDUX §11; ARCHITECTURE §5 | Large runtime shape |
-| 3 | `#form-multirate-coupling` | REDUX §4; seams | Fast/slow |
-| 4 | `#form-sufficient-statistic-seam` / consumer-$R$ | REDUX §5; column | Join seam; don't fork |
-| 5 | `#form-run-modes-carve` | OUTLINE §III; LEXICON | Joseph convention |
-| 6 | `#form-depend-by-key-never-latest` | builder-explorer §0 | Settled invariant |
-| 7 | `#form-flux-statistic-contract` | VIVARIA-DECLARATIVE-FRONTIER | Pre-run statistic match |
-| 8 | `#form-kernel-imperative-boundary` | VIVARIA-DEFINITIONS thesis | Declare data; kernel only |
-| 9 | `#form-phase-machinery-classes` | PHASES preamble only | After ordinum diff |
-| 10 | `#obs-routing-curl` / potential-identity | DECISIONS routing-violates… | Sibling cube control |
-| 11 | Thin `#norm-agentic-verdict-is-flag` | DECLARATIVE-FRONTIER correction | Or PROCESS WN |
+| 1 | `#form-lazy-query-graph` | REDUX §11; ARCHITECTURE §5 | Large runtime shape |
+| 2 | `#form-multirate-coupling` | REDUX §4; seams | Fast/slow |
+| 3 | `#form-sufficient-statistic-seam` / consumer-$R$ | REDUX §5; column | Join seam; don't fork |
+| 4 | `#form-run-modes-carve` | OUTLINE §III; LEXICON | Joseph convention |
+| 5 | `#form-flux-statistic-contract` | VIVARIA-DECLARATIVE-FRONTIER | Pre-run statistic match |
+| 6 | `#form-kernel-imperative-boundary` | VIVARIA-DEFINITIONS thesis | Declare data; kernel only |
+| 7 | `#form-phase-machinery-classes` | PHASES preamble only | After ordinum diff |
+| 8 | `#obs-routing-curl` / potential-identity | DECISIONS routing-violates… | Sibling cube control |
+| 9 | Thin `#norm-agentic-verdict-is-flag` | DECLARATIVE-FRONTIER correction | Or PROCESS WN |
 
 ## Super-archive
 

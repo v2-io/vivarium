@@ -46,6 +46,7 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | normative | Ops Critical | [#norm-declaration-must-convict](src/norm-declaration-must-convict.md) | A declaration that cannot fail is a wish | draft |
 | normative | Ops Critical | [#norm-probes-before-claims](src/norm-probes-before-claims.md) | Probes before claims | draft |
 | normative | Ops Critical | [#norm-probe-sensitivity](src/norm-probe-sensitivity.md) | Probe sensitivity is part of the probe; known-bad and scale-separation | draft |
+| normative | Ops Critical | [#norm-regime-probes](src/norm-regime-probes.md) | Regime probes ship with every rung; known issues get the probe first | draft |
 | normative | Ops Critical | [#norm-decision-authority](src/norm-decision-authority.md) | Authority tags; evidence ≠ who decided | draft |
 | normative | Model Critical | [#norm-bias-vs-noise](src/norm-bias-vs-noise.md) | Bias versus noise is the decisive discretisation audit | draft |
 | discussion | Model Critical | [#disc-algorithms-disguise-physics](src/disc-algorithms-disguise-physics.md) | Port the physical claim, not the paper costume | draft |
@@ -79,6 +80,7 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | --- | --- | --- | --- | --- |
 | formulation | Machine Critical | [#form-store-as-save](src/form-store-as-save.md) | The store is the save; memo store is portable vivium state | draft |
 | formulation | Machine Critical | [#form-builder-admission](src/form-builder-admission.md) | Builder admits only flux-allowed work; explorers observe-only pull | draft |
+| formulation | Machine Critical | [#form-depend-by-key-never-latest](src/form-depend-by-key-never-latest.md) | Depend on neighbours by complete key only; never “finest available” | draft |
 | | | | *(#gap) Run-modes carve* | missing |
 | | | | *(#gap) Full builder daemon (beacon / demand spool)* | missing |
 

@@ -26,7 +26,7 @@ A seam is a boundary in space, time, or both. What crosses is a flux of a conser
 
 5. **Relation to the flux web.** #form-flux-web is the *nomos-to-nomos* contract: matched consume/promise quantity names make a world assemble. This segment is the *scale/time boundary* contract: when two tiles or two rates meet, the *physical* object that may cross is flux (or its declared statistic), not the neighbour's full field. Both are needed; neither replaces the other.
 
-6. **Out of bounds.** (a) Hard-coded edge-outlet / zero-inflow tiles that ignore upstream discharge (tiles are not composable). (b) Mean-pin alone sold as full conservation (injection $\neq$ refluxing). (c) Treating "the finest/latest available neighbour" as the dependency — dependency must be by key (plan doctrine; sibling claim for builder/explorer decoupling).
+6. **Out of bounds.** (a) Hard-coded edge-outlet / zero-inflow tiles that ignore upstream discharge (tiles are not composable). (b) Mean-pin alone sold as full conservation (injection $\neq$ refluxing). (c) Treating "the finest/latest available neighbour" as the dependency — dependency must be by key ( #form-depend-by-key-never-latest ).
 
 ## Epistemic Status
 

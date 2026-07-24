@@ -81,10 +81,9 @@ and silently fails to reproduce the macro it replaced.
 
 ### 2b. The reconciliation harness, concretized: regime probes *(added 2026-07-03, empirically grounded)*
 
-**Claim trail:** general probe discipline is `#norm-probes-before-claims`. Domain
-TDD / "regime probes ship with every rung; known issues get the probe first" is
-still an extract candidate (no dedicated segment yet). Specimens below are
-instruments, not law.
+**Claim homes:** `#norm-probes-before-claims` · `#norm-probe-sensitivity` ·
+`#norm-regime-probes` (co-delivery with rungs; known issues first). Specimens
+below are instruments, not a second law home.
 
 The harness case (3) demands existed for one day before proving itself. The
 2026-07-02 "travelling blob" hunt (multi-metre water solitons winding down
