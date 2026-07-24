@@ -16,7 +16,7 @@
 "Not implemented" ⇒ compliance debt or residual build, **not** automatic reject of a formulation.
 
 ### Super-archive scope
-**Main objective:** peel **`.archive/` and live `doc/`** into segments (or ice), then graduate claim-empty prose to `.super-archive/`. **`doc/` is not excluded** — “still in doc/” means not pealed clean yet. Do not brief agents as if design/theory were permanently off-limits for graduation.
+**Main objective:** peel residual prose into segments (or ice), then graduate claim-empty material to `.super-archive/`. **No path ban** (doc/, archive/, even ref/ if superseded). “Still under X” = not pealed clean yet, or still the right place to consult. Do not brief agents with whole-tree exemptions.
 
 ## Briefing agents
 

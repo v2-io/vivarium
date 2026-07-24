@@ -38,7 +38,7 @@ Code least principled for architecture; probes convict behavior; true-A PoC is *
 
 ## Program objective (do not re-confuse)
 
-**Main work:** peel **`.archive/` and `doc/`** → segments (or ice) → **`.super-archive/`**. `doc/` is **in scope** for graduation under the same rules as archive files. “Still in design/theory” = residual gold, not a ban. Corrected 2026-07-23 after false path-exclusion framing.
+**Main work:** peel residual prose → segments (or ice) → **`.super-archive/`**. **No path ban** (archive, doc, even ref/). “Still under X” = residual gold or still useful as live reference, not a proscription. Corrected 2026-07-23.
 
 ## Agent briefs this wave
 

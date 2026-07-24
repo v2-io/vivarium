@@ -35,16 +35,17 @@
       (ARCHITECTURE; design/ plan/ theory/) — **mine field**: source until
       segmented, then dual-home demote or git mv to .super-archive when
       claim-empty (doc/ is not exempt from graduation); the codified phase
-      floor is tabularium/*.ordinum.udon; ref/ = true reference, consulted not
-      onboarded; msc/ = session reflections and spikes (instruments may stay
+      floor is tabularium/*.ordinum.udon; ref/ = true reference, usually
+      consulted not onboarded (may still graduate if fully superseded — not
+      proscribed); msc/ = session reflections and spikes (instruments may stay
       live while they convict); audits/ = audit deliverables (pending at top
       level; move to audits/.integrated/ only after verified, adjudicated, and
       integrated); .archive/ = accounted-for retirements that may still hold
       residual mine gold (not tactical current dependency); .super-archive/ =
       fully integrated into core segments and/or superseded by segment truth —
-      provenance only; do not re-mine as claim source (from .archive/ *or*
-      from doc/; see .super-archive/README.md + MANIFEST). A new doc that fits
-      none of these is a taxonomy question to raise, not a root file to drop.
+      provenance only; do not re-mine as claim source (any former path;
+      see .super-archive/README.md + MANIFEST). A new doc that fits none of
+      these is a taxonomy question to raise, not a root file to drop.
 
     |norm[sunset-freely]
       :kind prescription
@@ -70,10 +71,10 @@
       is not accounted for.
       Graduation: when every load-bearing claim in a sunset file has a segment
       (or is pure ice), git mv to .super-archive/ and log in MANIFEST.md —
-      applies to **.archive/ and doc/** (design, theory, plan, ARCHITECTURE, …)
-      alike. There is no path ban: “still in doc/” means not pealed clean yet.
-      .archive/ and live doc/ remain the holding pens for residual extract until
-      then.
+      **no path ban** (.archive/, doc/, even ref/ if claim-empty and superseded).
+      “Still under path X” means not pealed clean yet, or still the right place
+      to consult (typical for ref/ primaries — default lifestyle, not a
+      proscription). Residual extract lives wherever it still is until then.
 
     |norm[breadcrumbs]
       :kind prescription

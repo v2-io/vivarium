@@ -4,11 +4,13 @@
 
 ## Program objective (read this)
 
-**Main work of this phase:** peel claim gold out of **`.archive/` and live `doc/`** (design, theory, plan, ARCHITECTURE, …) into **`core/` segments**, then **graduate** what is claim-empty or superseded here — so agents stop re-mining ice and stop treating old prose as law.
+**Main work of this phase:** peel claim gold out of residual substrate (especially **`.archive/` and live `doc/`**, and anywhere else prose still acts as a second mine) into **`core/` segments**, then **graduate** what is claim-empty or superseded here — so agents stop re-mining ice and stop treating old prose as law.
 
-There is **no path ban**. `doc/design/`, `doc/theory/`, plans, and ARCHITECTURE are **first-class graduation candidates** under the same rules as `.archive/` files. “Still live in `doc/`” only means **not pealed clean yet**, not “excluded by design.”
+There is **no path ban.** Graduation rules apply to **any** tree path: `.archive/`, `doc/` (design, theory, plan, ARCHITECTURE, …), even **`ref/`** if a reference note is fully superseded and claim-empty. “Still live under X” only means **not pealed clean yet** (or still the useful place to *consult* primary literature), not “excluded by design.”
 
-Earlier session wording that sounded like “keep design/theory out of super-archive forever” was a **mistake** (contingent “still has gold” collapsed into a false category ban). Corrected 2026-07-23 (Joseph).
+Practical bias (not a proscription): **`ref/`** is usually *true reference* (PDFs, NOTES, surveys) that stays consulted rather than onboarded — it often has no claim residue to graduate. That is a *default lifestyle*, not a rule forbidding `ref/` from this directory.
+
+Earlier wording that banned `doc/` (or any whole tree) from super-archive was a **mistake**. Corrected 2026-07-23 (Joseph).
 
 ## What this is
 
@@ -17,14 +19,15 @@ Material that has **already been promoted into claim homes** (`core/src/` segmen
 | Layer | Role |
 |-------|------|
 | **`core/`** | Sole claim truth |
-| **Live `doc/`, residual `.archive/`, some `msc/`** | **Mine field** — extract → segment (or ice) → graduate when claim-empty |
-| **Live instruments** | Spikes/probes/DECISIONS that still *convict* — stay live until their job ends |
+| **Residual mine (any path)** | **Mine field** — extract → segment (or ice) → graduate when claim-empty |
+| **Live instruments / primary literature** | Spikes/probes that still *convict*; `ref/` PDFs and NOTES while still the right place to consult — stay live until that job ends |
 | **`.super-archive/`** | **Done mining for claims** — integrated or superseded |
 
 Suggested layout as batches grow (optional subdirs, not required):
 
 - `from-archive/` — graduated from `.archive/`
 - `from-design/`, `from-theory/`, `from-plan/`, `from-architecture/` — graduated from `doc/…`
+- `from-ref/` — only if a `ref/` prose note is fully superseded (rare; not proscribed)
 
 ## Graduation rules (all must hold)
 

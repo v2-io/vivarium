@@ -32,7 +32,7 @@ A deterministic constructed-world laboratory (and sim game) in the RimWorld / DF
 | **Residual mine** | [`.archive/`](.archive/) **and live `doc/`** (design / theory / plan / ARCHITECTURE) — extract gold → segments; not tactical claim law |
 | **Fully integrated / superseded** | [`.super-archive/`](.super-archive/) — graduated from archive *or* doc; do not re-mine as claim source; see `MANIFEST.md` |
 
-**Main objective this phase:** peel `.archive/` and `doc/` into `core/` segments (or honest ice), then **graduate** claim-empty prose to `.super-archive/`. `doc/` is **not** exempt — “still in doc/” means not pealed clean yet. Supporting prose is source until segmented; when a segment lands, dual-home demote or super-archive — do not keep a parallel canon.
+**Main objective this phase:** peel residual prose (especially `.archive/` and `doc/`) into `core/` segments (or honest ice), then **graduate** claim-empty material to `.super-archive/`. **No path ban** — not `doc/`, not even `ref/` (though `ref/` is usually live primary literature that stays consulted). “Still under path X” means not pealed clean yet. When a segment lands, dual-home demote or super-archive — do not keep a parallel canon.
 
 Candidate inventory (unratified scan, not canon): [`core-segment-candidates-2026-07-14.md`](core-segment-candidates-2026-07-14.md).
 
