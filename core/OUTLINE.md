@@ -250,6 +250,7 @@ Live floor data: [`tabularium/terrestris.ordinum.udon`](../tabularium/terrestris
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
 | detail | Model | [#detail-nomos-defect-anatomy](src/detail-nomos-defect-anatomy.md) | Jul-13 defect→box map; failure-gallery / seductive-wrong specimens | draft |
+| observation | Math | [#obs-coarse-only-closure-nogo](src/obs-coarse-only-closure-nogo.md) | No pointwise coarse-only drainage closure reaches the trunk ($R^2\le0.36$, two seeds) | draft |
 | worked-example | Model | [#worked-example-mfd-prime-question](src/worked-example-mfd-prime-question.md) | MFD as disguised geometric claim — Prime Question specimen of a dead costume | draft |
 
 ---
