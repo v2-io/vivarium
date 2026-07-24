@@ -6,8 +6,8 @@
 | ID | Finding | Disposition | Landing |
 |---|---|---|---|
 | P0 | Builder ignores unmet flux while status forbids erosion | **fix (default path)** | Admission check via `requisite_chain`; refuse exit 2; lock `Drop` |
-| P0 residual A | Waived artifacts look lawful in census | **open / deferred** | `--allow-unmet` logs waiver; **store census does not yet label provisional**; no key/metadata bit. `#form-flux-web` known-incomplete (3) discloses this. Not fully “integrated” until census or key flags exist |
-| P0 residual B | Waived keys == lawful keys | **open / deferred** | Same root as residual A — need explicit provisional key field or status labeling |
+| P0 residual A | Waived artifacts look lawful in census | **partial fix** | Root third line `provisional` + status pyramid `prov` column + header count. Store tests cover flag roundtrip. Remaining: bin e2e waive→status test; `Source` does not surface provisional on Hit |
+| P0 residual B | Waived keys == lawful keys | **partial fix** | Same complete key (correct — metadata not under-keying); honesty is root flag + census, not a key fork |
 | P0 residual C | No integration test for gate | **open / deferred** | Gate lives in bin; lib exercises `requisite_chain` only |
 | P1 | Builder lock TOCTOU | **defer** | Drop guard helps setup failure; atomic `create_new` still owed |
 | P1 | Query `put` errors swallowed | **defer** | API shape change |

@@ -18,9 +18,10 @@
 //! - hash is 64-bit FNV-1a (fast, dependency-free) — fine for a demo's object
 //!   count, **not** collision-safe at scale; swap to blake3 before this holds
 //!   anything we cannot recompute.
-//! - no GC/eviction, no manifest, no run-mode enforcement yet (Phase 0 decided
-//!   convention-only + a `provisional` banner; the canon-root guard is deferred
-//!   to the first graduation).
+//! - no GC/eviction, no full manifest, no run-mode canon-root guard yet.
+//! - **provisional roots** (third line on the root file) mark waived flux
+//!   admission (`--allow-unmet`); census and `status` surface them. This is
+//!   root metadata, not a key field — same complete key, different honesty.
 //! - **under-keying is the one unsafe failure** (§12 — a stale memo then
 //!   *lies*), so callers must fold *every* input into the [`Key`].
 
@@ -84,6 +85,27 @@ impl Key {
     }
 }
 
+/// Options for a memo put. Flags are **root metadata**, not key inputs: the same
+/// complete key may be lawful or provisional depending on builder admission.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct PutOpts {
+    /// Written under waived flux admission (`--allow-unmet`). Census and status
+    /// must surface this; provisional roots are not lawful *in vivia* evidence
+    /// ( #form-builder-admission · #form-flux-web ).
+    pub provisional: bool,
+}
+
+/// One store root as the census instruments see it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RootEntry {
+    /// Canonical complete-key string (empty for pre-census format-v1 roots).
+    pub key: String,
+    /// Content-addressed object hash (hex).
+    pub object: String,
+    /// True when written under waived flux admission — not lawful evidence.
+    pub provisional: bool,
+}
+
 /// A filesystem-backed content-addressed store.
 pub struct Store {
     objects: PathBuf,
@@ -108,30 +130,53 @@ impl Store {
         fs::read(self.objects.join(obj)).ok()
     }
 
-    /// Store `value` under `key`. The bytes land at `objects/<value-hash>`
-    /// (idempotent — re-putting identical bytes is a no-op) and `roots/<key-
-    /// hash>` is pointed at them. Both writes go temp-then-rename, so a reader
-    /// never sees a half-written object or root.
-    ///
-    /// A root file carries `<object-hash>\n<canonical key string>`: the second
-    /// line is what makes the store *enumerable by meaning* — the census behind
-    /// every instrument (fidelity pyramid, `status`, watchpoints) reads it.
-    /// Without it a root is an opaque hash and "what exists?" is unanswerable.
+    /// Whether the root for `key` is tagged provisional (false if missing or untagged).
+    pub fn is_provisional(&self, key: &Key) -> bool {
+        let root = match fs::read_to_string(self.roots.join(hex(key.hash()))) {
+            Ok(t) => t,
+            Err(_) => return false,
+        };
+        root.lines().skip(2).any(|l| l.trim() == "provisional")
+    }
+
+    /// Store `value` under `key` as a **lawful** (non-provisional) root.
     pub fn put(&self, key: &Key, value: &[u8]) -> io::Result<()> {
+        self.put_with(key, value, PutOpts::default())
+    }
+
+    /// Store `value` under `key` with root metadata (`PutOpts`).
+    ///
+    /// The bytes land at `objects/<value-hash>` (idempotent — re-putting
+    /// identical bytes is a no-op) and `roots/<key-hash>` is pointed at them.
+    /// Both writes go temp-then-rename, so a reader never sees a half-written
+    /// object or root.
+    ///
+    /// Root file shape:
+    /// ```text
+    /// <object-hash>
+    /// <canonical key string>
+    /// [provisional]   # optional third line when PutOpts.provisional
+    /// ```
+    /// Line 2 makes the store *enumerable by meaning*. Line 3 is the honesty
+    /// bit for waived admission ( #form-builder-admission residual A/B ).
+    pub fn put_with(&self, key: &Key, value: &[u8], opts: PutOpts) -> io::Result<()> {
         let obj_name = hex(fnv1a(value));
         let obj_path = self.objects.join(&obj_name);
         if !obj_path.exists() {
             write_atomic(&obj_path, value)?;
         }
-        let root = format!("{obj_name}\n{}", key.as_str());
+        let mut root = format!("{obj_name}\n{}", key.as_str());
+        if opts.provisional {
+            root.push_str("\nprovisional");
+        }
         write_atomic(&self.roots.join(hex(key.hash())), root.as_bytes())
     }
 
-    /// Enumerate every root as `(canonical key string, object hash)` — the raw
-    /// census the instruments aggregate. Roots written before key-strings were
-    /// recorded (format v1, pre-2026-07-10) appear with an empty key and should
-    /// be counted as "unknown"; they are valid but not attributable.
-    pub fn roots(&self) -> io::Result<Vec<(String, String)>> {
+    /// Enumerate every root for the census instruments. Roots written before
+    /// key-strings were recorded (format v1, pre-2026-07-10) appear with an
+    /// empty key and should be counted as "unknown"; they are valid but not
+    /// attributable. Missing third line ⇒ not provisional.
+    pub fn roots(&self) -> io::Result<Vec<RootEntry>> {
         let mut out = Vec::new();
         for entry in fs::read_dir(&self.roots)? {
             let path = entry?.path();
@@ -140,9 +185,14 @@ impl Store {
             }
             let text = fs::read_to_string(&path)?;
             let mut lines = text.lines();
-            let obj = lines.next().unwrap_or("").trim().to_string();
+            let object = lines.next().unwrap_or("").trim().to_string();
             let key = lines.next().unwrap_or("").trim().to_string();
-            out.push((key, obj));
+            let provisional = lines.any(|l| l.trim() == "provisional");
+            out.push(RootEntry {
+                key,
+                object,
+                provisional,
+            });
         }
         Ok(out)
     }
@@ -229,11 +279,32 @@ mod tests {
         let s = Store::open(&dir).unwrap();
         s.put(&Key::new("initial-topography", "v0").field("level", 7), b"a").unwrap();
         s.put(&Key::new("erosion", "v0").field("level", 9), b"b").unwrap();
-        let mut roots = s.roots().unwrap();
-        roots.sort();
+        let roots = s.roots().unwrap();
         assert_eq!(roots.len(), 2);
-        assert!(roots.iter().any(|(k, _)| k.starts_with("initial-topography@v0") && k.contains("level=7")));
-        assert!(roots.iter().any(|(k, _)| k.starts_with("erosion@v0") && k.contains("level=9")));
+        assert!(roots.iter().any(|r| {
+            r.key.starts_with("initial-topography@v0") && r.key.contains("level=7") && !r.provisional
+        }));
+        assert!(roots.iter().any(|r| r.key.starts_with("erosion@v0") && r.key.contains("level=9")));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn provisional_flag_survives_census_and_can_be_cleared() {
+        // Waived admission must leave a durable mark (de-novo residual A/B);
+        // a later lawful put must not leave the lie standing.
+        let dir = tmpdir("provisional");
+        let s = Store::open(&dir).unwrap();
+        let k = Key::new("erosion-tile", "v0").field("level", 7);
+        s.put_with(&k, b"waived", PutOpts { provisional: true }).unwrap();
+        assert!(s.is_provisional(&k));
+        let roots = s.roots().unwrap();
+        assert_eq!(roots.len(), 1);
+        assert!(roots[0].provisional);
+        assert!(roots[0].key.starts_with("erosion-tile@v0"));
+        s.put(&k, b"lawful").unwrap();
+        assert!(!s.is_provisional(&k));
+        assert_eq!(s.get(&k).as_deref(), Some(&b"lawful"[..]));
+        assert!(!s.roots().unwrap()[0].provisional);
         let _ = fs::remove_dir_all(&dir);
     }
 

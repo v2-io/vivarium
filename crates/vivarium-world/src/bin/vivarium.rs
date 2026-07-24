@@ -293,9 +293,10 @@ fn cmd_build(rest: &[String]) -> i32 {
         if !unmet.is_empty() {
             if allow_unmet {
                 out.line(&format!(
-                    "{phase}: WAIVED unmet flux needs ({}) — artifacts are provisional; do not cite as lawful",
+                    "{phase}: WAIVED unmet flux needs ({}) — roots will be tagged provisional; do not cite as lawful",
                     unmet.join("; ")
                 ));
+                world.set_provisional_writes(true);
             } else {
                 out.line(&format!(
                     "{phase}: REFUSED — unmet flux needs: {}. re-run with --allow-unmet for provisional materialization, or keep a producer for these quantities first.",
@@ -308,6 +309,8 @@ fn cmd_build(rest: &[String]) -> i32 {
                 );
                 return 2;
             }
+        } else {
+            world.set_provisional_writes(false);
         }
         done = 0;
         out.status(phase, 0, total);
@@ -334,6 +337,7 @@ fn cmd_build(rest: &[String]) -> i32 {
             out.line(&format!("{phase}: face {f} done ({done}/{total} tiles, {computed} computed this run)"));
         }
         out.line(&format!("{phase}: swept {total} tiles in {:.1?} ({computed} computed, {} were hits)", t0.elapsed(), total - (computed)));
+        world.set_provisional_writes(false);
         computed = 0;
     }
     out.status("idle", done, total);
@@ -388,30 +392,57 @@ fn cmd_status(rest: &[String]) -> i32 {
         }
     };
     // The fidelity pyramid: nomos × level counts, levels descending (coarse at
-    // the top — the half-population-pyramid Joseph pictured).
-    let mut census: std::collections::BTreeMap<(u8, String), usize> = std::collections::BTreeMap::new();
+    // the top — the half-population-pyramid Joseph pictured). Provisional roots
+    // (waived flux admission) are counted and labeled — they must not look lawful.
+    let mut census: std::collections::BTreeMap<(u8, String), (usize, usize)> =
+        std::collections::BTreeMap::new();
     let mut unknown = 0;
-    for (key, _) in &roots {
-        let nomos = key.split('@').next().unwrap_or("").to_string();
-        let level = key
+    let mut provisional_total = 0;
+    for r in &roots {
+        if r.provisional {
+            provisional_total += 1;
+        }
+        let nomos = r.key.split('@').next().unwrap_or("").to_string();
+        let level = r
+            .key
             .split('|')
             .find_map(|f| f.strip_prefix("level="))
             .and_then(|v| v.parse::<u8>().ok());
         match (nomos.is_empty(), level) {
-            (false, Some(l)) => *census.entry((l, nomos)).or_default() += 1,
+            (false, Some(l)) => {
+                let e = census.entry((l, nomos)).or_default();
+                e.0 += 1;
+                if r.provisional {
+                    e.1 += 1;
+                }
+            }
             _ => unknown += 1,
         }
     }
-    println!("\nfidelity pyramid ({} roots; B = physics tier, declared/derived — the honesty column):", roots.len());
-    println!("{:>5}  {:<14} {:>9}  {:>7}  ", "level", "nomos", "B dcl/drv", "tiles");
-    let max = census.values().copied().max().unwrap_or(1);
-    for ((level, nomos), n) in &census {
+    println!(
+        "\nfidelity pyramid ({} roots{}; B = physics tier, declared/derived — the honesty column):",
+        roots.len(),
+        if provisional_total > 0 {
+            format!(", {provisional_total} provisional")
+        } else {
+            String::new()
+        }
+    );
+    if provisional_total > 0 {
+        println!(
+            "  ⚠ {provisional_total} root(s) tagged provisional (written under --allow-unmet) — not lawful *in vivia* evidence"
+        );
+    }
+    println!("{:>5}  {:<14} {:>9}  {:>7}  {:>5}  ", "level", "nomos", "B dcl/drv", "tiles", "prov");
+    let max = census.values().map(|(n, _)| *n).max().unwrap_or(1);
+    for ((level, nomos), (n, p)) in &census {
         let b = match nomotheke::lookup(nomos) {
             Some(d) => format!("{}/{}", d.physics.letter(), d.derived_physics().letter()),
             None => "?/?".to_string(), // a root the registry doesn't know — itself a finding
         };
         let bar = "█".repeat((n * 40 / max).max(1));
-        println!("{level:>5}  {nomos:<14} {b:>9}  {n:>7}  {bar}");
+        let pmark = if *p > 0 { format!("{p}") } else { "·".into() };
+        println!("{level:>5}  {nomos:<14} {b:>9}  {n:>7}  {pmark:>5}  {bar}");
     }
     if unknown > 0 {
         println!("{unknown} pre-census roots (format v1 — valid, not attributable)");

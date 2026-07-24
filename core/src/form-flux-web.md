@@ -25,7 +25,7 @@ Nomoi couple only through a shared vocabulary of fluxed quantities: one produces
 
 **Max attainable: exact** as architecture of coupling under the nomotheke-as-built. Live: vocabulary module, `consumes`/`promises` on `NomosDecl`, `audit::producer_of` / `unmet_across_registry` / `requisite_chain`, builder gate. Stage `draft`.
 
-**Known incomplete:** (1) statistic + exactness on a consume edge (mean at-least L…) is designed, not built; (2) maturity of ladder promises not yet displayed in CLI; (3) store census does not yet tag provisional artifacts written under `--allow-unmet`.
+**Known incomplete:** (1) statistic + exactness on a consume edge (mean at-least L…) is designed, not built; (2) maturity of ladder promises not yet displayed in CLI; (3) provisional root tags land under waived admission (`PutOpts.provisional` / status census) — end-to-end bin integration test and `Source`-visible Hit still open ( #form-builder-admission ).
 
 ## Discussion
 

@@ -30,7 +30,7 @@ The builder may materialize only what the flux contract allows (or explicitly wa
 
 **Known incomplete (open — do not soft-close):**
 
-1. **Provisional artifacts look lawful.** Waiver is logged; store census / keys do not yet carry a provisional bit (de-novo audit residuals). Same incomplete as #form-flux-web .
+1. **Provisional tag (partially closed).** Waived phases set `World::set_provisional_writes`; roots gain a third-line `provisional` flag; `vivarium status` prints provisional counts (store `RootEntry` / `PutOpts`). Still open: no lib-level integration test of the end-to-end waive→census path; Hit path does not yet expose provisional in `Source`.
 2. **No lib-level integration test** of the refuse path (gate lives in the binary).
 3. **Full builder daemon** (beacon cones, demand spool, restart-in-place) is plan-grade (`doc/plan/builder-explorer-decoupling.md`), not this segment's built surface. Do not read FE(1)–FE(4) as claiming the full plan is shipped.
 4. **Lock TOCTOU / atomic create** still engineering debt.

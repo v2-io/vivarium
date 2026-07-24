@@ -38,7 +38,7 @@ The content-addressed memo store is the world's portable saved state — not a d
 1. **64-bit FNV-1a** is not collision-safe at scale; module docs require a stronger hash before unrecomputable artifacts (BLAKE3 is engineering advice, **not** a DECISIONS entry).
 2. **No GC, no full manifest, no run-mode enforcement** yet (honest flags in `store.rs`).
 3. **Regenerable/irreducible split and mutation-log schema** remain shape-reserved (TENTATIVE) — do not over-prescribe.
-4. **Provisional / waived builds** can write roots that look like lawful memos (`--allow-unmet` residual) — census does not yet tag provisional ( #form-flux-web known incomplete).
+4. **Provisional / waived builds** write a third-line `provisional` flag on roots (`PutOpts`); status census surfaces counts. Still open: run-mode canon-root guard beyond the provisional honesty bit; Hit path does not yet expose the flag in `Source` ( #form-builder-admission ).
 
 ## Discussion
 

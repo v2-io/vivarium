@@ -16,11 +16,13 @@
 //! so matured state **persists** (no re-seed-from-raw-prior; the store is the
 //! save). Dependencies between systems become recursion in the pull.
 
+use std::cell::Cell;
+
 use crate::erosion::{Fluvial, FluvialParams};
 use crate::gen;
 use crate::nomotheke::{CLIMATE, EROSION, HYDROSPHERE, INITIAL_TOPOGRAPHY, UPLIFT, WATER};
 use crate::sphere::{CellId, Face};
-use crate::store::{Key, Store};
+use crate::store::{Key, PutOpts, Store};
 
 /// Where a pulled value came from — the memoization signal, so callers (and the
 /// HUD, later) can *see* the world being built once and reused.
@@ -45,16 +47,38 @@ pub enum Source {
 pub struct World<'s> {
     store: &'s Store,
     seed: u64,
+    /// When set, memo puts tag roots `provisional` (builder waived unmet flux).
+    provisional_writes: Cell<bool>,
 }
 
 impl<'s> World<'s> {
     pub fn new(store: &'s Store, seed: u64) -> Self {
-        World { store, seed }
+        World {
+            store,
+            seed,
+            provisional_writes: Cell::new(false),
+        }
     }
 
     /// The world-seed (read-only — identity is set at construction).
     pub fn seed(&self) -> u64 {
         self.seed
+    }
+
+    /// Tag subsequent memo puts as provisional (or clear the tag). Builder sets
+    /// this for phases admitted only under `--allow-unmet`.
+    pub fn set_provisional_writes(&self, provisional: bool) {
+        self.provisional_writes.set(provisional);
+    }
+
+    fn put_memo(&self, key: &Key, value: &[u8]) {
+        let _ = self.store.put_with(
+            key,
+            value,
+            PutOpts {
+                provisional: self.provisional_writes.get(),
+            },
+        );
     }
 
     /// The hydrosphere nomos — the planet's conserved water budget (`crate::hydrosphere`).
@@ -71,7 +95,7 @@ impl<'s> World<'s> {
             }
         }
         let h = crate::hydrosphere::Hydrosphere::of(&crate::planet::Planet::EARTH);
-        let _ = self.store.put(&key, &h.to_bytes());
+        self.put_memo(&key, &h.to_bytes());
         (h, Source::Computed)
     }
 
@@ -119,7 +143,7 @@ impl<'s> World<'s> {
             return (decode_f32(&bytes), Source::Hit);
         }
         let tile = self.compute_initial_topography(face, level, oi, oj, nx);
-        let _ = self.store.put(&key, &encode_f32(&tile));
+        self.put_memo(&key, &encode_f32(&tile));
         (tile, Source::Computed)
     }
 
@@ -146,7 +170,7 @@ impl<'s> World<'s> {
             return (decode_f32(&bytes), Source::Hit);
         }
         let tile = crate::uplift::uplift_rate_tile(self.seed, face, level, oi, oj, nx);
-        let _ = self.store.put(&key, &encode_f32(&tile));
+        self.put_memo(&key, &encode_f32(&tile));
         (tile, Source::Computed)
     }
 
@@ -188,7 +212,7 @@ impl<'s> World<'s> {
                 tile.push((mean * crate::climate::precip_jitter_factor(self.seed, cell)) as f32);
             }
         }
-        let _ = self.store.put(&key, &encode_f32(&tile));
+        self.put_memo(&key, &encode_f32(&tile));
         (tile, Source::Computed)
     }
 
@@ -258,7 +282,7 @@ impl<'s> World<'s> {
         f.set_precip_weight(precip_weight); // ...and the climate nomos's rain
         f.erode(&FluvialParams { epochs, ..Default::default() });
         let eroded = f.h.clone();
-        let _ = self.store.put(&key, &encode_f32(&eroded));
+        self.put_memo(&key, &encode_f32(&eroded));
         (eroded, Source::Computed)
     }
 
@@ -358,7 +382,7 @@ impl<'s> World<'s> {
             sim.step(&p);
         }
         let depth = sim.depth.clone();
-        let _ = self.store.put(&key, &encode_f32(&depth));
+        self.put_memo(&key, &encode_f32(&depth));
         (depth, Source::Computed)
     }
 }

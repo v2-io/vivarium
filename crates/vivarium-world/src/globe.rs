@@ -73,16 +73,17 @@ fn field<'a>(key: &'a str, name: &str) -> Option<&'a str> {
 }
 
 impl Coverage {
-    /// Parse the raw census (`store.roots()` output: `(key, obj_hash)` pairs).
+    /// Parse the raw census (`store.roots()` entries).
     /// The display level is the deepest level any surface tile reached; only
     /// tiles at that level count toward coverage (a mixed-level store shows its
-    /// finest built rung).
-    fn parse(roots: &[(String, String)]) -> Coverage {
+    /// finest built rung). Provisional roots still count as built (they are in
+    /// the store); status is what labels them provisional.
+    fn parse(roots: &[crate::store::RootEntry]) -> Coverage {
         // Deepest level present among the surface nomoi.
         let level = roots
             .iter()
-            .filter(|(k, _)| k.starts_with("initial-topography@") || k.starts_with("erosion-tile@"))
-            .filter_map(|(k, _)| field(k, "level").and_then(|v| v.parse::<u8>().ok()))
+            .filter(|r| r.key.starts_with("initial-topography@") || r.key.starts_with("erosion-tile@"))
+            .filter_map(|r| field(&r.key, "level").and_then(|v| v.parse::<u8>().ok()))
             .max()
             .unwrap_or(6);
         let mut cov = Coverage {
@@ -92,7 +93,8 @@ impl Coverage {
             erosion: Default::default(),
             watered: Default::default(),
         };
-        for (k, _) in roots {
+        for r in roots {
+            let k = r.key.as_str();
             let nomos = k.split('@').next().unwrap_or("");
             let l = match field(k, "level").and_then(|v| v.parse::<u8>().ok()) {
                 Some(l) if l == level => l,
@@ -172,7 +174,13 @@ fn pick(pal: &[u8], t: f64) -> u8 {
 /// is the central meridian (degrees, default 0 — rotate to centre a region); `w`
 /// is the character width. The oval is 2:1, and terminal cells are ~2:1, so
 /// `h = w/4` makes it read as a true CMB-style oval.
-pub fn render(world: &World, roots: &[(String, String)], w: usize, lon0_deg: f64, color: bool) -> String {
+pub fn render(
+    world: &World,
+    roots: &[crate::store::RootEntry],
+    w: usize,
+    lon0_deg: f64,
+    color: bool,
+) -> String {
     let cov = Coverage::parse(roots);
     let h = (w / 4).max(1);
     let level = cov.level;
@@ -347,12 +355,29 @@ mod tests {
 
     #[test]
     fn coverage_ladders_by_deepest_nomos() {
+        use crate::store::RootEntry;
         let roots = vec![
-            ("initial-topography@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64".into(), "a".into()),
-            ("erosion-tile@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64|epochs=20".into(), "b".into()),
-            ("water-tile@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64|eepochs=20|steps=200".into(), "c".into()),
+            RootEntry {
+                key: "initial-topography@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64".into(),
+                object: "a".into(),
+                provisional: false,
+            },
+            RootEntry {
+                key: "erosion-tile@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64|epochs=20".into(),
+                object: "b".into(),
+                provisional: false,
+            },
+            RootEntry {
+                key: "water-tile@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64|eepochs=20|steps=200".into(),
+                object: "c".into(),
+                provisional: false,
+            },
             // a second face with only initial_topo reached
-            ("initial-topography@v|seed=0|face=1|level=6|oi=0|oj=0|nx=64".into(), "d".into()),
+            RootEntry {
+                key: "initial-topography@v|seed=0|face=1|level=6|oi=0|oj=0|nx=64".into(),
+                object: "d".into(),
+                provisional: false,
+            },
         ];
         let cov = Coverage::parse(&roots);
         assert_eq!(cov.level, 6);
