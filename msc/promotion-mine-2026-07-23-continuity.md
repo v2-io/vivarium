@@ -36,6 +36,10 @@
 
 Code least principled for architecture; probes convict behavior; true-A PoC is **compliance** under owned observation, not new law.
 
+## Program objective (do not re-confuse)
+
+**Main work:** peel **`.archive/` and `doc/`** → segments (or ice) → **`.super-archive/`**. `doc/` is **in scope** for graduation under the same rules as archive files. “Still in design/theory” = residual gold, not a ban. Corrected 2026-07-23 after false path-exclusion framing.
+
 ## Agent briefs this wave
 
 - `2026-07-23-sufficient-statistic-adjudication.md`

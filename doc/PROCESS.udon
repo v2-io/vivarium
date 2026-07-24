@@ -50,9 +50,11 @@
       Archive generously. The main tree is for current working state; a program
       that keeps its whole reasoning trail and evolution in the main parts
       becomes too difficult to maintain and navigate. Reasoning trails, dated
-      reviews, superseded framings, provenance — .archive/ (organized, indexed
-      in .archive/README.md) and git history are their proper home, and
-      rewinding for any reason is exactly what they serve.
+      reviews, superseded framings, provenance — .archive/ (residual mine),
+      .super-archive/ (fully integrated or ice), and git history are their
+      proper homes; rewinding for any reason is exactly what they serve.
+      Prefer graduating claim-empty doc/ prose rather than letting dual-homes
+      accumulate as a second mine.
 
     |norm[archive-accounting]
       :kind prescription
@@ -65,8 +67,11 @@
       section, ideally a segment slug) in the commit message. "Probably covered"
       is not accounted for.
       Graduation: when every load-bearing claim in a sunset file has a segment
-      (or is pure ice), git mv to .super-archive/ and log in MANIFEST.md.
-      .archive/ remains the holding pen for residual extract.
+      (or is pure ice), git mv to .super-archive/ and log in MANIFEST.md —
+      applies to **.archive/ and doc/** (design, theory, plan, ARCHITECTURE, …)
+      alike. There is no path ban: “still in doc/” means not pealed clean yet.
+      .archive/ and live doc/ remain the holding pens for residual extract until
+      then.
 
     |norm[breadcrumbs]
       :kind prescription

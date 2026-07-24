@@ -18,7 +18,7 @@ Adjudicated ice in `msc/consolidation-wave-2026-07-21/archive-mining-report.md` 
 | `from-archive/lexicon-notes-and-scratch.md` | `.archive/…` | `LEXICON.udon` |
 | `from-archive/universal-biological-rhythms.md` | `.archive/…` | `ref/research/est-tiw-dossier.md` (⚠ Fable name-only) |
 
-**Still in `.archive/` (residual mine or ledger):** `memory-surfaced-2026-07-13.md`, archived `CLAUDE.md`, `PHASES.md`, `VIVARIA-DEFINITIONS.md`, `VIVARIA-DECLARATIVE-FRONTIER.md`, `SUPERSEDED.md`, `.archive/README.md`.
+**Still residual mine (not graduated):** `.archive/` holds `memory-surfaced-2026-07-13.md`, archived `CLAUDE.md`, `PHASES.md`, `SUPERSEDED.md`. Live **`doc/` is also residual mine** until pealed — same graduation rules; no path ban (README correction 2026-07-23).
 
 ## Claim promotions (instruments stay live; not super-archived)
 

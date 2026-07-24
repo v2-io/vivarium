@@ -29,10 +29,10 @@ A deterministic constructed-world laboratory (and sim game) in the RimWorld / DF
 | **Executable law / probes** | `crates/vivarium-world/` · examples · `vivarium status` · `bin/check` (tests + determinism clippy) |
 | **Pending audits** | [`audits/`](audits/) — integrate per `#ops-audit-integration`; `.integrated/` only when done |
 | **Consolidation intuition** | [`CONSOLIDATION-STATUS.md`](CONSOLIDATION-STATUS.md) — big-picture residual estimate (**not** claim canon; core wins on conflict) |
-| **Archaeology (residual mine)** | [`.archive/`](.archive/) — not tactical current dependency; may still hold unextracted gems |
-| **Fully integrated / superseded** | [`.super-archive/`](.super-archive/) — graduated substrate; do not re-mine as claim source; see `MANIFEST.md` |
+| **Residual mine** | [`.archive/`](.archive/) **and live `doc/`** (design / theory / plan / ARCHITECTURE) — extract gold → segments; not tactical claim law |
+| **Fully integrated / superseded** | [`.super-archive/`](.super-archive/) — graduated from archive *or* doc; do not re-mine as claim source; see `MANIFEST.md` |
 
-Supporting prose (`doc/ARCHITECTURE.md`, `doc/design/*`, `doc/theory/*`, plans) remains useful **as source material for segments**. Do not treat it as a parallel canon. When a segment lands, it replaces the claim's home; the old prose is demoted to pointer or archive.
+**Main objective this phase:** peel `.archive/` and `doc/` into `core/` segments (or honest ice), then **graduate** claim-empty prose to `.super-archive/`. `doc/` is **not** exempt — “still in doc/” means not pealed clean yet. Supporting prose is source until segmented; when a segment lands, dual-home demote or super-archive — do not keep a parallel canon.
 
 Candidate inventory (unratified scan, not canon): [`core-segment-candidates-2026-07-14.md`](core-segment-candidates-2026-07-14.md).
 
