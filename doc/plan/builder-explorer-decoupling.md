@@ -50,7 +50,7 @@ The BDD stress-test's sharpest gap — exo-by-governance splits into *access-ric
 The staged physics progression the builder's stage chains implement, each rung a keyed nomos composing on the one below:
 
 1. **Macro-erosion epochs** — coarse geological erosion (today's `erosion_tile`).
-2. **Macro water-cycle + alluvial coupling** — water at aggregated scale, sediment fluxed back into erosion; slow erosion reads water as *time-averaged discharge*, water sees terrain as quasi-static (`doc/theory/multiscale-seams.md` §2.3). The rung with the real open nuance.
+2. **Macro water-cycle + alluvial coupling** — water at aggregated scale, sediment fluxed back into erosion; slow erosion reads water as *time-averaged discharge*, water sees terrain as quasi-static (`.super-archive/from-theory/multiscale-seams.md` §2.3). The rung with the real open nuance.
 3. **Human-scale live water, full precision, ~8× real-time** — the conserved shallow-water sim, *entered warm*: its settled fill is memoized (eventually the analytic year-zero morning), so entering a tile loads settled water instead of re-filling. Memoizing the fill is simultaneously what kills the old spike's ~2 h re-fill and what frees the budget for 8×.
 
 ## 5. The initial slice *(settled order; increments = commits)*

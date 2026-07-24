@@ -11,7 +11,7 @@ depends:
 
 # Dynamic exponent $z$ at seams (exploratory)
 
-*Sketch peel from `doc/theory/multiscale-seams.md` §3. The per-process $z$ facts are standard numerics; the seam-reconciliation framing and the timestep-from-quadtree tactic are project stance, not established law. Not a second seam segment — #form-seam-flux-exchange and #form-scale-separation-directional own the seam laws.*
+*Sketch peel from `.super-archive/from-theory/multiscale-seams.md` §3. The per-process $z$ facts are standard numerics; the seam-reconciliation framing and the timestep-from-quadtree tactic are project stance, not established law. Not a second seam segment — #form-seam-flux-exchange and #form-scale-separation-directional own the seam laws.*
 
 ## Formal Expression (sketch)
 

@@ -98,7 +98,7 @@ So the real design decision is **which invariants must survive downscaling**, an
 
 ## 7. The four seams (a maturity map)
 
-**Claim homes:** types 1–3 discipline → `#form-seam-flux-exchange` (+ `#form-face-flux-register` for hanging nodes; `#form-scale-separation-directional` for multirate weak coupling). Type 4 open residue → `#sketch-detail-abstract-reversion` (not primacy). Teaching detail: `doc/theory/multiscale-seams.md` §2. Do not treat this map as a second seam law.
+**Claim homes:** types 1–3 discipline → `#form-seam-flux-exchange` (+ `#form-face-flux-register` for hanging nodes; `#form-scale-separation-directional` for multirate weak coupling). Type 4 open residue → `#sketch-detail-abstract-reversion` (not primacy). Teaching detail: `.super-archive/from-theory/multiscale-seams.md` §2. Do not treat this map as a second seam law.
 
 "The seams are the big question" is truer as: there are ~four seam *types*, and only one is open — which is far more encouraging.
 

@@ -14,7 +14,7 @@ When two processes couple across a timescale gap, stability wants the **fast→s
 
 ## Formal Expression
 
-1. **Directional separation.** Scale separation ( #form-rl-closure-algebra law 3) is not symmetric. In the Gear–Wells multirate picture, the load-bearing stability condition is a small **fast→slow Jacobian block** (primary Prop 4.1 lineage — teaching body in `doc/theory/multiscale-seams.md` §2.3). Slow may appear quasi-static to fast; fast should not strongly force the slow at every fast step without averaging / lag.
+1. **Directional separation.** Scale separation ( #form-rl-closure-algebra law 3) is not symmetric. In the Gear–Wells multirate picture, the load-bearing stability condition is a small **fast→slow Jacobian block** (primary Prop 4.1 lineage — precedent detail at #detail-seam-precedents FE(6)). Slow may appear quasi-static to fast; fast should not strongly force the slow at every fast step without averaging / lag.
 2. **Declare direction.** A nomos pair that couples across bands should declare **who is fast, who is slow, and which way the weak block lies** — not only “we use multirate.” Inventory-named `#form-multirate-coupling` as a dual home of seam law is rejected; this segment is the **residue** only.
 3. **Specimen (architecture, not shipped coupler).** Erosion geological / water hydrological: never one shared timestep; water is fast, erosion slow. Live stack may still lack time-averaged discharge→erosion — **compliance debt**, not a softener of the direction law.
 4. **Out of bounds.** Dynamic exponent $z$-reconciliation as established numerics; timestep-from-quadtree as law (still source/tactical); four-band DESIGN-SYSTEMS table as claim.

@@ -32,7 +32,7 @@ A seam is a boundary in space, time, or both. What crosses is a flux of a conser
 
 ## Epistemic Status
 
-**Max attainable: exact** for "exchange fluxes, not states" as Earth-system coupler and AMR practice (Berger–Oliger / Berger–Colella; Gear–Wells multirate; HMM on-demand micro) — established in primary reads summarized in `doc/theory/multiscale-seams.md`.
+**Max attainable: exact** for "exchange fluxes, not states" as Earth-system coupler and AMR practice (Berger–Oliger / Berger–Colella; Gear–Wells multirate; HMM on-demand micro) — primary-read precedents held at #detail-seam-precedents .
 
 **Currently `robust-qualitative`:** the project formulation (one seam on two axes; drainage-shaped space seam; flux magnitude as degree) is stance-grade architecture written into ARCHITECTURE §4 and the multiscale theory pair. Dynamic-exponent $z$ reconciliation at a seam is **project coinage / conjecture**, not claimed here as established numerics. Type-4 reversion seam is **split** ( #sketch-detail-abstract-reversion ): state up-propagation measured solved; the nonlinear closure for a non-local flux remains open — and explicitly not on the ethereal-explorer path.
 

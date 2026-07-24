@@ -29,11 +29,11 @@ Every multiscale method is four objects and three honesty laws: macro $U$, micro
 
 4. **Consumer-dependent $R$ (stance).** The literature often fixes one $R$ per method; vivarium wants **$R$ per consumer** (hydrology needs conserved totals; line-of-sight needs max; display needs mean). Store the wrong statistic and the fine materialization silently corrupts the macro.
 
-5. **What this is not.** This segment does **not** claim that live kernels already implement honest $R \circ L = \mathrm{id}$, refluxing, or consumer-dependent $R$. It names the algebra the stack must speak. Method-zoo taxonomy (AMR, HMM, multirate, equation-free, …) is graduated teaching (`.super-archive/from-theory/multiscale-methods.md`); seam-type catalogue remains teaching in `doc/theory/multiscale-seams.md` until further segmented.
+5. **What this is not.** This segment does **not** claim that live kernels already implement honest $R \circ L = \mathrm{id}$, refluxing, or consumer-dependent $R$. It names the algebra the stack must speak. Method-zoo taxonomy (AMR, HMM, multirate, equation-free, …) is graduated teaching (`.super-archive/from-theory/multiscale-methods.md`); primary-read seam precedents are held at #detail-seam-precedents (source graduated).
 
 ## Epistemic Status
 
-**Max attainable: exact** for the operator vocabulary as shared mathematical structure (HMM $\mathcal{Q}\mathcal{R}=I$, equation-free $\mathcal{M}\mu=I$, Berger–Oliger injection — primaries read; see `.super-archive/from-theory/multiscale-methods.md` (graduated teaching zoo), `doc/theory/multiscale-seams.md`, ARCHITECTURE §1).
+**Max attainable: exact** for the operator vocabulary as shared mathematical structure (HMM $\mathcal{Q}\mathcal{R}=I$, equation-free $\mathcal{M}\mu=I$, Berger–Oliger injection — primaries read; see `.super-archive/from-theory/multiscale-methods.md` (graduated teaching zoo), `.super-archive/from-theory/multiscale-seams.md`, ARCHITECTURE §1).
 
 **Currently `robust-qualitative`:** the four objects and three laws are the project formulation of that structure; consumer-dependent $R$ and fated-lifting-as-closure-stance are design commitment under determinism, not Joseph-stamped as a separate DECISIONS row.
 

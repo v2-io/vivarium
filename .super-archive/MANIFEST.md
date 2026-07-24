@@ -7,6 +7,7 @@
 | Path | From | Superseded by / ice |
 |------|------|---------------------|
 | `from-theory/multiscale-methods.md` | `doc/theory/multiscale-methods.md` (full body; provenance = HEAD pre-mv byte-match) | Algebra/seam/fated → `#form-rl-closure-algebra`, `#form-seam-flux-exchange`, `#post-determinism-as-ontology` (+ face register / mean-pin obs). Pure teaching zoo + novelty inventory — **zero residual claim debt.** Live path removed; ARCHITECTURE §2 dual-home collapsed to pointer. |
+| `from-theory/multiscale-seams.md` | `doc/theory/multiscale-seams.md` (full body, git mv) | Seam laws → `#form-seam-flux-exchange` / `#form-rl-closure-algebra` / `#form-face-flux-register` / `#form-scale-separation-directional`; primary-read precedents (B-O region generation, G-W backup/slowest-first, EF lifting-heals, HMM) → **`#detail-seam-precedents`**; §3 $z$-material → `#sketch-dynamic-exponent-seams`; §2.4 superseded statement → `#sketch-detail-abstract-reversion`; §4 checklist owned piecewise by the segments it listed. Cone/relativity imagery and abyssal narrative = ice. |
 
 ## 2026-07-23 batch 4 — DESIGN peel + memory-surfaced
 
