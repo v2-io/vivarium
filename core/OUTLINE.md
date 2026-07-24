@@ -93,10 +93,10 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | formulation | Math Critical | [#form-rl-closure-algebra](src/form-rl-closure-algebra.md) | Multiscale $U,u,R,L$ + three honesty laws; $R\circ L=\mathrm{id}$ with compliance debt | draft |
 | formulation | Math Critical | [#form-seam-flux-exchange](src/form-seam-flux-exchange.md) | Seams exchange fluxes, not states; one discipline on space × time | draft |
 | formulation | Math Critical | [#form-face-flux-register](src/form-face-flux-register.md) | Hanging-node single-valued face flux (Berger–Colella register); refluxing ceases under three conditions | draft |
+| observation | Math Critical | [#obs-mean-pin-manufactures-seam](src/obs-mean-pin-manufactures-seam.md) | Mean-pin manufactures seam ridge and mass; not $R\circ L=\mathrm{id}$; zero-physics control | draft |
 | formulation | Math Critical | [#form-grid-equiangular-staggered](src/form-grid-equiangular-staggered.md) | Equiangular cube-sphere + Arakawa-C + per-cell metrics (tentative keep); router open; cube-locked control mandatory | draft |
 | | | | *(#gap) Hydrosphere, climate, erosion, water nomoi (beyond box + #form-derived-sea-level)* — residual: wire pour/freeboard keeper into nomotheke; full field nomos segments | missing |
 | | | | *(#gap) Cube-locked bias specimens as own observation segments (MFD fan; uniform cell-area A; routing curl) — folded summary in #form-grid-equiangular-staggered until extracted* | missing |
-| | | | *(#gap) Mean-pin manufactures seam / mass source / not $R\circ L=\mathrm{id}$ — measurement home (strengthens #form-rl-closure-algebra debt; PROBE 6–7)* | missing |
 
 ## VI. Process and contribution
 

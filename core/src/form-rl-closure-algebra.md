@@ -38,7 +38,7 @@ Every multiscale method is four objects and three honesty laws: macro $U$, micro
 **Currently `robust-qualitative`:** the four objects and three laws are the project formulation of that structure; consumer-dependent $R$ and fated-lifting-as-closure-stance are design commitment under determinism, not Joseph-stamped as a separate DECISIONS row.
 
 **Compliance debt (strengthen first — do not soften the law):**
-1. **Mean-pin is not $R \circ L = \mathrm{id}$ on the mean.** `erosion.rs::pin_block_means` is a smoothed delta injection (bilinear upsample of a block delta), not a block-constant injection. Measured residual on a real L19 eroded tile: mean $0.43\,\mathrm{m}$, max $2.97\,\mathrm{m}$ at 30 epochs, growing with epoch count and curvature-correlated ($r=-0.42$). The in-tree guard passes only because its tolerance ($2.0\,\mathrm{m}$) was sized to the defect (`DECISIONS[mean-pin-does-not-preserve-block-means]`, `:by claude`, proposed measurement — the falsification of the *implementation claim* is measured; the algebra law stands).
+1. **Mean-pin is not $R \circ L = \mathrm{id}$ on the mean** — and it **manufactures seam ridge and mass**. Measurement home: #obs-mean-pin-manufactures-seam (zero-physics ridge $\sim 2\times$; pin-on seam $5.77\to 2.03$ pin-off; mass $+0.136\%$ at $150$ fine epochs; residual mean/max on L19 also in `DECISIONS[mean-pin-does-not-preserve-block-means]`). Algebra law stands; implementation convicted.
 2. **Injection $\neq$ refluxing.** Mean-pin (when corrected) is Berger–Oliger fine→coarse *injection/update*. Conservative interface flux identity lives on a **face flux register** at hanging nodes ( #form-face-flux-register ); a separate refluxing *pass* is only needed if double-evolve is retained.
 
 Stage `draft`. Sources for extraction: ARCHITECTURE §1 (corrected), multiscale-methods §§1–4, multiscale-seams §§1–2, #post-represent-by-consequence Working Notes (do not treat uncorrected $R \circ L$ prose as this postulate).
@@ -50,5 +50,5 @@ Without this algebra named, every multiscale construct looks like a one-off inve
 ## Working Notes
 
 - **Dual homes demoted (prior wave + this):** multiscale-methods header + §1; ARCHITECTURE §1; multiscale-seams header + §1; DESIGN-REDUX §5 algebra join. Method-zoo rows, dynamic-exponent $z$, and detail→abstract open problem remain source until segmented.
-- **Sibling claims (not this segment):** #form-seam-flux-exchange (fluxes-not-states); #form-store-as-save; consumer-dependent statistic contract as flux-edge field; wavelet/Haar store spike findings.
+- **Sibling claims:** #form-seam-flux-exchange ; #form-face-flux-register ; #obs-mean-pin-manufactures-seam (measurement home for pin defects); consumer-dependent statistic contract; wavelet store representation findings.
 - **Do not re-assert** "mean-pin enforces $R \circ L = \mathrm{id}$ live" in any file — the corrected law is aspiration + compliance debt.

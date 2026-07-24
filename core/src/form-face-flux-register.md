@@ -54,5 +54,5 @@ Joseph described the subdivided-edge case before the literature name landed: coa
 
 - **Instrument:** `msc/spike-wavelet-store/` PROBE 7 + `RUN.txt`; face MRA dual of cell MRA in lit-notes.
 - **Do not re-claim:** "storing state detail coefficients alone kills the seam" — false (Jensen; zero-physics mean-pin ridge). Representation identity ≠ dynamics commute.
-- **Sibling extracts still open:** mean-pin as mass source / ridge manufacturer (PROBE 6–7 numbers); macro-tier governance vs summary roles; production face-key addressing in `store.rs`.
+- **Sibling:** #obs-mean-pin-manufactures-seam (PROBE 6 ridge/mass; injection-alone worse than pin-off). Macro-tier governance vs summary roles still open. Production face-key addressing in `store.rs` unbuilt.
 - **Dual-home demote targets:** multiscale-seams §2.1 refluxing paragraph; ARCHITECTURE AMR row; DECISIONS long forms once this slug is cited.
