@@ -20,7 +20,8 @@
 use vivarium_world::lithosphere::MANTLE_TP_C;
 use vivarium_world::mantle_thermal::{abyssal_epochs, potential_temp_c, present_abyssal};
 use vivarium_world::sea_level::{
-    emerged_land_record_at_tp, emerged_land_verdict, EMERGED_LAND_FRACTION_BAND,
+    emerged_land_record_at_tp, emerged_land_timing_verdict_for, emerged_land_verdict,
+    EMERGED_LAND_FRACTION_BAND,
 };
 
 const LEVEL: u8 = 7;
@@ -73,6 +74,22 @@ fn main() {
     println!("  [{}] land fraction monotone non-decreasing as the mantle cools", pf(all_monotone));
     println!("  [{}] hot early-Abyssal start is (near) a water-world (<0.5% land)", pf(water_world_start));
     println!("  [{}] present-Abyssal epoch is in-band (and equals the live world)", pf(present_in_band));
+
+    // The temporal (era-sharpening) verdict — the clauses the static Record
+    // named NotPredicable, now crudely predicable along the cooling chain.
+    println!("\n--- timing verdict (era-sharpening; calibration-free clauses) ---");
+    for seed in SEEDS {
+        let v = emerged_land_timing_verdict_for(seed, LEVEL);
+        println!(
+            "  seed {seed}: monotone={} submerged-start={} enters-&-stays-in-band={} | ga-absolute={}",
+            v.emergence_monotone.label(),
+            v.starts_submerged.label(),
+            v.enters_and_stays_in_band.label(),
+            v.ga_calibrated_era.label(),
+        );
+    }
+    println!("  (ga-absolute era targets stay n/a-v1: the rate law is declared crude — an absolute-Ga");
+    println!("   fraction target is a calibration it cannot earn, though the curve passes near 10%-by-3.0-Ga)");
 }
 
 fn pf(b: bool) -> &'static str {

@@ -434,13 +434,188 @@ pub fn emerged_land_verdict(rec: EmergedLandRecord) -> EmergedLandVerdict {
         land_rises: if rec.land_fraction > 0.0 { Clause::Pass } else { Clause::Fail },
         fraction_in_band: if (lo..=hi).contains(&rec.land_fraction) { Clause::Pass } else { Clause::Fail },
         relief_bounded: if rec.max_subaerial_m <= SUBAERIAL_RELIEF_FLAG_M { Clause::Pass } else { Clause::Flag },
+        // A single Record has no time axis, so it cannot convict *timing* — that
+        // is a property of the trajectory, not of one snapshot. The temporal
+        // clauses now live in `emerged_land_timing_verdict` (the cooling chain).
         timing: Clause::NotPredicable,
     }
+}
+
+// --- Temporal (era-sharpening) adjudication over the cooling chain -----------
+//
+// The clauses the static Record named `NotPredicable` because "per cycle"
+// collapsed to per-seed — there was no time axis. The mantle-thermal cooling
+// trajectory (`mantle_thermal::abyssal_epochs`, `#form-isostasy-column` FE(2)/(7))
+// now IS a real time axis, so a *sequence* of Records (hot → cool) can convict
+// the temporal shape of emergence. What it can and cannot earn is set by the
+// honesty tier of the rate law, which is declared **crude (physics Low)**:
+//
+//  - **Calibration-FREE** clauses are convictable — they depend only on the
+//    monotone *direction* of cooling (declared) and the ordering of epochs, not
+//    on any epoch→Ga mapping: monotone emergence, a submerged start, and the
+//    trajectory entering and staying inside the early-Earth band.
+//  - **Ga-ABSOLUTE** literature clauses ("land ≳10% by ~3.0 Ga-equivalent";
+//    "modern-like freeboard only ~2.5–2.2 Ga") stay `NotPredicable`: the epoch→Ga
+//    mapping is a *declared* order-of-magnitude curve (`PRESENT_ABYSSAL_GA`, τ),
+//    not fitted, so testing against an absolute-Ga target would assert a
+//    calibration the rate law does not earn — even though the crude curve happens
+//    to pass near the 10%-by-3.0-Ga target (an encouraging coincidence, recorded
+//    in the probe, not convicted).
+
+/// Trajectory-level verdict on the temporal (era-sharpening) clauses, adjudicated
+/// over a cooling sequence of Records ordered **hot → cool**.
+#[derive(Clone, Copy, Debug)]
+pub struct EmergedLandTimingVerdict {
+    /// Land fraction is monotone non-decreasing from hot to cool — a cooling
+    /// world does not *un*-emerge land. Calibration-free. `NotPredicable` if
+    /// given fewer than two epochs (no time axis to test).
+    pub emergence_monotone: Clause,
+    /// The hottest (early-Abyssal) epoch stands below the band floor — the
+    /// water-world start of the ordinum ladder. Calibration-free.
+    pub starts_submerged: Clause,
+    /// The trajectory reaches the early-Earth band and stays inside it through
+    /// the coldest modeled epoch — band membership is monotone non-regressing
+    /// and never overshoots the ceiling within the Abyssal window. Calibration-
+    /// free. (This is the nucleation-growth finding: saturating craton growth
+    /// bounds the cold end; the retired fBm world overshot >20% and would fail.)
+    pub enters_and_stays_in_band: Clause,
+    /// The literature's Ga-absolute era targets. `NotPredicable` in v1: the
+    /// rate law is declared crude, so an absolute-Ga fraction target is a
+    /// calibration it cannot earn (see module note above).
+    pub ga_calibrated_era: Clause,
+}
+
+impl EmergedLandTimingVerdict {
+    /// The calibration-free temporal clauses all convict green. **Not** a Kept
+    /// verdict — Kept is a separate adjudication, and the Ga-absolute clause
+    /// remains honestly NotPredicable.
+    pub fn calibration_free_clauses_pass(&self) -> bool {
+        self.emergence_monotone == Clause::Pass
+            && self.starts_submerged == Clause::Pass
+            && self.enters_and_stays_in_band == Clause::Pass
+    }
+}
+
+/// Adjudicate the temporal clauses over a cooling sequence of Records
+/// (**hot → cool**). Pure over the slice, so a probe can feed it synthetic
+/// sequences as known-bads (`#norm-probe-sensitivity`).
+pub fn emerged_land_timing_verdict(records: &[EmergedLandRecord]) -> EmergedLandTimingVerdict {
+    let (lo, hi) = EMERGED_LAND_FRACTION_BAND;
+
+    let emergence_monotone = if records.len() < 2 {
+        Clause::NotPredicable
+    } else if records.windows(2).all(|w| w[1].land_fraction + 1e-9 >= w[0].land_fraction) {
+        Clause::Pass
+    } else {
+        Clause::Fail
+    };
+
+    let starts_submerged = match records.first() {
+        Some(r) if r.land_fraction < lo => Clause::Pass,
+        Some(_) => Clause::Fail,
+        None => Clause::NotPredicable,
+    };
+
+    // Enters the band (some epoch in [lo,hi]), never overshoots the ceiling
+    // (no epoch above hi), and does not regress out the bottom once emerged
+    // (band membership monotone non-decreasing in ordinal band index).
+    let enters_and_stays_in_band = if records.len() < 2 {
+        Clause::NotPredicable
+    } else {
+        let reaches = records.iter().any(|r| (lo..=hi).contains(&r.land_fraction));
+        let no_overshoot = records.iter().all(|r| r.land_fraction <= hi);
+        // ordinal band: 0 drowned (<lo), 1 in-band, (2 would be >hi, excluded above)
+        let band = |f: f64| if f < lo { 0u8 } else { 1u8 };
+        let no_regress = records.windows(2).all(|w| band(w[1].land_fraction) >= band(w[0].land_fraction));
+        if reaches && no_overshoot && no_regress { Clause::Pass } else { Clause::Fail }
+    };
+
+    EmergedLandTimingVerdict {
+        emergence_monotone,
+        starts_submerged,
+        enters_and_stays_in_band,
+        ga_calibrated_era: Clause::NotPredicable,
+    }
+}
+
+/// Build the cooling sequence for `seed` along `mantle_thermal::abyssal_epochs`
+/// (reading the live post-ledger chain) and adjudicate its temporal clauses.
+/// Records are recomputed from the (store-backed) epoch surfaces — this verdict
+/// is an instrument, not world-state, so it memoizes nothing itself
+/// (`#form-store-as-save` FE(6): recompute is its representation).
+pub fn emerged_land_timing_verdict_for(seed: u64, level: u8) -> EmergedLandTimingVerdict {
+    let records: Vec<EmergedLandRecord> = mantle_thermal::abyssal_epochs()
+        .into_iter()
+        .map(|t| emerged_land_record_at_tp(seed, level, mantle_thermal::potential_temp_c(t)))
+        .collect();
+    emerged_land_timing_verdict(&records)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A synthetic Record carrying only the fields the timing verdict reads.
+    fn rec(frac: f64) -> EmergedLandRecord {
+        EmergedLandRecord { sea_level_m: 0.0, land_fraction: frac, max_subaerial_m: 0.0, level: 6 }
+    }
+
+    #[test]
+    fn timing_verdict_convicts_the_live_cooling_chain() {
+        // The temporal clauses, now predicable because the cooling trajectory
+        // is a real time axis. Measured (mantle_cooling_probe, level 7): every
+        // seed emerges monotonically from a water-world (0.0% at 3.6 Ga) through
+        // the in-band present into an in-band cold end (14–19%, under the 20%
+        // ceiling — the nucleation-growth bound). Coarse (level 5) here.
+        for seed in [0u64, 1, 7] {
+            let v = emerged_land_timing_verdict_for(seed, 5);
+            assert_eq!(v.emergence_monotone, Clause::Pass, "seed {seed}: emergence must be monotone in time");
+            assert_eq!(v.starts_submerged, Clause::Pass, "seed {seed}: hot early-Abyssal is a water-world");
+            assert_eq!(
+                v.enters_and_stays_in_band, Clause::Pass,
+                "seed {seed}: trajectory must enter the band and stay in it (no >20% overshoot)"
+            );
+            assert!(v.calibration_free_clauses_pass(), "seed {seed}: calibration-free clauses convict — but NOT Kept");
+            // The Ga-absolute clause is honestly refused, not faked green: the
+            // crude rate law cannot earn an absolute-Ga fraction target.
+            assert_eq!(v.ga_calibrated_era, Clause::NotPredicable, "Ga-absolute era targets stay NotPredicable (crude rate law)");
+        }
+    }
+
+    #[test]
+    fn timing_verdict_catches_temporal_known_bads() {
+        // #norm-probe-sensitivity: the pure-over-slice verdict must FAIL on
+        // sequences that violate each convictable clause — else its green is
+        // insensitive. Sequences are hot → cool.
+        //
+        // (1) NON-MONOTONE — land emerges then partly drowns again: a cooling
+        //     world that un-emerges land. emergence_monotone FAILS.
+        let dip = [rec(0.0), rec(0.05), rec(0.03), rec(0.10)];
+        assert_eq!(emerged_land_timing_verdict(&dip).emergence_monotone, Clause::Fail);
+        //
+        // (2) OVERSHOOT — the retired fBm world's shape: monotone but the cold
+        //     end blows past the 20% ceiling (measured 27% pre-nucleation).
+        //     enters_and_stays_in_band FAILS; emergence_monotone still passes.
+        let overshoot = [rec(0.0), rec(0.05), rec(0.15), rec(0.27)];
+        let ov = emerged_land_timing_verdict(&overshoot);
+        assert_eq!(ov.emergence_monotone, Clause::Pass);
+        assert_eq!(ov.enters_and_stays_in_band, Clause::Fail, "a >20% cold end must fail the stay-in-band clause");
+        //
+        // (3) NEVER EMERGES — a perpetual water-world never reaches the band.
+        //     starts_submerged passes, but enters_and_stays FAILS (never in band).
+        let drowned = [rec(0.0), rec(0.001), rec(0.005), rec(0.01)];
+        let dr = emerged_land_timing_verdict(&drowned);
+        assert_eq!(dr.starts_submerged, Clause::Pass);
+        assert_eq!(dr.enters_and_stays_in_band, Clause::Fail, "a world that never reaches the band must fail");
+        //
+        // (4) HOT START ALREADY EMERGED — a decreed/over-emerged world that
+        //     stands land at the hottest epoch fails the water-world start.
+        let hot_land = [rec(0.10), rec(0.12), rec(0.14), rec(0.16)];
+        assert_eq!(emerged_land_timing_verdict(&hot_land).starts_submerged, Clause::Fail);
+        //
+        // A single record cannot convict a trajectory clause — no time axis.
+        assert_eq!(emerged_land_timing_verdict(&[rec(0.05)]).emergence_monotone, Clause::NotPredicable);
+    }
 
     #[test]
     fn bathymetry_alone_is_a_water_world_at_derived_sea() {
