@@ -593,11 +593,15 @@ mod tests {
         assert_eq!(emerged_land_verdict(floor_bad).fraction_in_band, Clause::Fail, "0% is below the band floor");
 
         // CEILING — a DECREED low sea level (old SEA_LEVEL_M-style datum)
-        // manufactures forbidden land. Measured: seed 1 @ 3000 m → 39.7% (>29%
-        // modern). The fraction_in_band clause FAILS above the 20% ceiling.
-        let decreed_frac = land_fraction_at_sea(1, 3000.0, 6);
+        // manufactures forbidden land. Measured on the nucleation-growth field:
+        // seed 1 @ 2000 m → ~63% (>>29% modern). The fraction_in_band clause
+        // FAILS above the 20% ceiling. (The decreed datum is an instrument
+        // parameter recalibrated to the field: the pre-nucleation fBm world used
+        // 3000 m → 39.7%; the nucleation-growth surface sits higher, so a lower
+        // decreed sea is the equivalent over-emergence known-bad.)
+        let decreed_frac = land_fraction_at_sea(1, 2000.0, 6);
         assert!(decreed_frac > EMERGED_LAND_FRACTION_BAND.1, "decreed datum manufactures {decreed_frac:.3} land");
-        let ceil_bad = EmergedLandRecord { sea_level_m: 3000.0, land_fraction: decreed_frac, max_subaerial_m: 4000.0, level: 6 };
+        let ceil_bad = EmergedLandRecord { sea_level_m: 2000.0, land_fraction: decreed_frac, max_subaerial_m: 4000.0, level: 6 };
         let cv = emerged_land_verdict(ceil_bad);
         assert_eq!(cv.fraction_in_band, Clause::Fail, "over-emerged surface must fail the band");
         assert_eq!(cv.relief_bounded, Clause::Flag, "and its 4 km stand flags the relief ceiling");

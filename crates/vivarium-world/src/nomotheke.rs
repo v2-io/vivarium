@@ -611,13 +611,13 @@ pub static MANTLE_THERMAL: NomosDecl = NomosDecl {
 /// physics. Claim home: `#form-isostasy-column`.
 pub static LITHOSPHERE: NomosDecl = NomosDecl {
     name: "lithosphere",
-    version: "lithosphere-2026-07-24c-rock-mass-ledger-conserved",
+    version: "lithosphere-2026-07-24d-craton-nucleation-growth",
     system: "lithosphere-column",
     approach: Approach::Analytic,
     earth_fidelity: Tier::Low, // era-plausible pins (Chowdhury lineage), not Earth's actual columns
     physics: Tier::Low,        // inventory is a fated stand-in; no differentiation rate law yet
-    relation: "conserved columnar inventory: crust thickness+density (craton felsic / oceanic thermal-ramped) + depleted keel — one differentiation process, two buoyant products stacked. The mantle-thermal DRIVER is now a nomos (a declared cooling trajectory T_p(t)), consumed here; the oceanic-crust ramp reads it, so a cooling mantle deepens basins",
-    status: "v1 fated columns (lithosphere.rs); craton fraction calibration convicted by test; cooling⇒contrast-growth monotonicity unit-tested; driven in time by the mantle-thermal nomos (emergence trajectory probed); differentiation rate law OPEN; erosion's mass-return is BUILT and ADOPTED (erosion_return.rs) — the ledger is the live default surface (sea_level repoints to the post-erosion pour), so LITHO_COLUMN is Conserved (closed-box probe as instrument). Open rungs: routed deposition (v1 uniform blanket), iterated erode→rebound epochs (v1 one φ=1 step), water loading",
+    relation: "conserved columnar inventory: crust thickness+density (craton felsic / oceanic thermal-ramped) + depleted keel — one differentiation process, two buoyant products stacked. Craton PLACEMENT is a fated nucleation-and-growth field (few nuclei accreting coherent cratons of characteristic scale, NOT a threshold slice through scale-free fBm/percolation speckle) — the horizontal half of the open differentiation rate law. The mantle-thermal DRIVER is a nomos (declared cooling trajectory T_p(t)), consumed here: the oceanic-crust ramp reads it so a cooling mantle deepens basins, AND the cratons accrete outward as it cools (growth ∝ cooling), so emergence reads as continents assembling",
+    status: "v1 fated columns (lithosphere.rs); craton PRESENT-area calibration convicted by test AND craton MORPHOLOGY (few coherent cratons, not speckle) convicted by craton_morphology at matched land budget; cooling⇒contrast-growth monotonicity unit-tested; driven in time by the mantle-thermal nomos (monotone emergence trajectory probed, cratons growing over epochs); differentiation rate law (dynamics) still OPEN — sites+growth are fated geometry; erosion's mass-return is BUILT and ADOPTED (erosion_return.rs) — the ledger is the live default surface (sea_level repoints to the post-erosion pour), so LITHO_COLUMN is Conserved (closed-box probe as instrument). Open rungs: differentiation dynamics, routed deposition (v1 uniform blanket), iterated erode→rebound epochs (v1 one φ=1 step), water loading",
     deps: &[&NOISE, &MANTLE_THERMAL],
     consumes: &[
         Consume { quantity: flux::SEEDED_ASYMMETRY, needs: Statistic::CenterSample },

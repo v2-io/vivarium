@@ -101,8 +101,10 @@ fn main() {
         floor * 100.0,
         lo * 100.0
     );
-    // Ceiling: a decreed low sea level manufactures forbidden land.
-    for decreed in [4000.0, 3000.0] {
+    // Ceiling: a decreed low sea level manufactures forbidden land. (Datums
+    // recalibrated to the nucleation-growth surface, which sits higher than the
+    // retired fBm field — 3000/4000 m no longer over-flood; 2000/2500 m do.)
+    for decreed in [2500.0, 2000.0] {
         let f1 = land_fraction_at_sea(1, decreed, 6);
         println!(
             "    ceiling known-bad — decreed sea {decreed:.0} m on seed 1: {:.1}% land → above {:.0}% ceiling → frac FAIL",
@@ -111,11 +113,11 @@ fn main() {
         );
     }
     println!(
-        "\n    → fraction clause discriminates deviations outside [{:.1}%, {:.0}%] (caught at 0% and ~40% — well inside resolution);",
+        "\n    → fraction clause discriminates deviations outside [{:.1}%, {:.0}%] (caught at 0% and ~63% — well inside resolution);",
         lo * 100.0,
         hi * 100.0
     );
-    println!("      relief clause resolves stands past {:.0} m (live post-ledger peaks ~1.4–2.0 km sit at the edge — it catches the hundreds-of-m overshoot, not only gross ones).", SUBAERIAL_RELIEF_FLAG_M);
+    println!("      relief clause resolves stands past {:.0} m (live post-ledger peaks ~2.0–2.3 km sit just over the edge — it catches the hundreds-of-m overshoot, not only gross ones).", SUBAERIAL_RELIEF_FLAG_M);
     println!("\n  Claimed ≠ Kept: the hard time-free clauses convicting does NOT mark the promise Kept.");
     println!("  Kept additionally requires the temporal clauses (deep time), and a separate adjudication.");
 }

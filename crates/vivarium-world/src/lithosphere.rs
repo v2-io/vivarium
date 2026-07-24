@@ -74,9 +74,251 @@ pub const RHO_SEDIMENT: f64 = 2500.0;
 pub const CRATON_CRUST_M: f64 = 35_000.0;
 /// Depleted-keel thickness (m) under a full craton. Same anchor.
 pub const CRATON_KEEL_M: f64 = 180_000.0;
-/// Cratonized area fraction of the fated field (0..1) — the differentiation
-/// stand-in's one shape knob. Same anchor.
+/// Cratonized area fraction of the fated field (0..1) at the present-Abyssal
+/// anchor — the differentiation stand-in's calibration target. Same anchor.
 pub const CRATON_AREA_FRAC: f64 = 0.12;
+
+// --- Nucleation-and-growth cratonization (the fated differentiation stand-in,
+//     horizontal half; `#form-isostasy-column` FE(8)) ------------------------
+//
+// The craton field is NOT a threshold slice through a scale-free field — that
+// is percolation speckle (many small islands, the wrong morphology class,
+// however honest the heights). It is a fated **nucleation-and-growth** law: a
+// few blue-noise nucleation sites per world (seed-only), each accreting a
+// coherent craton of characteristic scale that GROWS as the mantle cools. This
+// is the cheapest law with the right morphology class, and it makes emergence
+// read as continents *assembling* (`DECISIONS[craton-nucleation-and-deep-time-
+// playback-ruled-in-scope]`). Physics Low-Med, declared stand-in — still not a
+// differentiation *dynamics*; the sites and their growth are fated geometry.
+
+/// Nucleation-site count is drawn fated per seed in this inclusive range — a
+/// FEW cratonic nuclei, not a scale-free continuum. `ASSUMPTIONS.md`
+/// "craton geometry".
+pub const CRATON_SITE_COUNT: (u64, u64) = (8, 13);
+/// Mean nucleation-site accretion radius (rad) at the present-Abyssal anchor
+/// (`g = 1`). A characteristic craton scale (~0.2 rad ≈ ~1350 km cap radius on
+/// Earth), calibrated so the present cratonized area ≈ [`CRATON_AREA_FRAC`]
+/// (convicted by `craton_fraction_is_in_band`). Same anchor.
+pub const CRATON_SITE_RADIUS_MEAN_RAD: f64 = 0.235;
+/// Per-site radius spread (multiplicative, `[lo, hi]` × mean) — cratons vary in
+/// size, so the field carries a size *distribution*, not identical discs. Same anchor.
+pub const CRATON_SITE_RADIUS_LO: f64 = 0.6;
+pub const CRATON_SITE_RADIUS_HI: f64 = 1.5;
+/// Minimum angular separation (rad) between accepted nucleation sites
+/// (blue-noise placement — `#post-determinism-as-ontology` Working Notes:
+/// distribution must match phenomenon; uniform is rarely honest). Sites nearer
+/// than this are rejected, so nuclei are distinct while their grown caps may
+/// still merge at the margins (isolated cratons AND merged continents). Same anchor.
+pub const CRATON_SITE_MIN_SEP_RAD: f64 = 0.22;
+/// Continental-margin softness (rad) — the smoothstep width over which a
+/// craton's weight ramps 0→1 (shelves, not cliffs). Comfortably wider than a
+/// pour-grain cell arc, so the field stays sphere-continuous. Same anchor.
+pub const CRATON_MARGIN_RAD: f64 = 0.06;
+/// Low-frequency boundary-warp amplitude (fraction of radius) and frequency —
+/// lobes the craton outline so coastlines are irregular (made-by-something),
+/// not perfect circles, while staying continuous and coherent (warp wavelength
+/// ≫ margin, so it warps the outline, never speckles it). Same anchor.
+pub const CRATON_WARP_AMP: f64 = 0.22;
+pub const CRATON_WARP_FREQ: f64 = 2.0;
+/// Growth ceiling: a hard clamp on the cooling scalar `g(T_p)` (a guard — the
+/// saturation below is the effective ceiling, ~1.33). Same anchor.
+pub const CRATON_GROWTH_MAX: f64 = 2.5;
+/// Growth-saturation rate: accretion is fast while the mantle is hot (cratons
+/// ASSEMBLE early, hot→present) and SATURATES as it cools, so post-present
+/// growth is gentle. This is what keeps emergence monotone: once basins are the
+/// dominant moving part, growing cratons no longer raise the global isostatic
+/// reference fast enough to re-submerge marginal land. Same anchor.
+pub const CRATON_GROWTH_SATURATION: f64 = 4.0;
+
+// Fated-noise domain tags for the nucleation field (keep distinct from the
+// noise.rs registry: 0/1/3/7/13/17/18/19 in use). 40 site-count · 41 site
+// direction · 42 site radius · 43.. per-site boundary warp.
+const DOM_SITE_COUNT: u32 = 40;
+const DOM_SITE_DIR: u32 = 41;
+const DOM_SITE_RADIUS: u32 = 42;
+const DOM_SITE_WARP_BASE: u32 = 43;
+
+/// One fated nucleation site: a growth centre on the sphere and its base
+/// accretion radius (at `g = 1`). Growth over epochs scales the radius; the
+/// centre never moves — so a site that exists at epoch t exists at t+1, grown.
+#[derive(Clone, Copy, Debug)]
+pub struct CratonSite {
+    /// Unit-vector growth centre (fated, seed-only).
+    pub dir: [f64; 3],
+    /// Base accretion radius (rad) at the present-Abyssal anchor.
+    pub base_radius: f64,
+    /// The site's fated warp domain (per-site boundary lobing).
+    warp_domain: u32,
+}
+
+/// Smoothstep clamped to `[0, 1]` — the continental-margin ramp.
+#[inline]
+fn smoothstep01(x: f64) -> f64 {
+    let t = x.clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
+
+/// The fated nucleation sites for a world-seed — a FEW blue-noise-separated
+/// growth centres, memoized per seed (the whole set is cheap but is read at
+/// every cratonized cell of every pour). Dart-throwing: draw uniform-sphere
+/// candidates and accept those at least [`CRATON_SITE_MIN_SEP_RAD`] from every
+/// accepted site, until the fated target count is reached or the candidate pool
+/// is exhausted. Pure function of seed (`#post-determinism-as-ontology`).
+pub fn craton_sites(seed: u64) -> std::sync::Arc<Vec<CratonSite>> {
+    use std::collections::BTreeMap;
+    use std::sync::{Arc, Mutex};
+    static CACHE: Mutex<Option<BTreeMap<u64, Arc<Vec<CratonSite>>>>> = Mutex::new(None);
+    {
+        let mut guard = CACHE.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(sites) = guard.get_or_insert_with(BTreeMap::new).get(&seed) {
+            return sites.clone();
+        }
+    }
+
+    let (n_lo, n_hi) = CRATON_SITE_COUNT;
+    let span = (n_hi - n_lo + 1) as f64;
+    let target =
+        n_lo + (noise::unit_f64(noise::hash3(seed, DOM_SITE_COUNT, 0, 0, 0)) * span) as u64;
+    let target = target.clamp(n_lo, n_hi) as usize;
+
+    const CANDIDATE_CAP: i64 = 96;
+    let cos_min_sep = CRATON_SITE_MIN_SEP_RAD.cos();
+    let mut sites: Vec<CratonSite> = Vec::with_capacity(target);
+    for cand in 0..CANDIDATE_CAP {
+        if sites.len() >= target {
+            break;
+        }
+        // Uniform point on the sphere from two fated draws (z uniform in [-1,1],
+        // azimuth uniform) — the honest spherical-uniform prior, not lattice.
+        let u1 = noise::unit_f64(noise::hash3(seed, DOM_SITE_DIR, cand, 0, 0));
+        let u2 = noise::unit_f64(noise::hash3(seed, DOM_SITE_DIR, cand, 1, 0));
+        let z = 2.0 * u1 - 1.0;
+        let phi = 2.0 * std::f64::consts::PI * u2;
+        let r = (1.0 - z * z).max(0.0).sqrt();
+        let dir = [r * phi.cos(), r * phi.sin(), z];
+        // Blue-noise rejection: keep nuclei distinct.
+        let too_close = sites.iter().any(|s| {
+            let dot = s.dir[0] * dir[0] + s.dir[1] * dir[1] + s.dir[2] * dir[2];
+            dot > cos_min_sep
+        });
+        if too_close {
+            continue;
+        }
+        let ru = noise::unit_f64(noise::hash3(seed, DOM_SITE_RADIUS, cand, 0, 0));
+        let base_radius =
+            CRATON_SITE_RADIUS_MEAN_RAD * (CRATON_SITE_RADIUS_LO + ru * (CRATON_SITE_RADIUS_HI - CRATON_SITE_RADIUS_LO));
+        sites.push(CratonSite {
+            dir,
+            base_radius,
+            warp_domain: DOM_SITE_WARP_BASE.wrapping_add(sites.len() as u32),
+        });
+    }
+
+    let sites = Arc::new(sites);
+    let mut guard = CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    guard.get_or_insert_with(BTreeMap::new).insert(seed, sites.clone());
+    sites
+}
+
+/// Craton accretion-growth scalar `g(T_p)` — how far the fated cratons have
+/// grown from their nuclei at mantle temperature `T_p`. Zero at the Hadean-hot
+/// ceiling (`TP_HOT_MAX_C`: nuclei not yet accreted, a near-water-world),
+/// exactly `1` at the present-Abyssal anchor (`MANTLE_TP_C` — the calibrated
+/// area, and the coherence pin with the seed-only world), and `> 1` into the
+/// cooling future (cratons keep accreting as the mantle cools, the world
+/// maturing *past* the early-Earth regime), clamped at [`CRATON_GROWTH_MAX`].
+/// Monotone non-increasing in `T_p`, so along the cooling chain cratons only
+/// grow — emergence is monotone and the epoch caps are NESTED by construction.
+pub fn craton_growth(tp_c: f64) -> f64 {
+    // `TP_HOT_MAX_C` is the mantle-thermal Hadean ceiling; kept local to avoid a
+    // module cycle (mantle_thermal depends on lithosphere, not vice-versa).
+    const TP_HOT_MAX_C: f64 = 1650.0;
+    // Cooling progress ∈ [0,1]: 0 at the Hadean-hot ceiling, 1 at the modern
+    // asymptote. A saturating accretion curve `1 − e^{−a·cool}` (fast early,
+    // flattening late), normalized so the present-Abyssal anchor reads exactly 1.
+    let cool = |t: f64| ((TP_HOT_MAX_C - t) / (TP_HOT_MAX_C - TP_MODERN_C)).max(0.0);
+    let shape = |c: f64| 1.0 - (-CRATON_GROWTH_SATURATION * c).exp();
+    (shape(cool(tp_c)) / shape(cool(MANTLE_TP_C))).min(CRATON_GROWTH_MAX)
+}
+
+/// Cratonization weight ∈ [0,1] at a cell under mantle temperature `tp_c` — the
+/// fated nucleation-and-growth field. Union (max) of the grown cratons: each
+/// site contributes a smoothstep cap of radius `base·g(tp)`, warped by a
+/// low-frequency sphere-continuous fBm so outlines are irregular. Continuous on
+/// S² (all geometry from the unit vector — `#form-sphere-continuous-surface-fields`),
+/// fated, and T_p-dependent through the growth scalar (cratons accrete as the
+/// mantle cools).
+pub fn craton_weight_at_tp(seed: u64, cell: CellId, tp_c: f64) -> f64 {
+    let g = craton_growth(tp_c);
+    if g <= 0.0 {
+        return 0.0;
+    }
+    let p = cell.to_cube().to_unit();
+    let sites = craton_sites(seed);
+    let mut w = 0.0f64;
+    for s in sites.iter() {
+        let cosang = (p[0] * s.dir[0] + p[1] * s.dir[1] + p[2] * s.dir[2]).clamp(-1.0, 1.0);
+        // Skip-far: the largest this cap can reach is base·g·(1+warp_amp)+margin.
+        // Cells beyond it get 0 from this site — and, crucially, we never pay the
+        // fBm warp for the ~88 % oceanic sphere (cost tracks cratonized area).
+        let r_max = s.base_radius * g * (1.0 + CRATON_WARP_AMP);
+        if cosang < (r_max + CRATON_MARGIN_RAD).cos() {
+            continue;
+        }
+        let theta = cosang.acos();
+        let warp = (noise::fbm3(
+            seed,
+            s.warp_domain,
+            p[0] * CRATON_WARP_FREQ,
+            p[1] * CRATON_WARP_FREQ,
+            p[2] * CRATON_WARP_FREQ,
+            2,
+            2.0,
+            0.5,
+        ) - 0.5)
+            * 2.0
+            * CRATON_WARP_AMP;
+        let r_eff = s.base_radius * g * (1.0 + warp);
+        let wi = smoothstep01((r_eff - theta) / CRATON_MARGIN_RAD);
+        if wi > w {
+            w = wi;
+            if w >= 1.0 {
+                return 1.0;
+            }
+        }
+    }
+    w
+}
+
+/// Cratonization weight at the present-Abyssal anchor (`MANTLE_TP_C`) — the
+/// seed-only default the calibration test and probes read.
+pub fn craton_weight(seed: u64, cell: CellId) -> f64 {
+    craton_weight_at_tp(seed, cell, MANTLE_TP_C)
+}
+
+/// **RETIRED as world law; kept ONLY as the morphology probe's known-bad**
+/// (`#norm-probe-sensitivity` FE(2): a probe that cannot fail on a historical
+/// broken configuration is not yet a probe for that fault class). This is the
+/// pre-2026-07-24 craton field: a threshold slice through a 4-octave fBm, whose
+/// land-threshold morphology is *percolation speckle* — many tiny components,
+/// low compactness — the wrong class Joseph identified on the live globe. The
+/// `craton_morphology` probe FAILS on this and PASSES on the nucleation-growth
+/// field; that contrast is the probe's conviction. Not called by any world path.
+pub fn craton_weight_fbm_speckle_known_bad(seed: u64, cell: CellId) -> f64 {
+    let threshold = 0.585;
+    let margin = 0.03;
+    ((craton_fbm_raw_known_bad(seed, cell) - (threshold - margin)) / margin).clamp(0.0, 1.0)
+}
+
+/// The raw 4-octave fBm value the retired field thresholded — exposed so the
+/// morphology probe can threshold it to a *matched land budget* and compare
+/// fragmentation apples-to-apples (the retired field's own area was
+/// uncalibrated: 14–40 % by seed, itself a symptom). Not world law.
+pub fn craton_fbm_raw_known_bad(seed: u64, cell: CellId) -> f64 {
+    let p = cell.to_cube().to_unit();
+    let f = 2.2;
+    noise::fbm3(seed, 17, p[0] * f, p[1] * f, p[2] * f, 4, 2.0, 0.5)
+}
 
 /// One lithospheric column: the conserved inventory isostasy reads.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -112,28 +354,12 @@ pub fn oceanic_crust_rho(tp_c: f64) -> f64 {
     2950.0 - t * 100.0
 }
 
-/// Cratonization weight ∈ [0,1] at a cell: the fated differentiation stand-in.
-/// Sphere-continuous (unit-vector fBm — `#form-sphere-continuous-surface-fields`
-/// binds solid fields), thresholded so ~`CRATON_AREA_FRAC` of area cratonizes,
-/// with a smooth margin (continental shelves, not cliffs).
-pub fn craton_weight(seed: u64, cell: CellId) -> f64 {
-    let p = cell.to_cube().to_unit();
-    let f = 2.2; // a few nuclei per face-scale — craton-sized features
-    let n = noise::fbm3(seed, 17, p[0] * f, p[1] * f, p[2] * f, 4, 2.0, 0.5);
-    // 4-octave fBm concentrates near 0.5 (per-octave averaging shrinks the
-    // tails), so the exceedance quantile is measured, not derived: threshold
-    // 0.585 lands the cratonized area near CRATON_AREA_FRAC on the sampled
-    // sphere — a calibration CONVICTED by `craton_fraction_is_in_band`, not
-    // trusted (the first guess, a symmetric-quantile formula, gave 0.5% area).
-    let threshold = 0.585;
-    let margin = 0.03; // smooth continental margin width in noise units
-    ((n - (threshold - margin)) / margin).clamp(0.0, 1.0)
-}
-
 /// The lithospheric column at a cell under mantle temperature `tp_c`.
-/// Craton and oceanic end-members blend over the margin weight.
+/// Craton and oceanic end-members blend over the margin weight. The craton
+/// weight is itself `tp_c`-dependent (nucleation-growth: cratons accrete as the
+/// mantle cools), so a cooling epoch both deepens basins AND grows the cratons.
 pub fn column_at_tp(seed: u64, cell: CellId, tp_c: f64) -> Column {
-    let w = craton_weight(seed, cell);
+    let w = craton_weight_at_tp(seed, cell, tp_c);
     let (h_oc, rho_oc) = (oceanic_crust_m(tp_c), oceanic_crust_rho(tp_c));
     Column {
         crust_m: h_oc + w * (CRATON_CRUST_M - h_oc),
@@ -259,9 +485,10 @@ mod tests {
 
     #[test]
     fn craton_fraction_is_in_band() {
-        // Convicts the threshold calibration: cratonized area (w > 0.5) must
-        // sit near CRATON_AREA_FRAC. The first, formula-derived threshold gave
-        // 0.5% silently — this is the guard against that class.
+        // Convicts the nucleation-growth calibration: cratonized area (w > 0.5)
+        // at the present-Abyssal anchor must sit near CRATON_AREA_FRAC (site
+        // count × mean radius calibrated to it). Measured seed 0 ~0.093 —
+        // in-band; the guard against silent drift as the field's shape knobs move.
         let cells = sample_cells(64);
         let frac = cells.iter().filter(|&&c| craton_weight(0, c) > 0.5).count() as f64 / cells.len() as f64;
         assert!(

@@ -28,6 +28,7 @@ pub mod gen;
 pub mod chunk;
 pub mod uplift;
 pub mod lithosphere;
+pub mod craton_morphology;
 pub mod mantle_thermal;
 pub mod sea_level;
 pub mod erosion_return;

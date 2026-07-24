@@ -1,8 +1,10 @@
-//! Calibration probe for the cratonization threshold (`#form-isostasy-column`
-//! stand-in inventory): prints the craton-weight histogram and the cratonized
-//! area fraction (w > 0.5) across all six faces. The declared target is
-//! `CRATON_AREA_FRAC`; `lithosphere::tests::craton_fraction_is_in_band`
-//! convicts drift. Recorded 2026-07-24: threshold 0.585 → fraction ~0.134.
+//! Calibration probe for the nucleation-growth cratonization field
+//! (`#form-isostasy-column` FE(8) stand-in inventory): prints the craton-weight
+//! histogram and the cratonized area fraction (w > 0.5) at the present-Abyssal
+//! anchor across all six faces. The declared target is `CRATON_AREA_FRAC`;
+//! `lithosphere::tests::craton_fraction_is_in_band` convicts drift. Recorded
+//! 2026-07-24 (nucleation-growth): seed 0 ~0.093, seed 1 ~0.104, seed 7 ~0.131
+//! (all in band). For the shape class, see `craton_morphology_probe`.
 fn main(){
     use vivarium_world::lithosphere::*;
     use vivarium_world::sphere::{CubeCoord, Face};
