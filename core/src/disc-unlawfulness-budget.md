@@ -32,7 +32,7 @@ Convergence under a finite window is not decidable to zero residual. Realized fr
 
 **Max attainable: robust-qualitative** for the structural undecidability of finite-window convergence (standard computational/verification fact, not a project invention) and for Realized ⟂ Lawful as project ontology.
 
-**Currently `robust-qualitative`:** BREAK-2 and the unLawfulness-budget operational doctrine live in `doc/plan/vivium-operational-workflow.md` (reasoning trail, 2026-07-06). Realized ⟂ Lawful deconflation is Joseph-settled (2026-07-06 participation ontology; LEXICON realized-kingdom / lawful-kingdom carve). The *formal* "convergence is undecidable ⇒ structural unLawfulness" packaging is agent-derived corroboration of that carve — do not invent a Joseph decision slug that does not exist. Stage `draft`.
+**Currently `robust-qualitative`:** Realized ⟂ Lawful deconflation is Joseph-settled (2026-07-06 participation ontology; LEXICON realized-kingdom / lawful-kingdom carve). The *formal* "convergence is undecidable ⇒ structural unLawfulness" packaging is agent-derived corroboration — do not invent a Joseph decision slug that does not exist. Full lifecycle pipeline and sibling BREAKs: #detail-vivium-lifecycle . Stage `draft`.
 
 **Not claimed:** a specific $\varepsilon$ schema in the store (component E / stage-chains still unbuilt); that Lawful certification is *logically* impossible in every possible future method — only that *finite freeze-and-tag under current architecture* cannot deliver zero residual as a clean event.
 
@@ -42,6 +42,5 @@ This is why the Abyssal parity target is honestly **Realized, not Lawful** early
 
 ## Working Notes
 
-- **Dual homes demoted:** vivium-operational-workflow header + BREAK-2 trail; ARCHITECTURE §6 honest catch; abyssal-parity milestone + checklist (pointers, not re-owned); LEXICON realized/lawful already pointed here.
-- **Siblings:** run-modes carve; component-E stage chains ($\varepsilon$ as data); full ETHICS harm-triple segmentation; ASF checkpoint-forking foreign claim for BREAK-5 only (`#asf/…` when citing).
-- **Do not re-rank** "THE one hard research problem" — superlatives are predicate-free (FORMAT §6); BREAK-2 is *a* structural break, not a ranking.
+- **Siblings:** #detail-vivium-lifecycle (BREAK-1/3/4/5, doctrine, capability ladder); run-modes carve; component-E stage chains; full ETHICS segmentation; ASF checkpoint-forking only as `#asf/…`.
+- **Do not re-rank** "THE one hard research problem" — superlatives are predicate-free; BREAK-2 is *a* structural break, not a ranking.

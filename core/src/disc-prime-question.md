@@ -36,5 +36,5 @@ The failure mode the method blocks is arguing about the algorithm one *imagines*
 
 - **Pointer-only:** law is this segment; MFD teaching chain → #worked-example-mfd-prime-question ; measurements → #obs-cube-locked-kernel-bias ; residual theory §0 dual-home demoted. Bias-vs-noise cut is `#norm-bias-vs-noise`.
 - **`msc/research-structure-preserving/README.md` §1.2** (Prime Question ≡ modified-equation analysis; Warming & Hyett) becomes a literature pointer into this segment for project law; survey detail stays in the recon doc.
-- **`doc/design/NOMOS-CONTRACT.md` box ⑤** still needs procedure + `NomosDecl` fields; this segment states the claim-side requirement only — does not invent schema.
+- **`#detail-nomos-defect-anatomy` box ⑤** still needs procedure + `NomosDecl` fields; this segment states the claim-side requirement only — does not invent schema.
 - **LEXICON:** `modified-equation` / `backward-error-analysis` still unlanded; proposed under the structure-preserving DECISION, not ratified here.

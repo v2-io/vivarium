@@ -11,7 +11,7 @@ depends:
 
 # Two-layer mind (exploratory — not primary)
 
-*Exploratory sketch: novel agent architecture idea that does **not** supersede existing segments and is **not** ready for primacy. Source peel from `doc/design/DESIGN.md` (full pre-pointer body: `.super-archive/from-design/DESIGN.md`). Not Level-C agent-seam work; not a claim that this is vivarium law.*
+*Exploratory sketch: novel agent architecture idea that does **not** supersede existing segments and is **not** ready for primacy. Load-bearing FE of the founding DESIGN two-layer section lives **here** so nothing depends on ice. Not Level-C agent-seam work; not vivarium law.*
 
 Mirrors Joseph's identity/substrate distinction — *the LLM is the mind the identity uses to think with, not the identity itself.*
 

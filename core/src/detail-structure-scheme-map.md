@@ -47,7 +47,7 @@ Extended support for #form-declared-structure-tradeoff : the per-structure menu 
 
 ## Epistemic Status
 
-**Max attainable: exact** for classical structure↔scheme pairings once each row is tied to a primary or a project measurement. **Currently `robust-qualitative`:** table and conflict list extracted from the Jul-12/13 discretisation audit (`.super-archive/from-theory/discretisation-and-information.md` §4, corrected present-best); AL81/Ringler readings via structure-preserving recon DECISIONS; routing/MFD rows backed by measurement homes. Stage `draft`. This is a `detail` segment: supports the declare-trade formulation; decides nothing it does not.
+**Max attainable: exact** for classical structure↔scheme pairings once each row is tied to a primary or a project measurement. **Currently `robust-qualitative`:** table and conflict list extracted from the Jul-12/13 discretisation audit (`#detail-info-theoretic-discretisation / #detail-fvm-control-volume / #detail-structure-scheme-map` §4, corrected present-best); AL81/Ringler readings via structure-preserving recon DECISIONS; routing/MFD rows backed by measurement homes. Stage `draft`. This is a `detail` segment: supports the declare-trade formulation; decides nothing it does not.
 
 ## Discussion
 
@@ -55,6 +55,6 @@ Without the map, agents treat structure-preserving language as a slogan or pick 
 
 ## Working Notes
 
-- **Source peel:** `.super-archive/from-theory/discretisation-and-information.md` §4 / §4.1 / §4.1a / §4.2 / §4.3 (present-best; correction archaeology stays history).
+- **Source peel:** `#detail-info-theoretic-discretisation / #detail-fvm-control-volume / #detail-structure-scheme-map` §4 / §4.1 / §4.1a / §4.2 / §4.3 (present-best; correction archaeology stays history).
 - **Do not restate** the false “gravity-driven flow is curl-free” probe target — use #obs-routing-curl-spiral .
 - **Owed:** NomosDecl fields for preserved/sacrificed structure; null-space eigenvalue probe as instrument (Cardiff periodic-patch recipe still teaching until built).

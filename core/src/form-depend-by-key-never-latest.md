@@ -25,7 +25,7 @@ A nomos may depend on a neighbour only **by complete content-addressed key** —
 
 ## Epistemic Status
 
-**Max attainable: exact** as frame property under complete keys + fated computation. **Currently `exact`** for the invariant as architecture law (`doc/plan/builder-explorer-decoupling.md` §0, settled this-session design 2026-07-10; load-bearing for Phase-3 flux-BC tiles). Production flux-BC tiles still incomplete — debt does not soften the invariant.
+**Max attainable: exact** as frame property under complete keys + fated computation. **Currently `exact`** for the invariant as architecture law (`#detail-builder-daemon` §0, settled this-session design 2026-07-10; load-bearing for Phase-3 flux-BC tiles). Production flux-BC tiles still incomplete — debt does not soften the invariant.
 
 Stage `draft`.
 

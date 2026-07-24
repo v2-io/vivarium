@@ -1,4 +1,4 @@
-//! RED-TEAM PROBE for `.super-archive/from-theory/discretisation-and-information.md` (2026-07-13).
+//! RED-TEAM PROBE for `#detail-info-theoretic-discretisation / #detail-fvm-control-volume / #detail-structure-scheme-map` (2026-07-13).
 //!
 //! UNCOMMITTED, adversarial. Four probes, each able to return "the doc is right":
 //!

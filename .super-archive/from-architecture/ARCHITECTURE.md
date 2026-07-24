@@ -1,5 +1,8 @@
 # vivarium — ARCHITECTURE
 
+> **Graduated 2026-07-24.** Claim law is `core/`. Open-problem census habit → `#disc-open-problem-census`. Build trails → `.super-archive/from-plan/`. Do not re-mine as claim source.
+
+
 *Source / consolidating overview — **not claim canon.** Settled claims live in `core/src/` (`core/OUTLINE.md` · `#scope-segment-canon`). Use this file as extraction substrate and mental-model map; when a segment exists, the segment wins.*
 
 *v0.3, 2026-07-10 (body). Derivations and detail still pointed here: `.super-archive/from-theory/multiscale-seams.md`, `.super-archive/from-design/DESIGN-REDUX.md`, `.super-archive/from-design/DESIGN-MATERIAL.md`, `.super-archive/from-design/DESIGN-SYSTEMS.md`, `tabularium/terrestris.ordinum.udon`, `LEXICON.udon`, `ASF.md`. Graduated teaching zoo: `.super-archive/from-theory/multiscale-methods.md`. Status marked inline: **settled** / **stance** / **open** / **gap**. Vocabulary is `LEXICON.udon`-canonical.*

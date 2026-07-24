@@ -11,7 +11,7 @@
 //! the [`crate::nomotheke`], and report the **maturity** of every promise in force —
 //! which turns "what should I build next?" from taste into a lookup.
 //!
-//! **The maturity ladder** (`doc/plan/regula-conformance-design.md` §4c, Joseph's
+//! **The maturity ladder** (`#detail-regula-design` §4c, Joseph's
 //! acceptance-test discipline):
 //!
 //! | rung | meaning |

@@ -26,10 +26,10 @@ depends:
 
 ## Epistemic Status
 
-**Currently `sketch`** for the box set and procedures; the fields and structural tests are **live code** (`nomotheke.rs`, `audit.rs`; 2026-07-24). Source anatomy: `doc/design/NOMOS-CONTRACT.md` (its "the data model cannot hold this" blocker is retired; its per-box procedure files remain unwritten intent). Stage `draft`.
+**Currently `sketch`** for the box set and procedures; the fields and structural tests are **live code** (`nomotheke.rs`, `audit.rs`; 2026-07-24). Source anatomy: `#detail-nomos-defect-anatomy` (its "the data model cannot hold this" blocker is retired; its per-box procedure files remain unwritten intent). Stage `draft`.
 
 ## Working Notes
 
-- Promote (or split per-box) toward `formulation` when the per-box *earning procedures* exist — the NOMOS-CONTRACT discipline: each box's file answers "how do I find out what's true here," carries its own probe, and a failure gallery. Fields without procedures invite confident wrong content.
-- Open: a "conflicts-with" surface on box ④ (the structure lists don't yet express which preserved rows conflict — #form-declared-structure-tradeoff FE(2)); reachability check at the ordinum level (a keeper's output range vs its promise's predicate).
-- Defect table stays teaching in NOMOS-CONTRACT.
+- Earning-procedure shape + full defect map + failure-gallery seeds: #detail-nomos-defect-anatomy (not iced NOMOS-CONTRACT).
+- Promote (or split per-box) toward `formulation` when procedures exist as core peels. Fields without procedures invite confident wrong content.
+- Open: "conflicts-with" surface on box ④; ordinum reachability (keeper range vs promise predicate).

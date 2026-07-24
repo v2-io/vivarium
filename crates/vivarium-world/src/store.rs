@@ -1,14 +1,14 @@
 //! Content-addressed, memoized store — the world's portable saved state.
 //! Claim home: `#form-store-as-save` (save ≡ memo store; invalidation vs
 //! eviction; regenerable/irreducible frame). Teaching source:
-//! `doc/design/DESIGN-REDUX.md` §13; architecture map: `doc/ARCHITECTURE.md` §5.
+//! `doc/design/DESIGN-REDUX.md` §13; architecture map: `core (ARCHITECTURE graduated)` §5.
 //!
 //! **Domain-neutral by construction.** Keys and values here are opaque; the
 //! nomos above (`query.rs`) give them meaning. Nothing in this module knows
 //! about terrain, columns, or `CellId`s — a spatial field, a geochemical
 //! reservoir, a food-web state-vector, or an agent population all persist
 //! through this *same* interface. That neutrality is the framework's invariant
-//! (`doc/ARCHITECTURE.md` domain-fixation guard), not a courtesy.
+//! (`core (ARCHITECTURE graduated)` domain-fixation guard), not a courtesy.
 //!
 //! Shape (git-repo-like): `objects/<value-hash>` hold immutable bytes;
 //! `roots/<key-hash>` point at the object a complete key resolves to. Content-

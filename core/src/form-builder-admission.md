@@ -32,7 +32,7 @@ The builder may materialize only what the flux contract allows (or explicitly wa
 
 1. **Provisional tag (partially closed).** Waived phases set `World::set_provisional_writes`; roots gain a third-line `provisional` flag; `vivarium status` prints provisional counts (store `RootEntry` / `PutOpts`). Still open: no lib-level integration test of the end-to-end waive→census path; Hit path does not yet expose provisional in `Source`.
 2. **No lib-level integration test** of the refuse path (gate lives in the binary).
-3. **Full builder daemon** (beacon cones, demand spool, restart-in-place) is plan-grade (`doc/plan/builder-explorer-decoupling.md`), not this segment's built surface. Do not read FE(1)–FE(4) as claiming the full plan is shipped.
+3. **Full builder daemon** (beacon cones, demand spool, restart-in-place) is design-grade in #detail-builder-daemon , not this segment's built surface. Do not read FE(1)–FE(4) as claiming that design is shipped.
 4. **Lock TOCTOU / atomic create** still engineering debt.
 5. Worldview spike still hybrid-evolves on explorer paths — compliance debt on #form-core-view-wall , not a license to dissolve FE(4).
 
@@ -43,5 +43,5 @@ Status can print "unmet" while a naive builder still writes eroded tiles — tha
 ## Working Notes
 
 - **Promoted** from consolidation-wave draft (now `.super-archive/from-msc/consolidation-wave-2026-07-21/`); store sibling #form-store-as-save.
-- **Dual homes demoted carefully:** `doc/plan/builder-explorer-decoupling.md` header (admission + observe-only + store bus); `query.rs` observe-only surface; abyssal-parity explorer roles. Unbuilt daemon / beacons / demand spool remain plan design — not claimed by this segment.
+- **Dual homes demoted carefully:** `#detail-builder-daemon` header (admission + observe-only + store bus); `query.rs` observe-only surface; abyssal-parity explorer roles. Unbuilt daemon / beacons / demand spool remain plan design — not claimed by this segment.
 - Pair with maturity CLI display debt on #form-ordinum-governs-flux-web — different surface, same "show the convicting truth" telos.

@@ -28,7 +28,7 @@ A seam is a boundary in space, time, or both. What crosses is a flux of a conser
 
 6. **Out of bounds.** (a) Hard-coded edge-outlet / zero-inflow tiles that ignore upstream discharge (tiles are not composable). (b) Mean-pin alone sold as full conservation (injection $\neq$ refluxing). (c) Treating "the finest/latest available neighbour" as the dependency — dependency must be by key ( #form-depend-by-key-never-latest ).
 
-7. **Floating-point is the bottom-most seam.** Conservation discipline reaches down to arithmetic: an increment that must *land* (bed deadband) or must be *counted* (rain/evap bias) is a seam crime at the scale below the smallest grid seam. Where conservation is claimed, choose the accounting explicitly per site — realized-delta accounting or compensated summation — rather than trusting bare `f32` addition. (Paid-for: the twin f32 finds, 2026-07; specimen trail in `.super-archive/from-theory/multiscale-methods.md` §4.)
+7. **Floating-point is the bottom-most seam.** Conservation discipline reaches down to arithmetic: an increment that must *land* (bed deadband) or must be *counted* (rain/evap bias) is a seam crime at the scale below the smallest grid seam. Where conservation is claimed, choose the accounting explicitly per site — realized-delta accounting or compensated summation — rather than trusting bare `f32` addition. (Paid-for: the twin f32 finds, 2026-07; specimen trail in `#form-rl-closure-algebra / #detail-seam-precedents` §4.)
 
 ## Epistemic Status
 
@@ -47,6 +47,6 @@ The seam fix and tile composability are the same work: honest boundary condition
 ## Working Notes
 
 - **Dual homes demoted:** multiscale-seams header + mental model; ARCHITECTURE §4; framework-to-status-quo §3; abyssal-parity checklist item 4; DESIGN-REDUX §5 join. Phase-3 flux-BC tile plan remains build trail.
-- **Do not absorb:** method zoo (graduated `.super-archive/from-theory/multiscale-methods.md`), $z$-from-quadtree tactical item, full four-seam catalogue — extract later if needed. (The detail→abstract rename is executed at #sketch-detail-abstract-reversion .)
+- **Do not absorb:** method zoo (graduated `#form-rl-closure-algebra / #detail-seam-precedents`), $z$-from-quadtree tactical item, full four-seam catalogue — extract later if needed. (The detail→abstract rename is executed at #sketch-detail-abstract-reversion .)
 - **Face register / hanging nodes:** #form-face-flux-register (measured single-valued vs two-sided; three conditions; leaf-only price). Do not restate "wavelets make the seam free" without that segment's retraction of representation≠dynamics.
 - **Conflict guard:** "flux-on-the-face makes refluxing an invariant *without a bill*" is superseded; the bill is leaf-only (or explicit correction under double-evolve).

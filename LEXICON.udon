@@ -42,7 +42,7 @@
       |rel :to charge :kind opened-by
 
     |term[phase-transition] :status settled :since 2026-07-04
-      The regime-change EVENT at a phase-gate. Incremental, never a wholesale swap: most systems perpetuate, a few sunset, a larger group of new and finer-scale systems spins up at the gate (.super-archive/from-archive/PHASES.md Design notes). It leaves the largest memo, and it promotes converged state into Law.
+      The regime-change EVENT at a phase-gate. Incremental, never a wholesale swap: most systems perpetuate, a few sunset, a larger group of new and finer-scale systems spins up at the gate (ordinum data; historical PHASES notes are ice). It leaves the largest memo, and it promotes converged state into Law.
       |rel :to law :kind revises
       |rel :to memo :kind leaves
       |rel :to ordinum :kind floor-checked-against
@@ -64,7 +64,7 @@
 
     |term[defeasance] :status settled :since 2026-07-11
       The mechanism of "defeasible": a later phase's explicit retirement of a prior promise (`|defeasance :voids "<phase.promise>" :by <charge>`, with an honest reason). Phases declare only their NOVEL promises; inherited promises CONTINUE IMPLICITLY (no re-listing — the mind should not carry ancient ongoing processes as clutter). So the promises IN FORCE at phase N = union(promises 1..N) minus union(defeasances 1..N). Canonical instance: Phase 7's decomposers void Phase 6's coal-window limit.
-      |confused .super-archive/from-archive/PHASES.md's "sunset" (a system stopping) — sunset is the friendly gloss for the regime case; defeasance is the precise mechanism, and it pairs with the property word "defeasible".
+      |confused historical PHASES "sunset" (a system stopping) — sunset is the friendly gloss for the regime case; defeasance is the precise mechanism, and it pairs with the property word "defeasible".
       |rel :to promise :kind voids
       |rel :to permit :kind same-shape-as
       |source tabularium/terrestris.ordinum.udon (reading-rules)
@@ -84,12 +84,12 @@
 
     |term[ordinum] :status settled :since 2026-07-11
       :forms full formal name Ordinatio Ordinum; keyed ordinum@version
-      The codified, pinned, versioned phase-expectations artifact — the per-phase Charge/Promise floor as DATA, which every regula cites as the floor it may extend but never silently undercut. .super-archive/from-archive/PHASES.md is its reportatio (the prose working text the authorized version compiles from — the medieval ordinatio-vs-reportatio carve, Scotus precedent) and archives once codification lands. A PHASES revision yields a NEW ordinum version; existing regulae keep their pinned floor and opt in by re-versioning — integration-is-replacement applied to the constitution.
+      The codified, pinned, versioned phase-expectations artifact — the per-phase Charge/Promise floor as DATA, which every regula cites as the floor it may extend but never silently undercut. The ordinum is the live floor; historical reportatio prose (PHASES) is ice provenance only — do not re-mine for claims. A PHASES revision yields a NEW ordinum version; existing regulae keep their pinned floor and opt in by re-versioning — integration-is-replacement applied to the constitution.
       |not a stage-synonym source: stages remain PHASES — "order" is not adopted (it would re-blur sequence-vs-class; class-of-regna stays extensional, "Terrestris regna").
       |context grammar held honestly — standalone "ordinum" is a bare genitive plural; the elided head noun (ordinatio) makes the full form exact. Deliberate ellipsis, Joseph's euphony call.
       |rel :to regula :kind floor-of
       |rel :to phase :kind codifies
-      |source doc/plan/regula-conformance-design.md §2
+      |source #detail-regula-design §2
 
     |term[target] :status settled
       Phases 7/8/9 as TARGET 1/2/3 — the playable entry points. ETHICS.md binds from Phase 8's transition.
@@ -127,7 +127,7 @@
     |term[fidelity-ladder] :status settled
       Spend representation by consequence; every aspect has a ladder of model rungs and may honestly occupy any rung whose sufficient statistics its consumers need.
       |rel :to rung :kind composed-of
-      |source .super-archive/from-design/DESIGN-REDUX.md §12
+      |source #form-complete-content-addressed-key · #form-store-as-save · #form-pull-query-composition · #form-three-scoped-runtime
 
     |term[telescope] :status settled
       Nested resolution tiers around a focus, re-anchored on drift (the erosion telescope is the built instance).
@@ -140,7 +140,7 @@
     |term[beacon] :status settled :since 2026-07-10
       A STANDING, spec-persisted build priority: a (region, stage/phase, level) triple in the manifest's demand bucket that draws the builder's causal-cone advancement toward it. Demand changes what gets built FIRST, provably never WHAT gets built (order-independence: nomoi depend on artifacts by key, never "latest available") — so beacons are freely editable mid-build. Per-beacon policy: depth-first (a waiting explorer) vs breadth-first (the globe-spinner).
       |rel :to manifest :kind lives-in
-      |source doc/plan/builder-explorer-decoupling.md
+      |source #detail-builder-daemon
 
     |term[finisher] :status settled
       A fine tier run for 1-2 animated passes over its parent's band, mean-pinned to conserve (Joseph's field observation, 2026-07-02).
@@ -148,10 +148,10 @@
     |term[memo] :status settled
       A cached converged state in the lazy query-graph runtime; the memo left at a phase-transition is the largest. The save-file IS the memo store.
       |not "checkpoint" (retired; see the collision ledger, §5).
-      |source .super-archive/from-design/DESIGN-REDUX.md §11-13
+      |source #form-complete-content-addressed-key · #form-store-as-save · #form-pull-query-composition · #form-three-scoped-runtime
 
     |term[system] :status settled
-      The phenomenon-level unit a phase runs — erosion, hydrology, climate (.super-archive/from-design/DESIGN-SYSTEMS.md rows; the ARCHITECTURE §9 contract is what one declares to join the machine).
+      The phenomenon-level unit a phase runs — erosion, hydrology, climate (#detail-phenomena-systems-map rows; the ARCHITECTURE §9 contract is what one declares to join the machine).
       |rel :to rung :kind climbs
       |rel :to slot :kind fills-via-nomos
 
@@ -173,7 +173,7 @@
       |not cognate with noumenon — nomos is from nemein (to allot), noumenon from noein (to think); but the nomoi + seed literally constitute the world's noumenon (§7.2), so the near-homophony is free resonance, deliberately enjoyed.
 
     |term[patch] :status settled
-      The Cartesian stencil substrate — a chunk interior as a flat row-major array with a halo carrying cross-chunk/face neighbours, so hot loops never branch. Column/Stratum and CellId — the matter and spatial keys — are defined in .super-archive/from-design/DESIGN-MATERIAL.md and used here unchanged.
+      The Cartesian stencil substrate — a chunk interior as a flat row-major array with a halo carrying cross-chunk/face neighbours, so hot loops never branch. Column/Stratum and CellId — the matter and spatial keys — are defined in #form-column-control-volume · #form-material-property-interface · #form-cellid-chunk-patch and used here unchanged.
 
     |term[detail-must-be-earned] :status settled
       Principle (Joseph): never paint sub-simulation detail the physics did not produce; the finest SIMULATED tier is authoritative and painted coordinate-noise detail yields to any simulated field overlapping it.
@@ -196,7 +196,7 @@
       |rel :to lawful-steering :kind overridable-by
 
     |term[generator-pinning] :status open
-      FILL_ALGO_VERSION generalized: frozen state must pin the algorithm version that produced it; a cache key is f(inputs, seed, generator-version). Already assumed everywhere; still unnamed. The structural resolution (source-derived nomos versions) is queued in doc/toolchain.md.
+      FILL_ALGO_VERSION generalized: frozen state must pin the algorithm version that produced it; a cache key is f(inputs, seed, generator-version). Already assumed everywhere; still unnamed. The structural resolution (source-derived nomos versions) is queued in #detail-epistemics-toolchain.
 
     |term[run-modes] :status open
       Different things currently called by one name ("running the world"): strictly temporal-causal runs · replays from pinned generators · discardable iteration runs · live play accruing history. Referents now pinned even though naming is open: strictly-causal / replay / live-play = Closed vs Open-with-recorded-forcing (§7.2); the discardable iteration run = the pre-participation non-intervention register (§4).
@@ -256,7 +256,7 @@
 
       The moving edge of the project's best current nomos is the LINEAGE HEAD; the curated, citable set a vivium builds against is its PINNED version (immutable). The three-way sub-question is answered structurally: interface = the slot set · algorithm = the nomos occupying a slot · target machine = backend identity in the memo key (the CPU-reference determinism policy answered the third leg). `vivarium status` reports conformance-to-pin and gap-to-head — the big-picture instrument as a computed diff.
       |rel :to regula :kind versions-of
-      |source doc/plan/regula-conformance-design.md §4b
+      |source #detail-regula-design §4b
 
   ; ==========================================================================
   |section[epistemic-labels] :num 5
@@ -284,7 +284,7 @@
 
       A named system-role in the world-assembly, identified by its FLUX INTERFACE (the ARCHITECTURE §9 contract): what any occupant must produce and consume. Nomos are candidate occupants at different rungs — the same slot filled at different rigor/performance/capability. Granularity rule: one interface consumers couple to = one slot; internal decomposition (EBM vs GCM) is rungs within it; separate interfaces are separate slots.
       |rel :to nomos :kind occupied-by
-      |source doc/plan/regula-conformance-design.md §1
+      |source #detail-regula-design §1
 
     |term[permit] :status open :since 2026-07-11
       PARKED with the regula (DECISIONS[regula-vocabulary-deferred]). The OBJECT is real and needed — the flux audit has to know which absences are declared — but post-collapse it lives on the MANIFEST rather than on a regula, and whether it keeps this name is deferred.
@@ -292,7 +292,7 @@
       A declared, auditable ABSENCE: (absent slots, validity condition). The validity condition names the fluxed quantities whose consumption VOIDS it — when any nomos declares a consumed quantity in the void-set, the audit reports the permit voided and demands the slot be filled before the consuming nomos may land. Canceling pairs (§1) are permits; so are grandfathered honest gaps (the atmosphere permit whose retirement is the reservoir layer).
       |rel :to canceling-pair :kind audit-form-of
       |rel :to manifest :kind carried-by
-      |source doc/plan/regula-conformance-design.md §3
+      |source #detail-regula-design §3
 
     |term[manifest] :status settled :since 2026-07-10
       What THIS vivium is and chose — the per-world PRESCRIPTION, and the object that individuates one world from another (spec.rs: identity, label, demand). The seed is minted here, ONCE. Beacons live in its demand bucket. Post-collapse (DECISIONS[regula-collapses-to-order-and-manifest], Joseph) it is also the home for the world's permits and its `:order` / `:target-phase` — the prescriptive half of what a regula was reaching for. That expansion is DESIGNED, not yet built.
@@ -312,7 +312,7 @@
       |rel :to permit :kind carries
       |rel :to ordinum :kind pins
       |rel :to vivium :kind declared-by
-      |source doc/plan/regula-conformance-design.md (the reasoning trail, no longer the plan)
+      |source #detail-regula-design (the reasoning trail, no longer the plan)
 
     |term[regula-terrestris] :status open :since 2026-07-11
       :name Regula Terrestris
@@ -325,7 +325,7 @@
 
     |term[use-case-fidelity-contract] :status open
       :name use-case = fidelity contract
-      Each use-case IS a statement of which axes must be honest — the largest-scale consumer in the consumer-dependent sufficient-statistic sense, at the very top of the fidelity ladder. Roughly: natural-world hypothesis testing needs A+B+C real · Earth-simulation pins A hard · speculative-coherent game needs C-consistency + B (lawful, not Earth-true) · agentic inhabitation additionally trips ETHICS.md · ASF-theory simulation needs the agent layer legible · personal exploration asks only for coherent beauty. The full working menu is canonical in doc/ARCHITECTURE.md §7. Different contracts pin against different regula versions (§4).
+      Each use-case IS a statement of which axes must be honest — the largest-scale consumer in the consumer-dependent sufficient-statistic sense, at the very top of the fidelity ladder. Roughly: natural-world hypothesis testing needs A+B+C real · Earth-simulation pins A hard · speculative-coherent game needs C-consistency + B (lawful, not Earth-true) · agentic inhabitation additionally trips ETHICS.md · ASF-theory simulation needs the agent layer legible · personal exploration asks only for coherent beauty. The full working menu is canonical in core (ARCHITECTURE graduated) §7. Different contracts pin against different regula versions (§4).
       |rel :to regula :kind reified-by
 
     |term[law] :status carved :since 2026-07-04
@@ -341,7 +341,7 @@
 
       Terms where vivarium and ASF usage could confuse, with the rule for each:
       - regime: ours (§1) = dominance structure of world systems; ASF's dynamic-regime axis (R0-R3) = interaction-dynamics class of composite agents. Near ASF material say "world regime" vs "dynamic regime Rn".
-      - checkpoint: RESOLVED 2026-07-04 — vivarium retired it for phase boundaries (-> phase-transition / phase-gate; cache sense -> memo); ceded to ASF's agent-state-snapshot sense. In vivarium work "checkpoint" means an agent snapshot — which matters exactly in fork/save design where world-forks meet agent-checkpoints. PENDING (Joseph's call): .super-archive/from-design/DESIGN-REDUX.md still uses it in a runtime durability sense at four sites — decide memo vs a distinct persist-boundary name (candidates save, snapshot; NOT checkpoint).
+      - checkpoint: RESOLVED 2026-07-04 — vivarium retired it for phase boundaries (-> phase-transition / phase-gate; cache sense -> memo); ceded to ASF's agent-state-snapshot sense. In vivarium work "checkpoint" means an agent snapshot — which matters exactly in fork/save design where world-forks meet agent-checkpoints. PENDING (Joseph's call): some design prose used "checkpoint" in a runtime durability sense — decide memo vs distinct persist-boundary name — decide memo vs a distinct persist-boundary name (candidates save, snapshot; NOT checkpoint).
       - persistence: reserved for the AAT property (bounded mismatch under drift). For disk say storage, memoization, or save — never "persistence".
       - tempo: reserved for AAT's $\mathcal{T} = \sum \nu \cdot \eta^\ast$ (rate of useful information gain). The HUD's sim-rate lines are RATES, not tempo, until they measure information.
       - epoch: no conflict (ours is the erosion solver's tick; ASF doesn't claim it) — recorded as checked.
@@ -456,7 +456,7 @@
     |term[realized-kingdom] :status settled
       A kingdom whose LAW IS IMMUTABLE. That is the whole definition — it says nothing about whether the law is good, only that it no longer changes. Realization is a THRESHOLD (fix the law at a chosen tolerance).
       |not "Deployed" — reserved, to be refined later as an actual deployment process, distinct from merely being Realized/ready.
-      |confused lawful-kingdom — Realized ⟂ Lawful, deliberately independent: a natural-modeling kingdom is MERELY REALIZED, converging toward Lawful, never self-certifiably complete (Gödel: a system cannot prove its own consistency from inside — "Lawful" is a noumenal property an endo agent cannot self-verify, exactly N-VIS = Revelation). Each Realization carries a residual unLawfulness budget (claim home #disc-unlawfulness-budget; source doc/plan/vivium-operational-workflow.md BREAK-2).
+      |confused lawful-kingdom — Realized ⟂ Lawful, deliberately independent: a natural-modeling kingdom is MERELY REALIZED, converging toward Lawful, never self-certifiably complete (Gödel: a system cannot prove its own consistency from inside — "Lawful" is a noumenal property an endo agent cannot self-verify, exactly N-VIS = Revelation). Each Realization carries a residual unLawfulness budget (claim home #disc-unlawfulness-budget; source #detail-vivium-lifecycle / #disc-unlawfulness-budget BREAK-2).
 
     |term[lawful-kingdom] :status open
       A kingdom whose law is internally SELF-CONSISTENT and coherent — no glitches, no contradictions. An ASYMPTOTE ($\varepsilon \to 0$), never an event.

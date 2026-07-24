@@ -1,5 +1,8 @@
 # Builder–explorer decoupling — the operational companion to the parity plan
 
+> **Graduated 2026-07-24** to `.super-archive/from-plan/`. Build/reasoning trail only — claim homes in `core/`. Do not re-mine as claim source.
+
+
 > **Claim homes (not this file).** Store as portable save / bus → `#form-store-as-save`. Builder refuse-unmet / waiver / explorer observe-only pull → `#form-builder-admission`. Core/view wall → `#form-core-view-wall`. Complete key → `#form-complete-content-addressed-key`. This file remains **operational design** for the unbuilt daemon, beacons, demand spool, and UX — not a second home for those laws.
 
 *2026-07-10. Joseph's usage scenario (the "naive imagined scenario," given verbatim in-session) cleaned into an architecture, with the decisions it settled. This is the **operational/UX layer** over `doc/plan/abyssal-parity-plan.md` (which owns the build phases) and `doc/ARCHITECTURE.md` (which owns the frame). Status inline: **settled** (decided this session) / **design** (reasoned, adopt-unless-contradicted) / **open**. Vocabulary: LEXICON-canonical (beacon, focus, memo, vivium, Realized).*

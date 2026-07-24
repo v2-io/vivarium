@@ -25,7 +25,7 @@ For each nomos, the **kernel** (the numerical procedure) is the sole intended im
 
 **Max attainable: exact** as method once ratified in DECISIONS. **Currently `robust-qualitative`:** Joseph-attributed steer in the 2026-07-12 declarative-frontier / definitions spike framing (“declare everything you can; kernel is the only imperative escape hatch”) — **no dedicated DECISIONS row** found; do not invent `:by us`. Project practice (nomotheke, flux audit, refuse-unmet) already moves in this direction.
 
-Stage `draft`. Sources: `.super-archive/from-archive/VIVARIA-DEFINITIONS.md` thesis (graduated); ARCHITECTURE §9 adding-a-system checklist as teaching.
+Stage `draft`. Sources: #form-add-system-contract ; #def-nomos .
 
 ## Discussion
 

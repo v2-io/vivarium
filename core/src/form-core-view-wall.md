@@ -24,7 +24,7 @@ The world frame never depends on a renderer. Every consumer of the world is a pe
 **Known incomplete surface (compliance debt, not a soften of the law):**
 
 1. **Default path (closed for FE(4)).** `spikes/worldview` defaults to **observe-only**: prior/sample surface, no in-view erosion or water evolution. Evolution workers and epoch knobs run only under explicit `VIVARIUM_ALLOW_VIEW_EVOLUTION=1` with a loud stderr banner — the same species of named waiver as builder `--allow-unmet`.
-2. **Opt-in hybrid remains debt.** Under that flag the spike still owns macro/fine epoch counts, rain/fill controls, and live maturing on the explorer process. That path is a **physics testbench**, not ethereal explorer and not *in vivia* evidence. Closing it fully means store-backed pulls (`vivarium build` / demand spool) replace in-view `Fluvial` / water workers — plan surface in `doc/plan/builder-explorer-decoupling.md`.
+2. **Opt-in hybrid remains debt.** Under that flag the spike still owns macro/fine epoch counts, rain/fill controls, and live maturing on the explorer process. That path is a **physics testbench**, not ethereal explorer and not *in vivia* evidence. Closing it fully means store-backed pulls (`vivarium build` / demand spool) replace in-view `Fluvial` / water workers — plan surface in `#detail-builder-daemon`.
 3. **Store-backed navigation** is a separate gap from FE(4); both must close for a true ethereal explorer that upgrades as builder memos land.
 
 ## Discussion

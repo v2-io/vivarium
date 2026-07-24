@@ -1,5 +1,8 @@
 # The epistemics toolchain — what mechanically hardens the honesty, and when to adopt it
 
+> **Graduated 2026-07-24.** Live map → `#detail-epistemics-toolchain`. PROCESS norms still bind. Do not re-mine as claim source.
+
+
 *2026-07-11, at Joseph's ask ("packages or methodologies we can adopt earlier that will make the project more wise, strong, and beautiful through truth, and that are harder to retrofit later because they inform our habits"). Every version/capability claim below was verified against current docs.rs / repos on 2026-07-11 by a research agent, not recalled from memory. The organizing principle: adopt early exactly the things that shape muscle memory; defer external harnesses freely — they bolt on whenever.*
 
 ## Adopt now (habit-forming, near-zero cost, painful to retrofit)

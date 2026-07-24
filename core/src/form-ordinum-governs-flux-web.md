@@ -34,6 +34,6 @@ Before this join, a "closed flux web" could print clean while erosion silently n
 
 ## Working Notes
 
-- Ice/pointer: DECISIONS ordinum-governs entry remains history of *why*; claim home is this segment. Reportatio: `.super-archive/from-archive/PHASES.md` (not law; ordinum is).
+- DECISIONS ordinum-governs entry is history of *why*; claim home is this segment. Live floor is `tabularium/terrestris.ordinum.udon` data only (historical PHASES reportatio is ice provenance, not a read dependency).
 - Display debt: wire maturity into `vivarium status` (or sibling command) without inventing a second ladder.
 - Emerged-land keeper path extracted to #form-derived-sea-level ; drop residual banner when nomotheke promises the flux.

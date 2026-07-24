@@ -162,7 +162,7 @@ pub struct Consume {
 
 /// Box ② — one assumption the algorithm makes about its cells / regime, and
 /// whether this world actually delivers it. The defects of 2026-07-13 were all
-/// found by hand because nothing declared these (`doc/design/NOMOS-CONTRACT.md`).
+/// found by hand because nothing declared these (`#detail-nomos-defect-anatomy`).
 pub struct Assumes {
     pub assumption: &'static str,
     pub delivered: Delivered,
@@ -309,7 +309,7 @@ pub struct NomosDecl {
     /// miss is the honest "rain without a sky" finding, and a permit may later
     /// license a miss. A consumed quantity that *is* met by a nomos must have
     /// that nomos in `deps` (else the complete key would omit its version) —
-    /// pinned by a test. (`doc/plan/regula-conformance-design.md` §3;
+    /// pinned by a test. (`#detail-regula-design` §3;
     /// `VIVARIA-DEFINITIONS.md` §"the web".)
     pub consumes: &'static [Consume],
     /// What it hands forward.

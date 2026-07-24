@@ -47,6 +47,5 @@ World-law algorithms enter the store only through declared nomos. The registry i
 
 ## Working Notes
 
-- **Promoted** from consolidation-wave draft (now `.super-archive/from-msc/consolidation-wave-2026-07-21/`).
-- **Dual homes demoted:** ARCHITECTURE §9 "adding a system" registry bullets; `nomotheke.rs` module header. Per-nomos epistemic status strings remain data, not re-prose.
-- Sibling gaps: ASSUMPTIONS generated ledger; per-box earning procedures + content conviction ( #sketch-nomos-declaration-boxes Working Notes — the fields themselves landed 2026-07-24).
+- Add-a-system checklist: #form-add-system-contract . Defect anatomy: #detail-nomos-defect-anatomy .
+- Sibling gaps: ASSUMPTIONS generated ledger; per-box earning procedures + content conviction ( #sketch-nomos-declaration-boxes ).

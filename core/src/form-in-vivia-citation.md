@@ -31,7 +31,7 @@ A citable *in vivia* result names a complete world-artifact key: seed, generator
 
 1. **Generator-pinning** is open as a dictionary term and practice ( #lexicon/term/generator-pinning).
 2. **Hand-stamped nomos versions** remain present practice; source-derived versions are the target remedy ( #form-complete-content-addressed-key known incomplete surfaces).
-3. **Enforcement layer** for cone-fold / regula-style citation was sketched (`doc/plan/regula-conformance-design.md`) and is not this segment's claim that it is built.
+3. **Enforcement layer** for cone-fold / regula-style citation was sketched (`#detail-regula-design`) and is not this segment's claim that it is built.
 
 Stage `draft`. Do not assert that every `cargo run` example is already a citable vivium.
 

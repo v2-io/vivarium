@@ -28,7 +28,7 @@ Every settled claim about what vivarium is, must do, or may conclude lives in a 
    - **`core/src/` body** — current law / observation / formulation (sole claim truth).
    - When core is corrected and old FE text leaves the body, that retired text goes to the **history layer** (git, commit messages, DECISIONS, changelog — not a softened twin in the segment body).
    - **Working Notes** — forward residue (open tension, do-not-reclaim, instruments), not a dump of deleted FE history.
-   - **`.super-archive/`** — graduated *mine* substrate (design/archive peals) once claim-empty; provenance of sources, not core’s changelog.
+   - **`.super-archive/`** — treat as **deleted** for all intents: provenance/rewind only after peels. No live tactical dependence; no unique non-superseded meat may live only there.
    - **Not integration:** live dual-home restatements of the FE, or a live “claim home: #slug” pointer table (second OUTLINE). Unpealed mine may stay in live `doc/` until pealed.
 5. **Session success.** Work that does not move a segment (or produce a probe / decision a segment will cite) does not advance claim-truth, however useful it is for play or engineering.
 
@@ -46,5 +46,5 @@ Fun and exploration remain legitimate. They are constrained only where they woul
 
 ## Working Notes
 
-- Migration of `doc/ARCHITECTURE.md` and design corpus into segments is open work; until a claim has a slug, treat those files as **sources to extract from**, not as law to quote.
+- Migration of `core (ARCHITECTURE graduated)` and design corpus into segments is open work; until a claim has a slug, treat those files as **sources to extract from**, not as law to quote.
 - Whether `ETHICS.md` remains permanently out-of-core or is fully segmented is open; until then the carve-out stands.

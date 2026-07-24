@@ -1,5 +1,8 @@
 # Vivium Operational Workflow — derived, and stress-broken, from the ontology
 
+> **Graduated 2026-07-24** to `.super-archive/from-plan/`. Build/reasoning trail only — claim homes in `core/`. Do not re-mine as claim source.
+
+
 > **Claim home for BREAK-2 / unLawfulness budget:** `#disc-unlawfulness-budget`. Save ≡ memo: `#form-store-as-save`. Moratorium: `#scope-moratorium-endogenous-emergence`. This file remains a **reasoning trail** (pipeline, capability ladder, collected breaks) — not parallel claim law.
 
 *2026-07-06. Turns the participation ontology + AAT grounding + moratorium into an operating pipeline:

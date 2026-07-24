@@ -3,7 +3,7 @@
 //! *"Gravity-driven flow is a gradient flow ⇒ ∇×∇φ ≡ 0. Does MFD's biased fan produce a flow
 //! field with nonzero discrete curl? If yes, our routing makes water circulate on hillsides —
 //! not an accuracy problem, a violated identity, and refinement will never fix it."*
-//! — `.super-archive/from-theory/discretisation-and-information.md` §6 probe 2; structure table §4.1 row 2.
+//! — `#detail-info-theoretic-discretisation / #detail-fvm-control-volume / #detail-structure-scheme-map` §6 probe 2; structure table §4.1 row 2.
 //!
 //! Run:  `cargo run --release -p vivarium-world --example curl_probe`
 //!

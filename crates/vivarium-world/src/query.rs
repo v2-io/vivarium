@@ -46,7 +46,7 @@ pub enum Source {
 // versions remain the §12 target).
 
 /// One vivium, opened for querying: the store it persists in and the seed that
-/// (with the law) IS its identity (LEXICON §4; `doc/plan/vivium-operational-workflow.md`
+/// (with the law) IS its identity (LEXICON §4; `#detail-vivium-lifecycle / #disc-unlawfulness-budget`
 /// Stage 0). Construct via [`World::new`] — normally from a loaded manifest
 /// (`spec::WorldSpec`), the one place a bare seed is handled.
 pub struct World<'s> {

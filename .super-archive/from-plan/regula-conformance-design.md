@@ -1,5 +1,8 @@
 # The regula — world-level conformance, made as auditable as the nomos
 
+> **Graduated 2026-07-24** to `.super-archive/from-plan/`. Build/reasoning trail only — claim homes in `core/`. Do not re-mine as claim source.
+
+
 *v2, 2026-07-11 (v1 of 2026-07-10 in git history). From Joseph's proposal (verbatim intent: a "charter that says this vivarium attempts to follow such-and-such… therefore it also models magnetic fields and solar flares and aurora and has high-fidelity ozone and therefore UV insolation simulation… as auditable as the rest… in order to have in-vivia experiment results with rigor and replayability where finding a latent flaw in a nomos can easily be seen to have changed the experimenter's results or not immediately"), strengthened across two dialog rounds. Status: **build-spec** — naming settled (§6); `regula.rs` v0 lands as the reservoir/thermal work's specification (TODO §Regula Terrestris v0). The concept's felt purpose (Joseph, 2026-07-11): the workflow-shaping pressure that stops us "adding various things on a whim like we would if it were just a game engine" — vigilance replaced by structure.*
 
 ## 1. What it is — the third grain of one honesty stack

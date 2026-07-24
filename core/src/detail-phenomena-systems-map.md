@@ -18,17 +18,28 @@ Source inventory for which Earth-lineage systems exist, on what timescales, how 
 
 ## Formal Expression
 
-1. **Systems table (slow → fast).** Each row is a candidate nomos or cluster: timescale, size-scale, crude-payoff / hi-fid difficulty (judgment), crude product, current vivarium status. Full table lives in the graduated source body (`.super-archive/from-design/DESIGN-SYSTEMS.md`); **present summary of load-bearing rows:**
+1. **Systems table (slow → fast).** Candidate nomos clusters. Timescales/size-scales are Earth-system standard (high confidence); crude-payoff / hi-fid difficulty are judgment.
 
-| system | timescale | crude product | vivarium (snapshot) |
-|---|---|---|---|
-| Tectonics / uplift | Myr | uplift-rate field → macro elevation prior | crude geology tier |
-| Climate / atmosphere | hrs–Myr | temp/precip fields | insolation seed |
-| Erosion / sediment | Kyr–Myr | stream-power + hillslope diffusion | **crude rung live** |
-| Hydrology | days–Kyr | flow accumulation + shallow-water | **crude rung live** |
-| Weathering / soil | 100s yr–10 Kyr | soil depth/type + differential hardness | — |
-| Biomes / vegetation | yr–millennia | Whittaker + succession | — |
-| Glaciation, karst, aeolian, coastal, ore, … | varied | feature-specific | mostly — |
+| system | timescale | size-scale | crude product | vivarium |
+|---|---|---|---|---|
+| Tectonics (uplift, plates) | Myr–100 Myr | global | uplift-rate field → macro elevation prior | crude geology tier |
+| Climate / atmosphere | hrs–Myr | global | lat+elev+continentality → temp/precip | insolation seed |
+| Volcanism / magmatism | days–Myr | local–regional | edifices + intrusions | — |
+| Glaciation / ice | 10–100 Kyr | continental | U-valleys, cirques, fjords, moraines | — |
+| Weathering / pedogenesis | 100s–10 Kyr | per-column | soil depth/type + differential hardness | — |
+| Erosion / sediment | Kyr–Myr | local–regional | stream-power + hillslope diffusion | **crude live** |
+| Karst / dissolution | 10 Kyr–Myr | local | caves, sinkholes | — |
+| Hydrothermal / ore | Kyr–Myr | local | veins, deposits | — |
+| Aeolian | yr–Kyr | regional | dunes, loess | — |
+| Coastal / sea-level | decades–Kyr | local–regional | beaches, cliffs, deltas | partial (flat sea) |
+| Hydrology | days–Kyr | watershed | flow accumulation + shallow-water | **crude live** |
+| Biomes | centuries–millennia | regional | Whittaker lookup | — |
+| Ecosystems / vegetation | yr–centuries | local–regional | succession | — |
+| Biogeochemical cycles | days–Myr | local–global | nutrient pools | partial |
+| Seismicity | events on long stress cycle | regional | scarps, offsets | — |
+| Floral/faunal evolution | 10 Kyr–Myr | regional–global | trait drift | defer |
+| Isostasy / rebound | Kyr–10 Kyr | regional | elastic load response | defer |
+| Ocean circulation | yr–Kyr | global | heat-transport bands | defer |
 
 2. **Multirate bands** (coupling texture; law → #form-scale-separation-directional · #form-seam-flux-exchange ): deep drivers (Myr) → orbital/climate (10–100 Kyr) → surface process (Kyr) → fast/biological (yr–centuries). Fast sees slow as quasi-static; slow sees fast as time-averaged.
 
@@ -36,7 +47,7 @@ Source inventory for which Earth-lineage systems exist, on what timescales, how 
 
 4. **Feature-driven growth.** Landforms are compositions over the material property interface ( #form-material-property-interface ): hoodoos = layered erodibility + erosion; fjords = ice; caves = karst; dunes = aeolian; ore = hydrothermal + fated materialization; deltas = sediment + sea level.
 
-5. **Fluvial next-rungs + sediment inventory (honest ladder).** Highest-leverage absent physics (judgment): grain-size split + Stokes settling; bank mechanics (undercut + Mohr–Coulomb); Darcy lateral groundwater. Transport-mode gaps: saltation, bed-load traction, debris/$\mu(I)$, dissolved load, flocculation. Interface: armoring/colmation partial; bedforms, tools-and-cover abrasion, meandering/oxbows mostly absent. **Scaffolding-with-demolition-date:** explicit armor/colmation fields should retire when grain-size physics emerges ( #form-fidelity-ladder ). Full inventory table in graduated SYSTEMS source.
+5. **Fluvial next-rungs + sediment inventory (honest ladder).** Highest-leverage absent (judgment): (1) grain-size split + Stokes settling; (2) bank mechanics (undercut + Mohr–Coulomb); (3) Darcy lateral groundwater. Transport modes: wash/suspension live; absent saltation, bed-load traction, debris/$\mu(I)$, dissolved load, flocculation. Interface: armoring+colmation partial; absent bedforms, tools-and-cover abrasion, meandering/oxbows (some emergent unverified). Hillslope: creep live; landslides/debris deferred. **Scaffolding-with-demolition-date:** armor/colmation explicit fields retire when grain sizes emerge ( #form-fidelity-ladder ). Hyperconcentrated: concentration-dependent density/viscosity + Bingham yield missing. Cordonnier–Braun stream-power + implicit solve is the CG-terrain method family of the live crude rung; multi-resolution space×time is the field's named open direction.
 
 6. **Approach codes** (process may blend): **A** analytic/functional (+ fated noise) · **R** relaxation-to-attractor · **S** statistical/empirical · **T** taxonomy/bestiary · **P** procedural-physical stepwise (annotate physics-understood + cost). **Agent-fidelity column** prioritizes what inhabitants perceive/depend on (rivers, biomes over mantle). Per-process ledger rows accrete in graduated source; live status is nomotheke, not this table.
 
@@ -54,6 +65,6 @@ Without a single map, agents re-invent system lists from memory and treat DESIGN
 
 ## Working Notes
 
-- **Source graduated:** `.super-archive/from-design/DESIGN-SYSTEMS.md` (full tables, sediment inventory prose, algorithms ledger rows, regime-probe instrument notes).
-- **Ordinum adjacency:** approach codes referenced by nomotheke; charges/promises remain ordinum data (OUTLINE §IV/§VII gaps).
-- **Probes:** regime-probe law → #norm-regime-probes ; specimens stay in examples/, not re-listed as law here.
+- **Ordinum adjacency:** approach codes may be referenced by nomotheke; charges/promises remain ordinum data (OUTLINE §IV/§VII gaps).
+- **Probes:** #norm-regime-probes ; specimens in `examples/`.
+- Supersedes DESIGN-SYSTEMS as inventory home — do not re-mine ice.

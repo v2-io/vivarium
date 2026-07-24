@@ -1,5 +1,8 @@
 # Water parallelism — CPU-parallel and GPU compute (plan, 2026-07-03)
 
+> **Graduated 2026-07-24** to `.super-archive/from-plan/`. Build/reasoning trail only — claim homes in `core/`. Do not re-mine as claim source.
+
+
 *Intent and constraints for whoever takes water performance on — deliberately
 not a task list. Written the day the async mesher landed (6→121 fps) and the
 question "can water go to the GPU?" got a real look.*

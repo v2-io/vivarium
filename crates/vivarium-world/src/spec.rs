@@ -1,7 +1,7 @@
 //! The vivium manifest — the file that *individuates a world*.
 //!
 //! A vivium's identity is content-addressed: `hash(seed, law-versions,
-//! generator-versions)` (`doc/plan/vivium-operational-workflow.md` Stage 0;
+//! generator-versions)` (`#detail-vivium-lifecycle / #disc-unlawfulness-budget` Stage 0;
 //! LEXICON §4 build-stack). The manifest is where that identity is declared and
 //! the one place a bare seed is handled — everything downstream receives it
 //! inside a [`crate::query::World`], so key-seed and compute-seed cannot diverge.

@@ -1,5 +1,8 @@
 # Framework-to-status-quo — the honest gap, and the drainage-shaped dependency design
 
+> **Graduated 2026-07-24** to `.super-archive/from-plan/`. Build/reasoning trail only — claim homes in `core/`. Do not re-mine as claim source.
+
+
 > [!note]
 > **Terminology (2026-07-10):** “recipe” throughout this dated document = **nomos** (pl. *nomos*) — the term settled after this was written (LEXICON §2). Kept verbatim as history.
 

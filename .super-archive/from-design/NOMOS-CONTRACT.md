@@ -1,5 +1,8 @@
 # The nomos contract — what a nomos must declare to be true-to-physics
 
+> **Graduated 2026-07-24.** Fields live on `NomosDecl`; defect anatomy → `#detail-nomos-defect-anatomy`; boxes sketch + flux/structure/prime-question segments own law. Per-box procedure files remain open intent (not launched). Do not re-mine as claim source.
+
+
 *Written 2026-07-13, after a day auditing the project's kernels. The defects found that day sort into five kinds; the flux web declares only the first. The five boxes were abstracted from those defects, so the sort is a restatement of that sample — not evidence the set is closed.*
 
 > **Status:** source / procedure design, not claim canon. Box ① → `#form-flux-web`; box ⑤ → `#disc-prime-question`; convictability → `#norm-declaration-must-convict`; nomos grain → `#def-nomos`; **boxes ②–④ exploratory schema** → `#sketch-nomos-declaration-boxes`. Bias adjudication → `#norm-bias-vs-noise`. Preserved/sacrificed structure + family/seam declaration law → `#form-declared-structure-tradeoff`. Defect table below is **teaching** (specimen anatomy), not a second law home.

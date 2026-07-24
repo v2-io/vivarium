@@ -38,7 +38,7 @@ This is the load-bearing generalisation of the 2026-07-13 audit day: every defec
 
 ## Working Notes
 
-- **Dual-home demote:** `.super-archive/from-theory/discretisation-and-information.md` §4 headers point here for the law; table/conflicts/consumer rows → #detail-structure-scheme-map . `doc/design/NOMOS-CONTRACT.md` box ④ section points here for the law.
+- **Dual-home demote:** `#detail-info-theoretic-discretisation / #detail-fvm-control-volume / #detail-structure-scheme-map` §4 headers point here for the law; table/conflicts/consumer rows → #detail-structure-scheme-map . `#detail-nomos-defect-anatomy` box ④ section points here for the law.
 - **Instruments owed:** null-space/eigenvalue probe on each field nomos; $R\circ\mathrm{div} = \mathrm{div}\circ R_F$ commutation probe; run curl probe against *current* kernel before any mimetic rewrite (it passes vacuously after).
 - **Do not re-claim:** "the discrete topological identities are hard" — they are free on any mesh ($d\circ d=0$ is combinatorial); all difficulty lives in the Hodge star (recon carve).
 - Sibling: `#obs-routing-curl-spiral` (measured specimen of a violated identity); `#sketch-nomos-declaration-boxes` (where declarations would live on `NomosDecl`).

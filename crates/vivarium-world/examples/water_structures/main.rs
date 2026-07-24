@@ -857,7 +857,7 @@ fn probe_nullspace() {
     println!("\n╔══════════════════════════════════════════════════════════════════════════════╗");
     println!("║ PROBE 2f — IS water.rs BLIND TO THE CHECKERBOARD? (the null-space claim)      ║");
     println!("╚══════════════════════════════════════════════════════════════════════════════╝");
-    println!("`.super-archive/from-theory/discretisation-and-information.md` §2.5 says: \"those solitons were");
+    println!("`#detail-info-theoretic-discretisation / #detail-fvm-control-volume / #detail-structure-scheme-map` §2.5 says: \"those solitons were");
     println!("the invisible mode. The θ-smoothing is Rhie–Chow-class stabilisation.\" A null");
     println!("mode exists only if the operator CANNOT SEE the Nyquist checkerboard. Feed it one.\n");
     println!("A COLLOCATED scheme computes ∂η/∂x as (η_{{i+1}} − η_{{i−1}})/2Δx  ⇒ 0 on a checkerboard.");

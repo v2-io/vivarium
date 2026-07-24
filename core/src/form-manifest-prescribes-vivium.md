@@ -28,7 +28,7 @@ World-level conformance uses **two artifacts**, not three: the **ordinum** (desc
 
 **Currently `exact` for FE(1)–(3)** as project law; **`robust-qualitative` / draft for FE(2) field inventory** until `spec.rs` / store roots implement the full surface. Vocabulary: LEXICON `manifest` exists; `regula` / `slot` / `permit` words may remain open (deferred, not dead) without reviving the regula *artifact*.
 
-Stage `draft`. Sources: DECISIONS regula-collapse; `.super-archive/from-archive/VIVARIA-DEFINITIONS.md` Layer 3 (graduated); regula-conformance-design as reasoning trail only.
+Stage `draft`. Sources: DECISIONS regula-collapse; #detail-regula-design ; #form-ordinum-governs-flux-web .
 
 ## Discussion
 

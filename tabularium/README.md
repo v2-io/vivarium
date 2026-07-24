@@ -7,7 +7,7 @@
 Artifacts whose content is *data the machine reads*, not narrative and not implementation:
 
 - **ordina** (`*.ordinum.udon`) — codified **phase floors**: per-phase charges, promises, and defeasances for a world-*kind*. The reportatio (prose working text) each was compiled from lives in `doc/` or `.archive/`; the pinned `:reportatio` / `:reportatio-pin` records the exact source. *Present:* [`terrestris.ordinum.udon`](terrestris.ordinum.udon) — the Earth-world-kind (`:manifold cube-sphere-3d-voxel`).
-- **regulae** (`*.regula.udon`) — world-level **conformance profiles**: which slots at what minimum rigor, which absences are permitted, the epistemological posture. Each pins an `ordinum@version`. *Coming:* `terrestris.regula.udon` (Regula Terrestris pins the Terrestris ordinum — one track, two faces), spec at [`../doc/plan/regula-conformance-design.md`](../doc/plan/regula-conformance-design.md).
+- **regulae** (`*.regula.udon`) — world-level **conformance profiles**: which slots at what minimum rigor, which absences are permitted, the epistemological posture. Each pins an `ordinum@version`. *Coming:* `terrestris.regula.udon` (Regula Terrestris pins the Terrestris ordinum — one track, two faces), spec at [`../#detail-regula-design`](../#detail-regula-design).
 - and, over time, the other structured law-data the design calls for (declarations, slot registries, …) — each a single-root udon document.
 
 The **lexicon** (`../LEXICON.udon`) and the **process norms** (`../doc/PROCESS.udon`) are also udon, but they are project-governance front-doors, so they stay at their load-bearing locations rather than in the archive of world-law.

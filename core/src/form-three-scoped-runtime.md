@@ -31,7 +31,7 @@ The fully-general pull graph (non-local + coupled + mutable, all aspects at once
 
 ## Epistemic Status
 
-**Max attainable: exact** as architecture once the spine and cone machinery exist to convict it. **Currently `robust-qualitative`:** the decomposition is design stance (DESIGN-REDUX §11 "graceful degradation"; ARCHITECTURE §5), agent-articulated and Joseph-worked-within, with **no DECISIONS ratification row**. FE(3)'s lagged-coupling DAG is doctrine whose full mechanization is unbuilt. FE(5)'s measurements are spike-grade under the wavelet-store harness, `:by claude`, proposed. Honest build inventory: spine **unbuilt**; demand spool / flux-BC tiles **plan-grade** (`doc/plan/builder-explorer-decoupling.md`, `abyssal-parity-plan.md`); pull pattern **live in miniature**; prefetch **deliberately absent**; edit layer **split** per FE(5).
+**Max attainable: exact** as architecture once the spine and cone machinery exist to convict it. **Currently `robust-qualitative`:** the decomposition is design stance (DESIGN-REDUX §11 "graceful degradation"; ARCHITECTURE §5), agent-articulated and Joseph-worked-within, with **no DECISIONS ratification row**. FE(3)'s lagged-coupling DAG is doctrine whose full mechanization is unbuilt. FE(5)'s measurements are spike-grade under the wavelet-store harness, `:by claude`, proposed. Honest build inventory: spine **unbuilt**; demand spool / flux-BC tiles **plan-grade** (`#detail-builder-daemon`, `abyssal-parity-plan.md`); pull pattern **live in miniature**; prefetch **deliberately absent**; edit layer **split** per FE(5).
 
 Stage `draft`.
 

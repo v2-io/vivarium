@@ -40,7 +40,7 @@ This is the severity half of the Prime Question stack: #disc-prime-question reco
 
 ## Working Notes
 
-- **Dual homes demoted:** discretisation graduated; NOMOS-CONTRACT bias adjudication section; `.super-archive/from-archive/CLAUDE.md`. Worked MFD / θ / clip specimens stay in DECISIONS + measurement homes.
+- Specimens: DECISIONS + #detail-nomos-defect-anatomy + measurement homes.
 - **`#disc-prime-question` Working Notes** already deferred this cut here — no fork of the rule back into that segment.
-- **Unbuilt surface:** geometric-contract / `NomosDecl` field for declared bias-vs-noise class of each residual — `doc/design/NOMOS-CONTRACT.md` and DECISIONS impact; not invented schema here.
+- **Unbuilt surface:** geometric-contract / `NomosDecl` field for declared bias-vs-noise class of each residual — `#detail-nomos-defect-anatomy` and DECISIONS impact; not invented schema here.
 - **Related open:** Jensen / sufficient-statistic contract and column cell-average vs point-sample fork need their own segments; this norm only asserts the audit cut they must answer.

@@ -18,7 +18,7 @@ Spend simulation, precision, and storage only where a consumer depends on the re
 
 ## Epistemic Status
 
-**Max attainable: axiomatic** as project stance. Stated as the consolidating principle of `doc/ARCHITECTURE.md`. Stage `draft`. Fidelity cash-out now has `#form-fidelity-invariant`. Remaining sub-claims (lazy memo graph, phase freezes, consumer-dependent restriction statistics beyond the fidelity segment) need their own segments before they inherit this postulate's authority; this file does not smuggle them in as proved.
+**Max attainable: axiomatic** as project stance. Stated as the consolidating principle of `core (ARCHITECTURE graduated)`. Stage `draft`. Fidelity cash-out now has `#form-fidelity-invariant`. Remaining sub-claims (lazy memo graph, phase freezes, consumer-dependent restriction statistics beyond the fidelity segment) need their own segments before they inherit this postulate's authority; this file does not smuggle them in as proved.
 
 ## Discussion
 

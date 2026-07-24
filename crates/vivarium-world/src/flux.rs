@@ -2,7 +2,7 @@
 //!
 //! A multiscale, heterogeneous world is assembled from nomos that never share
 //! mutable state: one hands another a **fluxed quantity** and nothing else
-//! (`.super-archive/from-theory/multiscale-seams.md (#detail-seam-precedents for primary-read support)`; the coupling contract of ARCHITECTURE §9).
+//! (`#detail-seam-precedents / #form-seam-flux-exchange`; the coupling contract of ARCHITECTURE §9).
 //! The contract is exactly one string-match: a nomos `produces` a quantity, a
 //! downstream nomos `consumes` the same quantity, and *that matched pair is the
 //! only thing they agree on*. So the strings must come from **one shared
@@ -25,7 +25,7 @@
 //! assumption in its drainage-area discharge; water as the documented ~10× rain
 //! fudge, `ASSUMPTIONS.md` "rain rate"). No nomos *produces* it yet. Naming it
 //! here is what turns "rain without a sky" from an unwritten assumption into a
-//! mechanical audit finding (`crate::audit`; `doc/plan/regula-conformance-design.md` §3).
+//! mechanical audit finding (`crate::audit`; `#detail-regula-design` §3).
 //!
 //! **The statistic + exactness contract is now declared** (`#form-flux-web`
 //! FE(6)): promises carry `{statistic, exactness}` and consumes carry

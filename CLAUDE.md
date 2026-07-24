@@ -29,7 +29,7 @@ A deterministic constructed-world laboratory (and sim game) in the RimWorld / DF
 | **Executable law / probes** | `crates/vivarium-world/` · examples · `vivarium status` · `bin/check` (tests + determinism clippy) |
 | **Pending audits** | [`audits/`](audits/) — integrate per `#ops-audit-integration`; `.integrated/` only when done |
 | **Consolidation intuition** | [`CONSOLIDATION-STATUS.md`](CONSOLIDATION-STATUS.md) — big-picture residual estimate (**not** claim canon; core wins on conflict) |
-| **Residual mine** | [`.archive/`](.archive/) **and live `doc/`** (design / theory / plan / ARCHITECTURE) — extract gold → segments; not tactical claim law |
+| **Residual mine** | [`.archive/`](.archive/) residual ledger only; live `doc/` is essentially **PROCESS.udon** (+ empty design/theory/plan dirs). Claim meat lives in `core/` |
 | **Fully integrated / superseded** | [`.super-archive/`](.super-archive/) — graduated from archive *or* doc; do not re-mine as claim source; see `MANIFEST.md` |
 
 **Main objective this phase:** peel residual prose into **core** (present best); graduate claim-empty mine to **`.super-archive/`**. **Integration is replacement** (`#scope-segment-canon`): core body holds current best; text removed *from core* goes to the **history layer** (git / DECISIONS / changelog), not a softened twin. Working Notes = forward residue, not history dump. Pointer tables are not integration. **Every graduated file speeds the next adjudication.** Novel not-ready-for-primacy: Working Notes, `type: sketch`, or `msc/`.

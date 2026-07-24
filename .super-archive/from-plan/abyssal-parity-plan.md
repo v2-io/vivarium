@@ -1,5 +1,8 @@
 # Abyssal parity plan — an ethereal explorer in an early-Abyssal world
 
+> **Graduated 2026-07-24** to `.super-archive/from-plan/`. Build/reasoning trail only — claim homes in `core/`. Do not re-mine as claim source.
+
+
 > **Claim homes for laws this plan *honors* (not owns).** Realized ⟂ Lawful / unLawfulness budget → `#disc-unlawfulness-budget`. Seam fluxes / position×time → `#form-seam-flux-exchange`. Fidelity on both axes → `#form-fidelity-invariant`. Save ≡ memo store → `#form-store-as-save`. Builder/explorer roles → `#form-builder-admission`. Moratorium → `#scope-moratorium-endogenous-emergence`. Determinism / complete key / core-view wall → their segments. This file is the **build sequence** toward the milestone — not parallel claim law.
 
 *2026-07-10. The phased path from today's fixed-patch physics testbench to the first playable milestone: **an ethereal explorer roaming some of a Realized early-Abyssal world**, produced principled-and-global rather than as one baked patch, conforming to the consolidated architecture. Rests on `doc/ARCHITECTURE.md` (the three axes), `.super-archive/from-theory/multiscale-seams.md` (position AND time at the seams — the technical core), `doc/plan/framework-to-status-quo.md` (the verified status quo + the store/spine/tile/query build shape), and `LEXICON.udon` (canonical vocabulary). Status inline: **decision** (Joseph's call, gating) / **build** / **gap** / **open**. This is the primary plan; alternative sequencings are flagged where they exist.*

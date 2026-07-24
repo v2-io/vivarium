@@ -3,7 +3,7 @@
 //! straight off the declarations with **nothing running**.
 //!
 //! This is the payoff of declaring the coupling contract as data
-//! (`VIVARIA-DEFINITIONS.md` §"the web"; `doc/plan/regula-conformance-design.md`
+//! (`VIVARIA-DEFINITIONS.md` §"the web"; `#detail-regula-design`
 //! §3). Every function here is a pure graph query over the [`crate::nomotheke`]
 //! registry — no store, no kernels, no simulation. Their whole job is to make
 //! the questions the fidelity pyramid can't answer answerable *before* a line of
@@ -23,7 +23,7 @@
 //! their flux interface. It is deliberately *not* the full world-conformance
 //! audit: it takes no `regula`/`ordinum` and no store census, because the
 //! world-level profile's shape is still Joseph's open call (regula-keep, per
-//! `doc/plan/regula-conformance-design.md`, vs regula-collapse, per
+//! `#detail-regula-design`, vs regula-collapse, per
 //! `VIVARIA-DEFINITIONS.md`). What both agree on is exactly this layer — the
 //! requisite/conservation queries over `consumes`↔`produces` — so it is built
 //! here, on the common ground, ahead of that decision. Permit-licensing of an

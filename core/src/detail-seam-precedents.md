@@ -36,5 +36,5 @@ The point of holding these at claim-adjacent grade is the failure mode they prev
 
 ## Working Notes
 
-- Source graduated: `.super-archive/from-theory/multiscale-seams.md` → `.super-archive/from-theory/` (its §3 z-material lives at #sketch-dynamic-exponent-seams ; §2.4's superseded statement at #sketch-detail-abstract-reversion ; §4's declaration checklist is owned piecewise by the segments it listed).
+- z-material: #sketch-dynamic-exponent-seams ; reversion open: #sketch-detail-abstract-reversion .
 - Open measurement named in FE(3): basin-partition stability across levels — still unowned as a probe.

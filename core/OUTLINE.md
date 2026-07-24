@@ -43,6 +43,7 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | sketch | Model | [#sketch-detail-abstract-reversion](src/sketch-detail-abstract-reversion.md) | Reversion frame; open: nonlinear closure for non-local flux (state half retired as measured) | draft |
 | sketch | Project | [#sketch-nomos-declaration-boxes](src/sketch-nomos-declaration-boxes.md) | Nomos boxes ②–④ geometry/semantics/structure — exploratory schema | draft |
 | discussion | Project | [#disc-vivarium-purpose](src/disc-vivarium-purpose.md) | Dual purpose: play and *in vivia* laboratory; claim truth outranks demo polish this phase | draft |
+| discussion | Project | [#disc-open-problem-census](src/disc-open-problem-census.md) | Open work derived from core gaps — not ranked superlatives | draft |
 | sketch | Project | [#sketch-three-project-axes](src/sketch-three-project-axes.md) | Graphics / world / agents as independent budgets — exploratory map | draft |
 | formulation | Machine | [#form-engine-bevy](src/form-engine-bevy.md) | Bevy is the view/runtime engine (project decision + spike) | draft |
 | sketch | Project | [#sketch-logozoetic-peer-view](src/sketch-logozoetic-peer-view.md) | Typed A/O peer view for logozoetic play — exploratory | draft |
@@ -77,6 +78,7 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | formulation | Machine Critical | [#form-flux-web](src/form-flux-web.md) | Nomoi couple by matched flux quantities + statistic/exactness; unmet = unrunnable | draft |
 | formulation | Project Critical | [#form-ordinum-governs-flux-web](src/form-ordinum-governs-flux-web.md) | Ladder promises are flux; `:kept-by` is the producer | draft |
 | formulation | Project Critical | [#form-kernel-imperative-boundary](src/form-kernel-imperative-boundary.md) | Kernel = only imperative escape hatch; rest is declaration data | draft |
+| formulation | Project | [#form-add-system-contract](src/form-add-system-contract.md) | Six-clause contract to add a composable world-system; CHONK prior art; domain-fixation guard | draft |
 | formulation | Model Critical | [#form-column-control-volume](src/form-column-control-volume.md) | Column is a control volume with sufficient statistics (frame; impl open) | draft |
 | observation | Physics | [#obs-hydrosphere-box-nomos](src/obs-hydrosphere-box-nomos.md) | Box nomos proves representation-agnostic contract | draft |
 | formulation | Physics Critical | [#form-derived-sea-level](src/form-derived-sea-level.md) | Sea level = pour ocean into solid hypsometry; freeboard earns emerged land (not decreed continents) | draft |
@@ -96,6 +98,11 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | | | | *(#gap) Run-modes carve (thin: LEXICON open referents + root isolation; no fat enum)* | missing |
 | | | | *(#gap) Full builder daemon (beacon / demand spool)* | missing |
 | formulation | Machine Critical | [#form-three-scoped-runtime](src/form-three-scoped-runtime.md) | Spine / cones / edit-layer decomposition; time-in-key DAG; prefetch is pure optimization | draft |
+| detail | Machine | [#detail-builder-daemon](src/detail-builder-daemon.md) | Unbuilt builder/explorer daemon: store-as-bus, beacons, demand spool | draft |
+| detail | Machine | [#detail-drainage-dependency-planning](src/detail-drainage-dependency-planning.md) | Drainage islands as dependency map; flux magnitude sets pull fidelity | draft |
+| detail | Project | [#detail-abyssal-parity-build](src/detail-abyssal-parity-build.md) | Six-phase path to ethereal explorer in early-Abyssal | draft |
+| detail | Project | [#detail-vivium-lifecycle](src/detail-vivium-lifecycle.md) | Pipeline stages, capability ladder, BREAK-1/3/4/5 + doctrine | draft |
+| detail | Project | [#detail-regula-design](src/detail-regula-design.md) | World-level regula conformance design (held; largely unbuilt) | draft |
 
 ## IV. Kingdoms, orders, and ordinum
 
@@ -124,6 +131,9 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | detail | Math | [#detail-fvm-control-volume](src/detail-fvm-control-volume.md) | Cardiff FVM taxonomy: constructions, volume-exact reconstruction, null-space probe | draft |
 | worked-example | Model | [#worked-example-mfd-prime-question](src/worked-example-mfd-prime-question.md) | MFD as disguised geometric claim — Prime Question specimen | draft |
 | detail | Project | [#detail-phenomena-systems-map](src/detail-phenomena-systems-map.md) | Systems inventory, multirate bands, build-order judgment, fluvial ladder, approach ledger | draft |
+| detail | Model | [#detail-nomos-defect-anatomy](src/detail-nomos-defect-anatomy.md) | Jul-13 defect→box map, earning-procedure shape, failure-gallery seeds | draft |
+| detail | Machine | [#detail-water-parallelism](src/detail-water-parallelism.md) | Gather-not-scatter; CPU reference; GPU as keyed rung | draft |
+| detail | Ops | [#detail-epistemics-toolchain](src/detail-epistemics-toolchain.md) | Structural vs harness tooling queue; wired clippy; skip reasons | draft |
 | | | | *(#gap) Hydrosphere, climate, erosion, water nomos (beyond box + #form-derived-sea-level)* — residual: wire pour/freeboard keeper into nomotheke; full field nomos segments | missing |
 
 ## VI. Process and contribution

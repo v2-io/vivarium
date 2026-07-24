@@ -8,7 +8,9 @@
 
 **Compounding:** every file that moves here **speeds the next adjudication** (smaller mine, fewer dual-homes, less re-litigation). Prefer **low-hanging fruit** when it is honestly claim-empty — do not save easy ice for later while re-reading it every pass.
 
-**Integration is replacement** (present best in **core**). Super-archive holds graduated *source mine* after peals — not the place where deleted core FE is “integrated” (that is the **history layer**: git / DECISIONS / changelog). Live “claim home: #slug” pointer tables are dual-home cosplay. Unpealed residual may stay in live `doc/` until pealed.
+**Integration is replacement** (present best in **core**). Super-archive holds graduated *source mine* after peals — not the place where deleted core FE is “integrated” (that is the **history layer**: git / DECISIONS / changelog). Live “claim home: #slug” pointer tables are dual-home cosplay.
+
+**Treat super-archive as deleted for all intents.** Nothing live may depend on it for tactical current truth. **No good non-superseded work may exist only in ice** — peel into core (including `detail` / `worked-example` / appendix failure galleries) first, then graduate. Ice is provenance / rewind only.
 
 There is **no path ban.** Graduation rules apply to **any** tree path: `.archive/`, `doc/` (design, theory, plan, ARCHITECTURE, …), even **`ref/`** if a reference note is fully superseded and claim-empty. “Still live under X” only means **not pealed clean yet** (or still the useful place to *consult* primary literature), not “excluded by design.”
 

@@ -172,7 +172,7 @@
       or shared RNG (thread_rng and kin — all randomness is a keyed hash), no
       HashMap/HashSet iteration order reaching canonical bytes or store roots.
       The clippy disallowed-lists that mechanize this are queued in
-      doc/toolchain.md; the norm binds now, ahead of the tooling.
+      #detail-epistemics-toolchain; the norm binds now, ahead of the tooling.
 
     |norm[probes-first]
       :kind prescription
@@ -232,5 +232,5 @@
       Adding a target-aged world feature goes through the requisite-closure
       check: what does the regula then demand (which slots, which permits
       voided)? Until regula.rs lands, run the check by hand against
-      doc/plan/regula-conformance-design.md section 3. This norm is the reason
+      #detail-regula-design section 3. This norm is the reason
       the regula layer exists — structure where vigilance kept failing.

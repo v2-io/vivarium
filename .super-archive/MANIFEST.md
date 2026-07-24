@@ -2,6 +2,17 @@
 
 *Present-tense index of graduated substrate. Not claim law. Newest batches first.*
 
+## 2026-07-24 batch 8 — doc residual iced only after full core peels
+
+| Path | Note |
+|------|------|
+| `from-architecture/ARCHITECTURE.md` | Meat → `#form-add-system-contract`, `#disc-open-problem-census`, existing segments |
+| `from-design/NOMOS-CONTRACT.md` | Meat → `#detail-nomos-defect-anatomy` + boxes sketch (fields already code) |
+| `from-plan/*` | Meat → `#detail-abyssal-parity-build`, `#detail-builder-daemon`, `#detail-vivium-lifecycle`, `#detail-drainage-dependency-planning`, `#detail-regula-design`, `#detail-water-parallelism` |
+| `from-doc/toolchain.md` | Meat → `#detail-epistemics-toolchain` |
+
+**Rule reinforced:** super-archive is treated as deleted for all intents — no live tactical dependence; no unique non-superseded meat only in ice. Appendix failure galleries live in core (`detail-nomos-defect-anatomy` FE(8)).
+
 ## 2026-07-24 batch 7 — discretisation + MATERIAL + SYSTEMS
 
 | Path | From | Superseded by / ice |
@@ -66,7 +77,7 @@
 | Location | Contents |
 |----------|----------|
 | `.archive/` | `SUPERSEDED.md` (active ledger) + `README.md` (index) |
-| Live `doc/` | NOMOS-CONTRACT, plan/, ARCHITECTURE, toolchain, PROCESS (design thick middle graduated) |
+| Live `doc/` | **PROCESS.udon only** (design/theory/plan/ARCHITECTURE/toolchain graduated after core peels) |
 | Live instruments | spikes, DECISIONS, `ref/` primaries |
 
 ## Provenance audit 2026-07-23

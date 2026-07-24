@@ -31,7 +31,7 @@ The content-addressed memo store is the world's portable saved state — not a d
 
 ## Epistemic Status
 
-**Max attainable: exact** as architecture law under complete keys and determinism-as-ontology. Live substrate: `crates/vivarium-world/src/store.rs` (objects + roots; domain-neutral; atomic temp-then-rename put). Stage `draft`. Sources: graduated DESIGN-REDUX §13 (`.super-archive/from-design/`), ARCHITECTURE §5, store module honesty.
+**Max attainable: exact** as architecture law under complete keys and determinism-as-ontology. Live substrate: `crates/vivarium-world/src/store.rs` (objects + roots; domain-neutral; atomic temp-then-rename put). Stage `draft`. Sources: store module honesty; design meat in this segment + #form-complete-content-addressed-key .
 
 **Known incomplete (MVP / compliance debt — not a soften of the law):**
 
@@ -47,7 +47,7 @@ Treating the store as "just a cache" reintroduces a second home for world truth 
 ## Working Notes
 
 - **Sole home.** Do not reintroduce `form-save-is-memo-store` or `form-store-is-save` as parallel slugs.
-- **Dual homes demoted:** DESIGN-REDUX §13 (file graduated `.super-archive/from-design/DESIGN-REDUX.md`); ARCHITECTURE §5; `store.rs` / `query.rs` module docs; plan headers.
+- **Dual homes demoted:** DESIGN-REDUX §13 (file graduated `core store/pull/ladder segments`); ARCHITECTURE §5; `store.rs` / `query.rs` module docs; plan headers.
 - **Residual / TENTATIVE shapes reserved from graduated REDUX §13 (not FE):**
   - **Thin vs fat save policy** — thin = nomos + irreducible + roots (regenerate rest); fat = also ship materialized regenerable for instant / version-drift-robust pickup; natural “fat for developed regions, thin elsewhere.” Exact policy unfixed.
   - **Regenerable bit derivation** — how the regenerable/irreducible tag is computed; GC that prunes regenerable freely on algo-version bump while never touching irreducible.

@@ -49,5 +49,5 @@ Calling something a nomos is the claim that it is *one addressable article of la
 - **Ice once this lands (definition dual-homes only):**
   - `.archive/VIVARIA-DEFINITIONS.md` §"Layer 1 — the nomos" — primary archive prose of "keyed, versioned, executable article of world-law"; ice the definitional gloss (scaffold udon sketch may still inform a later nomotheke/udon segment).
   - `.archive/README.root.md` opening nomos paragraph — dual-home of the same gloss for the old front door.
-  - `doc/ARCHITECTURE.md` §9 clause (5) (nomotheke declaration fields) — reduce to a one-line pointer to this slug when the §9 "adding a system" contract is segmented; leave R/L/closure and probe clauses until their own homes.
+  - `core (ARCHITECTURE graduated)` §9 clause (5) (nomotheke declaration fields) — reduce to a one-line pointer to this slug when the §9 "adding a system" contract is segmented; leave R/L/closure and probe clauses until their own homes.
   - `doc/design/DESIGN-REDUX.md` §12 Nix/"recipe" = nomos gloss — definitional identity only; keep the memoization and over-key discipline until the complete-key segment lands.
