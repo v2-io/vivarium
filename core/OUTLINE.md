@@ -45,6 +45,7 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | scope | Project | [#scope-agent-seam-constraints](src/scope-agent-seam-constraints.md) | Late-phase agent-seam constraints holder (not primary until Level C) | draft |
 | normative | Ops Critical | [#norm-declaration-must-convict](src/norm-declaration-must-convict.md) | A declaration that cannot fail is a wish | draft |
 | normative | Ops Critical | [#norm-probes-before-claims](src/norm-probes-before-claims.md) | Probes before claims | draft |
+| normative | Ops Critical | [#norm-probe-sensitivity](src/norm-probe-sensitivity.md) | Probe sensitivity is part of the probe; known-bad and scale-separation | draft |
 | normative | Ops Critical | [#norm-decision-authority](src/norm-decision-authority.md) | Authority tags; evidence ≠ who decided | draft |
 | normative | Model Critical | [#norm-bias-vs-noise](src/norm-bias-vs-noise.md) | Bias versus noise is the decisive discretisation audit | draft |
 | discussion | Model Critical | [#disc-algorithms-disguise-physics](src/disc-algorithms-disguise-physics.md) | Port the physical claim, not the paper costume | draft |
@@ -67,6 +68,7 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | formulation | Model Critical | [#form-column-control-volume](src/form-column-control-volume.md) | Column is a control volume with sufficient statistics (frame; impl open) | draft |
 | observation | Physics | [#obs-hydrosphere-box-nomos](src/obs-hydrosphere-box-nomos.md) | Box nomos proves representation-agnostic contract | draft |
 | formulation | Physics Critical | [#form-derived-sea-level](src/form-derived-sea-level.md) | Sea level = pour ocean into solid hypsometry; freeboard earns emerged land (not decreed continents) | draft |
+| formulation | Model Critical | [#form-sphere-continuous-surface-fields](src/form-sphere-continuous-surface-fields.md) | Solid surface fields are continuous on $S^2$ (unit-sphere sampling); never per-face noise charts | draft |
 | discussion | Model Critical | [#disc-prime-question](src/disc-prime-question.md) | Prime Question = modified-equation analysis | draft |
 | | | | *(#gap) Full Terrestris phase-content segments* | missing |
 | | | | *(#gap) Manifest / vivium identity* | missing |
@@ -90,8 +92,10 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | --- | --- | --- | --- | --- |
 | formulation | Math Critical | [#form-rl-closure-algebra](src/form-rl-closure-algebra.md) | Multiscale $U,u,R,L$ + three honesty laws; $R\circ L=\mathrm{id}$ with compliance debt | draft |
 | formulation | Math Critical | [#form-seam-flux-exchange](src/form-seam-flux-exchange.md) | Seams exchange fluxes, not states; one discipline on space × time | draft |
-| | | | *(#gap) Grid / staggering (measurements vs open verdict)* | missing |
+| formulation | Math Critical | [#form-grid-equiangular-staggered](src/form-grid-equiangular-staggered.md) | Equiangular cube-sphere + Arakawa-C + per-cell metrics (tentative keep); router open; cube-locked control mandatory | draft |
 | | | | *(#gap) Hydrosphere, climate, erosion, water nomoi (beyond box + #form-derived-sea-level)* — residual: wire pour/freeboard keeper into nomotheke; full field nomos segments | missing |
+| | | | *(#gap) Cube-locked bias specimens as own observation segments (MFD fan; uniform cell-area A; routing curl) — folded summary in #form-grid-equiangular-staggered until extracted* | missing |
+| | | | *(#gap) Mean-pin manufactures seam / not $R\circ L=\mathrm{id}$ — measurement home (strengthens #form-rl-closure-algebra debt)* | missing |
 
 ## VI. Process and contribution
 

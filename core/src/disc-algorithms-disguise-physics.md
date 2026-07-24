@@ -27,4 +27,4 @@ This is the anti-pattern to "do what the paper said, plus alterations to work in
 
 ## Working Notes
 
-- Grid *verdict* (which grid to keep) remains open where Joseph has not closed it; this segment does not close the grid question. See `DECISIONS[grid-question-not-closed-authority-was-inflated]`.
+- Grid *verdict* is now the Joseph-tentative keep in #form-grid-equiangular-staggered (not closed forever; reopening conditions named). This segment still does not own the grid — only the method: port the physical claim. See `DECISIONS[grid-question-not-closed-authority-was-inflated]` lineage + later tentative-decide entry.

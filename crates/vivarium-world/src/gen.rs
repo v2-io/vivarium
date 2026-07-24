@@ -159,25 +159,20 @@ mod tests {
         assert_ne!(initial_topography_m(0, c, 12), initial_topography_m(42, c, 12));
     }
 
-    /// The face-seam probe (written FIRST, per the regime-probe discipline —
-    /// DESIGN-REDUX §2b): the prior must be continuous across cube-face edges
-    /// and corners. Method: step along many small arcs of equal length, some
-    /// crossing a face edge (or skirting the (1,1,1) corner), some within one
-    /// face; the cross-seam elevation deltas must be the same order as the
-    /// within-face ones. The v1 per-face prior fails this catastrophically
-    /// (independent noise fields per face ⇒ O(amplitude) cliffs at every edge —
-    /// the deficiency the first whole-globe view made visible, 2026-07-10).
+    /// Face-seam continuity of solid surface fields.
+    /// Claim homes: `#form-sphere-continuous-surface-fields`,
+    /// `#norm-probe-sensitivity` (regime-probe discipline: DESIGN-REDUX §2b).
+    /// Method: equal-arc steps, some cross-edge / near-corner, some within-face;
+    /// cross-seam Δh must match within-face order. v1 per-face noise fails with
+    /// O(amplitude) cliffs (first whole-globe view, 2026-07-10).
     #[test]
     fn prior_is_continuous_across_faces_and_corners() {
         use crate::sphere::CubeCoord;
-        // Probe sensitivity is part of the probe (learned 2026-07-10: a first
-        // draft at L10/arc 3e-3 PASSED on the discontinuous v1 prior — within-
-        // face deltas at ~2-cell separation were large enough to mask a 2–3 km
-        // cliff). At one-cell separation the discrimination is ~7×: v1 measured
-        // cross-seam ~3,000 m vs within-face ~440 m at L12.
-        //
-        // Checks **tectonic** surface (bathymetry + freeboard): freeboard must
-        // also be sphere-continuous, or the globe shows cube-face cliffs.
+        // Sensitivity: L10/arc 3e-3 green on discontinuous v1; one-cell L12
+        // discriminates ~7× (~3000 m cross vs ~440 m within). See
+        // `#norm-probe-sensitivity`.
+        // Tectonic surface = bathymetry + freeboard — both must be sphere-sampled.
+
         let level = 12u8;
         let arc = std::f64::consts::FRAC_PI_2 / 4096.0; // one cell at L12
         let prior_at = |d: [f64; 3]| {
