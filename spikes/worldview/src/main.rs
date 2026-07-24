@@ -1,34 +1,27 @@
-//! vivarium-worldview — the first view over the clean-room frame.
+//! vivarium-worldview — a Bevy peer view over the clean-room frame.
 //!
-//! Depends on `vivarium-world` ONLY (the core/view wall). Where `spikes/slabs`
-//! renders `vivarium-core`'s flat baked patch, this renders the cube-sphere frame:
-//! pick a face region, sample it into field patches (`sample::sample_surface` —
-//! data only), and build the proven point-mesh + translucent depth-shaded water
-//! (idioms carried from slabs, which stays the core-backed SOTA until this
-//! matures).
+//! Depends on `vivarium-world` ONLY (no reverse edge into the world crate).
+//! Renders a cube-sphere face region as an ortho point-mesh (slabs idioms).
 //!
-//! The exploration ENGINE is at parity with slabs (auto-pitch fan probe, look-up
-//! near-clip, pan/turn re-framing, HUD, autoshot) so that all remaining work is
-//! WORLD fidelity, not view work. Scale is kept honest by construction:
-//!   • the pawn is a real 0.5 × 2 m figure, never scaled by zoom or vert — at
-//!     survey zoom it is sub-pixel *because that is true*; the focus cursor is a
-//!     flat reticle that cannot read as a figure;
-//!   • a map scale bar (round-number length, pixel-exact from the ortho zoom);
-//!   • the HUD states the sampled window's relief range (m above sea) — the
-//!     honest answer to "is there height here?";
-//!   • VIVARIUM_VERT exaggeration (default 1 = honest) for survey-scale form,
-//!     the standard cartographic practice — relief at a 94 km viewport is ~3% of
-//!     the screen at honest scale, exactly like the real Earth from altitude.
-//! The fidelity dials are the point:
-//!   • `[` / `]` — change the sampling LEVEL live (same geographic spot, finer or
-//!     coarser cells). Every rebuild reports its generation time on the HUD, so
-//!     when query-graph memoization lands (DESIGN-REDUX §11–12), a revisited
-//!     (level, region) will visibly drop to ~0 ms.
+//! ## Core / view wall ( #form-core-view-wall FE(4) )
 //!
-//! Floating origin, done right (the audit's far-lands item): global face-cell
-//! coordinates in metres reach ~10^7 m, where f32 resolves only ~1 m — so mesh
-//! vertices AND the camera work relative to a f64 anchor at the patch centre, and
-//! only anchored-relative f32 ever reaches the GPU.
+//! **Default = observe-only.** The process samples the fated prior (and any
+//! in-memory tiers it already holds); it does **not** run erosion or water
+//! evolution, and it does not own world-evolution parameters. That is the path
+//! that may claim ethereal / moratorium-clear observe-only.
+//!
+//! **Opt-in physics testbench.** `VIVARIUM_ALLOW_VIEW_EVOLUTION=1` re-enables
+//! the hybrid live-erosion / fill workers (epoch knobs, rain, settle). That
+//! path is a **named FE(4) debt** — useful for watching kernels, not a lawful
+//! explorer and not *in vivia* evidence. Loud stderr banner on enable.
+//! Store-backed builder materialization (`vivarium build`) remains the
+//! admission path for durable world state ( #form-builder-admission ).
+//!
+//! Fidelity dials that remain view-local (sampling level, zoom, vert
+//! exaggeration, HUD) are display concerns, not evolution parameters.
+//!
+//! Floating origin: mesh + camera are relative to an f64 patch-centre anchor
+//! so GPU f32 never sees global face metres at far-lands scale.
 
 use std::path::PathBuf;
 
@@ -58,6 +51,32 @@ fn world_seed() -> u64 {
     static SEED: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
     *SEED.get_or_init(|| {
         std::env::var("VIVARIUM_SEED").ok().and_then(|s| s.parse().ok()).unwrap_or(0)
+    })
+}
+
+/// FE(4) gate: in-view erosion/water evolution is off unless explicitly waived.
+/// Same species as builder `--allow-unmet` — loud, named, not silent default.
+fn view_evolution_allowed() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| {
+        let on = std::env::var("VIVARIUM_ALLOW_VIEW_EVOLUTION")
+            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+            .unwrap_or(false);
+        if on {
+            eprintln!(
+                "[worldview] ⚠ VIEW EVOLUTION ENABLED (VIVARIUM_ALLOW_VIEW_EVOLUTION=1) — \
+                 FE(4) debt path: in-view epochs/water are a physics testbench, \
+                 not ethereal observe-only ( #form-core-view-wall ). \
+                 Prefer `vivarium build` for lawful store materialization."
+            );
+        } else {
+            eprintln!(
+                "[worldview] observe-only — prior/sample surface; no in-view erosion/water. \
+                 Set VIVARIUM_ALLOW_VIEW_EVOLUTION=1 for the hybrid testbench \
+                 ( #form-core-view-wall FE(4) )."
+            );
+        }
+        on
     })
 }
 
@@ -297,7 +316,8 @@ struct TierMeta(Vec<(u8, std::time::Instant, u32, f32, f32)>);
 struct SharedFocus(Arc<Mutex<(f64, f64, u8)>>);
 
 fn build_tier0(view: &View) -> Vec<ErodedRegion> {
-    if std::env::var("VIVARIUM_ERODE").map(|v| v == "0").unwrap_or(false) {
+    // Default observe-only (FE(4)); also honor legacy VIVARIUM_ERODE=0 kill switch.
+    if !view_evolution_allowed() || std::env::var("VIVARIUM_ERODE").map(|v| v == "0").unwrap_or(false) {
         return Vec::new();
     }
     const SIM_LEVEL: u8 = 19; // ~19 m cells (core ran 16 m)
@@ -328,6 +348,9 @@ fn build_tier0(view: &View) -> Vec<ErodedRegion> {
 /// re-anchoring, no re-seeding: the water's work persists). The live telescope
 /// stays available via VIVARIUM_MODE=telescope.
 fn spawn_fine_tiers(view: &View, base: Vec<ErodedRegion>, tx: std::sync::mpsc::Sender<TierMsg>, wtx: std::sync::mpsc::SyncSender<WaterMsg>, focus: SharedFocus) {
+    if !view_evolution_allowed() {
+        return;
+    }
     if std::env::var("VIVARIUM_MODE").map(|v| v == "telescope").unwrap_or(false) {
         spawn_telescope(view, base, tx, wtx, focus);
     } else {
@@ -845,6 +868,7 @@ fn water_update(rx: Res<WaterRx>, mut water: ResMut<WaterRes>, mut meta: ResMut<
 }
 
 fn main() {
+    let _ = view_evolution_allowed(); // print FE(4) mode banner once at startup
     let view = View::default();
     // The session's fixed instant (until #11 wires real time controls):
     // VIVARIUM_DAY = day of year (0 = vernal equinox; default late spring),

@@ -21,7 +21,11 @@ The world frame never depends on a renderer. Every consumer of the world is a pe
 
 **Max attainable: exact** as architecture law — falsified by a rendering dependency into the world crate, or by a view-owned evolution parameter that changes what the world *is*. The law is founding (DESIGN.md; `DECISIONS[core-view-wall-observe-only]`, `:by us`). Stage `draft`.
 
-**Known incomplete surface (compliance debt, not a soften of the law):** `spikes/worldview` still reads view-local evolution parameters (macro/fine erosion epochs and related fill controls) and runs erosion on the explorer path — the same *species* of violation as a view-held epoch knob. That hybrid is a physics testbench debt, not a license to dissolve FE(4). Any path that claims ethereal / moratorium-clear observe-only must satisfy FE(4); the debt must close on that path before the claim is honest.
+**Known incomplete surface (compliance debt, not a soften of the law):**
+
+1. **Default path (closed for FE(4)).** `spikes/worldview` defaults to **observe-only**: prior/sample surface, no in-view erosion or water evolution. Evolution workers and epoch knobs run only under explicit `VIVARIUM_ALLOW_VIEW_EVOLUTION=1` with a loud stderr banner — the same species of named waiver as builder `--allow-unmet`.
+2. **Opt-in hybrid remains debt.** Under that flag the spike still owns macro/fine epoch counts, rain/fill controls, and live maturing on the explorer process. That path is a **physics testbench**, not ethereal explorer and not *in vivia* evidence. Closing it fully means store-backed pulls (`vivarium build` / demand spool) replace in-view `Fluvial` / water workers — plan surface in `doc/plan/builder-explorer-decoupling.md`.
+3. **Store-backed navigation** is a separate gap from FE(4); both must close for a true ethereal explorer that upgrades as builder memos land.
 
 ## Discussion
 
@@ -29,6 +33,7 @@ Headless calibration, human play, and logozoetic play-as-oneself are the same wo
 
 ## Working Notes
 
-- Worldview store-backed navigation is a separate gap from FE(4); both must close for a true ethereal explorer.
+- Worldview gate: `VIVARIUM_ALLOW_VIEW_EVOLUTION` (default off). Module docs + Cargo.toml comment name the split.
+- Next strengthen: pull matured tiles via store query (`surface_prefer_eroded` / demand spool) so the ethereal path shows builder work without re-enabling in-view evolution.
 - Workspace `clippy` disallows for rendering crates in world packages remain desirable enforcement, not yet the segment's burden.
 - Specimen of FE(4) violation and revert: `DECISIONS[core-view-wall-observe-only]` (history layer).

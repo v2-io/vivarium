@@ -1,9 +1,6 @@
-# vivarium-worldview — the first view over the clean-room frame (vivarium-world),
-# depending on it ONLY (the core/view wall: no vivarium-core here). A survey
-# instrument: sample a cube-face region into field patches (sample::sample_surface),
-# render as the proven ortho point-mesh (idioms carried from spikes/slabs), and
-# expose the fidelity dials — [ ] changes the sampling level live and the HUD shows
-# generation cost, which is the instrument for watching memoization land later.
+# vivarium-worldview — Bevy peer view over vivarium-world only (no reverse edge).
+# Default: observe-only prior/sample ( #form-core-view-wall FE(4) ).
+# Opt-in hybrid evolution: VIVARIUM_ALLOW_VIEW_EVOLUTION=1 (physics testbench debt).
 [package]
 name = "vivarium-worldview"
 version = "0.0.0"
