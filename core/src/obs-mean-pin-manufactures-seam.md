@@ -45,7 +45,7 @@ depends:
 
 ## Epistemic Status
 
-**Max attainable: exact** for the measurements under the spike harness (reproduces seam_ridge class; land guard PROBE 0). **Currently `exact`** as observation of the live operator's defects; **proposal to retire** remains unratified (`DECISIONS[mean-pin-manufactures-the-seam-and-the-mass]`, `:by claude`, proposed). The algebra aspiration in #form-rl-closure-algebra is **not** softened by this observation — strengthen-before-soften: the law stands; the implementation is convicted.
+**Max attainable: exact** for the measurements under the spike harness (reproduces seam_ridge class; land guard PROBE 0). **Currently `exact`** as observation of the live operator's defects; **the retire-or-replace recommendation is council-accepted** (`DECISIONS[mean-pin-manufactures-the-seam-and-the-mass]`, `:by claude`, `:status council-accepted` — 2026-07-24 council note: accepted incl. the retire-or-replace call, the replacement judged against the face-register conditions (FE(8), #form-face-flux-register); **the replacement experiment can still fail** and has not yet run). The algebra aspiration in #form-rl-closure-algebra is **not** softened by this observation — strengthen-before-soften: the law stands; the implementation is convicted.
 
 Stage `draft`. Primary instrument: `msc/spike-wavelet-store/` PROBE 6–7 + `RUN.txt`; live code `erosion.rs::pin_block_means`.
 
