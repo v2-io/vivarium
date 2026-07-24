@@ -284,7 +284,7 @@ pub static UPLIFT: NomosDecl = NomosDecl {
 /// System #2 — fluvial erosion composed on the initial-topography.
 pub static EROSION: NomosDecl = NomosDecl {
     name: "erosion-tile",
-    version: "erosion-2026-07-12b-uplift", // now consumes the uplift nomos's field
+    version: "erosion-2026-07-23a-true-cell-area", // spherical A for drainage/deposit; not MFD lengths
     system: "fluvial-erosion",
     approach: Approach::Procedural,
     earth_fidelity: Tier::Med, // stream-power/Davy–Lague are how real landscapes are modeled
@@ -395,7 +395,7 @@ mod tests {
     #[test]
     fn declarations_mint_the_keys() {
         assert!(INITIAL_TOPOGRAPHY.key().as_str().starts_with("initial-topography@initial-topography-2026-07-10b-sphere3d"));
-        assert!(EROSION.key().as_str().starts_with("erosion-tile@erosion-2026-07-12b-uplift"));
+        assert!(EROSION.key().as_str().starts_with("erosion-tile@erosion-2026-07-23a-true-cell-area"));
     }
 
     #[test]

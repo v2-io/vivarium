@@ -64,8 +64,9 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | formulation | Machine Critical | [#form-complete-content-addressed-key](src/form-complete-content-addressed-key.md) | Complete key; over-key never under-key | draft |
 | formulation | Project | [#form-in-vivia-citation](src/form-in-vivia-citation.md) | Operational *in vivia* citation: seed + versions + phase memo + intervention script | draft |
 | formulation | Machine Critical | [#form-nomotheke-registry](src/form-nomotheke-registry.md) | Nomotheke is the registry contract; undeclared law is unlawful | draft |
-| formulation | Machine Critical | [#form-flux-web](src/form-flux-web.md) | Nomoi couple by matched flux quantities; unmet = unrunnable | draft |
+| formulation | Machine Critical | [#form-flux-web](src/form-flux-web.md) | Nomoi couple by matched flux quantities + statistic/exactness; unmet = unrunnable | draft |
 | formulation | Project Critical | [#form-ordinum-governs-flux-web](src/form-ordinum-governs-flux-web.md) | Ladder promises are flux; `:kept-by` is the producer | draft |
+| formulation | Project Critical | [#form-kernel-imperative-boundary](src/form-kernel-imperative-boundary.md) | Kernel = only imperative escape hatch; rest is declaration data | draft |
 | formulation | Model Critical | [#form-column-control-volume](src/form-column-control-volume.md) | Column is a control volume with sufficient statistics (frame; impl open) | draft |
 | observation | Physics | [#obs-hydrosphere-box-nomos](src/obs-hydrosphere-box-nomos.md) | Box nomos proves representation-agnostic contract | draft |
 | formulation | Physics Critical | [#form-derived-sea-level](src/form-derived-sea-level.md) | Sea level = pour ocean into solid hypsometry; freeboard earns emerged land (not decreed continents) | draft |

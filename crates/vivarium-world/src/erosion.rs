@@ -159,7 +159,13 @@ impl Default for FluvialParams {
 /// core's `Heightfield`. Heights in metres above the bedrock datum.
 pub struct Fluvial {
     pub nx: usize,
+    /// Characteristic cell length (m) at this level — still used for *lengths*
+    /// (slope arms, talus, creep). **Not** for cell area; see [`Self::cell_area`].
     pub cell_m: f32,
+    /// True spherical cell area (m²) per cell — equiangular closed form
+    /// (`crate::measure`). Retires uniform `cell_m²` for drainage / deposition
+    /// volume (`#obs-cube-locked-kernel-bias`).
+    pub cell_area: Vec<f32>,
     pub h: Vec<f32>,
     /// MFD drainage area (m²) from the last epoch — the dendritic-ness instrument.
     pub drainage: Vec<f32>,
@@ -201,22 +207,47 @@ impl Fluvial {
     /// the coarse tiers below it (the §7.2 downscaling seam: the fine sim's
     /// initial condition is the downscaled coarse end-state + detail increment).
     pub fn from_surface(seed: u64, face: Face, level: u8, oi: u32, oj: u32, nx: usize, surf: impl Fn(CellId) -> f64) -> Self {
-        let cell_m = crate::sample::cell_size_m(level, crate::planet::Planet::EARTH.radius_m) as f32;
+        let radius = crate::planet::Planet::EARTH.radius_m;
+        let cell_m = crate::sample::cell_size_m(level, radius) as f32;
         let mut h = vec![0.0f32; nx * nx];
+        let mut cell_area = vec![0.0f32; nx * nx];
         for y in 0..nx {
             for x in 0..nx {
-                let cell = CellId::from_face_ij(face, oi + x as u32, oj + y as u32, level);
+                let gi = oi + x as u32;
+                let gj = oj + y as u32;
+                let cell = CellId::from_face_ij(face, gi, gj, level);
                 h[y * nx + x] = surf(cell) as f32;
+                cell_area[y * nx + x] =
+                    crate::measure::cell_area_m2(face, gi as u64, gj as u64, level, radius) as f32;
             }
         }
-        Self { nx, cell_m, h, drainage: vec![0.0; nx * nx], face, level, origin: (oi, oj), seed, uplift_rate: vec![0.0; nx * nx], precip_weight: vec![1.0; nx * nx], last_delta_m: f32::INFINITY }
+        Self {
+            nx,
+            cell_m,
+            cell_area,
+            h,
+            drainage: vec![0.0; nx * nx],
+            face,
+            level,
+            origin: (oi, oj),
+            seed,
+            uplift_rate: vec![0.0; nx * nx],
+            precip_weight: vec![1.0; nx * nx],
+            last_delta_m: f32::INFINITY,
+        }
     }
 
     /// Resume a simulation over an existing eroded field (e.g. the startup tier),
     /// so the live loop can keep running epochs without redoing the initial work.
     pub fn from_region(r: &ErodedRegion) -> Self {
-        let cell_m = crate::sample::cell_size_m(r.level, crate::planet::Planet::EARTH.radius_m) as f32;
-        Self { nx: r.nx, cell_m, h: r.h.clone(), drainage: vec![0.0; r.nx * r.nx], face: r.face, level: r.level, origin: (r.oi, r.oj), seed: r.seed, uplift_rate: vec![0.0; r.nx * r.nx], precip_weight: vec![1.0; r.nx * r.nx], last_delta_m: f32::INFINITY }
+        Self::from_surface(r.seed, r.face, r.level, r.oi, r.oj, r.nx, |_| 0.0).with_heights(r.h.clone())
+    }
+
+    /// Replace heights after [`from_surface`] scaffolding (used by [`from_region`]).
+    fn with_heights(mut self, h: Vec<f32>) -> Self {
+        debug_assert_eq!(h.len(), self.nx * self.nx);
+        self.h = h;
+        self
     }
 
     /// Snapshot into a sampleable region.
@@ -398,11 +429,10 @@ impl Fluvial {
     fn accumulate_drainage(&mut self, order: &[usize]) {
         const P: f32 = 1.1;
         let nx = self.nx;
-        let cell_area = self.cell_m * self.cell_m;
-        // Local runoff = area × local precipitation (relative weight from the
-        // climate nomos; 1.0 = uniform rain). Discharge then accumulates downstream.
+        // Local runoff = true spherical cell area × local precip weight.
+        // (Uniform cell_m² was a cube-locked bias — `#obs-cube-locked-kernel-bias`.)
         for i in 0..self.drainage.len() {
-            self.drainage[i] = cell_area * self.precip_weight[i];
+            self.drainage[i] = self.cell_area[i] * self.precip_weight[i];
         }
         for &i in order.iter().rev() {
             let (x, y) = (i % nx, i / nx);
@@ -457,15 +487,15 @@ impl Fluvial {
     /// laying down `G·Qs/A` per reach; what reaches an outlet is lost to the sea.
     fn deposit(&mut self, p: &FluvialParams, recv: &[usize], order: &[usize], before: &[f32]) {
         let n = self.nx * self.nx;
-        let area = self.cell_m * self.cell_m;
         let mut qs = vec![0.0f32; n];
         for i in 0..n {
             let eroded = before[i] - self.h[i];
             if eroded > 0.0 {
-                qs[i] = eroded * area;
+                qs[i] = eroded * self.cell_area[i];
             }
         }
         for &i in order.iter().rev() {
+            let area = self.cell_area[i];
             let a = self.drainage[i].max(area);
             let deposit_h = p.deposition * qs[i] / a;
             let deposit_vol = (deposit_h * area).min(qs[i]);
@@ -730,7 +760,7 @@ mod fluvial_tests {
         let p = FluvialParams { epochs: 12, ..Default::default() };
         let mut f = small();
         f.erode(&p);
-        let cell_area = f.cell_m * f.cell_m;
+        let cell_area = f.cell_area.iter().cloned().fold(0.0f32, f32::max);
         let max_d = f.drainage.iter().cloned().fold(0.0f32, f32::max);
         assert!(max_d > 50.0 * cell_area, "no channel network formed (max {max_d})");
         assert!(f.h.iter().all(|v| v.is_finite()), "heights blew up");

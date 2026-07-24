@@ -35,3 +35,14 @@ Adjudicated ice in `msc/consolidation-wave-2026-07-21/archive-mining-report.md` 
 ## Dual-home demotions (source stays; law prose collapsed)
 
 ARCHITECTURE §1 mean-pin essay · multiscale-methods §1 mean-pin / AMR note · discretisation header → cube-locked obs. Tracker: `msc/promotion-mine-2026-07-23-continuity.md`.
+
+## 2026-07-23 batch 2 — VIVARIA spikes after claim peels
+
+| Path | Superseded by |
+|------|----------------|
+| `from-archive/VIVARIA-DEFINITIONS.md` | `#form-kernel-imperative-boundary`, `#form-manifest-prescribes-vivium`, nomos/flux/store segments |
+| `from-archive/VIVARIA-DECLARATIVE-FRONTIER.md` | `#form-flux-web` FE(6) statistic contract; PROCESS `agentic-verdict-is-flag`; probes/declaration norms |
+
+## Code PoC same day (not archive)
+
+`measure.rs` + fluvial true cell area for drainage/deposit — compliance to `#obs-cube-locked-kernel-bias` (fan residual remains).

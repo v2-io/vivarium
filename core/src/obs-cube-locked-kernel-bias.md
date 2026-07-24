@@ -38,5 +38,5 @@ Bias vs noise ( #norm-bias-vs-noise ): both defects are signed, systematic, and 
 ## Working Notes
 
 - **Summarizes** grid FE(5); this slug owns the measurement catalogue. Sibling curl/potential-identity (`routing-violates-the-potential-identity-…`) still extractable as its own obs if needed.
-- **Instruments:** DECISIONS mfd-fan / drainage-area entries; `examples/grid_lab/`; `msc/spike-wavelet-store/` PROBE 8; discretisation-and-information §0 teaching body.
-- **Do not claim:** MFD “killed D8 anisotropy” as current truth (audit reversed that memory).
+- **Instruments:** DECISIONS mfd-fan / drainage-area entries; `examples/grid_lab/`; `msc/spike-wavelet-store/` PROBE 8; `crates/vivarium-world/src/measure.rs` + fluvial `cell_area` (2026-07-23 PoC: **true A** for drainage seed and deposit volume; MFD *lengths* still uniform `cell_m` — fan residual remains).
+- **Do not claim:** “cube-locked bias fixed” after true-A only; MFD fan is independent. MFD “killed D8 anisotropy” is not current truth.
