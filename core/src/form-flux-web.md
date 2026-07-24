@@ -25,7 +25,7 @@ Nomoi couple only through a shared vocabulary of fluxed quantities: one produces
 
 **Max attainable: exact** as architecture of coupling under the nomotheke-as-built. Live: vocabulary module, `consumes`/`promises` on `NomosDecl`, `audit::producer_of` / `unmet_across_registry` / `requisite_chain`, builder gate. Stage `draft`.
 
-**Known incomplete:** (1) statistic + exactness on a consume edge (mean at-least L…) is designed, not built; (2) maturity of ladder promises not yet displayed in CLI; (3) provisional root tags land under waived admission (`PutOpts.provisional` / status census) — end-to-end bin integration test and `Source`-visible Hit still open ( #form-builder-admission ); (4) **code-first trail from `ce55ddf`:** closing `emerged land` Unmet via freeboard keeper + derived sea level is in flight — when landed, FE here and #form-ordinum-governs-flux-web must be updated so the web claim matches the nomotheke (not left as "erosion without land" forever).
+**Known incomplete:** (1) statistic + exactness on a consume edge (mean at-least L…) is designed, not built; (2) maturity of ladder promises not yet displayed in CLI; (3) provisional root tags land under waived admission (`PutOpts.provisional` / status census) — end-to-end bin integration test and `Source`-visible Hit still open ( #form-builder-admission ); (4) **residual:** `emerged land` remains Unmet until freeboard keeper lands (path #form-derived-sea-level ) — when a producer is registered, this FE needs no change of architecture, only the live graph matches the claim.
 
 ## Discussion
 
@@ -34,4 +34,5 @@ The flux web is how "rain without a sky" and "erosion without land" stop being o
 ## Working Notes
 
 - Ice/pointer targets once stable: `flux.rs` module docs; ARCHITECTURE §9 coupler bullets; regula-conformance-design §3 (reasoning trail).
-- Sibling segments: #def-nomos (article), #form-ordinum-governs-flux-web (ladder drives web), hydrosphere as worked box instance.
+- Sibling segments: #def-nomos (article), #form-ordinum-governs-flux-web (ladder drives web), hydrosphere as worked box instance, #form-derived-sea-level (pour + freeboard keeper path).
+- Residual trail: drop "emerged land Unmet" Known-incomplete item (4) when nomotheke promises the quantity.
