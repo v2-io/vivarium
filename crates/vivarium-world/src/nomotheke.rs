@@ -471,15 +471,22 @@ pub static CLIMATE: NomosDecl = NomosDecl {
     promises: &[Promise {
         quantity: flux::PRECIPITATION,
         conservation: Conservation::Conserved,
-        statistic: Statistic::Mean, // mean-preserving jitter is unit-tested; the MEAN is the guarantee
-        exactness: Exactness::Exact,
+        statistic: Statistic::Mean,
+        // Mean preservation is unit-tested only to ±7% (0.93..1.07) and climate.rs's
+        // own doc says "preserved in expectation; exact global closure is a probe
+        // worth writing"; the jitter factor also carries a sign-definite .max(0.0)
+        // clip. Approximate until the jitter is normalized over its domain.
+        exactness: Exactness::Approximate,
     }],
     assumptions: &["atmosphere residence time", "precip jitter"],
     family: &[Family::BoxToField],
     assumes_geometry: &[],
     structure: StructureDecl {
-        preserves_exact: &["local-conservation"], // precip = evap steady-state; jitter is mean-preserving
-        preserves_approx: &[],
+        preserves_exact: &[],
+        // the steady-state identity (stock/residence) is exact; the jittered field
+        // conserves only in expectation (±7% test bound) — same debt as the
+        // Approximate statistic above
+        preserves_approx: &["local-conservation"],
         sacrifices: &[],
     },
     unphysical_terms: &[],
@@ -627,6 +634,12 @@ pub static EROSION: NomosDecl = NomosDecl {
             note: "45°-periodic grid-locked first-moment deflection (rms 0.2419°, eight attractors); exactly zero at p = 1 — a theorem. Live at erosion.rs P",
         },
         UnphysicalTerm {
+            term: "Priority-Flood ε-fill (mass minted in depressions)",
+            parity: Parity::SignDefinite,
+            verdict: ErrVerdict::Bias,
+            note: "fill_depressions raises cells with no debit, every epoch — can only add; volume per epoch unprobed",
+        },
+        UnphysicalTerm {
             term: "creep diffusion-number clamp k ≤ 0.24",
             parity: Parity::SignDefinite,
             verdict: ErrVerdict::Bias,
@@ -640,7 +653,7 @@ pub static EROSION: NomosDecl = NomosDecl {
 /// System #3 — conserved shallow water settling on the eroded bed.
 pub static WATER: NomosDecl = NomosDecl {
     name: "water-tile",
-    version: "water-2026-07-10a",
+    version: "water-2026-07-10a", // predates the 07-23 sea_m default change — parameter-vs-algorithm versioning rule unwritten (hand-stamp debt, #form-complete-content-addressed-key)
     system: "surface-water",
     approach: Approach::Relaxation,
     earth_fidelity: Tier::Low, // real hydraulics, ~10x rain-cycle fudge, bounded (not converged) fill
@@ -675,7 +688,7 @@ pub static WATER: NomosDecl = NomosDecl {
         Assumes {
             assumption: "local-inertial momentum valid (published envelope Fr < 1)",
             delivered: Delivered::Violated,
-            note: "~5.7% of wet cells supercritical on eroded land; Froude cap measured SATURATED (max Fr ≡ 2.00 bit-identical — instrument reads its own clamp); DECISIONS[water-runs-outside-its-published-validity-envelope]",
+            note: "~5.7% of wet cells supercritical (Fr > 1.5, the measured threshold) on eroded land; Froude cap measured SATURATED (max Fr ≡ 2.00 bit-identical — instrument reads its own clamp); DECISIONS[water-runs-outside-its-published-validity-envelope]",
         },
         Assumes {
             assumption: "uniform cell spacing (cell_m as one length)",
@@ -684,7 +697,7 @@ pub static WATER: NomosDecl = NomosDecl {
         },
     ],
     structure: StructureDecl {
-        preserves_exact: &["local-conservation", "well-balanced", "positivity"], // conservation unit-tested; well-balanced + no-null-space measured 2026-07-13 (undeclared assets a rewrite nearly destroyed); positivity held by a clamp that is itself a declared term below
+        preserves_exact: &["local-conservation", "well-balanced", "positivity"], // conservation unit-tested; no-null-space measured 2026-07-13; well-balanced measured 2026-07-24 (`water_structures wb`: lake-at-rest incl. partially-dry, f64 exact, f32 at the ULP conditioning floor — LAKE-AT-REST only; moving-water WB is proposed sacrificed per DECISIONS[hydrostatic-reconstruction-fails…]); positivity held by a clamp that is itself a declared term below
         preserves_approx: &[],
         sacrifices: &["entropy-condition"], // roll-wave/shock structure the scheme cannot render; θ suppresses the symptom
     },

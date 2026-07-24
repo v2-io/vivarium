@@ -30,7 +30,7 @@ Extended support for #form-declared-structure-tradeoff : the per-structure menu 
 | **symplectic structure** (Hamiltonian) | symplectic integrators | secular energy drift; orbits spiral | ante-mundane orbit / moon / obliquity |
 | **the second law** (entropy) | entropy-stable schemes / entropy conditions — **one-sided bound**, not a selection principle; no general convergence theory for systems | conservative schemes can converge to non-physical weak solutions (expansion shocks) | hydraulic jumps; `water.rs` shocks |
 | **realizability** (positivity: $h\ge 0$) | limiters / positivity-preserving schemes | negative depth ⇒ PDE type change | `water.rs` |
-| **equilibria** (still lake stays still) | well-balanced schemes | spurious currents in dead-calm water | `water.rs` — unknown if ours is well-balanced or merely damped |
+| **equilibria** (still lake stays still) | well-balanced schemes | spurious currents in dead-calm water | `water.rs` — **measured well-balanced 2026-07-24** (`water_structures wb`: lake-at-rest incl. partially-dry; f64 exact, f32 at ULP floor). Lake-at-rest only; moving-water WB proposed sacrificed (`DECISIONS[hydrostatic-reconstruction-fails…]`) |
 | **rotational symmetry** (no preferred direction) | isotropic stencils; edge-flux not fixed fans | grid-aligned rivers | `erosion` MFD — **measured broken** ( #obs-cube-locked-kernel-bias ) |
 | **timescale hierarchy** (multirate) | scale-separated / multirate coupling | fast and slow silently corrupt each other | seam; `water` × `erosion` ( #form-scale-separation-directional ) |
 

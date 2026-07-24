@@ -20,7 +20,7 @@ A deterministic constructed-world laboratory (and sim game) in the RimWorld / DF
 |---|---|
 | **Any session (Level A)** | This file · [`core/OUTLINE.md`](core/OUTLINE.md) · [`FORMAT.md`](FORMAT.md) · `#scope-moratorium-endogenous-emergence` / [`ETHICS.md`](ETHICS.md) · `#scope-asf-reading-gates` |
 | **Write or review a segment** | [`FORMAT.md`](FORMAT.md) (incl. §5.2 cross-member `#asf/…` refs) · the segment's `depends` · [`LEXICON.udon`](LEXICON.udon) for every term (a grep is not a read) |
-| **Who decided what** | [`DECISIONS.decision-log.udon`](DECISIONS.decision-log.udon) — `:by us` means Joseph decided |
+| **Who decided what** | [`DECISIONS.decision-log.udon`](DECISIONS.decision-log.udon) — `:by us` means Joseph decided; `:status council-accepted` = recommendation carried under a delegated grant, Joseph supported — deliberate, but not inviolable law (`#norm-decision-authority`) |
 | **Term meanings** | [`LEXICON.udon`](LEXICON.udon) |
 | **Magic constants** | [`ASSUMPTIONS.md`](ASSUMPTIONS.md) |
 | **World-system design (Level B)** | `#scope-asf-reading-gates` Level B list · `#disc-aat-vivarium-object-map` (discussion-grade map) |

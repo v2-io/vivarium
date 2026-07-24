@@ -57,6 +57,15 @@
 ;   claude — Claude's own tactical call, logged so it does not fall through the
 ;            cracks; Joseph may veto or promote it.
 ;
+;   STATUS council-accepted (instituted by Joseph, 2026-07-24): a `:by claude`
+;     (or `:by us … proposed`) recommendation ADJUDICATED by a delegated agent
+;     under Joseph's grant — "recommendation carried, Joseph supported."
+;     It means: this was not done blindly in a corner — AND it is not an
+;     inviolable invariant "because Joseph instituted it." If the truth later
+;     says to do differently, do differently; the status does not resist.
+;     Strictly between `proposed` and `decided`; it never upgrades :by.
+;     Claim home: `#norm-decision-authority`.
+;
 ;   ⚠ DO NOT INFLATE. THIS IS THE ONE FIELD WHERE AN ERROR IS NOT MERELY WRONG.
 ;
 ;   Joseph, 2026-07-12 — the standard, stated for every agent who reads this:
@@ -298,7 +307,8 @@
     Joseph's intuition ("some way to do partial fluxes so that by the time you get to the worst area it's still 8 minus a little") is CORRECT. Conservation and routing do not depend on valence — flux is a boundary integral, and gradient-projected edge-flux routing (D-∞ on a mesh) fans outflow across however many edges exist as partial fluxes summing exactly. So the defect DEMOTES from a global conservation failure to a bounded local accuracy wart at 24 cells (LSQ gradients recover second order at any valence). **That is the argument that decides the grid does not need replacing.** The cube∪octahedron partition (Voronoi = cuboctahedron — Joseph guessed it before the derivation) is elegant and never evaluates a cell at a singularity, but it is an O(1)→O(N) trade and is recommended against — while its partial-edge MECHANISM is exactly right for the coarse↔fine tile seam, which is unavoidable and non-matching by nature.
   |ref ref/research/seam-adjacency-findings.md §Addendum · examples/grid_lab.rs · Snyder 1992 Table 1
 
-|decision[conservation-is-not-consistency] :date 2026-07-12 :by claude :status proposed :topic physics :supersedes [seam-grid-leads-snyder-healpix snyder-closes-the-projection-lead]
+|decision[conservation-is-not-consistency] :date 2026-07-12 :by claude :status council-accepted :topic physics :supersedes [seam-grid-leads-snyder-healpix snyder-closes-the-projection-lead]
+  :council 2026-07-24 — Accepted: consistency=scheme+grid, the corrected-scheme direction, and the equal-area findings. The grid VERDICT itself is since carried by `the-grid-tentatively-decided-keep-the-cube-sphere-and-stagger-it` (`:by us`, tentative) — this entry adds evidence, not a second verdict. Hot-loop cost risk since measured (`corrected-scheme-is-affordable-via-precomputed-stencil`).
   :note 2026-07-12 — DOWNGRADED decided -> proposed. The MEASUREMENTS below stand and reproduce. The VERDICT ("keep the grid, change the kernels") is NOT ratified — Joseph has not adjudicated it and the discussion is still to be had. Do not cite the grid question as closed. See `grid-question-not-closed-authority-was-inflated`.
   :session 01UzCVNNAn6eynKxo2fV74MC
   THE LEAD IS CLOSED, BY MEASUREMENT — and the earlier decision reached the RIGHT CONCLUSION FOR THE WRONG REASON. Keep the equiangular cube-sphere and CellId; change the KERNELS. But the load-bearing claim underneath that — "conservation is a SCHEME property, isotropy/shape is a GRID property no scheme fixes" — is FALSE, and correcting it changes what the kernel work actually is.
@@ -336,7 +346,7 @@
     The nomos-declares-what-it-needs / grid-declares-what-it-provides / audit-matches design is unaffected and still right. Only the sizing changes: the branch is smaller than hoped (2, not 10) and the metric table is not a table at all (it is a function, or a few f32 planes per (face, level)).
   |ref ref/research/grid-comparison-report.md §4.6 · crates/vivarium-world/examples/grid_lab/probes.rs (classes)
 
-|decision[grid-report-supersedes-two-of-my-claims] :date 2026-07-12 :by claude :status proposed :topic physics
+|decision[grid-report-supersedes-two-of-my-claims] :date 2026-07-12 :by claude :status council-accepted :topic physics
   :supersedes seam-amortization-and-the-two-grid-overlay
   :note 2026-07-12 — AUTHORITY CORRECTED (was `:by us :status decided`). The `us` tag claimed Joseph decided AND Claude sustains; he did not decide it. The measurements stand; the verdict is a PROPOSAL awaiting him. See `grid-question-not-closed-authority-was-inflated`.
   :session 01UzCVNNAn6eynKxo2fV74MC
@@ -395,7 +405,8 @@
     Design consequence, concretely: **the store keys CELLS today; a staggered store must key FACES too** — and a face is shared between two cells, possibly at DIFFERENT levels. So face identity needs its own addressing discipline (standard move: each face owned by exactly one of its two cells, canonically the lower `CellId`, stored once and read twice). That is a real, tractable change to `store.rs` / `query.rs`, and **it is the thing that makes the seam an identity instead of a repair.** Weigh together with: the staggering lead (`TODO` §grid), the wavelet-store spike, and the column-semantics fork — they are one design, not four. **NOT DECIDED — this is Claude's proposal on Joseph's model; the grid/scheme question remains open and is his.**
   |ref .super-archive/from-theory/discretisation-and-information.md SS7 + fig/staggering.svg · TODO.md SS discretisation-foundation · crates/vivarium-world/src/{store,query}.rs
 
-|decision[routing-violates-the-potential-identity-and-the-replacement-does-not-fix-it] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[routing-violates-the-potential-identity-and-the-replacement-does-not-fix-it] :date 2026-07-13 :by claude :status council-accepted :topic physics
+  :council 2026-07-24 — Accepted incl. the null-test warning and the composition finding; the remedy is refined by `the-router-is-a-scalar…`/`mfds-output…` (vector reconstruction, not the moment tilt). Claim home `#obs-routing-curl-spiral`. Pricing experiment (channel-network diff) still owed before severity claims.
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⛔ MEASURED — THE IDENTITY IS VIOLATED, MY BRIEF NAMED THE WRONG IDENTITY, AND THE KERNEL WE WERE ABOUT TO BUILD DOES NOT FIX IT. **`κ ≈ 2.0e-2` on the cone; median 1.9e-2 over traced contours on real terrain — ~2% of the routed flux runs AROUND the hill rather than DOWN it, net of all cancellation. LEVEL-INDEPENDENT: identical from L9 to L23 (a 16 384× refinement in cell area) while the probe's own error on the same loop falls FIVE ORDERS to machine zero. It is a BIAS, it is TOPOLOGICAL, and refinement will never touch it.**
   |reason
@@ -413,7 +424,7 @@
     **Not urgent per `check-the-ladder-not-modern-earth`** — `charge[erosion-carving]` is a Phase-3 gate and `emerged-land` is unkept ⇒ **correct work, not critical-path work.** ⚠ **But the structure table's NEIGHBOURING rows are the live ones: `water.rs` runs NOW, and the queued ocean/atmosphere nomoi are exactly the ones the table says a collocated grid gets wrong (vorticity/Kelvin — UNTESTED).**
   |ref crates/vivarium-world/examples/curl_probe/ (curl.rs module doc carries the identity restatement) · msc/spike-curl-probe/PREDICTIONS.md (written BEFORE the first run) · ref/research/grid-comparison-report.md SS6
 
-|decision[the-jensen-variable-was-wrong-and-so-was-the-sign] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[the-jensen-variable-was-wrong-and-so-was-the-sign] :date 2026-07-13 :by claude :status council-accepted :topic physics
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⚠⚠ CORRECTS `column-is-a-control-volume-with-sufficient-statistics` (`:by us :status decided`) AND `.super-archive/from-theory/discretisation-and-information.md` SS3.3. **BOTH argue: "stream power is E = K·A^m·S^n, NONLINEAR IN SLOPE … for n>1 you systematically UNDER-estimate erosion."** ⚠ **READ THE KERNEL. `incise()` IS n=1.** `FluvialParams::default()` → `m: 0.5`; the implicit solve is `h ← (h + f·h_r)/(1 + f)`, `f = K·dt·A^m/dist` — the Braun–Willett form, which is **exact *because* n=1**. ⇒ **AT n=1 STREAM POWER IS LINEAR IN SLOPE. THE JENSEN GAP IN S IS EXACTLY ZERO. The variable, the statistic, AND the sign are all wrong.**
   |reason
@@ -427,7 +438,8 @@
     Correct SS3.3 of the theory doc and the `column-is-a-control-volume` entry (done 2026-07-13). **Do not repeat the n>1 framing anywhere.** The contract to build: the joint `(A, S)` statistic, not `var(S)`.
   |ref crates/vivarium-world/src/erosion.rs (incise, FluvialParams::default) · msc/research-lem-sota/ · Bonetti et al. 2018 Proc R Soc A 474:20170693 · Skinner & Coulthard 2023 ESurf 11:695
 
-|decision[mfd-is-the-two-point-flux-and-our-router-is-not-d-infinity] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[mfd-is-the-two-point-flux-and-our-router-is-not-d-infinity] :date 2026-07-13 :by claude :status council-accepted :topic physics
+  :council 2026-07-24 — Accepted. Two of its gates have since closed: the rotation test RAN (every router rotation-stable ≤1.42% pk-pk — `the-router-is-a-scalar…` ⑥) and Coatléven & Chauveau 2025 was obtained and read primary (`mfds-output…`). Rename + acyclicity-declaration executed (acyclicity now a declared structure on the erosion NomosDecl, 2026-07-24).
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⚠ THE LITERATURE ANSWERS THE PRIME QUESTION BETTER THAN WE DID, AND IT COLLAPSES TWO OF OUR RESULTS INTO ONE. Our standing answer was *"MFD is a **quadrature**; the 8 cells are its nodes."* **True, but not the sharpest form — and the sharper form is published.** Coatléven & Chauveau 2024 (*ESurf* 12:995), read primary: MFD algorithms are *"**a way of implementing a solver for the … stationary water mass conservation**"* — i.e. of the divergence-form law `div(a·v̂) = 1` for **specific catchment area** (Bonetti, Bragg & Porporato 2018, *Proc R Soc A* 474:20170693).
   |reason
@@ -444,7 +456,8 @@
     Rename the kernel everywhere. Run the rotation test before quoting the 4×. Get Coatléven & Chauveau 2025 and price the post-processing correction first. Declare acyclicity as a structure. Retire the curl-free framing.
   |ref msc/research-lem-sota/ · Coatléven & Chauveau 2024 ESurf 12:995 + 2025 Comput Geosci (PAYWALLED, WANTED) · Prescott et al. 2025 ESurf 13:239 · Bonetti et al. 2018 · Armitage 2019 ESurf 7:67 · relata bibkeys: coatleven-2024-large, prescott-2025-evaluation, bonetti-2018-theory, armitage-2019-short
 
-|decision[the-router-is-a-scalar-pretending-to-be-a-vector-and-p-is-the-bias] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[the-router-is-a-scalar-pretending-to-be-a-vector-and-p-is-the-bias] :date 2026-07-13 :by claude :status council-accepted :topic physics
+  :council 2026-07-24 — Accepted: findings + the composed remedy stack (p=1 · kill diagonals · Coatléven vector reconstruction · non-orthogonality gradient) as the recommended path. Implementation is separate work — p is still 1.1 in erosion.rs and is declared as a Bias term on its NomosDecl until changed.
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⚖ **THE ROUTER SPIKE'S VERDICT — MEASURED, AND IT REFUTES ME TWICE.** *(Both router agents died on API errors mid-write; the derivation, the measurements and the `router_lab` harness survived on disk. `msc/spike-principled-router/{DERIVATION.md,MEASUREMENTS.md}` · `crates/vivarium-world/examples/router_lab/`.)*
   > **THE ROUTER'S OUTPUT IS A SCALAR. THE PHYSICS IS A VECTOR FIELD.** Every router in our table was trying to make a **scalar accumulation** carry a **direction AND a magnitude** — and the two fixes fought **because they were extracting those two things from one object, in two different and incompatible coordinate systems.**
@@ -462,7 +475,7 @@
     **[P] TWO PARAMETERS ARE STRUCTURALLY UNIDENTIFIABLE from the routed flow and can be retired** (`DERIVATION.md` §4.3) — the mobility function `η_w` has **no influence** on flux strength, and **only the CONTRASTS of `k_m`** matter, not its absolute value.
   |ref msc/spike-principled-router/{DERIVATION.md,MEASUREMENTS.md} · crates/vivarium-world/examples/router_lab/ · ref/research/pdfs/markdowns/CorrectedMFD/ · relata: coatleven-2025-postprocessing · grid_lab §9a (the control that was the falsification)
 
-|decision[mfds-output-is-not-a-discharge-it-is-a-boundary-integral] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[mfds-output-is-not-a-discharge-it-is-a-boundary-integral] :date 2026-07-13 :by claude :status council-accepted :topic physics
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⚠⚠ **THE MISSING TERM, FOUND — AND MY PREDICTION WAS WRONG.** I predicted the missing factor was a **second moment** (the angular *spread* of the outflow, matched to plan curvature). **It is not.** Joseph supplied the paywalled paper (Coatléven & Chauveau, *"A post-processing to restore numerical consistency for the most classical multiple flow direction algorithms"*; converted in-repo at `ref/research/pdfs/markdowns/CorrectedMFD/`, read directly). The actual result is **simpler and deeper**: ⇒ **MFD'S OUTPUT IS NOT A DISCHARGE. IT IS A BOUNDARY INTEGRAL WHOSE VALUE DEPENDS ON THE SHAPE AND ORIENTATION OF THE BOUNDARY.**
   |reason
@@ -493,7 +506,8 @@
     **NOT covered by this decision, and open:** the ROUTER · the rotation test on the routing headline · the hydrostatic-reconstruction failure when `Δz ≥ h` (**proved**, and it is *thin films on steep ground* — our common case, a level-dependent bias that **will masquerade as a seam defect**) · the measured AMR-seam-crossing-a-cube-panel-seam artifact (convergence 4 → 2.5).
   |ref ref/research/grid-comparison-report.md · msc/research-structure-preserving/ · msc/spike-wavelet-store/ · msc/spike-corrected-scheme-cost/ · crates/vivarium-world/examples/{grid_lab,null_space,water_structures,curl_probe}/ · Balsara 2001 · Putman & Lin 2007 · Weller
 
-|decision[plate-tectonics-as-an-emergent-regime-the-first-in-vivia-study] :date 2026-07-13 :by us :status proposed :topic physics
+|decision[plate-tectonics-as-an-emergent-regime-the-first-in-vivia-study] :date 2026-07-13 :by us :status council-accepted :topic physics
+  :council 2026-07-24 — Accepted as STUDY DESIGN — hypothesis + four controls (esp. the cube control) + the ordering consequence (fix grid-locked biases first). NOT accepted as a claim that plates will emerge; the buoyancy half and the cratons-precondition synthesis remain marked inference.
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⚗ **THE FIRST REAL *IN VIVIA* STUDY — and the first time vivarium would do what it exists for.** HYPOTHESIS: **plate tectonics need not be authored. It is a REGIME — a phase transition of the lithosphere nomos, gated on TWO quantities that are both functions of the SAME variable (mantle potential temperature): (a) LITHOSPHERIC STRENGTH (a hot lithosphere deforms internally instead of transmitting stress — no plates), and (b) OCEANIC-CRUST BUOYANCY (thick, Mg-rich Archean seafloor will not sink; as the mantle cools, melt fractions drop, the seafloor thins and densifies, and it becomes negatively buoyant — so it CAN founder).** ⇒ **One driver, one nomos chain, gating BOTH the land and the plates.** *And the cratons are not merely contemporaneous with plate tectonics — they are its PRECONDITION: differentiation makes thick crust + a depleted keel, which is simultaneously the thing that RISES (land) and the thing that is RIGID (a proto-plate). You cannot have plates until you have plate-like objects, and the same process manufactures them.*
   |reason
@@ -510,7 +524,8 @@
     **Predicates, sourced, from the same paper:** land >10% by ~3.0 Ga-equivalent · craton elevations ~1–1.5 km, peak relief ~1.1 km · **max relief < ~2 km while the geotherm is hot, RISING as the mantle cools** (*the topography ceiling IS the strength thermometer, and it is an emergent signal you can watch*) · modern-like freeboard by 2.5–2.2 Ga-equivalent.
   |ref relata: chowdhury-2025-subaerial (read primary) · van Hunen & van den Berg 2008 [⊘ unread] · Johnson et al. 2017 Nature 543:239 [⊘ unread] · VIVARIA-DECLARATIVE-FRONTIER.md (hypothesis/fitness blocks) · LEXICON SS4 (in vivia) · doc/plan/vivium-operational-workflow.md
 
-|decision[isostasy-is-the-uplift-nomos-and-the-keel-is-half-of-it] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[isostasy-is-the-uplift-nomos-and-the-keel-is-half-of-it] :date 2026-07-13 :by claude :status council-accepted :topic physics
+  :council 2026-07-24 — Accepted: the nomos shape (mantle-thermal → lithosphere column → isostasy → sea-level; uplift-as-producer disappears) and the literature-sourced emerged-land predicate. Korenaga 2017 still unread; differentiation rate law remains the open modelling.
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   THE UPLIFT FIX, SOURCED. **`uplift` should not exist as a producer of a height rate.** The physical primitive is the **lithospheric COLUMN** (a conserved mass); **elevation is a DERIVED reading of it by isostasy**; and "rock uplift rate" is merely `de/dt` — **a diagnostic, not a driver.** This is `DESIGN-MATERIAL.md` §4's own law (*"the conserved primitive is volume/mass of material — NOT a height"*), which `uplift.rs` violates. Primary: **Chowdhury, Cawood & Mulder 2025, *Annu. Rev. Earth Planet. Sci.* 53:443–78, "Subaerial Emergence of Continents on Archean Earth"** (`relata: chowdhury-2025-subaerial`, read directly; supplied by Joseph).
   |reason
@@ -529,7 +544,8 @@
     **Still open and genuinely so:** the differentiation *rate law* (what makes felsic melt, how fast, where) is the real modelling, and Korenaga et al. 2017 is the freeboard-modelling reference to read next. **[⊘] Not read.**
   |ref relata: chowdhury-2025-subaerial (Annu. Rev. Earth Planet. Sci. 2025, 53:443-78; DOI 10.1146/annurev-earth-040722-093345; bib-fields verified) · sidebar "Continental Freeboard" (the equation) · SS3.4.1-3.4.3 (the mechanisms) · Figure 6 (freeboard modelling) · Chowdhury et al. 2021; Korenaga et al. 2017 [⊘ unread] · .super-archive/from-design/DESIGN-MATERIAL.md SS4 · TODO SSthermal-spine
 
-|decision[uplift-is-structurally-incapable-of-keeping-its-promise] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[uplift-is-structurally-incapable-of-keeping-its-promise] :date 2026-07-13 :by claude :status council-accepted :topic physics
+  :council 2026-07-24 — Accepted: the strictly-positive range finding (code-verified) and the range/reachability check as a new BrokenKeeper class. The CCB*18 contrast half stays non-primary-read, as the entry itself flags.
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⚠⚠ VERIFIED IN CODE — AND IT BLOCKS THE #1 GAP. `uplift.rs`: `weight = 0.25 + 1.5 * fbm(...)` where `fbm ∈ [0,1)` ⇒ **weight ∈ [0.25, 1.75), rate ∈ [0.125, 0.875) m/epoch.** ⇒ **THE UPLIFT RATE IS STRICTLY POSITIVE AT EVERY CELL ON THE PLANET. THERE IS NO SUBSIDENCE ANYWHERE, EVER.** A field that only ever goes **up** cannot differentiate crust into high platforms and deep basins; it cannot produce bimodal hypsometry (a unimodal fBm ramp on a unimodal fBm prior). ⇒ **THE `uplift` NOMOS IS MECHANICALLY INCAPABLE OF KEEPING `promise[emerged-land]`** — the ordinum's `:tag gate`, the **#1 gap the entire build queue is blocked on**, and the promise the ordinum assigns **to exactly this nomos**.
   |reason
@@ -541,7 +557,8 @@
     **Fix `uplift` BEFORE `erosion`** — the ladder already said so, and now we know the stub is not merely crude but **structurally unable to keep its promise.** And **add the range/reachability check to `ordinum.rs`'s `BrokenKeeper` family.**
   |ref crates/vivarium-world/src/uplift.rs:36-43 · noise.rs (fbm range) · tabularium/terrestris.ordinum.udon (charge[emergent-land] :tag gate) · msc/research-lem-sota/
 
-|decision[drainage-area-uses-a-uniform-cell-area] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[drainage-area-uses-a-uniform-cell-area] :date 2026-07-13 :by claude :status council-accepted :topic physics
+  :council 2026-07-24 — Accepted. Partially executed 2026-07-23: true spherical A now used for drainage seed + deposit volume; MFD split lengths remain uniform (declared Violated on the erosion NomosDecl).
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⚠ MEASURED — A SECOND CUBE-LOCKED BIAS IN EROSION, INDEPENDENT OF THE FAN, AND IT IS ~6 LINES TO FIX. `erosion.rs:371` computes drainage area as **`cell_area = self.cell_m * self.cell_m`** — **ONE uniform area for the entire tile** (`cell_m` is a single per-level scalar from `sample::cell_size_m(level, radius)`), used as the local runoff for **every** cell. **But our cells are not equal-area.** Measured: **exactly right at a face centre; overstating A by +41.2% at the edge midpoints; area-weighted mean +17.810% — BIT-IDENTICAL at L5 / L7 / L9 / L11 / L13.** No `N` in it. ⇒ **A BIAS THAT CANNOT BE OUT-RESOLVED.**
   |reason
@@ -552,7 +569,7 @@
     **FIX IT — it is small, exact, and independent of every open question.** Use the true spherical cell area per `CellId` (closed form in `msc/spike-wavelet-store/`); ~6 lines. Nothing about the grid verdict, the column fork, or the seam has to be settled first. **Then re-check whether any "emergent" drainage structure we have admired was actually the cube.**
   |ref crates/vivarium-world/src/erosion.rs:371 (accumulate_drainage), :346, :390 · msc/spike-wavelet-store/
 
-|decision[the-seam-is-double-evolution-not-discarded-detail] :date 2026-07-13 :by claude :status proposed :topic architecture
+|decision[the-seam-is-double-evolution-not-discarded-detail] :date 2026-07-13 :by claude :status council-accepted :topic architecture
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⚠ SPIKED AND MEASURED — THE SEAM'S CAUSE WAS MISDIAGNOSED, BY ME AND BY THE PROJECT. **The seam is NOT caused by discarded detail coefficients. It is caused by EVOLVING THE SAME GROUND TWICE AT TWO RESOLUTIONS and papering over the disagreement with `pin_block_means`.** The literature's condition set (from the spike's own recon): refluxing disappears under **(i) exact decimation + (ii) LEAF-ONLY EVOLUTION + (iii) single-valued face flux.** **We violate (ii) squarely — we double-evolve, exactly as Berger–Colella do, WHICH IS WHY THEY NEED REFLUXING.** The discarded details were **the symptom, not the sin.**
   |reason
@@ -572,7 +589,7 @@
     **Caveat on the refinement criterion:** detail magnitude is a **representation** criterion, **not a physics-error** criterion — corr(sub-grid detail, the coarse law's local error) = **−0.027**, because drainage area `A` is a **NON-LOCAL accumulation**: coarsening changes the flow network **topologically**, and no local statistic sees it. *(The literature scan found the same hole independently — all multiresolution-for-conservation-laws results assume a LOCAL finite-stencil flux.)*
   |ref msc/spike-wavelet-store/ (RUN.txt, lit-notes.md) · crates/vivarium-world/src/erosion.rs (pin_block_means, ErodedRegion::surface_m) · examples/seam_ridge.rs · .super-archive/from-theory/multiscale-seams.md SS2.1/SS2.4
 
-|decision[mean-pin-does-not-preserve-block-means] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[mean-pin-does-not-preserve-block-means] :date 2026-07-13 :by claude :status council-accepted :topic physics
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⚠ MEASURED, AND IT FALSIFIES A LAW OF THE OPERATOR ALGEBRA. **`erosion.rs::pin_block_means` does NOT preserve block means.** It is not `h <- mean(h)`; it is `h <- h + BilinearUpsample(target - BlockMean(h))` — a SMOOTHED DELTA INJECTION. Bilinear upsampling of a block-wise field does not preserve block means; its block mean is exactly the **(1,6,1)/8 stencil**, so the residual is **(Δb²/8)·∇²(delta)**. ⇒ **`ARCHITECTURE.md` law (1) — "mean-pinning a fine erosion tier to its parent is R∘L = id ON THE MEAN, live" — is FALSE as implemented.** Same false claim in multiscale-methods §1 (now `.super-archive/from-theory/multiscale-methods.md`) and `multiscale-seams.md` §2.1. **All three corrected 2026-07-13.**
   |reason
@@ -583,7 +600,8 @@
     **CHEAP, DECISIVE, AND IT CAN FAIL — run it first:** replace the bilinear delta upsample with a **block-constant** delta injection (which preserves the block mean EXACTLY and costs less), then **re-run `seam_ridge`. If the ridge drops, mechanism 2 was real.** Also: fix the guard to test the invariant it is named for, or rename it honestly.
   |ref crates/vivarium-world/src/erosion.rs:498 (pin_block_means) + test pin_preserves_parent_means · doc/ARCHITECTURE.md law (1) · .super-archive/from-theory/multiscale-methods.md SS1 · .super-archive/from-theory/multiscale-seams.md SS2.1 · examples/seam_ridge.rs
 
-|decision[theta-is-lax-friedrichs-not-rhie-chow] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[theta-is-lax-friedrichs-not-rhie-chow] :date 2026-07-13 :by claude :status council-accepted :topic physics
+  :council 2026-07-24 — Accepted, read JOINTLY with `our-kernels-have-no-null-space…`: θ is claim-free AS A TERM (artificial diffusion, the paper's own words) — but the instability it damps is partly REAL (roll waves), so θ may be suppressing physics; retiring it means a scheme change, not deletion. Order-of-work (promote literals; count clip rates; roll-wave probe) stands.
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⚠ RETRACTION OF MY OWN CLAIM. I asserted that `water.rs`'s θ flux-smoothing is **Rhie–Chow-class stabilisation** curing an **invisible (checkerboard/null) mode** — the "travelling soliton blobs." **BOTH HALVES ARE FALSIFIED.** (1) **Wrong family:** de Almeida et al. 2012 say their momentum discretisation is *"inspired by the **Lax-Friedrichs** model"* — a monotone-flux / artificial-viscosity device from the HYPERBOLIC-conservation-law lineage. **Rhie–Chow cures a rank deficiency of a COLLOCATED grid — and `water.rs` is ALREADY STAGGERED** (its head operator is `η_i − η_j` ACROSS the face: a 2-point difference at spacing Δ, symbol `2·sin(kΔ/2)/Δ`, which at Nyquist is `2/Δ ≠ 0`). **There is no null mode for a Rhie–Chow term to cure.** (2) **Measured:** feed the real kernel its own Nyquist mode and it **decays to 78% in 8 steps** — damped by the head operator alone, with θ provably a no-op on step 1 (the flux arrays start at zero). **A null mode is invariant or grows without resistance. Ours is SEEN and DAMPED.**
   |reason
@@ -596,7 +614,8 @@
     Retract the Rhie–Chow identification from `.super-archive/from-theory/discretisation-and-information.md` SS2.5 and SS7(a) (done 2026-07-13). Reconcile or delete `water.rs:352`'s un-sourced physical claim. Run the roll-wave probe before touching θ. **The null-space probe remains right and remains worth running — but as the GRID-GENERAL instrument (rank deficiency is a linear-algebra statement; the Fourier/Nyquist version is the uniform-lattice special case), not as a prosecution of θ.**
   |ref de Almeida et al. 2012 WRR 48 W05528 · de Almeida & Bates 2013 WRR 49:4833 · crates/vivarium-world/src/water.rs:352,362-370 · .super-archive/from-theory/discretisation-and-information.md SS2.5
 
-|decision[water-runs-outside-its-published-validity-envelope] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[water-runs-outside-its-published-validity-envelope] :date 2026-07-13 :by claude :status council-accepted :topic physics
+  :council 2026-07-24 — Accepted; the Fr>1.5 threshold is the measured statement (declared as a Violated envelope on the water NomosDecl 2026-07-24). Companion new measurement: lake-at-rest well-balancedness now MEASURED (`water-is-well-balanced-at-lake-at-rest`).
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⚠ THE BIGGEST FINDING IN THE WATER AUDIT, AND IT IS NOT THE ONE I WENT LOOKING FOR. **de Almeida & Bates 2013 — the applicability study `water.rs` ITSELF CITES — bounds the local-inertial approximation at Fr < 0.5 (near-identical to full SWE), diverging to Fr = 1, and states outright that *"the physical characteristics of the flow field of supercritical flow with a Froude number of greater than 1 CANNOT BE CORRECTLY EXPRESSED by the local inertial model."*** **MEASURED on real 60-epoch eroded land (2 m sheet, 400 steps of the real kernel): ~5.7% of wet cells run SUPERCRITICAL (Fr > 1.5)** — and those are the steepest, fastest cells, i.e. **exactly the ones doing the erosive work.**
   |reason
@@ -609,7 +628,8 @@
     **ORDER OF WORK.** (1) **Promote the hardcoded literals to `WaterParams` fields** — NOTHING below can run until this lands. (2) **Count the clip activation rates** — the audit needs those, not θ's. (3) **Run the roll-wave probe** (`theta-is-lax-friedrichs-not-rhie-chow`). (4) **`ASSUMPTIONS.md`'s "used as intended" for the de Almeida terms is the claim to RETIRE** — the primary's intent is bounded at Fr < 0.5–1.0, and we run 5.7% of the wet domain above Fr 1.5 with the cap saturated. This is an ASSUMPTIONS row, and it is currently unfalsifiable.
   |ref de Almeida & Bates 2013 WRR 49:4833 (the applicability study water.rs cites) · crates/vivarium-world/src/water.rs · ASSUMPTIONS.md (de Almeida row)
 
-|decision[wavelet-store-solves-the-representation-not-the-dynamics] :date 2026-07-13 :by claude :status proposed :topic architecture :supersedes flux-on-the-face-makes-refluxing-an-invariant
+|decision[wavelet-store-solves-the-representation-not-the-dynamics] :date 2026-07-13 :by claude :status council-accepted :topic architecture :supersedes flux-on-the-face-makes-refluxing-an-invariant
+  :council 2026-07-24 — Accepted, with its own supersession refined by `the-seam-is-double-evolution…`: the bill it named is real and is now PRICED as leaf-only evolution — a price, not a refutation.
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⚠ RETRACTION. My claim that a multiresolution/wavelet store *"makes the coarse↔fine seam an IDENTITY"* and *"may retire `detail→abstract`"* **DIES — and it dies against my own document.** SS3.3 proves coarse-graining does NOT commute with a nonlinear law (Jensen). SS3.7 then claims the seam becomes an identity. **Both are in the same document and they contradict each other. THE SEAM *IS* THE NON-COMMUTATION SS3.3 PROVES.**
   |reason
@@ -623,7 +643,8 @@
     The wavelet-store spike (in flight) should be re-scoped: **build the representation, and do NOT claim the dynamics.** Correct SS3.7 and the flux-on-face entry. **`detail→abstract` remains OPEN and remains the hard problem; nothing here touches it.**
   |ref .super-archive/from-theory/discretisation-and-information.md SS3.3, SS3.7 · .super-archive/from-theory/multiscale-seams.md SS2.1, SS2.4 · crates/vivarium-world/src/erosion.rs (pin_block_means)
 
-|decision[preserve-the-structure-declare-the-sacrifice] :date 2026-07-13 :by claude :status proposed :topic architecture
+|decision[preserve-the-structure-declare-the-sacrifice] :date 2026-07-13 :by claude :status council-accepted :topic architecture
+  :council 2026-07-24 — Accepted FOR THE PRINCIPLE (claim home `#form-declared-structure-tradeoff`; boxes now fields on NomosDecl). Three |reason/|impact clauses were later corrected and are NOT carried: MZ/FDT amplitude is derived-from-measurement, not theorem-given; 'store the details and the seam never happens' is retracted (`wavelet-store-solves-the-representation…`); Jensen≡aliasing demoted to shared-parent. Read those entries with this one.
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   :note 2026-07-13 — AUTHORITY SELF-CORRECTED (was `:by us :status decided`), caught by the onboarding audit. **Joseph never ratified THIS principle.** He ratified the COLUMN framing ("it very much lands" — see `column-is-a-control-volume-...`'s :status-note), and this entry's own |reason quotes him about JITTER, not about the principle. **The instance that wrote the authority legend on 07-12 tagged its own governing principle `:by us` on 07-13 and put it into CLAUDE.md the same day** — which is the exact failure the legend exists to prevent, committed by its author, one day later. The PRINCIPLE stands on its merits and is still Level-A reading; only the TAG was false. Joseph may promote it to `:by us :status decided` with a :status-note, or veto it.
   THE GOVERNING PRINCIPLE FOR EVERY FIELD NOMOS. **Identify the STRUCTURE the physics has — conservation laws, potentials, topological identities, symmetries, the second law, realizability, the timescale hierarchy — and choose a discretisation that preserves THAT structure EXACTLY. Everything else is negotiable and must be DECLARED as sacrificed. No scheme preserves all of them; you are ALWAYS choosing, and the sin is choosing silently.** Full treatment, with the taxonomy, the structure table, and the probes: `.super-archive/from-theory/discretisation-and-information.md` (Level-B required reading before authoring or reworking a field nomos).
@@ -671,7 +692,8 @@
     ORIENTATION: flux-web section rewritten (the ordinum GOVERNS the web and currently convicts this world — that is the machinery working); ⛔ block replaced with the corrected reading + Joseph's un-adjudicated nuance kept visible ("the ordinum does not FORBID early emergence — a mismatch is a SIGN that either the model or the ladder is wrong; the early-continents papers adjudicate"); both standing guards stated (probe-that-cannot-fail; check-the-ladder-not-modern-earth); spine -> initial-topography; crate map + CLI updated; regula references corrected to the collapse. TODO: SSPrior v3 rewritten as the **#1 gap (`emerged-land`)** in the ladder's order; the conformance section rewritten around the regula collapse with the STILL-OWED maturity-report display called out. **NOT swept, needs Joseph:** LEXICON.udon still marks `regula` / `slot` / `permit` `:status settled` though the collapse retired them, and has NO `|term[manifest]` entry although two entries carry `|rel :to manifest` edges — a vocabulary call he owns.
   |ref ORIENTATION.md · TODO.md · ASSUMPTIONS.md · LEXICON.udon (NOT swept)
 
-|decision[wavelet-store-spiked-the-seam-is-not-the-details] :date 2026-07-13 :by claude :status proposed :topic architecture
+|decision[wavelet-store-spiked-the-seam-is-not-the-details] :date 2026-07-13 :by claude :status council-accepted :topic architecture
+  :council 2026-07-24 — Accepted for the FINDINGS (state-half retirement, exactly-conservative compression, non-local-flux residue — claim home `#sketch-detail-abstract-reversion`). Whether to BUILD the store remains open (its own impact says so).
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   SPIKED (`msc/spike-wavelet-store/`, 8 probes on real kernels + verified-land footprint; `RUN.txt`). The multiresolution store is REAL and BUILDABLE — but **§3.7's headline claim is FALSE AS STATED, because the seam was misdiagnosed.** The seam is NOT caused by discarding detail coefficients. It is caused by EVOLVING THE SAME GROUND TWICE at two resolutions and papering over the disagreement with `pin_block_means`. The half of the design that actually kills the seam is the FLUX-ON-THE-FACE half — and that half is **the same transform applied to faces instead of cells**. The two proposals are ONE DESIGN; they do not conflict; and the FLUX half is the load-bearing one.
   |reason
@@ -685,7 +707,8 @@
     NOT DECIDED — Joseph's call. If built: (1) `measure.rs` — exact spherical cell area + geodesic edge length as first-class DECLARED per-cell quantities (exact closed form, no quadrature: Ω = F(X₁,Y₁) − F(X₁,Y₀) − F(X₀,Y₁) + F(X₀,Y₀) with F(X,Y) = atan(XY/√(1+X²+Y²)), X = tan(πu/4) — in `src/area.rs`); (2) **LEAF-ONLY EVOLUTION** — a cell with children is DERIVED, never stepped (the missing ingredient, and it is CHEAPER: it deletes the double-evolve); (3) the face-keyed store (`flux-on-the-face-makes-refluxing-an-invariant`, unchanged); (4) the lifting MRA as the store's representation, PREDICTOR DECLARED PER QUANTITY; (5) KEEP the fated-detail synthesis for un-refined regions; (6) **retire `pin_block_means`**. ⚠ UNTESTED AND IT MATTERS MOST: whether thresholding error ACCUMULATES over repeated evolve→compress cycles (Bellotti et al. Prop 4.1: bounded Cε(n+1) for a NON-EXPANSIVE scheme, **exponential otherwise**, and "Harten's approach has never proved to satisfy the assumption but is widely used in practice"). Also untested: hot-loop cost; `cell_m`-as-a-LENGTH (slope/creep/talus); water.rs; CROSS-FACE seams (my composite grid lives inside one face; the 24 corner cells "should be fine" — exactly the kind of should-be-fine this project has been burned by). **THE TEMPORAL HALF [derived, not built]:** it is the SAME transform on a third chain group (time intervals) — the low-pass is the DURATION-weighted mean, and **Berger–Colella's flux register is literally a time-integrated detail coefficient**. It holds iff the ladder NESTS (Δt_coarse = Σ Δt_fine exactly), which is what `multiscale-seams` §3's "lock time to the spatial quadtree per z-sector" already delivers. Its residue is EXACTLY the already-flagged one: z is per-PROCESS, so two processes at one spatial level sit on DIFFERENT time ladders, and a flux between them crosses space-time faces that do not align. The MRA neither creates nor solves that — but it says WHERE it lives: at the space-time face, and nowhere else.
   |ref msc/spike-wavelet-store/{src/{area,mra,probes}.rs, RUN.txt, lit-notes.md} · .super-archive/from-theory/discretisation-and-information.md SS3.7 · ORIENTATION.md SS"The one hard research problem"
 
-|decision[refluxing-ceases-to-exist-measured] :date 2026-07-13 :by claude :status proposed :topic architecture
+|decision[refluxing-ceases-to-exist-measured] :date 2026-07-13 :by claude :status council-accepted :topic architecture
+  :council 2026-07-24 — Accepted as measurement + the one-design reconciliation. Adopting face-keyed store + leaf-only in production rides with the tentative grid decision and the macro-tier resolution — still open build work.
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   MEASURED — `flux-on-the-face-makes-refluxing-an-invariant` IS CORRECT, and it is **the same construction as the wavelet store, applied to a different geometric object.** The cell store's low-pass is the AREA-weighted mean over a cell's children (so ∫h dA telescopes). The flux register's low-pass is the LENGTH-weighted mean over a face's sub-faces (so ∫F dl telescopes). Cells are 2-chains, faces are 1-chains, and **the divergence theorem is what relates them**: d/dt ∫_cell h dA = Σ_faces ∫ F dl. Restrict BOTH integral-preservingly and a coarse cell's interior sub-faces cancel in equal-and-opposite pairs, leaving exactly its own faces — i.e. **R_cell ∘ div = div ∘ R_face**, and THAT COMMUTATION *IS* "refluxing is an invariant." **The two proposals are ONE DESIGN.**
   |reason
@@ -697,7 +720,8 @@
     Weigh AS ONE with the wavelet-store spike, the staggering lead (TODO §grid), and the column-semantics fork — they were never four decisions. Concretely: the store keys CELLS today; a staggered store must key FACES too (each face owned by exactly one of its two cells, canonically the lower `CellId`; stored once, read twice), and it must adopt LEAF-ONLY EVOLUTION. Still Joseph's call, and the grid/scheme question remains open and his.
   |ref msc/spike-wavelet-store/src/probes.rs (PROBE 7) + RUN.txt · DECISIONS[flux-on-the-face-makes-refluxing-an-invariant] · .super-archive/from-theory/multiscale-seams.md SS2.1
 
-|decision[mean-pin-manufactures-the-seam-and-the-mass] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[mean-pin-manufactures-the-seam-and-the-mass] :date 2026-07-13 :by claude :status council-accepted :topic physics
+  :council 2026-07-24 — Accepted incl. the retire-or-replace recommendation (claim home `#obs-mean-pin-manufactures-seam`); replacement judged against face-register conditions; the replacement experiment can still fail.
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   MEASURED. **`pin_block_means` — the operator whose entire purpose is coarse↔fine consistency — is the single largest manufacturer of the seam ridge it was written to prevent, IS NOT CONSERVATIVE (it manufactures mass), and DOES NOT DO WHAT ITS DOCSTRING SAYS.** Proposal: **retire it**, in favour of leaf-only evolution + a single-valued face flux.
   |reason
@@ -710,7 +734,8 @@
     `seam_ridge` stays RED, but its cause is now named and it is not "missing refluxing" alone. Retiring `pin_block_means` is a prerequisite for, not a consequence of, the store work — and it is a DELETION, not a build. Note it also means `ARCHITECTURE.md`'s R∘L=id-on-the-mean sentence needs correcting whatever else is decided.
   |ref msc/spike-wavelet-store/src/probes.rs (PROBE 6, PROBE 7) + RUN.txt · crates/vivarium-world/src/erosion.rs (pin_block_means, ErodedRegion::surface_m) · examples/seam_ridge.rs · doc/ARCHITECTURE.md
 
-|decision[cell-size-m-is-a-uniform-area-and-erosion-eats-it] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[cell-size-m-is-a-uniform-area-and-erosion-eats-it] :date 2026-07-13 :by claude :status council-accepted :topic physics
+  :council 2026-07-24 — Accepted; measure.rs landed with true cell area 2026-07-23 (partial adoption — see `drainage-area…` note). cell_m-as-LENGTH uses remain unprobed, as flagged.
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   MEASURED — a SECOND grid bias, previously unnamed, with the MFD fan's exact spatial signature. **`sample::cell_size_m(level, R) = (π/2·R)/2^level` is ONE length per level — no position in it. `erosion.rs:371` SQUARES it to get the cell AREA that drainage accumulates in, and `E = K·Aᵐ·Sⁿ` (m = 0.5) eats that A.** The uniform area is **exactly right at a face CENTRE** and **overstates A by +41.2% at the face EDGE MIDPOINTS** (+29.9% at the corners; +12.9% at our L19 working tile) ⇒ **a smooth 0–18.8% positional bias in the erosion rate — a six-fold, CUBE-LOCKED fake erodibility field.**
   |reason
@@ -722,7 +747,7 @@
     Independent of the store decision: exact spherical cell area has an **exact closed form** on the equiangular map — Ω = F(X₁,Y₁) − F(X₁,Y₀) − F(X₀,Y₁) + F(X₀,Y₀), F(X,Y) = atan(XY/√(1+X²+Y²)), X = tan(πu/4) — no quadrature, no table, ~6 lines (`msc/spike-wavelet-store/src/area.rs`). Geodesic EDGE LENGTH likewise exact (cube-sphere cell edges ARE great-circle arcs). Proposal: a `measure.rs` making cell area + edge length first-class DECLARED per-cell quantities, and retiring `cell_size_m` as an AREA. Cheap, and there is a measured bias behind it. Feeds the geometric contract (`algorithms-are-disguised-physical-claims` |impact (2): "the grid declares what it actually delivers").
   |ref msc/spike-wavelet-store/src/probes.rs (PROBE 8, PROBE 1) + RUN.txt · crates/vivarium-world/src/{erosion.rs:371, sample.rs (cell_size_m)} · ref/research/grid-comparison-report.md SS9a · DECISIONS[mfd-fan-is-a-bias-and-does-not-converge]
 
-|decision[corrected-scheme-is-affordable-via-precomputed-stencil] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[corrected-scheme-is-affordable-via-precomputed-stencil] :date 2026-07-13 :by claude :status council-accepted :topic physics
   :session spike-corrected-scheme-cost
   The corrected FV scheme's hot-loop cost — `grid-comparison-report.md` §10.6, "the biggest open risk in the report" — is MEASURED, and the report's precomputed-stencil rescue WORKS: it is an EXACT algebraic refactor (not an approximation), it stays exactly conservative, and it costs **+2.7% on a full erosion epoch**. ⚠ MEASUREMENT, NOT A VERDICT — it does not adjudicate the grid question, which remains Joseph's (`grid-question-not-closed-authority-was-inflated`).
   |reason
@@ -742,7 +767,7 @@
     A HYPOTHESIS I REFUTED (recorded, per the report's own idiom): I predicted the metre-scale normal equations' cond=1.2e10 meant part of the report's 3.65e-4 was conditioning noise. **REFUTED** — nondimensionalising (cond → 8.0) changes the answer by 1.7e-14. The report's number is truncation error, exactly as claimed.
   |ref crates/vivarium-world/examples/stencil_bench.rs · msc/spike-corrected-scheme-cost/stencil_bench.out · ref/research/grid-comparison-report.md SS10.6 · ref/research/spatial-key-bench.md
 
-|decision[our-kernels-have-no-null-space-the-solitons-were-roll-waves] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[our-kernels-have-no-null-space-the-solitons-were-roll-waves] :date 2026-07-13 :by claude :status council-accepted :topic physics
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⚠⚠ **REFUTES the hypothesis in `.super-archive/from-theory/discretisation-and-information.md` SS2.5** — *"the solitons WERE the invisible mode, and the theta-smoothing is Rhie-Chow-class stabilisation ... its physical claim is NONE."* **[M] Wrong in every clause.** Cardiff's null-space test (SS3.5.3, Fig. 17 — periodic patch, assemble the operator, count the zero eigenvalues) run on EVERY field kernel we own: **erosion creep, the MFD router, the full erosion epoch, and the water virtual pipes ALL have ZERO spurious zeros.** Checkerboarding/hourglassing is the ONE disease vivarium does not have. **The reason was never written down: every difference our kernels take is across a FACE (Delta apart), never centre-to-centre (2·Delta) — `water.rs` IS ALREADY A STAGGERED SCHEME.**
   |reason
@@ -756,7 +781,8 @@
     **(1) DO NOT make the `ASSUMPTIONS.md` edit that this spike was commissioned to justify.** "theta's physical claim is NONE" is **FALSE**; theta damps a mode that is at least partly REAL, which means it may be suppressing PHYSICS. **(2) RECORD that `water.rs` IS A STAGGERED SCHEME** (LEXICON/ARCHITECTURE, wherever the scheme question lives) — it is a real asset, it is undeclared, and a scheme rewrite could destroy it by accident. Note the corollary: **`erosion.rs`'s stream-power/MFD path is cell-centred and collocated, and is the one that does NOT have the property.** **(3) RECORD kappa's stabilisation role** beside its physical one. **(4) [OPEN]** whether the roll waves are QUANTITATIVELY right — the local-inertial scheme's characteristics are wrong above Fr=1, so the instability is real but its saturation almost certainly is not. **A scheme that resolves roll waves correctly is a different scheme, not a tuned theta.** **(5) [OPEN]** at L19 — the tier the world actually builds — the shipped epoch still has rho = 1.0075 > 1 at a relaxed state. Mild, plausibly just ongoing channel refinement; flagged so it is not lost.
   |ref crates/vivarium-world/examples/null_space/ · msc/spike-null-space/{probe-output.txt,fig/} · .super-archive/from-theory/discretisation-and-information.md SS2.5/SS3.2/SS7 · ref/research/pdfs/markdowns/cardiff-2021-thirty/ SS3.5.3 + Fig 17
 
-|decision[jarrett-roughness-is-a-positive-feedback-and-is-not-used-as-intended] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[jarrett-roughness-is-a-positive-feedback-and-is-not-used-as-intended] :date 2026-07-13 :by claude :status council-accepted :topic physics
+  :council 2026-07-24 — Accepted incl. the ASSUMPTIONS remedy (split the lumped row; re-scope off patch-local; own entry for Jarrett). The gentle-slope artefact/steep-slope roll-wave separation is the load-bearing result.
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⚠ **NEW, AND NOBODY WAS LOOKING FOR IT.** `water.rs`'s slope-dependent roughness — `n = min(n_base + 1.6·(head/l), 0.13)`, computed per pipe from the **instantaneous local water-surface slope** — is a **POSITIVE FEEDBACK**, and it destabilises the SHIPPED kernel on GENTLE slopes, far below any roll-wave threshold. **A cell that gains water -> its surface steepens -> `n` RISES -> its outflow FALLS -> it gains more water.** The loop closes with the wrong sign.
   |reason
@@ -775,7 +801,7 @@
     **`ASSUMPTIONS.md` is wrong about this row in TWO ways, and the row is one lumped line:** *"Jarrett roughness, Lekner-Dorf wet darkening, de Almeida-Bates stabilization | per papers | **literature** | used as intended"*. **(a) It is NOT "used as intended"** — see above. **(b) The row is filed under "Known honest fudges (worldview testbench — documented, PATCH-LOCAL)", and it is NOT patch-local:** theta = 0.8, the Jarrett `1.6`/`0.13` coefficients and the Froude-2 breaking cap are **hard-coded in `crates/vivarium-world/src/water.rs`** — the FRAME kernel, on the world path. The ledger's scoping does not match the code. Split the row, re-scope it, and give the Jarrett term its own honest entry. **NOT DECIDED — Joseph's call; the measurement is solid, the verdict is his.**
   |ref crates/vivarium-world/src/water.rs (`pipe_step`, the `n` computation) · crates/vivarium-world/examples/null_space/ · msc/spike-null-space/probe-output.txt SS"SECOND MECHANISM" · ASSUMPTIONS.md (the lumped literature row)
 
-|decision[structure-preserving-is-a-rediscovery-adopt-the-field] :date 2026-07-13 :by claude :status proposed :topic architecture
+|decision[structure-preserving-is-a-rediscovery-adopt-the-field] :date 2026-07-13 :by claude :status council-accepted :topic architecture
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   LITERATURE RECON RESULT (`msc/research-structure-preserving/`). The governing principle is a **rediscovery of a mature field**, and its vocabulary already exists: **compatible discretisation / mimetic / structure-preserving** (the de Rham complex; FEEC, DEC, MFD) for space, **geometric numerical integration** for time. **And the PRIME QUESTION is named too: it is MODIFIED EQUATION ANALYSIS** (Warming & Hyett 1974) on the PDE side and **BACKWARD ERROR ANALYSIS** on the ODE side — *"what PDE is this scheme actually solving exactly"* is a computation, not a rhetorical question, and it returns a TERM with a sign and a differential order. **Proposed: adopt the vocabulary; keep "the Prime Question" as the teaching frame but stop implying we coined the question.** 61 works seeded in relata, bib-fields verified against Crossref; ~45 read-primary.
   |reason
@@ -784,7 +810,7 @@
     `msc/research-structure-preserving/README.md` is the survey. LEXICON should gain: modified-equation, backward-error-analysis, compatible/mimetic discretisation, commutation relation. The structure table (`.super-archive/from-theory/discretisation-and-information.md` §4.1) needs a HODGE-STAR row and a MULTIRESOLUTION-CONSISTENCY row (below).
   |ref msc/research-structure-preserving/README.md SS1, SS7 · relata: warming-1974-modified-equation, desbrun-2005-dec, arnold-2010-feec-hodge, hairer-2006-gni-book
 
-|decision[structures-cross-the-seam-only-if-linear] :date 2026-07-13 :by claude :status proposed :topic architecture
+|decision[structures-cross-the-seam-only-if-linear] :date 2026-07-13 :by claude :status council-accepted :topic architecture
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   **THE GENERAL LAW OF THE SEAM, AND IT IS OUR OWN JENSEN THEOREM ARRIVING ONE LEVEL UP.** A structure survives coarse<->fine multiresolution **IFF the restriction operator COMMUTES with the operator that expresses it** (Kevlahan & Dubos, WAVETRISK, read primary: three commutation relations — circulation, mass, and *no spurious vorticity*). **BUT THAT LAW ONLY COVERS THE LINEAR STRUCTURES.** Mass, div-B, circulation, well-balancedness, positivity: linear/convex ⇒ they cross the seam, and each is PROVED to. **The second law is NONLINEAR and DOES NOT CROSS** — the standard DG mortar at a non-conforming interface is provably not entropy stable and **empirically CRASHES** (Friedrich et al. 2018, read primary: *"at t ~ 1 the approach even crashes"*, verified at CFL 0.5/0.25/0.125/0.0625).
   |reason
@@ -794,7 +820,8 @@
     Structure table gains a **multiresolution-consistency row**. New probe: does our coarse<->fine operator satisfy R.div = div.R_F — and relation (3), *uniform PV stays uniform under advection*? We have never asked. If we ever put an entropy-stable kernel on the adaptive grid, we must import the **mortar projection operators** (Friedrich 2018 / Chan 2021) — without them it will not degrade, it will CRASH at a CFL that looks safe.
   |ref msc/research-structure-preserving/README.md SS3 · relata: kevlahan-2019-wavetrisk, balsara-2001-divfree, friedrich-2018-entropy-nonconforming, lipnikov-2004-nonconformal
 
-|decision[the-grid-recon-argues-FOR-the-quad-grid] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[the-grid-recon-argues-FOR-the-quad-grid] :date 2026-07-13 :by claude :status council-accepted :topic physics
+  :council 2026-07-24 — Accepted AS EVIDENCE, exactly as the entry frames itself. The grid verdict remains the tentative `:by us` decision with its named reopening conditions; this changes nothing there.
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⚠ **EVIDENCE FOR THE STILL-OPEN GRID QUESTION — NOT A VERDICT. The grid question remains Joseph's** (`grid-question-not-closed-authority-was-inflated`). Four findings, all read-primary, and **they run in our favour, which is not what I expected to find**: **(1) our DOF ratio is the RIGHT one** — a quadrilateral grid has exactly 2:1 velocity:mass (D=3, **no spurious computational modes**); hexagons are 3:1 (spurious Rossby), triangles 3:2 (spurious inertia-gravity). Weller 2012 names us: *"The cubed sphere has the correct ratio of d.o.f., but is usually nonorthogonal."* **(2) So our disease is NOT computational modes** — a collocated quad A-grid ALSO has D=3; its pathology is **parasitic modes on the PHYSICAL branches** (half the gravity-wave spectrum has REVERSED group velocity; a forcing at one frequency excites a spurious short wave alongside the real one). Different disease. **(3) Uniformity BEATS orthogonality, measured** — Putman & Lin: the more uniform quasi-orthogonal cube-sphere gave *better* accuracy than the *most orthogonal* (conformal) grid, which clusters cells at the corners; and even the conformal cube-sphere is non-orthogonal at the 8 corners anyway. **(4) On ONE structure row our quad grid is PRIVILEGED, not a compromise:** exact SIMULTANEOUS energy + potential-enstrophy conservation is available on a square C-grid (Arakawa-Lamb 1981) and is **NOT** available from TRiSK on arbitrary structure (Ringler 2010: the PE-conserving schemes *"act as spurious sources of kinetic energy"*).
   |reason
@@ -820,7 +847,7 @@
     **Proposed lead: a grid-optimisation pass on the equiangular cube-sphere quadtree that drives the primal/dual crossing offset toward zero.** Nobody has done it. It does not change `CellId`, the quadtree, or the store, and it may be the cheapest path to making ANY staggered/mimetic scheme legal on our grid — a far smaller commitment than changing grids. NEW PROBE: how does the offset behave as the quadtree REFINES? We have measured its value; we have never measured its trend.
   |ref msc/research-structure-preserving/README.md SS4.6 · relata: aechtner-2015-wavelet-sphere
 
-|decision[unbalanced-haar-answers-the-multiresolution-store] :date 2026-07-13 :by claude :status proposed :topic architecture
+|decision[unbalanced-haar-answers-the-multiresolution-store] :date 2026-07-13 :by claude :status council-accepted :topic architecture
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   **THE WAVELET-STORE SPIKE'S LITERATURE HALF IS ANSWERED, AND OUR CASE IS *STRICTLY EASIER* THAN THE PUBLISHED ONE.** Joseph's worry — *"Haar assumes equal weights; ours vary 1.4x"* — is resolved: **classical Haar does; UNBALANCED HAAR does not.** Girardi & Sweldens 1997 (read primary) construct Haar-like wavelets on *"a complete separable sigma-finite measure space and **NESTED PARTITIONS**"*, with a fast transform. **A cube-sphere quadtree IS a nested partition and cell area IS the measure.** The 1.4x variation is not an obstacle — it is literally the case the paper was written for.
   |reason
@@ -830,7 +857,7 @@
     **⇒ TWO STAGES, BOTH NAMED, NEITHER INVENTED HERE: (1) build the area-weighted Haar store — exact, exactly conservative, coarse<->fine identity for free; (2) LIFT it for compression.** Verify stage 1 satisfies the `div` commutation relation (`structures-cross-the-seam-only-if-linear`) and mass conservation across the seam becomes an IDENTITY. Handoff refs: girardi-1997-unbalanced-haar, sweldens-1998-lifting, schroder-1995-spherical, aechtner-2015-wavelet-sphere SS3-4.
   |ref msc/research-structure-preserving/README.md SS6
 
-|decision[ante-mundane-delivers-a-forcing-sample-not-a-history] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[ante-mundane-delivers-a-forcing-sample-not-a-history] :date 2026-07-13 :by claude :status council-accepted :topic physics
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   **NOBODY DEFENDS A Gyr TRAJECTORY — AND THE HONEST CLAIM IS THE ONE OUR OWN ONTOLOGY ALREADY MAKES.** The inner solar system's Lyapunov time is ~4.3-4.5 Myr; La2004's own stated validity is **~40-60 Myr**, and Laskar & Gastineau (Nature 2009, read primary) are explicit: *"**It is thus hopeless to search for a precise solution for the motion of the Solar System over 5 Gyr**... A numerical integration over 5 Gyr **can thus only be considered as a random sample of its possible evolution.**"* **BUT THE FORCING SPECTRUM IS FAR MORE ROBUST THAN THE TRAJECTORY**: La2004 claims the 405-kyr eccentricity term good to **0.1% over 100 Myr and 0.2% over 250 Myr**. ⇒ **The ante-mundane phase must deliver a FORCING SAMPLE, not a HISTORY.** *"This is one draw from the ensemble of dynamically consistent histories, with the correct forcing spectrum"* is fully defensible over Gyr. *"This is what the obliquity WAS at t = -1.2 Gyr"* is not, and no integrator at any price will make it so.
   |reason
@@ -838,7 +865,7 @@
     **Also settled (read primary):** **(a) adaptive stepping DESTROYS symplecticity** — three distinct mechanisms; Hairer & Stoffer: *"At present no such extension is known for Hamiltonian problems."* ⇒ **the orbital nomos must be FIXED-STEP and EXPLICITLY EXEMPT from the CellId-derived-dt rule** (an orbit has no spatial grid, so the exemption is free) — **and the exemption gets DECLARED, not discovered**. **(b) Once TIDES are on, symplecticity is formally gone anyway** — but **SPLITTING** still pays (REBOUNDx), and that is the concept to reach for. Its errors are **systematic (a BIAS, not noise)**. **(c) With tides on, ENERGY IS NOT A VALID ERROR DIAGNOSTIC** (it should physically drift); La2004 watches **angular momentum** instead. **(d) Zero energy error does NOT imply a correct orbit** — phase errors are unbounded by the theorem. A standing overclaim; do not make it. **(e) The MOON is the cost centre** — La2004 needs a 1.83-day step to resolve it; Neron de Surgy & Laskar reached 5 Gyr at a **250-year** step by going to secular AVERAGED equations. **A direct Gyr N-body with a resolved Moon is very likely the wrong architecture.**
   |ref msc/research-structure-preserving/README.md SS8.4 · relata: laskar-2004-la2004, laskar-2009-collisional, hairer-1997-reversible, preto-1999-adaptive-symplectic, tamayo-2020-reboundx, rein-2019-hybrid, touma-1994-liepoisson
 
-|decision[entropy-stability-is-a-one-sided-bound-not-a-selection-principle] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[entropy-stability-is-a-one-sided-bound-not-a-selection-principle] :date 2026-07-13 :by claude :status council-accepted :topic physics
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   **A STANDING OVERCLAIM IN THE FIELD THAT WE WOULD HAVE MADE. State it precisely or not at all.** Entropy stability gives a **discrete entropy inequality** — and that is ALL. Fjordholm/Kaeppeli/Mishra/Tadmor (read primary): *"**there are no rigorous proofs of convergence for any kind of finite volume (difference) and finite element methods to the entropy solutions of a generic system of conservation laws, even in one space dimension**"*; *"**entropy stability may not suffice to ensure the convergence of approximate solutions**"*; and multi-dimensional entropy solutions *"are **not necessarily unique**"*, which *"raise[s] serious questions about the appropriateness of entropy solutions as the standard solution framework."* They then DEMONSTRATE it — their own entropy-stable scheme on Kelvin-Helmholtz shows *"**no sign of any convergence as the mesh is refined**"*, across three independent codes.
   |reason
@@ -847,7 +874,8 @@
     Goes in the sacrifice ledger as a **bounded, one-sided guarantee**. And note the seam interaction (`structures-cross-the-seam-only-if-linear`): entropy stability is the one structure that does NOT cross an AMR seam for free.
   |ref msc/research-structure-preserving/README.md SS8.2 · relata: fjordholm-2017-measure-valued, tadmor-1987-numerical-viscosity, wintermeyer-2016-entropy-swe
 
-|decision[hydrostatic-reconstruction-fails-in-our-exact-regime] :date 2026-07-13 :by claude :status proposed :topic physics
+|decision[hydrostatic-reconstruction-fails-in-our-exact-regime] :date 2026-07-13 :by claude :status council-accepted :topic physics
+  :council 2026-07-24 — Accepted incl. declaring moving-water well-balancedness SACRIFICED explicitly (lake-at-rest WB is now measured — `water-is-well-balanced-at-lake-at-rest`) and the dz≥h frequency probe.
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⚠ **A PROVED FAILURE MODE THAT LANDS EXACTLY ON `water.rs`.** Delestre/Cordier/Darboux/James 2012 (read primary), Proposition 2.1: **when the bed step across a face exceeds the local depth (`dz >= h`), hydrostatic reconstruction OVERESTIMATES the water height and UNDERESTIMATES the velocity.** *"`dz >= h`"* is not an edge case for a planet hydrology kernel — **thin films on real topography make it the COMMON case on any slope steeper than h/dx.** And the authors' consolation is cold comfort for a multiresolution code: the problem *"disappears when refining the discretization... **However, it has to be taken into account for practical computations, with a fixed discretization**"* — **but on an adaptive grid there are ALWAYS coarse cells, so there is always a level at which this bites.**
   |reason
@@ -857,7 +885,8 @@
     NEW PROBE: measure the `dz >= h` condition's frequency across levels in `water.rs`. Adopt the Zhang-Shu positivity limiter (accuracy-free; CFL 1/6 vs the 1/5 you already pay; inert when wet) with the flag-on-(h+z,hu)/act-on-(h,hu) split.
   |ref msc/research-structure-preserving/README.md SS8.1, SS8.3, SS8.3a, SS8.3b · relata: delestre-2012-hr-limitation, audusse-2004-hydrostatic, kurganov-2018-swe-review, ghazizadeh-2020-quadtree-wb-pos, xing-2010-positivity-wb-dg
 
-|decision[the-macro-tier-has-two-roles-and-conservation-buys-its-freedom] :date 2026-07-13 :by us :status proposed :topic architecture
+|decision[the-macro-tier-has-two-roles-and-conservation-buys-its-freedom] :date 2026-07-13 :by us :status council-accepted :topic architecture
+  :council 2026-07-24 — Accepted as the DESIGN CONSTRAINT resolving the leaf-only price (governance=conserved reservoirs, leaf-free; summary=leaf-bound), with its own caveat kept in force: a structural argument, NOT verified — test before building on it.
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   ⚖ **THE RESOLUTION TO THE LEAF-ONLY-EVOLUTION PRICE — and it dissolves it rather than paying it.** (Joseph, 2026-07-13: *"leaf-only-evolution is definitely MY big surprise of everything throughout the last few sessions."*) **THE MACRO TIER HAS TWO ROLES AND THE PROJECT HAS BEEN CONFLATING THEM.** ① **SUMMARY (restriction, ↑)** — means, maxes, hypsometry, ∫h dA. **These genuinely require the leaves. Leaf-only bites here, and honestly.** ② **GOVERNANCE (constraint, ↓)** — the conserved water inventory, the isostatic compensation constant, the phase promises, the flux-web requisites. **These do NOT require the leaves. They are a PRIOR the fine tier must satisfy; they PRECEDE it; they are what makes it well-posed at all.** ⇒ **THE LEAF-ONLY PRICE BITES ONLY ON THE SUMMARY ROLE. THE GOVERNANCE ROLE IS FREE — and it is the one that makes the fine tier possible.**
   |reason
@@ -887,7 +916,8 @@
       The main tree may point INTO `.archive/SUPERSEDED.md` freely (that is the one sanctioned archive dependency). It must not depend on any other archived file. LEXICON's `|carve` field is retired; a retirement is written to the ledger instead.
     |ref .archive/SUPERSEDED.md · LEXICON.udon |meta[entry-schema]
 
-|decision[disposition-of-the-2026-07-13-archive] :date 2026-07-13 :by claude :status proposed :topic process
+|decision[disposition-of-the-2026-07-13-archive] :date 2026-07-13 :by claude :status council-accepted :topic process
+  :council 2026-07-24 — Accepted and since largely DISCHARGED: ASF.md dispositioned 2026-07-16; its §§1–3/§7.5 content landed as core segments (`#disc-aat-vivarium-object-map`, `#scope-agent-seam-constraints`, `#scope-asf-reading-gates`, `#form-in-vivia-citation`); VIVARIA-* mined and graduated (super-archive batch 2); ORIENTATION/TODO/old CLAUDE graduated (batch 1); memory-surfaced adjudicated and graduated (batch 4). Residual: none known — the holding pen emptied.
     :session 01An1fos71L1LmxG3fSF6sE9
     PENDING JOSEPH. Every file archived in the 2026-07-13 re-founding — **except `SUPERSEDED.md`, which is settled, and `ASF.md`, dispositioned 2026-07-16 (`asf-bridge-returns-to-the-live-tree`) — though only "for now": the §§1–3 / §7.5 → `core/` segments proposal below is still open** — still needs a disposition: re-homed into canon, distilled into a `core/` segment, or genuinely retired. They were archived to clear the front doors, **not** because their content was judged dead, and nothing has yet been checked back out. The files: the previous `core/OUTLINE.md`, `CLAUDE.md`, `ORIENTATION.md`, `README.root.md`, `TODO.md`, `SUPERSEDED.md` (settled — see above), `VIVARIA-DEFINITIONS.md`, `VIVARIA-DECLARATIVE-FRONTIER.md`, `memory-surfaced-2026-07-13.md`, and **`ASF.md`**.
     |reason
@@ -932,3 +962,17 @@
   |impact
     CLAUDE.md and README rewritten as routers; first foundational segment batch landed under core/src/. Further work extracts claims from existing corpus into slugs; no new ORIENTATION-class state maps.
   |ref core/src/scope-segment-canon.md · core/OUTLINE.md · CLAUDE.md
+
+|decision[council-accepted-status-instituted] :date 2026-07-24 :by joseph :status decided :topic process
+  :session 4d13314a-8a6a-4f42-9ee0-558f4acf5add
+  A new `:status council-accepted` exists for ledger entries: a `:by claude` (or `:by us … proposed`) recommendation adjudicated by a delegated agent under Joseph's grant — "recommendation carried, Joseph supported."
+  |reason  Joseph, 2026-07-24: *"(1) it's what I would decide very likely, and (2) it doesn't get weight accidentally as inviolable law 'because Joseph instituted it' — it allows it to have the feel of 'this wasn't done blindly in a corner' but also 'this isn't some invariant now that we have to carry if the truth tells us to do something differently.'"* The delegated adjudicator adds nuance/qualification first where needed (as `:council` note lines), and leaves reserved or superseded entries untouched.
+  |impact  Legend updated; claim home `#norm-decision-authority`; CLAUDE.md disposition line. First adjudication pass run 2026-07-24 over the 07-12/07-13 proposed set (Fable session): 31 entries council-accepted (qualifications inline as `:council` notes); left as-was: `flux-on-the-face-makes-refluxing-an-invariant` (mid-supersession-chain; present truth carried by `the-seam-is-double-evolution…` + `refluxing-ceases…`) and the `:status lead` entries (leads are not verdicts).
+  |ref DECISIONS legend (authority + status) · core/src/norm-decision-authority.md · CLAUDE.md
+
+|decision[water-is-well-balanced-at-lake-at-rest] :date 2026-07-24 :by claude :status council-accepted :topic physics
+  :session 4d13314a-8a6a-4f42-9ee0-558f4acf5add
+  MEASURED — the "unknown whether ours is well-balanced or merely damped" fork is closed for the LAKE-AT-REST case: `water.rs` is well-balanced. `water_structures wb`: t=0⁺ pipe flux is exactly 0.000e0 on bumpy, grid-scale-rough, 30%-steep, and half-dry-island beds at every datum (f32 and f64; sole exception datum-0 f32, round-off); perturb-and-settle decays to 2.897e-13 in f64 while f32 plateaus at its ULP conditioning floor (~1.6e-4 at a 4000 m datum, √(ULP-ratio)-consistent) — a conditioning residue in η = b + d, not a scheme imbalance.
+  |reason  The wb probe was built 2026-07-13 but no result was ever recorded (the corpus then forked: NOMOS-CONTRACT asserted WB flat; the theory doc said "unknown"). Run independently twice on 2026-07-24 (verify agent, then session harness) with identical results. Scope: LAKE-AT-REST ONLY — moving-water well-balancedness is proposed sacrificed per `hydrostatic-reconstruction-fails-in-our-exact-regime`, and this measurement says nothing about it.
+  |impact  Water NomosDecl declares `well-balanced` in preserves_exact with this provenance; `#detail-structure-scheme-map` row updated from "unknown". The structural reason (η_i − η_j head operator on the free surface, not depth) is the scheme property a rewrite must not destroy.
+  |ref crates/vivarium-world/examples/water_structures/ (wb) · crates/vivarium-world/src/nomotheke.rs (WATER.structure) · core/src/detail-structure-scheme-map.md
