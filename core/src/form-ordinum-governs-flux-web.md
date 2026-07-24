@@ -12,8 +12,6 @@ depends:
 
 # The ordinum governs the flux web
 
-> [!warning] **Residual code trail** — Abyssal `emerged-land` remains **Unmet** in the live nomotheke until a freeboard keeper is registered. Formulation of pour + freeboard path: #form-derived-sea-level . When a producer promises `emerged land`, update FE(5) example so the queue matches the nomotheke.
-
 The phase ladder's promises *are* flux quantities, and `:kept-by` *is* the producer. A nomos that consumes an unkept promise makes the world mechanically unrunnable for that work — the ladder is not decorative.
 
 ## Formal Expression
@@ -22,7 +20,7 @@ The phase ladder's promises *are* flux quantities, and `:kept-by` *is* the produ
 2. **Promise ↔ flux.** A promise that later work depends on is expressible as a fluxed quantity. When a nomos **consumes** that quantity and no nomos is registered as keeping it, the flux audit reports **Unmet** ( #form-flux-web ).
 3. **`:kept-by`.** The function that makes a promise true is named as a nomos. Absence of `:kept-by` is honest gloss, not a guarantee. A `:kept-by` naming a nomos missing from the nomotheke is **BrokenKeeper** — an error, not a maturity rung (`ordinum.rs`).
 4. **Maturity ladder (acceptance-test discipline).** NotStarted → Specified (has `|predicate`) → Claimed (`:kept-by` names a real nomos) → Kept (predicate verified). **A promise with no predicate cannot be marked fulfilled at any level** — nothing could convict it. **Kept is not auto-derived** from the presence of a producer; claiming Kept without a refutable check is plausibility-as-verification ( #norm-probes-before-claims ).
-5. **What to build next.** Gaps are look-ups: Specified gate-promises with no keeper (e.g. Abyssal `emerged-land` until freeboard keeps it — #form-derived-sea-level ) are the queue the ladder sets, not session taste ( #disc-check-the-ladder ).
+5. **What to build next.** Gaps are look-ups: Specified gate-promises with no keeper are the queue the ladder sets, not session taste ( #disc-check-the-ladder ). Abyssal `emerged-land` is **promised** by uplift freeboard ( #form-derived-sea-level ); full isostatic column remains residual.
 
 ## Epistemic Status
 

@@ -11,9 +11,7 @@ depends:
 
 # Hydrosphere is a box nomos on the same contract
 
-> [!warning] **Residual code trail** — ocean stock is the input to derived sea level ( #form-derived-sea-level ); that pour is **not** weather-cycle bootstrap. This observation claims only the box stock + precip edge. Do not read unfinished pour code as part of this segment.
-
-The hydrosphere article is a global reservoir (no grid): conserved water inventory from ante-mundane mass fraction, partitioned ocean/atmosphere. It proves the store/nomotheke/flux contract is representation-agnostic.
+The hydrosphere article is a global reservoir (no grid): conserved water inventory from ante-mundane mass fraction, partitioned ocean/atmosphere. It proves the store/nomotheke/flux contract is representation-agnostic. Ocean stock feeds derived sea level ( #form-derived-sea-level ) — that pour is **not** weather-cycle bootstrap.
 
 ## Formal Expression
 

@@ -9,9 +9,7 @@ depends:
 
 # Check the phase ladder before modern Earth
 
-> [!warning] **Residual code trail** — formulation #form-derived-sea-level owns pour + freeboard / `emerged land`. Until gen retires decreed `SEA_LEVEL_M` and a nomos **promises** `emerged land`, live code may lag that FE; do not treat unfinished pour as contradiction of this segment's reading discipline.
-
-A measurement that modern Earth would call a defect may be the ordinum's promise kept. Read the developmental ladder before rewriting the prior.
+A measurement that modern Earth would call a defect may be the ordinum's promise kept. Read the developmental ladder before rewriting the prior. Engineering path: #form-derived-sea-level .
 
 ## Formal Expression
 
