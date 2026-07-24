@@ -10,7 +10,14 @@
 
 Joseph attached a condition before entrusting a builder/demand/observability design to an agent: that `core/` actually carries everything about the workflow / CLI / harness from the historical documents — so the design proceeds from accumulated thinking rather than re-deriving something worse.
 
-The claim under test was `#scope-segment-canon` FE(4), that `.super-archive/` holds "no unique non-superseded meat," together with `CONSOLIDATION-STATUS.md`'s "the prose mine is closed." Both are assertions about a peel executed over 2026-07-21 → 07-24.
+**Correction to this document's own framing** `[verified]`. An earlier draft named `#scope-segment-canon` FE(4) as the claim under test. It is not a claim — it is a **prohibition**: "no unique non-superseded meat **may** live only there." A rule can be violated without having been false. The segment's Epistemic Status goes further and explicitly disclaims the reading this audit attributed to it: "The rule does **not** claim that all true content has already been migrated into segments; migration incompleteness is expected."
+
+So **core never asserted the mine was closed.** The overclaim is `CONSOLIDATION-STATUS.md`, in a file whose own first line says "**Not claim canon.**" The claim channel was honest throughout; a non-canon status file was not.
+
+Two consequences worth carrying:
+
+1. FE(4) is a rule that **nothing can convict** — precisely what `#norm-declaration-must-convict` calls a wish. The rule that would have prevented the loss is itself unenforceable, and no instrument could tell anyone it had been broken.
+2. `CONSOLIDATION-STATUS.md` line 9 instructs "**do not re-mine ice for claims**" — the sentence that would have prevented this audit. It ran only because Joseph attached a condition that overrode it.
 
 ## 2. Method
 
