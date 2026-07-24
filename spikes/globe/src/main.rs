@@ -1,22 +1,33 @@
 //! vivarium-globe — spin the planet, zoom in, see what the store has built.
 //!
 //! The Phase-2 "smallest-first visible win" (`doc/plan/abyssal-parity-plan.md`):
-//! whole-globe surface from the store — **eroded when the builder has already
-//! memoized a fluvial tile**, otherwise the fBm initial-topography prior.
-//! Google-Earth verbs only: drag to spin, wheel to zoom.
+//! whole-globe surface from the store — **eroded where the builder has memoized a
+//! current-source fluvial tile**, otherwise the tectonic prior. Google-Earth
+//! verbs only: drag to spin, wheel to zoom.
 //!
 //! **The discipline this view exists to demonstrate** (the new frame, `store.rs` +
 //! `query.rs`): a view *only queries; it owns no world state*. Elevations come
-//! from store census — every builder `erosion-tile` root loads as an
-//! `ErodedRegion`, then each face is assembled with `World::assemble_surface_tile`
-//! (prior outside tiles). That matches the builder's 64×64 sweep; a single
-//! full-face key would miss those tiles. Never cold-runs fluvial erosion.
+//! from store census — each **current-source** `erosion-tile` root loads as an
+//! `ErodedRegion` (`World::load_current_eroded_regions`), then each face is
+//! assembled with `World::assemble_surface_tile` (prior outside tiles). Matches
+//! the builder's 64×64 sweep; a single full-face key would miss those tiles.
+//! Never cold-runs fluvial erosion.
 //!
-//! **Honesty line** (also on the HUD): the fBm prior is a placeholder that
-//! conserves nothing and encodes no tectonics; eroded tiles are fluvial carving
-//! on that prior (still not earned Abyssal land — see the ordinum's emerged-land
-//! gate). Relief is exaggerated ×20 by default (honest ×1 is a billiard ball)
-//! and the HUD states the factor.
+//! **Staleness is loud, not silent** (`#form-sphere-continuous-surface-fields`
+//! FE(3) view-assembly debt; the 2026-07-24 ribbon diagnosis): every nomos key
+//! folds the whole-crate source hash, so ANY `vivarium-world` edit makes the
+//! store's tiles stale-by-source. The old loader blended those stale-carved cells
+//! with current-source prior fallback into coverage-boundary *ribbons*. The
+//! default surface now uses current-source tiles only and the HUD prints the
+//! fresh/stale/prior-fallback census; VIVARIUM_INCLUDE_STALE=1 restores the old
+//! silent blend for side-by-side diagnosis.
+//!
+//! **Honesty line** (also on the HUD): the prior IS the tectonic surface
+//! (bathymetry + Abyssal isostatic freeboard, `#form-derived-sea-level` /
+//! `#form-isostasy-column`) — not a bare fBm placeholder; eroded tiles are
+//! fluvial carving on it. Land is the isostasy freeboard read: **Claimed, not yet
+//! Kept** (the emerged-land Record's hard clauses only). Relief is exaggerated
+//! ×20 by default (honest ×1 is a billiard ball) and the HUD states the factor.
 //!
 //! Run: `cargo run --release -p vivarium-globe`
 //! Controls: drag spin (inertia) · wheel / -/= zoom · arrows spin · [ ] level ·
@@ -43,12 +54,13 @@ use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 
+use vivarium_world::erosion;
 use vivarium_world::gen;
 use vivarium_world::sea_level;
 use vivarium_world::planet::Planet;
-use vivarium_world::query::World;
+use vivarium_world::query::{RegionCensus, World};
 use vivarium_world::spec::WorldSpec;
-use vivarium_world::sphere::{CubeCoord, Face};
+use vivarium_world::sphere::{CellId, CubeCoord, Face};
 use vivarium_world::store::Store;
 
 /// Render unit = 1 km (f32-safe at planetary scale: km magnitudes ≈ 6.4e3, where
@@ -90,13 +102,21 @@ struct GlobeMsg {
     /// pick reports elevation from the same queried data the meshes were built
     /// from — never a separate computation that could drift.
     tiles: Vec<Vec<f32>>,
-    /// How many store erosion tiles the census loaded (all faces/levels).
+    /// How many store erosion tiles were used for this surface (current-source
+    /// unless VIVARIUM_INCLUDE_STALE=1).
     store_eroded_tiles: usize,
+    /// Root census by source-hash freshness — the loud staleness signal.
+    census: RegionCensus,
+    /// Whether stale-source tiles were blended in (VIVARIUM_INCLUDE_STALE=1).
+    include_stale: bool,
     /// How many of the six faces had any cell covered by a store erosion tile.
     eroded_faces: usize,
     pull_s: f32,
     /// Fraction of cells above derived sea (≈ by-area).
     land_frac: f32,
+    /// Fraction of rendered cells painted from the instant prior (no covering
+    /// tile) — silent fallback made countable.
+    prior_fallback_frac: f32,
     /// The SEAM INSTRUMENT (see [`seam_stats`]). The view's mesh bridges face
     /// edges C0 — which would quietly *hide* a world-side cross-face-prior
     /// discontinuity (Joseph: "don't accidentally hide our bug by making the
@@ -399,15 +419,28 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx
         };
         let world = World::new(&store, seed);
         let sea_m = sea_level::derived_sea_level_m(seed) as f32;
+        // Silent staleness is the ribbon's root cause: after ANY vivarium-world
+        // source edit the store's tiles are stale-by-source-hash, and the old
+        // `load_eroded_regions` loaded them anyway — blending stale-carved cells
+        // with current-source prior fallback into coverage-boundary ribbons.
+        // Default is now the HONEST current-source surface; VIVARIUM_INCLUDE_STALE=1
+        // restores the old silent-blend behaviour for side-by-side diagnosis.
+        let include_stale = std::env::var("VIVARIUM_INCLUDE_STALE").map(|v| v == "1").unwrap_or(false);
         while let Ok((level, exag, audit)) = rx.recv() {
             let t0 = std::time::Instant::now();
             // Reload each request so a builder running alongside the globe is visible.
-            let regions = world.load_eroded_regions();
+            let census = world.eroded_region_census();
+            let regions = if include_stale {
+                world.load_eroded_regions()
+            } else {
+                world.load_current_eroded_regions()
+            };
             let store_eroded_tiles = regions.len();
             let nx = 1usize << level;
             let mut eroded_faces = 0usize;
             let mut land = 0usize;
             let mut total = 0usize;
+            let mut prior_fallback = 0usize;
             let mut tiles = Vec::with_capacity(6);
             let mut seam = SeamStats::default();
             let faces: Vec<FaceMesh> = std::thread::scope(|s| {
@@ -422,21 +455,33 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx
                             let (tile, eroded) =
                                 world.assemble_surface_tile(face, level, 0, 0, nx, regions);
                             let land = tile.iter().filter(|&&h| h > sea_m).count();
+                            // Per-cell coverage: cells with no covering region are
+                            // painted from the instant prior — the loud fallback count.
+                            let mut fallback = 0usize;
+                            for j in 0..nx as u32 {
+                                for i in 0..nx as u32 {
+                                    let cid = CellId::from_face_ij(face, i, j, level);
+                                    if erosion::tier_at(cid, regions).is_none() {
+                                        fallback += 1;
+                                    }
+                                }
+                            }
                             let (mesh, fseam) =
                                 build_face(world, face, level, &tile, exag, audit, sea_m);
-                            (mesh, tile, land, fseam, eroded)
+                            (mesh, tile, land, fseam, eroded, fallback)
                         })
                     })
                     .collect();
                 handles
                     .into_iter()
                     .map(|h| {
-                        let (fm, tile, l, fseam, eroded) =
+                        let (fm, tile, l, fseam, eroded, fallback) =
                             h.join().expect("face build panicked");
                         if eroded {
                             eroded_faces += 1;
                         }
                         land += l;
+                        prior_fallback += fallback;
                         total += tile.len();
                         tiles.push(tile);
                         seam.cross_max = seam.cross_max.max(fseam.cross_max);
@@ -454,9 +499,12 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx
                 faces,
                 tiles,
                 store_eroded_tiles,
+                census,
+                include_stale,
                 eroded_faces,
                 pull_s: t0.elapsed().as_secs_f32(),
                 land_frac: land as f32 / total.max(1) as f32,
+                prior_fallback_frac: prior_fallback as f32 / total.max(1) as f32,
                 seam,
             };
             if tx.send(msg).is_err() {
@@ -533,12 +581,15 @@ fn sun_world_dir(eph: &SunEphemeris) -> Vec3 {
 struct BuiltStats {
     level: u8,
     exag: f32,
-    /// Count of `erosion-tile` roots loaded from the store census.
+    /// Count of `erosion-tile` roots used for this surface.
     store_eroded_tiles: usize,
+    census: RegionCensus,
+    include_stale: bool,
     /// Faces with any cell covered by a store erosion tile (0..=6).
     eroded_faces: usize,
     pull_s: f32,
     land_frac: f32,
+    prior_fallback_frac: f32,
     seam: SeamStats,
 }
 
@@ -875,9 +926,12 @@ fn apply_builds(
         level: msg.level,
         exag: msg.exag,
         store_eroded_tiles: msg.store_eroded_tiles,
+        census: msg.census,
+        include_stale: msg.include_stale,
         eroded_faces: msg.eroded_faces,
         pull_s: msg.pull_s,
         land_frac: msg.land_frac,
+        prior_fallback_frac: msg.prior_fallback_frac,
         seam: msg.seam,
     });
 }
@@ -1003,31 +1057,38 @@ fn hud_update(
                 (s.cross_sum / s.n.max(1) as f64) as f32,
                 (s.within_sum / s.n.max(1) as f64) as f32,
             );
-            let surface = if b.eroded_faces == 6 {
-                format!(
-                    "eroded (all 6 faces, {} store tiles)",
-                    b.store_eroded_tiles
-                )
-            } else if b.eroded_faces > 0 {
-                format!(
-                    "mixed: {}/6 faces eroded ({} store tiles), rest fBm prior",
-                    b.eroded_faces, b.store_eroded_tiles
-                )
-            } else if b.store_eroded_tiles > 0 {
-                format!(
-                    "fBm at this L ({} store tiles at other levels — zoom or rebuild)",
-                    b.store_eroded_tiles
-                )
+            let cen = b.census;
+            let surface = if b.store_eroded_tiles > 0 {
+                format!("eroded {}/6 faces ({} tiles)", b.eroded_faces, b.store_eroded_tiles)
             } else {
-                "fBm prior (no erosion-tile roots — run vivarium build)".to_string()
+                "isostasy prior (no current-source eroded tiles)".to_string()
             };
-            let honesty = if b.eroded_faces > 0 {
-                "fluvial on fBm prior -- not earned Abyssal land (emerged-land gate still open)"
+            // Staleness / fallback census — silent fallback made loud (Joseph's
+            // edit->build->globe loop: a source edit moves every key's source
+            // hash, so yesterday's tiles are stale and the surface silently falls
+            // back to the prior at their coverage boundaries = the ribbons).
+            let src8 = &vivarium_world::nomotheke::SRC_HASH.get(..8).unwrap_or("????????");
+            let stale_note = if cen.stale > 0 {
+                if b.include_stale {
+                    format!(" | INCLUDING {} STALE (blended -> ribbons)", cen.stale)
+                } else {
+                    format!(" | {} STALE hidden -- rerun: vivarium build", cen.stale)
+                }
             } else {
-                "fBm surface prior -- placeholder: conserves nothing, no tectonics/erosion yet"
+                String::new()
             };
+            let census_line = format!(
+                "tiles: {} fresh / {} stale / {} total (src {src8}) | {:.1}% cells prior-fallback{stale_note}",
+                cen.fresh, cen.stale, cen.total, b.prior_fallback_frac * 100.0,
+            );
+            // Present truth: the solid prior IS the tectonic surface (bathymetry +
+            // Abyssal isostatic freeboard, #form-derived-sea-level / #form-isostasy-column),
+            // not a bare fBm placeholder; land is the isostasy freeboard read, and
+            // the emerged-land promise is Claimed, not yet Kept.
+            let honesty = "surface: tectonic prior (bathymetry + Abyssal isostatic freeboard) fluvial-carved where tiles exist; land = isostasy freeboard read -- Claimed, not yet Kept";
             format!(
                 "world \"{}\" (seed {:016x}) | {surface} L{} | cell ~{cell_km:.0} km | assemble {:.2} s | land ~{:.0}%{}\n\
+                 {census_line}\n\
                  alt {alt:.0} km | centre {:.1}{} {:.1}{} | relief x{:.0} (1 = honest) | level {}\n\
                  {pick_line}\n\
                  face-seam dh: cross {c_mean:.0} m mean, {:.0} m max | within-face {w_mean:.0} m mean, {:.0} m max{}\n\

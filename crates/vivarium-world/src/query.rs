@@ -51,6 +51,20 @@ impl Source {
     }
 }
 
+/// Census of `erosion-tile` roots by source-hash freshness (see
+/// [`World::eroded_region_census`]). `fresh + stale == total`.
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
+pub struct RegionCensus {
+    /// All `erosion-tile@` roots in the store.
+    pub total: usize,
+    /// Roots whose `src=` equals the current binary's [`crate::nomotheke::SRC_HASH`]
+    /// — this world's current eroded surface.
+    pub fresh: usize,
+    /// Roots carved under a different source tree (`src=` mismatch) — matured
+    /// bytes, but not the current law's surface. Shown only if a caller opts in.
+    pub stale: usize,
+}
+
 // Nomos identities (name, version, epistemic declaration, promises,
 // assumptions) live in the NOMOTHEKE (`nomotheke.rs`) — the registry is the
 // only key-mint for world-law computations, so an undeclared nomos cannot
@@ -338,16 +352,69 @@ impl<'s> World<'s> {
         (tile, src, false)
     }
 
+    /// Census of `erosion-tile` roots by **source-hash freshness** — the loud
+    /// signal a view needs so silent staleness stops masquerading as geography.
+    ///
+    /// Every nomos key folds the build-time whole-crate source digest
+    /// ([`crate::nomotheke::SRC_HASH`], `#form-complete-content-addressed-key`).
+    /// A root whose `src=` field differs from the current binary's hash was
+    /// carved under a **different source tree** — its bytes are matured, but not
+    /// this world's *current* surface. `load_eroded_regions` (below) does NOT
+    /// filter on this, so a stale tile is loaded and shown as if current unless
+    /// the caller consults this census / uses [`Self::load_current_eroded_regions`].
+    pub fn eroded_region_census(&self) -> RegionCensus {
+        let Ok(roots) = self.store.roots() else {
+            return RegionCensus::default();
+        };
+        let mut c = RegionCensus::default();
+        for r in &roots {
+            if !r.key.starts_with("erosion-tile@") {
+                continue;
+            }
+            c.total += 1;
+            if key_field(&r.key, "src") == Some(crate::nomotheke::SRC_HASH) {
+                c.fresh += 1;
+            } else {
+                c.stale += 1;
+            }
+        }
+        c
+    }
+
     /// Materialize every `erosion-tile` root as an [`ErodedRegion`] for observe-
     /// only sampling. Never runs the fluvial kernel — pure store census.
     /// Order is coarse → fine by level (required by [`erosion::surface_at`]).
+    ///
+    /// **Staleness caveat:** this loads *every* `erosion-tile@` root, INCLUDING
+    /// tiles carved under a stale source tree (different `src=`). Assembling
+    /// those alongside current-source prior fallback mixes two datums and paints
+    /// coverage-boundary ribbons on the globe. A view that must show only the
+    /// *current* world should use [`Self::load_current_eroded_regions`] and
+    /// report [`Self::eroded_region_census`] so the drop is loud, not silent.
     pub fn load_eroded_regions(&self) -> Vec<ErodedRegion> {
+        self.load_eroded_regions_where(|_| true)
+    }
+
+    /// Like [`Self::load_eroded_regions`] but only tiles whose `src=` matches the
+    /// current binary's [`crate::nomotheke::SRC_HASH`] — the observe-only honest
+    /// surface: a tile counts as *this* world's eroded state only if it was
+    /// carved under the source now running. Stale tiles are dropped (loudly, via
+    /// the census), never silently blended into the surface.
+    pub fn load_current_eroded_regions(&self) -> Vec<ErodedRegion> {
+        let cur = crate::nomotheke::SRC_HASH;
+        self.load_eroded_regions_where(|key| key_field(key, "src") == Some(cur))
+    }
+
+    fn load_eroded_regions_where(&self, keep: impl Fn(&str) -> bool) -> Vec<ErodedRegion> {
         let Ok(roots) = self.store.roots() else {
             return Vec::new();
         };
         let mut out = Vec::new();
         for r in roots {
             if !r.key.starts_with("erosion-tile@") {
+                continue;
+            }
+            if !keep(&r.key) {
                 continue;
             }
             let Some(face_i) = key_field(&r.key, "face").and_then(|v| v.parse::<u8>().ok()) else {
@@ -591,6 +658,60 @@ mod tests {
         // Pure prior path (no regions) still works and does not claim eroded.
         let (_prior, none) = w.assemble_surface_tile(face, level, 0, 0, nx, &[]);
         assert!(!none);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn stale_source_tiles_are_loaded_silently_but_the_census_and_current_loader_separate_them() {
+        // The ribbon fault class, at the loader boundary (#form-sphere-continuous-
+        // surface-fields FE(3) view-assembly debt; #form-builder-admission FE(4)).
+        //
+        // KNOWN-BAD the probe must convict: `load_eroded_regions` filters roots by
+        // the `erosion-tile@` prefix alone and ignores the `src=` source-hash, so a
+        // tile carved under a DIFFERENT source tree loads and assembles as if it
+        // were this world's current surface — silent staleness. After any
+        // vivarium-world source edit the whole store is stale-by-src, yet the globe
+        // kept painting it (Joseph's edit -> globe loop, 2026-07-24): the coverage
+        // boundary between stale-carved cells and current-source prior fallback is
+        // the ribbon.
+        //
+        // The instrument: `eroded_region_census` counts fresh vs stale, and
+        // `load_current_eroded_regions` drops stale so the surface is single-datum.
+        use crate::store::{Key, PutOpts};
+        let dir = tmpdir("stale-src");
+        let face = Face::from_index(2);
+        let (level, nx, epochs) = (6u8, 16usize, 5u32);
+        let s = Store::open(&dir).unwrap();
+        let w = World::new(&s, 7);
+
+        // A genuine, current-source eroded tile.
+        assert_eq!(w.erosion_tile(face, level, 0, 0, nx, epochs).1, Source::Computed);
+        let c0 = w.eroded_region_census();
+        assert_eq!((c0.total, c0.fresh, c0.stale), (1, 1, 0), "one fresh tile, no stale");
+        assert_eq!(w.load_current_eroded_regions().len(), 1);
+
+        // A hand-forged tile carved under a DIFFERENT source tree: identical
+        // coordinates, but src = a hash that is not the current binary's.
+        let stale_key = Key::new("erosion-tile", "erosion-stale-test")
+            .field("src", "deadbeefdeadbeef")
+            .field("seed", 7u64)
+            .field("face", face.index())
+            .field("level", level)
+            .field("oi", 128u32)
+            .field("oj", 0u32)
+            .field("nx", nx);
+        s.put_with(&stale_key, &encode_f32(&vec![1234.0f32; nx * nx]), PutOpts::default()).unwrap();
+
+        // Silent-staleness convicted: the default loader takes BOTH.
+        assert_eq!(w.load_eroded_regions().len(), 2, "default loader silently includes the stale tile");
+
+        // The instruments separate them.
+        let c1 = w.eroded_region_census();
+        assert_eq!((c1.total, c1.fresh, c1.stale), (2, 1, 1), "census surfaces the stale tile");
+        let current = w.load_current_eroded_regions();
+        assert_eq!(current.len(), 1, "current-only loader drops the stale tile");
+        assert!(current.iter().all(|r| !(r.oi == 128 && r.h.iter().all(|&h| h == 1234.0))), "stale bytes excluded");
+
         let _ = fs::remove_dir_all(&dir);
     }
 
