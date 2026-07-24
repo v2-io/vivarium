@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Convicts FORMAT.md §5.1's decision-citation form.
+#
+# Every `DECISIONS[<slug>]` reference in the bound tree must resolve to a real
+# `|decision[<slug>]` header in DECISIONS.decision-log.udon. A prefix or an
+# ellipsis truncation is a dangling reference, not a short form.
+#
+# WHY THIS EXISTS. `#lexicon/term/<slug>` had a stated form in FORMAT §5.1 and
+# dangled at zero from core; `DECISIONS[...]` had no stated form and dangled.
+# The difference was lintability, not care. Adding the form without adding this
+# check would leave a rule nothing can fail — `#norm-declaration-must-convict`
+# calls that a wish, and the same file's FE(4) super-archive clause is the
+# cautionary specimen (a prohibition with no convictor, which was then broken).
+#
+# SCOPE, and why it is drawn here:
+#   core/, crates/, and the root canon-adjacent docs are BOUND — these are read
+#   as current truth, so a dead pointer misleads.
+#   msc/ is EXCLUDED — scratch, spikes and audit reports, where a reference may
+#   deliberately quote a historical or hypothetical slug.
+#   .super-archive/ and archive/ are EXCLUDED — frozen provenance. Their refs
+#   name the state of the world when they were written; "fixing" them would be
+#   editing archaeology to satisfy a rule postdating it.
+#
+# Known not covered (deliberate, not oversight): the reverse direction — a
+# decision `|ref` citing a segment slug that no longer exists. Worth adding when
+# someone has a measured instance; this script fixes the defect that was
+# actually measured (2026-07-24, two dangling refs live in core/, both ellipsis
+# truncations of slugs the same files cited correctly elsewhere).
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+LEDGER=DECISIONS.decision-log.udon
+[ -f "$LEDGER" ] || { echo "check-decision-refs: no $LEDGER"; exit 1; }
+
+have=$(mktemp) ; refs=$(mktemp)
+trap 'rm -f "$have" "$refs"' EXIT
+
+grep -oE '^\|decision\[[^]]+\]' "$LEDGER" | sed -E 's/^\|decision\[(.*)\]$/\1/' | sort -u > "$have"
+
+# Bound set. `-I` skips binaries; the root files are listed explicitly so the
+# scan does not wander into target/ or the archives.
+grep -rHnoI 'DECISIONS\[[^]]*\]' \
+     core/ crates/ bin/ \
+     CLAUDE.md FORMAT.md ASSUMPTIONS.md CONSOLIDATION-STATUS.md README.md LEXICON.udon \
+     2>/dev/null \
+  | grep -v '^bin/check-decision-refs:' \
+  > "$refs" || true
+
+fail=0
+while IFS= read -r line; do
+  slug=${line##*DECISIONS[}
+  slug=${slug%%]*}
+  where=${line%%:DECISIONS*}
+  # Placeholder forms are syntax, not citations: `<slug>` is how FORMAT §5.1
+  # writes the form itself, and `$...` is a shell/format variable. Everything
+  # else — including an ellipsis truncation — is a citation and must resolve.
+  case "$slug" in
+    '<'*'>' | '$'*) continue ;;
+  esac
+  if ! grep -qxF "$slug" "$have"; then
+    if [ "$fail" -eq 0 ]; then
+      echo "check-decision-refs: dangling decision references (FORMAT §5.1)"
+    fi
+    fail=$((fail + 1))
+    echo "  $where"
+    echo "      DECISIONS[$slug] does not resolve"
+    # A truncation is the common case and the fix is mechanical, so name the
+    # candidate rather than making the reader grep for it.
+    cand=$(grep -F "$slug" "$have" | head -3 || true)
+    if [ -n "$cand" ]; then
+      echo "$cand" | sed 's/^/      did you mean: /'
+    fi
+  fi
+done < "$refs"
+
+if [ "$fail" -gt 0 ]; then
+  echo
+  echo "  $fail dangling. Cite the exact slug on the |decision[...] header line."
+  exit 1
+fi
+
+echo "check-decision-refs: ok ($(wc -l < "$refs" | tr -d ' ') references, $(wc -l < "$have" | tr -d ' ') decisions)"

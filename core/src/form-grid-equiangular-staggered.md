@@ -37,7 +37,7 @@ Uniformity beat orthogonality in the measured set; the hexagon envy was misplace
 
 ## Working Notes
 
-- **Primary sources:** `ref/research/grid-comparison-report.md`; `foundation-validation.md` §3; `DECISIONS[the-grid-tentatively-decided-…]`; Putman & Lin 2007; Snyder 1992 (negative lead on equal-area for our metrics); seam-adjacency addenda.
+- **Primary sources:** `ref/research/grid-comparison-report.md`; `foundation-validation.md` §3; `DECISIONS[the-grid-tentatively-decided-keep-the-cube-sphere-and-stagger-it]`; Putman & Lin 2007; Snyder 1992 (negative lead on equal-area for our metrics); seam-adjacency addenda.
 - **Measured cube-locked siblings (own extract later if needed):** `mfd-fan-is-a-bias-and-does-not-converge`; `drainage-area-uses-a-uniform-cell-area`; `routing-violates-the-potential-identity-…`. Closed-form spherical cell **area** and per-cell **centre / great-circle length** helpers are promoted from `msc/spike-wavelet-store/src/area.rs` into `measure.rs` and wired (`cell_area_m2`, `cell_center_unit`, `gc_dist_m`, `neighbor_center_dist_m`). Still in the spike, awaiting the staggered-FV router: the **edge-length** helpers (`arc_len_m`, `east_edge_len_m`, `north_edge_len_m`) and the arm / non-orthogonality metrics.
 - **Supersession note for `#disc-algorithms-disguise-physics` Working Notes:** that segment correctly forbade closing the grid by agent fiat; this segment is the later Joseph-tentative keep. Method (port physics, not paper grid) still stands.
 - **Price unpaid:** face-keyed store + leaf-only evolution vs double-evolve / mean-pin — see #form-face-flux-register , #form-rl-closure-algebra , #form-seam-flux-exchange .

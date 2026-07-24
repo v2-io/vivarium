@@ -109,6 +109,9 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | detail | Project | [#detail-vivium-lifecycle](src/detail-vivium-lifecycle.md) | Pipeline stages, capability ladder, BREAK-1/3/4/5 + doctrine | draft |
 | | | | *(#gap) Run-modes carve (thin: LEXICON open referents + root isolation; no fat enum)* | missing |
 | | | | *(#gap) Builder daemon **implementation** (design owned above; not shipped)* | missing |
+| | | | *(#gap) **Time-indexed stage chains** ("component E") — the settle sequence as chained nomoi carrying a time-index, each stage a memo with its recorded convergence-$\varepsilon$. Makes a build stage addressable (what beacons aim at), intermediate progress monitorable, and replay the same mechanism as live watching. Named as the cure by three `ASSUMPTIONS.md` **arbitrary** rows (epoch↔years; erosion run length; water fill steps) and by two nomos `status` strings; design precedent primary-read at #detail-seam-precedents FE(5). Absent from core except as a parenthetical in #disc-unlawfulness-budget* | missing |
+| | | | *(#gap) **The operated instrument** — this section is titled "Runtime, machine, and CLI" and owns no CLI/observability row. Build parameterization lives on the global command instead of the manifest ( #form-core-view-wall FE(4)); `vivarium status` / `info` legibility, watchpoints (no LEXICON entry), and "legible, steerable time regimes" (in-world clock vs wall clock, sim rate vs framerate — Joseph 2026-07-02) have no home* | missing |
+| | | | *(#gap) **Round-trip probe** — "resume vs run-through must agree." #form-depend-by-key-never-latest states build-order independence at `status: exact` with no convictor; this is the instrument that would convict it ( #norm-probes-before-claims)* | missing |
 
 ---
 

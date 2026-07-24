@@ -160,6 +160,11 @@ Past-work narration (*"previously carried X," "the audit recommended a soften"*)
 |---|---|
 | `#slug-name` | a segment in **this** project (`core/src/slug-name.md`) |
 | `#lexicon/term/<slug>` · `#lexicon/note/<slug>` | an entry in this project's `LEXICON.udon` |
+| `DECISIONS[<slug>]` | an entry in `DECISIONS.decision-log.udon` — the slug on its `\|decision[<slug>]` header line |
+
+**Cite a decision by its exact slug.** A prefix is a dangling reference, not a short form — a citation of `column-is-a-control-volume` does not resolve to the entry `column-is-a-control-volume-with-sufficient-statistics`, and an ellipsis truncation (`…`) resolves to nothing at all. Slugs here run long; write the whole one. (This paragraph names the failing forms rather than quoting them, so a grep for real references does not collect the teaching examples — a doc carrying a deliberate error is a trap for the next instrument.) This form went undefined until 2026-07-24, and the asymmetry was measurable — LEXICON references from core dangled at zero while decision references dangled, because only one of the two had a stated form to lint against.
+
+**The ledger's `|ref` field is not bound by the no-path rule.** It exists to name files, commits, and artifacts, and it does that correctly. "References carry no path" governs *cross-references* — where a slug is an identity and a path is a rotting location — not a field whose declared purpose is to point at where something lives. An audit read those twenty `|ref` paths as violations; they are the field working.
 
 ### 5.2 Cross-member (Archema) — the program identity scheme
 

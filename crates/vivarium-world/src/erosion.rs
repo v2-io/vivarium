@@ -445,7 +445,7 @@ impl Fluvial {
     /// MFD drainage accumulation (high→low, slopeᵖ-weighted to ALL lower
     /// neighbours) — dissolves D8's grid-aligned rib artifact.
     fn accumulate_drainage(&mut self, order: &[usize]) {
-        const P: f32 = 1.0; // directional first-moment unbiased on square lattice; DECISIONS[the-router-is-a-scalar…] / #obs-cube-locked-kernel-bias
+        const P: f32 = 1.0; // directional first-moment unbiased on square lattice; DECISIONS[the-router-is-a-scalar-pretending-to-be-a-vector-and-p-is-the-bias] / #obs-cube-locked-kernel-bias
         let nx = self.nx;
         // Local runoff = true spherical cell area × local precip weight.
         // (Uniform cell_m² was a cube-locked bias — `#obs-cube-locked-kernel-bias`.)

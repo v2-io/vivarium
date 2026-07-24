@@ -46,5 +46,6 @@ Fun and exploration remain legitimate. They are constrained only where they woul
 
 ## Working Notes
 
+- **FE(4)'s super-archive clause has no convictor** (found 2026-07-24). "No unique non-superseded meat may live only there" is a *prohibition*, and nothing in the executable path can fail when it is broken — which is what #norm-declaration-must-convict calls a wish. It was in fact broken: a five-slice audit found archive-only material (time-indexed stage chains, `restart-in-place`, a round-trip probe, "legible steerable time regimes"), and no instrument could have said so. Whether this is mechanizable at all is open; a coverage check over graduated files is one candidate and may cost more than it earns. Recorded here so the gap is visible rather than assumed closed. Note the distinct failure: the rule was never *false*, and this segment's Epistemic Status already disclaims the completeness reading — the overclaim lived in `CONSOLIDATION-STATUS.md`, not in core.
 - Migration of `core (ARCHITECTURE graduated)` and design corpus into segments is open work; until a claim has a slug, treat those files as **sources to extract from**, not as law to quote.
 - Whether `ETHICS.md` remains permanently out-of-core or is fully segmented is open; until then the carve-out stands.

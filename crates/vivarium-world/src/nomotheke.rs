@@ -731,7 +731,7 @@ pub static EROSION: NomosDecl = NomosDecl {
         Assumes {
             assumption: "diagonal neighbours share a face for flux",
             delivered: Delivered::Violated,
-            note: "they share only a vertex — 47.8% phantom flux; makes MFD un-correctable as FV; DECISIONS[the-router-is-a-scalar…] ⑤",
+            note: "they share only a vertex — 47.8% phantom flux; makes MFD un-correctable as FV; DECISIONS[the-router-is-a-scalar-pretending-to-be-a-vector-and-p-is-the-bias] ⑤",
         },
         Assumes {
             assumption: "uniform cell area and neighbour distances",
@@ -815,7 +815,7 @@ pub static WATER: NomosDecl = NomosDecl {
         },
     ],
     structure: StructureDecl {
-        preserves_exact: &["local-conservation", "well-balanced", "positivity"], // conservation unit-tested; no-null-space measured 2026-07-13; well-balanced measured 2026-07-24 (`water_structures wb`: lake-at-rest incl. partially-dry, f64 exact, f32 at the ULP conditioning floor — LAKE-AT-REST only; moving-water WB is proposed sacrificed per DECISIONS[hydrostatic-reconstruction-fails…]); positivity held by a clamp that is itself a declared term below
+        preserves_exact: &["local-conservation", "well-balanced", "positivity"], // conservation unit-tested; no-null-space measured 2026-07-13; well-balanced measured 2026-07-24 (`water_structures wb`: lake-at-rest incl. partially-dry, f64 exact, f32 at the ULP conditioning floor — LAKE-AT-REST only; moving-water WB is proposed sacrificed per DECISIONS[hydrostatic-reconstruction-fails-in-our-exact-regime]); positivity held by a clamp that is itself a declared term below
         preserves_approx: &[],
         sacrifices: &["entropy-condition"], // roll-wave/shock structure the scheme cannot render; θ suppresses the symptom
     },

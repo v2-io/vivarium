@@ -24,8 +24,49 @@
 // which nomos" map. Per-nomos attribution would be finer, but any such map is
 // itself a bump-discipline surface — forget to add a newly-shared helper to a
 // nomos's file list and you under-key again, reintroducing the exact hazard
-// this removes. So the floor is honest and the ceiling is deferred until (if
-// ever) the module graph makes attribution derivable rather than declared.
+// this removes. So the floor is honest — and as of 2026-07-24 the ceiling is a
+// MEASURED no-go at present code structure, not merely a deferral.
+//
+// **Why finer attribution fails here (measured, both halves).** Attribution
+// granularity cannot exceed *code* granularity, and this crate is not
+// partitioned by nomos. (a) Correctness: `deps` is itself hand-maintained and
+// under-covers, so declaration-derived scoping UNDER-keys — the unsafe
+// direction. `MANTLE_THERMAL.deps` is empty while `query::epoch_reduction_key`
+// mints from it over a computation spanning `sea_level`, `erosion_return`,
+// `lithosphere`, `gen` and `hydrosphere`: change one constant in `sea_level.rs`
+// and `derived_sea_m` moves on every epoch while a digest scoped to
+// `mantle_thermal.rs` stays bit-identical, so six roots would Hit and serve a
+// wrong sea level in silence. (`climate.rs` calls `noise::fbm` with `NOISE`
+// absent from `CLIMATE.deps`; `query.rs`, where tiles are computed, belongs to
+// no nomos at all. Root cause: `#form-nomotheke-registry` Known-incomplete (2),
+// open.) (b) Payoff: even the compiler-safe form — attribution from the actual
+// `crate::` module graph, no map anywhere — spares ZERO of 39 sampled commits
+// entirely and saves 0% on the four most-edited files; closures reach 17–26 of
+// 33 modules and two module cycles exist.
+//
+// So the honest unblock condition is module SEPARATION, not attribution
+// DERIVABILITY — a distinction the earlier wording here missed, and a
+// checkable one. Claim home for the measurement:
+// `#form-complete-content-addressed-key` Known-incomplete (3).
+//
+// **Comment normalisation: considered 2026-07-24 and DECLINED. Do not re-open
+// without new information.** It looks attractive — 6 of 36 source-touching
+// commits in a 10-day sample were doc-comment-only, and 38% of changed source
+// lines were comments, much of it cross-reference repointing from the `core/`
+// consolidation. But stripping comments correctly from Rust needs a real lexer
+// subset: nesting `/* */`, string and char literals containing `//`, raw
+// strings at arbitrary hash depth (`r##"…"##`), byte strings, and the
+// lifetime-vs-char ambiguity (`'a` vs `'a'`). A stripper that misses a comment
+// merely over-keys and is harmless; one that swallows a token of CODE
+// under-keys — silently serving a stale memo for an edit it could not see.
+// That is the exact hazard this module exists to remove, re-introduced inside
+// the mechanism meant to prevent it. The upside is a papercut and the downside
+// is a lie about world state, so the trade is bad at any implementation
+// quality short of a real parser — and `syn`/`proc-macro2` would break this
+// crate's dependency-free posture and this file's `include!`-from-`build.rs`
+// constraint. The `bin/` exclusion above is admissible for the opposite
+// reason: it is safe by *Cargo's target model*, not by the correctness of code
+// we would have to write.
 // The price is real: editing a comment or a test in this crate invalidates the
 // whole store. That is the safe direction, and eviction/recompute is the only
 // cost (`#form-store-as-save` FE(5) invalidation-vs-eviction).
@@ -73,6 +114,29 @@ pub fn digest_files(mut entries: Vec<(String, Vec<u8>)>) -> String {
 /// recursively. Paths are relative to `root` and use `/` on every platform so
 /// the digest is identical regardless of the host separator. `.tmp` and
 /// non-`.rs` files are ignored.
+/// Is this crate-relative source path outside the *library's* behaviour?
+///
+/// Only `src/bin/` is, and it is so **by Cargo's target model**: a `[[bin]]`
+/// target is compiled separately and the lib cannot reference it. So no lib
+/// value can depend on a binary's source, and folding binaries into the digest
+/// over-keys past what correctness needs — every CLI edit invalidating every
+/// world memo. Excluding them is not a relaxation of
+/// `#form-complete-content-addressed-key` FE(2)'s over-key asymmetry; it is
+/// removing an input that provably cannot affect the output.
+///
+/// A binary *can* change which keys get built. That is scheduling, not
+/// ontology, and it is explicitly not a world-state change:
+/// `#form-depend-by-key-never-latest` FE(1) — "computation order only selects
+/// which keys exist so far." A binary that computed world state outside a
+/// declared nomos would be a separate and already-forbidden bug
+/// (`#form-nomotheke-registry` FE(1)/(5), undeclared law is unlawful).
+///
+/// The match is on the `bin/` **directory** prefix, never a substring: a module
+/// named `bin.rs`, or any path merely containing "bin", stays in the digest.
+pub fn is_outside_lib(rel: &str) -> bool {
+    rel.starts_with("bin/")
+}
+
 pub fn collect_rs(root: &std::path::Path) -> std::io::Result<Vec<(String, Vec<u8>)>> {
     fn rec(
         dir: &std::path::Path,
@@ -91,6 +155,9 @@ pub fn collect_rs(root: &std::path::Path) -> std::io::Result<Vec<(String, Vec<u8
                     .unwrap_or(&p)
                     .to_string_lossy()
                     .replace('\\', "/");
+                if is_outside_lib(&rel) {
+                    continue;
+                }
                 out.push((rel, std::fs::read(&p)?));
             }
         }
@@ -111,6 +178,27 @@ pub fn digest_dir(root: &std::path::Path) -> std::io::Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The `src/bin/` exclusion must match the **directory**, never the
+    /// substring. The near-misses are the point: a module legitimately named
+    /// `bin.rs`, or any path with "bin" inside a longer name, is library code
+    /// whose silent exclusion would UNDER-key — the unsafe direction
+    /// (`#form-complete-content-addressed-key` FE(2)). This test fails on a
+    /// `contains("bin")` implementation, which is the mistake worth guarding.
+    #[test]
+    fn only_the_bin_directory_is_outside_the_lib() {
+        // Excluded: binaries, at any depth under the bin/ target dir.
+        assert!(is_outside_lib("bin/vivarium.rs"));
+        assert!(is_outside_lib("bin/sub/helper.rs"));
+
+        // Included: every one of these is library code.
+        assert!(!is_outside_lib("bin.rs"), "a module named bin is lib code");
+        assert!(!is_outside_lib("binary.rs"));
+        assert!(!is_outside_lib("cabin/x.rs"));
+        assert!(!is_outside_lib("nested/bin/x.rs"), "only the crate-root bin/ is a Cargo target");
+        assert!(!is_outside_lib("lithosphere.rs"));
+        assert!(!is_outside_lib("sea_level.rs"));
+    }
 
     #[test]
     fn digest_is_order_independent() {
