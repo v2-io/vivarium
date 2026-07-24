@@ -8,6 +8,8 @@
 
 **Compounding:** every file that moves here **speeds the next adjudication** (smaller mine, fewer dual-homes, less re-litigation). Prefer **low-hanging fruit** when it is honestly claim-empty — do not save easy ice for later while re-reading it every pass.
 
+**Integration is replacement** — the claim’s home becomes **core segment body**, **Working Notes** on a segment, or **this directory** (super-archive). It does **not** mean “leave a live pointer table.” A live file that is only “claim home: #slug” links is dual-home cosplay / a second OUTLINE. Unpealed teaching residual may stay in live `doc/` until pealed.
+
 There is **no path ban.** Graduation rules apply to **any** tree path: `.archive/`, `doc/` (design, theory, plan, ARCHITECTURE, …), even **`ref/`** if a reference note is fully superseded and claim-empty. “Still live under X” only means **not pealed clean yet** (or still the useful place to *consult* primary literature), not “excluded by design.”
 
 Practical bias (not a proscription): **`ref/`** is usually *true reference* (PDFs, NOTES, surveys) that stays consulted rather than onboarded — it often has no claim residue to graduate. That is a *default lifestyle*, not a rule forbidding `ref/` from this directory.

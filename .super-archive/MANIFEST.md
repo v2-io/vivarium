@@ -6,8 +6,8 @@
 
 | Path | From | Superseded by / ice |
 |------|------|---------------------|
-| `from-design/DESIGN.md` | **full pre-pointer body** (`git 0a5050e^`, 150 lines) | Live DESIGN is pointer shell; peals → purpose, axes/logozoetic/memory sketches, engine Bevy, two-layer sketch. **Corrected 2026-07-23:** first copy was the post–two-layer-peel 128-line intermediate — provenance failure, restored. |
-| `from-design/DESIGN-pre-pointer-shell-2026-07-23.md` | same snapshot alias | Archaeologist-friendly name |
+| `from-design/DESIGN.md` | **full body** (`git 0a5050e^`, 150 lines; provenance restored after intermediate peel) | Live `doc/design/DESIGN.md` **removed** (pointer shell was not integration). Peals: purpose, axes/logozoetic/memory sketches, engine Bevy, two-layer sketch. |
+| `from-design/DESIGN-pre-pointer-shell-2026-07-23.md` | same full-body snapshot alias | Archaeologist-friendly name |
 | `from-archive/memory-surfaced-2026-07-13.md` | `.archive/…` | Inventory ice; contradicted rows stay dead; `#sketch-memory-as-core-to-agency` pealed |
 
 ## 2026-07-23 batch 3 — low-hanging fruit + peels
