@@ -39,6 +39,10 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | postulate | Project Critical | [#post-represent-by-consequence](src/post-represent-by-consequence.md) | Represent by consequence | draft |
 | formulation | Project Critical | [#form-fidelity-invariant](src/form-fidelity-invariant.md) | Fidelity is lazy; materializations prove the macro with bounded deficiencies | draft |
 | discussion | Project | [#disc-vivarium-purpose](src/disc-vivarium-purpose.md) | Dual purpose: play and *in vivia* laboratory; claim truth outranks demo polish this phase | draft |
+| sketch | Project | [#sketch-three-project-axes](src/sketch-three-project-axes.md) | Graphics / world / agents as independent budgets — exploratory map | draft |
+| formulation | Machine | [#form-engine-bevy](src/form-engine-bevy.md) | Bevy is the view/runtime engine (project decision + spike) | draft |
+| sketch | Project | [#sketch-logozoetic-peer-view](src/sketch-logozoetic-peer-view.md) | Typed A/O peer view for logozoetic play — exploratory | draft |
+| sketch | Project | [#sketch-memory-as-core-to-agency](src/sketch-memory-as-core-to-agency.md) | Memory core to agency (Joseph research direction) — exploratory | draft |
 | discussion | Project | [#disc-aat-vivarium-object-map](src/disc-aat-vivarium-object-map.md) | AAT ↔ vivarium object map (unratified synthesis; not exact) | draft |
 | discussion | Project | [#disc-unlawfulness-budget](src/disc-unlawfulness-budget.md) | Every Realization carries an unLawfulness budget; Realized ⟂ Lawful | draft |
 | scope | Project Critical | [#scope-asf-reading-gates](src/scope-asf-reading-gates.md) | ASF familiarity gates A/B/C; Level C hard-gates agent-seam work | draft |
@@ -99,6 +103,7 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | --- | --- | --- | --- | --- |
 | formulation | Math Critical | [#form-rl-closure-algebra](src/form-rl-closure-algebra.md) | Multiscale $U,u,R,L$ + three honesty laws; $R\circ L=\mathrm{id}$ with compliance debt | draft |
 | formulation | Math Critical | [#form-seam-flux-exchange](src/form-seam-flux-exchange.md) | Seams exchange fluxes, not states; one discipline on space × time | draft |
+| formulation | Math | [#form-scale-separation-directional](src/form-scale-separation-directional.md) | Fast→slow weak block; declare multirate direction (not dual-home multirate package) | draft |
 | formulation | Math Critical | [#form-face-flux-register](src/form-face-flux-register.md) | Hanging-node single-valued face flux (Berger–Colella register); refluxing ceases under three conditions | draft |
 | observation | Math Critical | [#obs-mean-pin-manufactures-seam](src/obs-mean-pin-manufactures-seam.md) | Mean-pin manufactures seam ridge and mass; not $R\circ L=\mathrm{id}$; zero-physics control | draft |
 | formulation | Math Critical | [#form-grid-equiangular-staggered](src/form-grid-equiangular-staggered.md) | Equiangular cube-sphere + Arakawa-C + per-cell metrics (tentative keep); router open; cube-locked control mandatory | draft |

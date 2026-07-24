@@ -2,7 +2,7 @@
 
 > **Claim homes (not this file).** Fluxes-not-states / one seam on two axes → `#form-seam-flux-exchange`. $R$/$L$/closure algebra → `#form-rl-closure-algebra`. Flux *vocabulary* (consume/promise) → `#form-flux-web`. Complete key → `#form-complete-content-addressed-key`. This document is **source and teaching** (four seam types, primaries, $z$-cone, seam contract checklist). Do not cite it as parallel law.
 
-*Companion to `doc/theory/multiscale-methods.md` (the R / L / closure operator algebra) and `doc/design/DESIGN-REDUX.md` §4–7 (multirate coupling, the four seams). **Claim homes:** `#form-seam-flux-exchange` · `#form-rl-closure-algebra` · `#form-face-flux-register` (hanging-node / Berger–Colella face register, measured) · `#form-fidelity-invariant`. This file is source and teaching — not parallel law. Grounded in primaries (Berger–Oliger 1984 AMR; Gear–Wells 1984 multirate; E–Engquist 2003 HMM; Kevrekidis et al. 2003 equation-free) — `BIBLIOGRAPHY.md`. Epistemic status inline: **established** / **stance** / **open**.*
+*Companion to `doc/theory/multiscale-methods.md` (the R / L / closure operator algebra) and `doc/design/DESIGN-REDUX.md` §4–7 (multirate coupling, the four seams). **Claim homes:** `#form-seam-flux-exchange` · `#form-rl-closure-algebra` · `#form-face-flux-register` · `#form-scale-separation-directional` (fast→slow weak) · `#form-fidelity-invariant`. This file is source and teaching — not parallel law. Grounded in primaries (Berger–Oliger 1984 AMR; Gear–Wells 1984 multirate; E–Engquist 2003 HMM; Kevrekidis et al. 2003 equation-free) — `BIBLIOGRAPHY.md`. Epistemic status inline: **established** / **stance** / **open**.*
 
 ---
 

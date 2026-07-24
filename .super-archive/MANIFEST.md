@@ -2,6 +2,13 @@
 
 *Present-tense index of graduated substrate. Not claim law. Newest batches first.*
 
+## 2026-07-23 batch 4 — DESIGN peel + memory-surfaced
+
+| Path | From | Superseded by / ice |
+|------|------|---------------------|
+| `from-design/DESIGN.md` | pre-router body of `doc/design/DESIGN.md` | Live DESIGN is pointer shell; peals → purpose, axes sketch, logozoetic sketch, engine Bevy, two-layer sketch |
+| `from-archive/memory-surfaced-2026-07-13.md` | `.archive/…` | Inventory ice; contradicted rows stay dead; `#sketch-memory-as-core-to-agency` pealed |
+
 ## 2026-07-23 batch 3 — low-hanging fruit + peels
 
 | Path | From | Superseded by / ice reason |
@@ -36,8 +43,8 @@
 
 | Location | Contents |
 |----------|----------|
-| `.archive/` | `memory-surfaced-2026-07-13.md`, `SUPERSEDED.md` |
-| Live `doc/` | design / theory / plan / ARCHITECTURE — peel continues |
+| `.archive/` | `SUPERSEDED.md` only (ledger) |
+| Live `doc/` | DESIGN-REDUX, MATERIAL, SYSTEMS, NOMOS-CONTRACT, theory, plan, ARCHITECTURE |
 | Live instruments | spikes, DECISIONS, `ref/` primaries |
 
 ## Same-day non-archive work (not super-archived)

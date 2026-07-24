@@ -8,10 +8,9 @@
 
 | File | Why not graduated yet |
 |------|------------------------|
-| `memory-surfaced-2026-07-13.md` | Inventory; contradicted + mixed entries — peel entry-by-entry |
 | `SUPERSEDED.md` | Active retired-terms ledger until re-homed |
 | `README.md` | This index |
 
 ## Graduated (see `.super-archive/MANIFEST.md`)
 
-Re-founding ice, VIVARIA spikes, **PHASES** (reportatio path updated on ordinum), **archived CLAUDE**, consolidation-wave 2026-07-21 package, session-2026-07-10-mechanics.
+Re-founding ice, VIVARIA, PHASES, archived CLAUDE, consolidation-wave, session-07-10, **memory-surfaced** (index ice; `#sketch-memory-as-core-to-agency` pealed).

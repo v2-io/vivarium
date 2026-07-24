@@ -4,23 +4,22 @@
 
 ## Compounding super-archive
 
-Batches 1–3: re-founding ice, VIVARIA, PHASES, archived CLAUDE, consolidation-wave package, session-2026-07-10-mechanics. **`.archive/` residual:** memory-surfaced + SUPERSEDED only.
+Batches 1–4: archive ice, VIVARIA, PHASES, CLAUDE, consolidation-wave, session-07-10, **memory-surfaced**, **DESIGN body**. **`.archive/` residual:** SUPERSEDED ledger only.
 
-## Landed segments (this program)
+## Landed (batch 4)
 
-Continuity / grid / face flux / mean-pin / cube-locked / manifest / probes / depend-by-key / pull-composition / kernel boundary / flux FE(6) / **declared-violation-is-not-license** / **sketch-two-layer-mind** (exploratory).
+`#sketch-three-project-axes` · `#sketch-logozoetic-peer-view` · `#form-engine-bevy` · `#sketch-memory-as-core-to-agency` · `#form-scale-separation-directional` · DESIGN.md → pointer shell
 
-## Residual EXTRACT (live doc + thin archive)
+## Residual EXTRACT
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | Thin run-modes carve | Optional; LEXICON open |
-| 2 | scale-separation-is-directional | Gear–Wells residue |
-| 3 | routing-curl obs | Cube sibling |
-| 4 | execution-class / timescale-band | From design |
-| 5 | DESIGN three-axes / logozoetic peer / Bevy history | Residual DESIGN.md gold or ice |
-| 6 | REDUX/MATERIAL/SYSTEMS/theory residual | Main remaining mine mass |
-| 7 | memory-surfaced entry peel | Then graduate |
+| 1 | Thin run-modes carve | Optional |
+| 2 | routing-curl obs | Cube sibling |
+| 3 | execution-class / timescale-band | Design/ARCHITECTURE |
+| 4 | REDUX residual (three-scoped, multirate bands, fidelity ladder non-key) | Main mass |
+| 5 | MATERIAL / SYSTEMS / NOMOS-CONTRACT / theory teaching | Main mass |
+| 6 | SUPERSEDED re-home | Ledger |
 
 ## Code PoC
 
