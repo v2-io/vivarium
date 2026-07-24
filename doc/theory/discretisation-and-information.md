@@ -401,7 +401,7 @@ The information-theoretic restatement, which subsumes it:
 
 *Added 2026-07-13. An onboarding-audit agent designed an atmospheric-circulation nomos from this table and found the gap immediately: **its phenomenon hit SIX rows at once, and they fight each other.** The table as written implies you pick a scheme per structure. **Often you cannot.***
 
-- **Energy-conserving and enstrophy-conserving schemes are DIFFERENT SCHEMES.** For 2-D rotating flow you may have one exactly, or a compromise, but **not both** (this is the entire subject of Arakawa & Lamb 1981).
+- **Simultaneous energy + potential-enstrophy conservation is GRID-PRIVILEGED, not generally available.** ⚠ *Corrected 2026-07-23: an earlier line here said AL81 shows you get one "but not both" — the read-primary recon says the opposite about that paper.* Arakawa–Lamb 1981 achieves **both, exactly, on the square C-grid** — semi-discretely only (the time integrator breaks it at truncation order: their own dropped caveat); Ringler 2010 shows TRiSK on arbitrary (e.g. hexagonal) meshes provably cannot (`DECISIONS[the-grid-recon-argues-FOR-the-quad-grid]`). The conflict is real off the privileged grid; on it, the sacrifice moves into the time axis.
 - **A positivity limiter destroys the enstrophy budget.** Clipping to keep a state realizable is a nonlinear, non-conservative intervention that pollutes the very invariant you were preserving.
 - **Well-balancedness and high-order accuracy pull against each other** at wet/dry fronts.
 - **Entropy stability costs you exact energy conservation** — you *add* dissipation on purpose.
