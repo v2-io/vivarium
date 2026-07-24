@@ -39,7 +39,7 @@ Every multiscale method is four objects and three honesty laws: macro $U$, micro
 
 **Compliance debt (strengthen first — do not soften the law):**
 1. **Mean-pin is not $R \circ L = \mathrm{id}$ on the mean.** `erosion.rs::pin_block_means` is a smoothed delta injection (bilinear upsample of a block delta), not a block-constant injection. Measured residual on a real L19 eroded tile: mean $0.43\,\mathrm{m}$, max $2.97\,\mathrm{m}$ at 30 epochs, growing with epoch count and curvature-correlated ($r=-0.42$). The in-tree guard passes only because its tolerance ($2.0\,\mathrm{m}$) was sized to the defect (`DECISIONS[mean-pin-does-not-preserve-block-means]`, `:by claude`, proposed measurement — the falsification of the *implementation claim* is measured; the algebra law stands).
-2. **Injection $\neq$ refluxing.** Mean-pin (when corrected) is Berger–Oliger fine→coarse *injection/update*. Conservative interface flux correction (*refluxing*, Berger–Colella 1989) is distinct and still missing at tile seams.
+2. **Injection $\neq$ refluxing.** Mean-pin (when corrected) is Berger–Oliger fine→coarse *injection/update*. Conservative interface flux identity lives on a **face flux register** at hanging nodes ( #form-face-flux-register ); a separate refluxing *pass* is only needed if double-evolve is retained.
 
 Stage `draft`. Sources for extraction: ARCHITECTURE §1 (corrected), multiscale-methods §§1–4, multiscale-seams §§1–2, #post-represent-by-consequence Working Notes (do not treat uncorrected $R \circ L$ prose as this postulate).
 

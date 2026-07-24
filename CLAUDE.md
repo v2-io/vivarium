@@ -29,7 +29,8 @@ A deterministic constructed-world laboratory (and sim game) in the RimWorld / DF
 | **Executable law / probes** | `crates/vivarium-world/` · examples · `vivarium status` · `bin/check` (tests + determinism clippy) |
 | **Pending audits** | [`audits/`](audits/) — integrate per `#ops-audit-integration`; `.integrated/` only when done |
 | **Consolidation intuition** | [`CONSOLIDATION-STATUS.md`](CONSOLIDATION-STATUS.md) — big-picture residual estimate (**not** claim canon; core wins on conflict) |
-| **Archaeology only** | [`.archive/`](.archive/) — not tactical current dependency |
+| **Archaeology (residual mine)** | [`.archive/`](.archive/) — not tactical current dependency; may still hold unextracted gems |
+| **Fully integrated / superseded** | [`.super-archive/`](.super-archive/) — graduated substrate; do not re-mine as claim source; see `MANIFEST.md` |
 
 Supporting prose (`doc/ARCHITECTURE.md`, `doc/design/*`, `doc/theory/*`, plans) remains useful **as source material for segments**. Do not treat it as a parallel canon. When a segment lands, it replaces the claim's home; the old prose is demoted to pointer or archive.
 
@@ -45,7 +46,7 @@ Candidate inventory (unratified scan, not canon): [`core-segment-candidates-2026
 2. **Authority is not evidence.** Measurements can be solid while verdicts are unratified. Tag decisions honestly (`joseph` / `us` / `claude`). `#norm-decision-authority`.
 3. **No physics or behavior claim without a probe** that can fail. `#norm-probes-before-claims`.
 4. **Do not inline definitions** that live in LEXICON or another segment — link and gloss one line. An inlined definition is a fork.
-5. **Segment voice, not diff voice.** State what *is*. History lives in git, DECISIONS, `.archive/`.
+5. **Segment voice, not diff voice.** State what *is*. History lives in git, DECISIONS, `.archive/`, `.super-archive/`.
 6. **Code and views are secondary this phase** unless a segment's Working Notes require a probe or a declaration that can convict. Do not "stabilize the demo" instead of writing the claim.
 7. **Memory holds procedure only.** Research results belong in the repo where probes can convict them.
 

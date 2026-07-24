@@ -16,6 +16,7 @@ Ordered by load-bearing for *honest globe / lawful land*, not by prose mass.
 
 | Priority | Proposed slug | Source homes | Notes |
 |----------|---------------|--------------|-------|
+| ✓ | `#form-face-flux-register` | spike-wavelet-store PROBE 7; DECISIONS flux-on-face family | **Landed 2026-07-23** |
 | 1 | `#obs-mean-pin-not-rl-id` / seam manufacturer | DECISIONS mean-pin + wavelet-store probes; theory-plan mining | Strengthens `#form-rl-closure-algebra` debt; zero-physics ridge ~2× |
 | 2 | `#obs-mfd-fan-is-a-bias` (+ cell-area sibling) | DECISIONS mfd-fan / drainage-area-uniform; discretisation §0 | Cube-locked; summary already in grid segment FE(5) |
 | 3 | `#norm-regime-probes` | DESIGN-REDUX §2b; design-mining remaining #5 | Broader than sensitivity; every rung ships probes |

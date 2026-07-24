@@ -1,26 +1,24 @@
-# .archive — sunset material, indexed
+# `.archive/` — sunset material still held for residual mine or ledger
 
-*Current working state lives in the main tree; this directory and git history serve rewinding for any reason — archaeology, provenance, revisiting assumptions, reviewing reasoning trails. The rule (PROCESS.udon §archive-accounting): nothing here may be a tactical current dependency of the main tree; everything here is fair game for historical/rationale pointers from it. One line per file, newest first.*
+*Current working state lives in the main tree. Nothing here is a tactical current dependency. Historical / provenance pointers from the main tree are proper.*
 
-## The 2026-07-13 re-founding
+**Fully integrated or superseded ice** graduates to [`.super-archive/`](../.super-archive/) (see its README + MANIFEST). Do **not** re-mine super-archived files as claim sources.
 
-*Joseph archived every front door at once, deliberately. The reason is structural: the onboarding surface is the highest-churn surface in the repo, it is maintained by hand, and it had drifted — so it could not be repaired incrementally without the old text being cited back as law. Everything below is kept for him and for the agents working with him to read; none of it may be treated as current, and the new front door (`core/OUTLINE.md`) is being built from the sources rather than from any summary of them.*
+## Still here (residual mine or standing ledger)
 
-- `memory-surfaced-2026-07-13.md` — **seventeen Claude project-memory files, moved out of memory and into the repo verbatim**, plus the old 34 KB memory index (which was over the load limit and being silently truncated, so agents were reading a partial index with no indication of that). Research results were living where the repository could not see them, no probe could convict them, and no audit could reach them; several are contradicted by the July 12–13 kernel audit and nobody could tell. This is the inventory — the adjudication is open work. Memory now keeps only what is evergreen: procedure, standing law, and read-on-request material. Archived 2026-07-13.
-- `core/OUTLINE.md` — the first `core/` spec outline (2026-07-13): 7 parts, 71 segment rows, **0 segments written** (`core/src/` was empty; every link in it is dead). Its rows carry the claims themselves rather than pointing at files, which is why they are written in a register of certainty a table row has no room to qualify. Its own status block lists six documents as read that its companion accounting file records as sampled, and it argues at length about `VIVARIA-DEFINITIONS` while listing that document as unread. Kept as the honest first attempt and as the specimen that motivated the re-founding. Archived 2026-07-13.
-- `CLAUDE.md` — the agent-onboarding file: the tiered A/B/C reading gates, the Prime Question and the modified-equation tool, the bias-vs-noise audit, the authority-is-not-evidence guard. Substantial and much of it true; archived with the rest so the new front door is built deliberately rather than inherited. Archived 2026-07-13.
-- `ORIENTATION.md` — the current-state map. The artifact class is the problem, not the writing: anything hand-maintained that must be read *in full* will both grow and go stale, and those are the same property. Archived 2026-07-13.
-- `README.root.md` — the repository README. *(Named `README.root.md` because `.archive/README.md` is this index.)* Its headline — *"Epistemic honesty is enforced in code, not culture"* — is true of the parts that are mechanized and a wish for the rest; the project convicted itself of this in `doc/theory/discretisation-and-information.md` §2.4a. Archived 2026-07-13.
-- `TODO.md` — hand-written tactical queue; went stale in hours, repeatedly, and carried void items after decisions that superseded them. A queue that cannot be derived from declarations is a queue nobody can trust. Archived 2026-07-13.
-- `SUPERSEDED.md` — the retired-terms ledger. Archived 2026-07-13.
-- `VIVARIA-DEFINITIONS.md` — the layer map with build status (artifact ↔ Rust signature ↔ udon ↔ not-built). Written 2026-07-12, one day before the audit that produced most of what a kernel would need to declare; the two never met. Archived 2026-07-13.
-- `VIVARIA-DECLARATIVE-FRONTIER.md` — the declarative-scaffold spike: declare epistemology / interactions / lifecycle, run only the kernel; declared-tier as falsifiable; the agentic static audit as a check-mode. Proposals, not decisions. Archived 2026-07-13.
+| File | Why not super-archived yet |
+|------|----------------------------|
+| `memory-surfaced-2026-07-13.md` | Inventory; some gems still unsegmented; some entries contradicted — adjudicate before graduate |
+| `CLAUDE.md` | Re-founded live; may still hold texture not in segments |
+| `PHASES.md` | Reportatio; ordinum is law; selective extract only after line-diff |
+| `VIVARIA-DEFINITIONS.md` | Scaffold map; residual manifest / multirate backlog |
+| `VIVARIA-DECLARATIVE-FRONTIER.md` | Explicitly not built; gems thin |
+| `SUPERSEDED.md` | Retired-terms ledger until re-homed |
 
-## Earlier
+## Graduated 2026-07-23 → `.super-archive/from-archive/`
 
-- `PHASES.md` — **the reportatio of the Terrestris ordinum**: the prose first-guess of the world-phase ladder (Charges / Bequests / Records — Bequest-era terms, pre-Promise), which `tabularium/terrestris.ordinum.udon` codified and superseded (pinned at `:reportatio-pin 42621d5`). Its phase content → the ordinum; its Design notes → LEXICON §1 (canceling-pair, declare-causally, phase-transition) + the ordinum reading-rules; its Algorithms & approaches ledger → `doc/design/DESIGN-SYSTEMS.md`. Kept as the honest first-guess prose the ordinum is authorized from. Archived 2026-07-11.
-- `architecture-migration-2026-07-03.md` — dated crate-migration review (worldview→frame); the execution-class carve it introduced now lives in `doc/ARCHITECTURE.md` §2; carries a recipe→nomos terminology header. Archived 2026-07-11.
-- `taxonomy-bdd-stress-test.md` — 12 adversarial scenarios against the participation taxonomy; framing superseded by `doc/plan/vivium-operational-workflow.md` (its "core is robust" conclusion was a complacency smell); the gaps it found (Sc-5 moratorium-recursion, Sc-8 realizability, Sc-9 access-rich split) were answered in the regula design + LEXICON §7/§8. Archived 2026-07-11.
-- `universal-biological-rhythms.md` — origin doc of the EST/temporal-rhythms research; superseded-for-rigor by `ref/research/est-tiw-dossier.md` (correction header inside). ⚠ Known to trip the current Fable safeguard — handle by name. Archived 2026-07-11.
-- `lexicon-notes-and-scratch.md` — 2026-07-03 raw brainstorm behind the LEXICON; terms landed in LEXICON §1/§5, use-case menu in `doc/ARCHITECTURE.md` §7. Archived 2026-07-11.
-- `HANDOFF.md` — 2026-07-01 session handoff (slabs-era); superseded by ORIENTATION.md. Archived 2026-07-03.
+ORIENTATION, TODO, README.root, HANDOFF, first `core/OUTLINE` specimen, taxonomy-bdd, architecture-migration-2026-07-03, lexicon-notes-and-scratch, universal-biological-rhythms.
+
+## Rule (PROCESS)
+
+Main tree must never depend on this directory for tactical current needs. Claim truth: `core/`. Super-archive = done for claim extraction.
