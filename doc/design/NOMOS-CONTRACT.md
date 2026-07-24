@@ -2,13 +2,7 @@
 
 *Written 2026-07-13, after a day auditing the project's kernels. The defects found that day sort into five kinds; the flux web declares only the first. The five boxes were abstracted from those defects, so the sort is a restatement of that sample — not evidence the set is closed.*
 
-> **Status:** source / procedure design, not claim canon. Box ① → `#form-flux-web`;
-> box ⑤ → `#disc-prime-question`; convictability → `#norm-declaration-must-convict`;
-> nomos grain → `#def-nomos`; **boxes ②–④ exploratory schema** →
-> `#sketch-nomos-declaration-boxes`. Bias adjudication → `#norm-bias-vs-noise`.
-> Preserved/sacrificed structure + family/seam declaration law →
-> `#form-declared-structure-tradeoff`.
-> Defect table below is **teaching** (specimen anatomy), not a second law home.
+> **Status:** source / procedure design, not claim canon. Box ① → `#form-flux-web`; box ⑤ → `#disc-prime-question`; convictability → `#norm-declaration-must-convict`; nomos grain → `#def-nomos`; **boxes ②–④ exploratory schema** → `#sketch-nomos-declaration-boxes`. Bias adjudication → `#norm-bias-vs-noise`. Preserved/sacrificed structure + family/seam declaration law → `#form-declared-structure-tradeoff`. Defect table below is **teaching** (specimen anatomy), not a second law home.
 
 > **The purpose is not to fix `erosion.rs`.** It is to **generalize and secure the flux-web structure so that ANY nomos can be true-to-physics** (Joseph, 2026-07-13). MFD-8 is the corpse we dissected to learn the anatomy. This document is the anatomy.
 
@@ -54,17 +48,13 @@ The flux web today declares **one** thing: *"erosion consumes precipitation; cli
 | The three **one-sided clips** in `water.rs` (*a sign-definite operation is a bias by construction*) | ⑤ claim |
 | `uplift`'s output **range** cannot reach its promise's **predicate** | *(the same idea at the ordinum level — a **reachability** check)* |
 
-> **The flux web can answer *"can we rain principled water?"* — a PLUMBING question.**
-> **It cannot answer *"is this a bias or noise?", "what does this number mean?", "what did this scheme destroy?", "what unphysical term did it add?"* — the TRUTH questions.**
+> **The flux web can answer *"can we rain principled water?"* — a PLUMBING question.** **It cannot answer *"is this a bias or noise?", "what does this number mean?", "what did this scheme destroy?", "what unphysical term did it add?"* — the TRUTH questions.**
 
 ---
 
 ## ⚠ The cross-cutting rule: every box returns a VERDICT, and the verdict is BIAS or NOISE
 
-**Claim home:** `#norm-bias-vs-noise` (see also
-`DECISIONS[bias-vs-noise-is-the-decisive-audit]`; pairs with
-`#disc-prime-question` after the modified equation is known). This section is
-source elaboration, not a second home.
+**Claim home:** `#norm-bias-vs-noise` (see also `DECISIONS[bias-vs-noise-is-the-decisive-audit]`; pairs with `#disc-prime-question` after the modified equation is known). This section is source elaboration, not a second home.
 
 This is not a sixth box. It is the **adjudication rule shared by all of them**, and it decides *severity* everywhere:
 
