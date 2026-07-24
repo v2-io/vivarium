@@ -15,6 +15,7 @@
 | `#form-manifest-prescribes-vivium` | regula-collapse `:by us`; VIVARIA-DEFINITIONS L3 | manifest form |
 | `#norm-regime-probes` | DESIGN-REDUX §2b | regime probes |
 | `#form-depend-by-key-never-latest` | builder-explorer §0 | depend-by-key |
+| `#form-pull-query-composition` | REDUX §11 thin law; ARCH §5 | pull composition (not engine) |
 
 ## Dual-home demoted this wave
 
@@ -29,15 +30,20 @@
 
 | # | Slug | Source | Notes |
 |---|------|--------|-------|
-| 1 | `#form-lazy-query-graph` | REDUX §11; ARCHITECTURE §5 | Large runtime shape |
-| 2 | `#form-multirate-coupling` | REDUX §4; seams | Fast/slow |
-| 3 | `#form-sufficient-statistic-seam` / consumer-$R$ | REDUX §5; column | Join seam; don't fork |
-| 4 | `#form-run-modes-carve` | OUTLINE §III; LEXICON | Joseph convention |
-| 5 | `#form-flux-statistic-contract` | VIVARIA-DECLARATIVE-FRONTIER | Pre-run statistic match |
-| 6 | `#form-kernel-imperative-boundary` | VIVARIA-DEFINITIONS thesis | Declare data; kernel only |
-| 7 | `#form-phase-machinery-classes` | PHASES preamble only | After ordinum diff |
-| 8 | `#obs-routing-curl` / potential-identity | DECISIONS routing-violates… | Sibling cube control |
-| 9 | Thin `#norm-agentic-verdict-is-flag` | DECLARATIVE-FRONTIER correction | Or PROCESS WN |
+| — | ~~`#form-lazy-query-graph`~~ | | **Landed thin** as `#form-pull-query-composition`; thick engine/three-scoped stays gap |
+| — | ~~`#form-multirate-coupling`~~ | | **Killed as dual-home** of seam + R/L (not because coupler unbuilt) |
+| 1 | `#form-sufficient-statistic-seam` / consumer-$R$ | REDUX §5; column | Join seam; don't fork |
+| 2 | Thin `#form-run-modes-carve` | LEXICON open; store FE(8) | Names open; plan DECIDED ≠ DECISIONS; code lag ≠ reject |
+| 3 | `#scale-separation-is-directional` | seams §2.3 Prop 4.1 | Only multirate *residue* worth a FE |
+| 4 | `#form-flux-statistic-contract` | VIVARIA-DECLARATIVE-FRONTIER | Pre-run statistic match |
+| 5 | `#form-kernel-imperative-boundary` | VIVARIA-DEFINITIONS thesis | Declare data; kernel only |
+| 6 | `#form-phase-machinery-classes` | PHASES preamble only | After ordinum diff |
+| 7 | `#obs-routing-curl` / potential-identity | DECISIONS | Sibling cube control |
+| 8 | Thin `#norm-agentic-verdict-is-flag` | DECLARATIVE-FRONTIER | Or PROCESS WN |
+
+## Epistemic rank (Joseph 2026-07-23)
+
+Code is often **least principled**. Adjudicate architecture from segments/design/theory/DECISIONS/probes; code = debt or instrument. See `CLAUDE.md` working rule 7; `msc/agent-briefs/README.md`.
 
 ## Super-archive
 

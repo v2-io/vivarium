@@ -424,10 +424,13 @@ problem (EnKF pseudo-observations; their "representativity error" ≈ our §5).
 
 ## 11. The runtime as a lazy query graph
 
+**Claim home (thin composition law):** `#form-pull-query-composition` — pull evaluation of keyed nomoi; pattern not generic engine. Three-scoped degradation, prefetch, and full time-DAG below remain **source / unbuilt**, not that segment. Architecture honesty: the generic engine is still a gap (compliance debt under the law, not a softener).
+
 The operational form of everything above: **the whole runtime is a demand-driven,
 memoized query graph.** A query is `(aspect, region, resolution, time)`; a pull
 recurses into the queries it depends on; results memoize by key; nothing computes
-until demanded and nothing computes twice. *(established paradigm.)*
+until demanded and nothing computes twice. *(established paradigm as doctrine;
+engine completeness is a separate build fact.)*
 
 This is not novel architecture — it is the shape of modern build systems (Nix,
 Bazel, Shake; formalized in *Build Systems à la Carte*, Mokhov/Mitchell/Peyton

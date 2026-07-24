@@ -81,8 +81,10 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | formulation | Machine Critical | [#form-store-as-save](src/form-store-as-save.md) | The store is the save; memo store is portable vivium state | draft |
 | formulation | Machine Critical | [#form-builder-admission](src/form-builder-admission.md) | Builder admits only flux-allowed work; explorers observe-only pull | draft |
 | formulation | Machine Critical | [#form-depend-by-key-never-latest](src/form-depend-by-key-never-latest.md) | Depend on neighbours by complete key only; never “finest available” | draft |
-| | | | *(#gap) Run-modes carve* | missing |
+| formulation | Machine Critical | [#form-pull-query-composition](src/form-pull-query-composition.md) | World law composes by pull of keyed nomoi; pattern not generic engine | draft |
+| | | | *(#gap) Run-modes carve (thin: LEXICON open referents + root isolation; no fat enum)* | missing |
 | | | | *(#gap) Full builder daemon (beacon / demand spool)* | missing |
+| | | | *(#gap) Three-scoped runtime / time-DAG / prefetch (source only; not under pull-composition)* | missing |
 
 ## IV. Kingdoms, orders, and ordinum
 

@@ -48,6 +48,7 @@ Candidate inventory (unratified scan, not canon): [`core-segment-candidates-2026
 4. **Do not inline definitions** that live in LEXICON or another segment — link and gloss one line. An inlined definition is a fork.
 5. **Segment voice, not diff voice.** State what *is*. History lives in git, DECISIONS, `.archive/`, `.super-archive/`.
 6. **Code and views are secondary this phase** unless a segment's Working Notes require a probe or a declaration that can convict. Do not "stabilize the demo" instead of writing the claim.
+7. **Code rank for claim adjudication.** Live code is often the **least principled** surface right now (provisional, incomplete, dual-home, debt-ridden). For promotion work: **segments / design / theory / DECISIONS / measured probes** establish what is true as law or observation; code is **compliance debt**, **instrument**, or **miniature illustration** — not the adjudicator of architecture. "Not in code" does **not** falsify a formulation; "in code" does **not** mint a claim. Probes that can *fail* still convict behavior claims (`#norm-probes-before-claims`). When briefing agents: do not invite "verify against live code" as co-equal with design truth.
 7. **Memory holds procedure only.** Research results belong in the repo where probes can convict them.
 
 ### Claim ↔ code order (and the allowed inversion)
