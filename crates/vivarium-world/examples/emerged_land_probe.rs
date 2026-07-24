@@ -43,7 +43,7 @@ fn main() {
     let (lo, hi) = EMERGED_LAND_FRACTION_BAND;
     println!("EMERGED-LAND RECORD PROBE — the Claimed→Kept predicate, not a Kept verdict\n");
     println!(
-        "  literature bands (survey §6): land fraction {:.1}–{:.0}%   subaerial relief ≤ {:.0} m (soft, pre-erosion)",
+        "  literature bands (survey §6): land fraction {:.1}–{:.0}%   subaerial relief ≤ {:.0} m (soft; live post-rock-mass-ledger surface)",
         lo * 100.0,
         hi * 100.0,
         SUBAERIAL_RELIEF_FLAG_M
@@ -67,7 +67,7 @@ fn main() {
         );
         if v.relief_bounded == Clause::Flag {
             println!(
-                "            ⚠ amber: peak stand {:.0} m > {:.0} m — isostatic freeboard over-stands the craton on the PRE-erosion surface; strength limit + erosion mass-return that would trim it are open (#form-isostasy-column FE(8)).",
+                "            ⚠ amber: peak stand {:.0} m > {:.0} m — this is the LIVE (post-rock-mass-ledger) surface; the ledger already trimmed the pre-erosion over-stand (~2.4 km) toward the band, and a residual flag is the honest signature of the v1 crudeness (φ=1 single step, uniform-blanket deposition) + the still-open strength limit (#form-isostasy-column FE(9)).",
                 r.max_subaerial_m, SUBAERIAL_RELIEF_FLAG_M
             );
         }
@@ -115,7 +115,7 @@ fn main() {
         lo * 100.0,
         hi * 100.0
     );
-    println!("      relief clause resolves stands past {:.0} m (live peaks 1.7–2.4 km sit at the edge — it catches the hundreds-of-m overshoot, not only gross ones).", SUBAERIAL_RELIEF_FLAG_M);
+    println!("      relief clause resolves stands past {:.0} m (live post-ledger peaks ~1.4–2.0 km sit at the edge — it catches the hundreds-of-m overshoot, not only gross ones).", SUBAERIAL_RELIEF_FLAG_M);
     println!("\n  Claimed ≠ Kept: the hard time-free clauses convicting does NOT mark the promise Kept.");
     println!("  Kept additionally requires the temporal clauses (deep time), and a separate adjudication.");
 }

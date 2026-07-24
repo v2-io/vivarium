@@ -16,7 +16,7 @@ use vivarium_world::erosion_return::{
     rock_mass_balance, EROSION_MATURITY,
 };
 use vivarium_world::lithosphere::{surface_drop_per_crust_removed, MANTLE_TP_C, RHO_CONTINENTAL};
-use vivarium_world::sea_level::{emerged_land_record_at_tp, emerged_land_verdict, Clause, SUBAERIAL_RELIEF_FLAG_M};
+use vivarium_world::sea_level::{emerged_land_record_pre_ledger_at_tp, emerged_land_verdict, Clause, SUBAERIAL_RELIEF_FLAG_M};
 
 const LEVEL: u8 = 8;
 
@@ -34,7 +34,7 @@ fn main() {
     println!("  present-Abyssal epoch (T_p = {tp} °C), pour grain level {LEVEL}\n");
 
     for &seed in &seeds {
-        let pre = emerged_land_record_at_tp(seed, LEVEL, tp);
+        let pre = emerged_land_record_pre_ledger_at_tp(seed, LEVEL, tp);
         let post = emerged_land_record_after_erosion_at_tp(seed, LEVEL, tp);
         let (before, after) = rock_mass_balance(seed, tp);
         let rel = (after - before).abs() / before;
@@ -66,7 +66,8 @@ fn main() {
         println!();
     }
 
-    println!("  Claimed ≠ Kept: the ledger trims the amber toward the band and conserves rock — an OBSERVATION.");
-    println!("  Not taken here: wiring the post-erosion surface into the default pour (globe-visible; an adoption step),");
-    println!("  routed/proximity deposition, iterated erode→rebound epochs, and the LITHO_COLUMN Conserved decl upgrade.");
+    println!("  ADOPTED (2026-07-24): 'post-ledger' IS the live default surface — the pour, land classification, globe");
+    println!("  and every reader now see it; LITHO_COLUMN is Conserved (closed-box probe as instrument). 'pre' is the");
+    println!("  retained pre-ledger isostatic surface. Still Claimed ≠ Kept. Open rungs: routed/proximity deposition");
+    println!("  (v1 uniform blanket), iterated erode→rebound epochs (v1 one φ=1 step), water loading.");
 }
