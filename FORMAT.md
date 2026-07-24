@@ -94,6 +94,8 @@ A specification plausibly needs kinds a theory does not — something for *what 
 
 A segment can move **down** this ladder. When a dependency changes or an error surfaces it returns to `draft` rather than to an intermediate rung, because the issue may cascade. **A ladder that only promotes accumulates falsehood.**
 
+**Stage is a current-state marker, not a gate** (Joseph, 2026-07-24). It answers *"what work is still expected on this segment now"* — not *"how far has this segment climbed."* New information, better organization, and strengthening attempts — all encouraged — routinely reset stage, and under a gating reading those resets look like regression, which quietly pressures agents to defend rungs instead of improving segments. Read (and report) stage as the present-tense work-remaining marker it is: a corpus sitting at `draft` after a big reorganization is *honest*, not behind; nothing is owed to the ladder itself. (`DECISIONS[stage-is-a-marker-not-a-gate]`.)
+
 ### `depends` — prerequisite slugs
 
 The slugs this claim directly uses. The *kind* of each dependency is derivable from the referenced file's own `type`, so typed edges are unnecessary. Outline order and `depends` are independent and auditable against each other — a segment ordered before something it depends on is a finding.
