@@ -4,11 +4,11 @@
 //! A Hilbert [`CellId`] *addresses* a region; *inside*, cells are a plain
 //! row-major array so a stencil's neighbours are `idx±1` — ~80× faster than
 //! curve-id neighbours, ~6 Gcells/s while the patch fits cache (keep patches
-//! ~0.25–0.5 km, i.e. 256²–1024²). A `halo` ghost border holds cross-patch and
-//! cross-cube-face neighbours, filled at load, so the interior stencil never
-//! branches on boundaries. One `Patch<T>` per field (SoA) — the cache-friendliest
-//! layout for stencils. API shape is driven by its first consumer, the erosion
-//! tier (`ref/erosion-port/NOTES.md`).
+//! ~0.25–0.5 km, i.e. 256²–1024²). A `halo` ghost border holds cross-patch
+//! neighbours for the same-face fill at load; **cross-cube-face** halo fill
+//! is designed, unbuilt (loader-owned — `#form-cellid-chunk-patch`). Interior
+//! stencils never branch on boundaries. One `Patch<T>` per field (SoA). API
+//! shape driven by first consumer, the erosion tier (`ref/erosion-port/NOTES.md`).
 
 use crate::sphere::{CellId, Face};
 

@@ -40,5 +40,5 @@ The interface bet is what keeps "features are compositions, not new engines" tru
 ## Working Notes
 
 - **Dual-home demote:** DESIGN-MATERIAL §§5–6 and DESIGN-REDUX §15 get claim-home banners; property tables and schema sketch stay TENTATIVE source.
-- **Interface-state slot** (colmation live in `water.rs`, armoring named): needs a schema home before it can be claimed; currently source only.
+- **Interface-state slot:** colmation **and** armoring/colmation depth are live in `water.rs` (`armor`, `armor_depth`, `armor_shield`); schema-as-interface placement still residual — do not claim the full Material/Stratum schema is fixed.
 - Sibling: scaffolding-with-a-demolition-date (explicit fields that parameterize what finer rungs will emerge — armor, colmation) belongs to #form-fidelity-ladder 's climb story; noted there.

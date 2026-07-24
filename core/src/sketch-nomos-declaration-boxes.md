@@ -9,6 +9,7 @@ depends:
   - disc-prime-question
   - norm-bias-vs-noise
   - form-kernel-imperative-boundary
+  - form-declared-structure-tradeoff
 ---
 
 # Nomos declaration boxes ②–④ (exploratory schema)

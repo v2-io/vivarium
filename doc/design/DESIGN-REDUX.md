@@ -44,7 +44,7 @@ Naming it once is the point: every LOD, precision, and cognitive-swap decision s
 
 ## 3. Two axes of level-of-detail
 
-**Claim home:** `#form-temporal-lod-regimes` (one gradient; four regimes — global time-uniform / history-free lazy / history-dependent catch-up / equilibrium-attractor; lag-tolerance condition; non-locality caveat). Elaboration below is source substrate, not a second home.
+**Claim home:** `#form-temporal-lod-regimes`. Regime taxonomy and lag condition live **there** — do not restate as FE below. Elaboration is source/teaching only.
 
 LOD here is not only a *display* concern — it is also *how much simulation has been run*. Both axes drive both.
 
