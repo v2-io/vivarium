@@ -26,7 +26,7 @@ The phase ladder's promises *are* flux quantities, and `:kept-by` *is* the produ
 
 **Max attainable: exact** for the governing join Joseph decided (`DECISIONS[ordinum-governs-the-flux-web]`, `:by joseph`, decided). Engine + display: `ordinum.rs` maturity computation (over the flux/audit wiring), rendered by `vivarium status` via `ordinum::render_maturity` — the report reads the same `Promise::maturity()` the engine computes, so there is no second ladder. Stage `draft`.
 
-**Known incomplete:** (1) Full phase-content segmentation of the Terrestris ordinum is open (OUTLINE §VII; Abyssal piloted). (2) `emerged-land` is **Claimed** by isostasy ( #form-isostasy-column ) but not **Kept** until Record-style predicates convict per cycle.
+**Known incomplete:** (1) Full phase-content segmentation of the Terrestris ordinum is open (OUTLINE §VII; Abyssal piloted). (2) `emerged-land` is **Claimed** by isostasy ( #form-isostasy-column ); the Record-style predicate now exists (`sea_level::emerged_land_verdict`, FE(6) there) and its hard time-free clauses convict the live world, but the promise is not **Kept** — the per-cycle temporal clauses await deep time, and Kept is a separate adjudication.
 
 ## Discussion
 

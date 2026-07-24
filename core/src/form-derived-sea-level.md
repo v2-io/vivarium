@@ -41,5 +41,5 @@ Two independently declared quantities — ante-mundane water inventory and mass-
 
 - Live: `sea_level.rs`, `gen::bathymetry_m`, `lithosphere::freeboard_m`, nomotheke `ISOSTASY` promises `EMERGED_LAND`.
 - Freeboard law home: #form-isostasy-column . Abyssal phase maturity: #detail-phase-abyssal .
-- Probe: `examples/sea_level_probe.rs` retarget when convenient; Record land-fraction probe for Kept still open.
+- Probe: `examples/sea_level_probe.rs` retarget when convenient; **Record land-fraction predicate now built** — `sea_level::emerged_land_verdict` + `examples/emerged_land_probe.rs` ( #form-isostasy-column FE(6)), the Claimed → Kept instrument (hard clauses convict live; still Claimed, not Kept).
 - Ordinum Primordial `promise[sea-level-datum]` phase home still missing (OUTLINE).

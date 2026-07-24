@@ -229,7 +229,7 @@
         isostasy read of the lithosphere column (mass-conserving freeboard —
         `#form-isostasy-column`), 2026-07-24; the strictly-positive rate
         stand-in never could keep it (range/reachability conviction).
-        |predicate land rises above sea level, non-volcanic; land-fraction toward the early-Earth target band (survey §6). Live check: sea_level::land_fraction_at_derived_sea in the Abyssal band (test freeboard_earns_some_emerged_land).
+        |predicate land rises above sea level, non-volcanic; land-fraction toward the early-Earth target band (survey §6, ~1.8-20%); peak subaerial stand <=2 km (soft, pre-erosion); modern-like freeboard only ~2.5 Ga (not-yet-predicable, no deep time). Record predicate: sea_level::emerged_land_verdict + examples/emerged_land_probe.rs (2026-07-24) - hard time-free clauses convict the live world, both known-bads fail; still Claimed, not Kept (per-cycle verification awaits deep time + separate adjudication).
       |promise[erosion-substrate].regime :kept-by erosion-tile :from erosion-carving
         Fluvial erosion continues running as the geological substrate beneath
         every later phase.

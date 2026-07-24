@@ -129,6 +129,168 @@ pub fn land_fraction_at_derived_sea(seed: u64) -> f64 {
     land as f64 / total as f64
 }
 
+/// Land fraction (area where the tectonic surface stands above an *arbitrary*
+/// waterline `sea_m`), sampled at `level`. The derived-sea version above is the
+/// live law; this generalized form exists so a probe can pour against a
+/// **decreed** datum and show what a non-derived waterline manufactures — the
+/// known-bad half of the emerged-land predicate's sensitivity (#norm-probe-
+/// sensitivity FE(2)).
+pub fn land_fraction_at_sea(seed: u64, sea_m: f64, level: u8) -> f64 {
+    let n = 1usize << level;
+    let mut land = 0usize;
+    let mut total = 0usize;
+    for f in 0..6u8 {
+        let face = Face::from_index(f);
+        for j in 0..n {
+            for i in 0..n {
+                let u = ((i as f64 + 0.5) / n as f64) * 2.0 - 1.0;
+                let v = ((j as f64 + 0.5) / n as f64) * 2.0 - 1.0;
+                let cell = CubeCoord { face, u, v }.cell(level);
+                total += 1;
+                if tectonic_surface_m(seed, cell, level) > sea_m {
+                    land += 1;
+                }
+            }
+        }
+    }
+    land as f64 / total as f64
+}
+
+// --- Record-style acceptance predicate for `promise[emerged-land]` -----------
+//
+// The Claimed → Kept instrument (#form-ordinum-governs-flux-web FE(4);
+// #norm-probes-before-claims). Building this decides **no** verdict — it is the
+// check that *could* convict the promise per cycle. The bands are literature-
+// sourced (early-continents survey §6 → `ASSUMPTIONS.md`), Record-style checks on
+// *earned* freeboard; they are never baked into the Protogenic prior
+// (#form-derived-sea-level FE(7)).
+//
+// Deep time does not yet run, so "per cycle" collapses to "per seed": the
+// predicate is evaluated once on the static Abyssal tectonic surface. The
+// era-sharpening clauses ("land fraction >10% by ~3.0 Ga-equivalent"; "modern-
+// like freeboard only ~2.5–2.2 Ga") are therefore **not-yet-predicable** and are
+// named as such rather than faked — only the time-free clauses convict here.
+
+/// Emerged-land fraction band for an early-Earth world (Hadean → mid-Archean,
+/// pre-~2.5 Ga): Flament 2008 MC-median floor ~1.8%, Korenaga ceiling ~20%
+/// (survey §6; well below modern 29%). A world outside this band is either a
+/// drowned water-world (below floor) or a decreed/over-emerged surface (above).
+pub const EMERGED_LAND_FRACTION_BAND: (f64, f64) = (0.018, 0.20);
+
+/// Subaerial-relief flag ceiling (m). Early land stood ~1–1.5 km; >2 km
+/// topography is unlikely while the crust is weak under a hot geotherm (survey
+/// §6; #form-isostasy-column FE(6)). **Soft clause:** measured on the *pre-
+/// erosion* tectonic surface, where the strength limit and erosion mass-return
+/// that would enforce it are declared-open (#form-isostasy-column FE(8)). A
+/// breach is an amber **flag** — an honest signal that isostatic freeboard alone
+/// over-stands the cratons — not a hard conviction of the promise.
+pub const SUBAERIAL_RELIEF_FLAG_M: f64 = 2000.0;
+
+/// One evaluation of the emerged-land Record on a world-seed's Abyssal surface.
+#[derive(Clone, Copy, Debug)]
+pub struct EmergedLandRecord {
+    pub sea_level_m: f64,
+    pub land_fraction: f64,
+    /// Highest stand above the derived sea (0 if a total water-world).
+    pub max_subaerial_m: f64,
+    pub level: u8,
+}
+
+/// A predicate clause's outcome. `Flag` is a soft amber (measured; a breach
+/// informs but does not convict). `NotPredicable` is a clause the literature
+/// predicate carries that nothing in v1 can yet convict (the temporal clauses).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Clause {
+    Pass,
+    Fail,
+    Flag,
+    NotPredicable,
+}
+
+impl Clause {
+    pub fn label(self) -> &'static str {
+        match self {
+            Clause::Pass => "PASS",
+            Clause::Fail => "FAIL",
+            Clause::Flag => "flag",
+            Clause::NotPredicable => "n/a-v1",
+        }
+    }
+}
+
+/// The Record verdict: one clause per literature check.
+#[derive(Clone, Copy, Debug)]
+pub struct EmergedLandVerdict {
+    pub record: EmergedLandRecord,
+    /// Land rises above sea level at all (non-volcanic by construction — the
+    /// craton field is differentiation, not volcanism). Hard.
+    pub land_rises: Clause,
+    /// Land fraction inside the early-Earth band. Hard.
+    pub fraction_in_band: Clause,
+    /// Peak subaerial stand at/under the relief ceiling. Soft (pre-erosion).
+    pub relief_bounded: Clause,
+    /// Era-sharpening timing clauses — no deep time in v1. NotPredicable.
+    pub timing: Clause,
+}
+
+impl EmergedLandVerdict {
+    /// The promise's *hard* time-free clauses all convict green (relief may
+    /// flag amber; timing is n/a in v1). This is **not** a Kept verdict — Kept
+    /// is a separate later adjudication and requires the temporal clauses too.
+    pub fn hard_clauses_pass(&self) -> bool {
+        self.land_rises == Clause::Pass && self.fraction_in_band == Clause::Pass
+    }
+}
+
+/// Measure the emerged-land Record for `seed` at `level` (the derived sea comes
+/// from the level-8 pour regardless; land fraction and relief are sampled here).
+pub fn emerged_land_record_at(seed: u64, level: u8) -> EmergedLandRecord {
+    let sea = derived_sea_level_m(seed);
+    let n = 1usize << level;
+    let mut land = 0usize;
+    let mut total = 0usize;
+    let mut max_sub = 0.0f64;
+    for f in 0..6u8 {
+        let face = Face::from_index(f);
+        for j in 0..n {
+            for i in 0..n {
+                let u = ((i as f64 + 0.5) / n as f64) * 2.0 - 1.0;
+                let v = ((j as f64 + 0.5) / n as f64) * 2.0 - 1.0;
+                let cell = CubeCoord { face, u, v }.cell(level);
+                let h = tectonic_surface_m(seed, cell, level);
+                total += 1;
+                if h > sea {
+                    land += 1;
+                    max_sub = max_sub.max(h - sea);
+                }
+            }
+        }
+    }
+    EmergedLandRecord {
+        sea_level_m: sea,
+        land_fraction: land as f64 / total as f64,
+        max_subaerial_m: max_sub,
+        level,
+    }
+}
+
+/// The Record at the live pour grain (level 8).
+pub fn emerged_land_record(seed: u64) -> EmergedLandRecord {
+    emerged_land_record_at(seed, SAMPLE_LEVEL)
+}
+
+/// Adjudicate a Record against the literature bands — the predicate itself.
+pub fn emerged_land_verdict(rec: EmergedLandRecord) -> EmergedLandVerdict {
+    let (lo, hi) = EMERGED_LAND_FRACTION_BAND;
+    EmergedLandVerdict {
+        record: rec,
+        land_rises: if rec.land_fraction > 0.0 { Clause::Pass } else { Clause::Fail },
+        fraction_in_band: if (lo..=hi).contains(&rec.land_fraction) { Clause::Pass } else { Clause::Fail },
+        relief_bounded: if rec.max_subaerial_m <= SUBAERIAL_RELIEF_FLAG_M { Clause::Pass } else { Clause::Flag },
+        timing: Clause::NotPredicable,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -202,5 +364,81 @@ mod tests {
     fn derived_sea_is_deterministic() {
         assert_eq!(derived_sea_level_m(7), derived_sea_level_m(7));
         assert_ne!(derived_sea_level_m(0), derived_sea_level_m(1));
+    }
+
+    #[test]
+    fn emerged_land_predicate_hard_clauses_convict_the_live_world() {
+        // The Record-style predicate's time-free clauses on the live derived
+        // pour: land rises, and land fraction sits inside the early-Earth band
+        // (survey §6). Measured 2026-07-24 at level 8: seeds 0/1/7 gave
+        // 4.5% / 2.1% / 4.8% — near the Flament floor, comfortably in-band.
+        // Coarser here (level 6) for test speed; the finding is the same class.
+        for seed in [0u64, 1, 7] {
+            let v = emerged_land_verdict(emerged_land_record_at(seed, 6));
+            assert_eq!(v.land_rises, Clause::Pass, "seed {seed}: land must rise (not a water-world)");
+            assert_eq!(
+                v.fraction_in_band, Clause::Pass,
+                "seed {seed}: land fraction {:.3} outside band {:?}",
+                v.record.land_fraction, EMERGED_LAND_FRACTION_BAND
+            );
+            assert!(v.hard_clauses_pass(), "seed {seed}: hard time-free clauses convict — but this is NOT Kept");
+            // The relief clause is honestly soft: it may flag amber on the pre-
+            // erosion surface (seeds 0/7 measured ~2.4 km > the 2 km ceiling).
+            // A flag is a finding, never a hard fail — so the test does not gate on it.
+            assert!(
+                matches!(v.relief_bounded, Clause::Pass | Clause::Flag),
+                "relief clause is soft: pass or amber flag, never a hard fail"
+            );
+            // The temporal clauses are named not-yet-predicable, never faked green.
+            assert_eq!(v.timing, Clause::NotPredicable, "no deep time in v1 — timing cannot be convicted");
+        }
+    }
+
+    #[test]
+    fn emerged_land_predicate_catches_both_known_bads() {
+        // #norm-probe-sensitivity FE(2): a probe that cannot fail on a known-bad
+        // is not yet a probe for that fault class. Two bracket the live band.
+        //
+        // FLOOR — bathymetry alone (freeboard stripped) is the retired water-world:
+        // 0% land, the predicate's land_rises clause FAILS.
+        let sea = derived_sea_level_m(0);
+        let bathy_only_frac = {
+            let n = 1usize << 6;
+            let (mut land, mut tot) = (0usize, 0usize);
+            for f in 0..6u8 {
+                let face = Face::from_index(f);
+                for j in 0..n {
+                    for i in 0..n {
+                        let u = ((i as f64 + 0.5) / n as f64) * 2.0 - 1.0;
+                        let v = ((j as f64 + 0.5) / n as f64) * 2.0 - 1.0;
+                        let cell = CubeCoord { face, u, v }.cell(6);
+                        tot += 1;
+                        if gen::bathymetry_m(0, cell, 6) > sea {
+                            land += 1;
+                        }
+                    }
+                }
+            }
+            land as f64 / tot as f64
+        };
+        let floor_bad = EmergedLandRecord { sea_level_m: sea, land_fraction: bathy_only_frac, max_subaerial_m: 0.0, level: 6 };
+        assert_eq!(emerged_land_verdict(floor_bad).land_rises, Clause::Fail, "water-world must fail land_rises");
+        assert_eq!(emerged_land_verdict(floor_bad).fraction_in_band, Clause::Fail, "0% is below the band floor");
+
+        // CEILING — a DECREED low sea level (old SEA_LEVEL_M-style datum)
+        // manufactures forbidden land. Measured: seed 1 @ 3000 m → 39.7% (>29%
+        // modern). The fraction_in_band clause FAILS above the 20% ceiling.
+        let decreed_frac = land_fraction_at_sea(1, 3000.0, 6);
+        assert!(decreed_frac > EMERGED_LAND_FRACTION_BAND.1, "decreed datum manufactures {decreed_frac:.3} land");
+        let ceil_bad = EmergedLandRecord { sea_level_m: 3000.0, land_fraction: decreed_frac, max_subaerial_m: 4000.0, level: 6 };
+        let cv = emerged_land_verdict(ceil_bad);
+        assert_eq!(cv.fraction_in_band, Clause::Fail, "over-emerged surface must fail the band");
+        assert_eq!(cv.relief_bounded, Clause::Flag, "and its 4 km stand flags the relief ceiling");
+
+        // Sensitivity stated: the fraction clause discriminates deviations
+        // outside [1.8%, 20%] (caught at 0% and ~40% here — well inside its
+        // resolution); the relief clause discriminates stands past 2000 m
+        // (live peaks 1.7–2.4 km sit right at that edge, so it resolves the
+        // ~hundreds-of-metres overshoot, not merely gross violations).
     }
 }

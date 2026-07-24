@@ -37,7 +37,7 @@ Claim-adjacent home for Abyssal charges, promises, and defeasances: what the lad
 
 | Promise | Class | `:kept-by` / gloss | Maturity (honest) |
 |---|---|---|---|
-| `emerged-land` | state | `:kept-by isostasy` (ordinum + nomotheke); pour reads column freeboard ( #form-derived-sea-level , #form-isostasy-column ) | **Claimed** (2026-07-24) — real keeper, range can span basins/land, mass-balance zero-mean tested; **not Kept** — literature freeboard / land-fraction predicate not verified per cycle; inventory still a differentiation stand-in |
+| `emerged-land` | state | `:kept-by isostasy` (ordinum + nomotheke); pour reads column freeboard ( #form-derived-sea-level , #form-isostasy-column ) | **Claimed** (2026-07-24) — real keeper, range can span basins/land, mass-balance zero-mean tested; **Record predicate now built** (`emerged_land_verdict` / `examples/emerged_land_probe.rs`, #form-isostasy-column FE(6)): hard time-free clauses convict live (land rises; fraction 2–5% in-band), relief clause amber (pre-erosion over-stand), temporal clauses not-yet-predicable. **Still not Kept** — per-cycle verification awaits deep time and a separate adjudication; inventory still a differentiation stand-in |
 | `erosion-substrate` | regime | `:kept-by erosion-tile` | **Claimed** — real nomos runs crude fluvial composition ( #detail-erosion-composition ); **not Kept** without a convicting predicate probe that later phases truly stand on that bed |
 | `ore-and-soil` | state | gloss | Named only |
 | `toward-breathable` | capability | gloss; unlocks Primeval atmosphere gate | Named only |
