@@ -517,17 +517,14 @@ impl Default for SunEphemeris {
     }
 }
 
-/// World-frame unit vector toward the sun — the same declination/hour-angle
-/// identities as `planet.rs::insolation`/`sun_direction_enu` (kept in lockstep;
-/// the subsolar point is where the local hour angle is zero, i.e. lon =
-/// 2π(0.5 − day_fraction)), on the +Y-pole frame `Geo` uses.
+/// World-frame unit vector **toward the sun** — delegates to
+/// [`Planet::sun_direction_world`] so the directional light cannot drift from
+/// the insolation / ENU identities (verified: subsolar lon −15°/h westward).
 fn sun_world_dir(eph: &SunEphemeris) -> Vec3 {
-    let tilt = Planet::EARTH.axial_tilt_rad;
     let yf = (eph.day as f64 / 365.25).rem_euclid(1.0);
-    let decl = tilt * (std::f64::consts::TAU * yf).sin();
     let df = (eph.hour as f64 / 24.0).rem_euclid(1.0);
-    let slon = std::f64::consts::TAU * (0.5 - df);
-    Vec3::new((decl.cos() * slon.cos()) as f32, decl.sin() as f32, (decl.cos() * slon.sin()) as f32)
+    let [x, y, z] = Planet::EARTH.sun_direction_world(df, yf);
+    Vec3::new(x as f32, y as f32, z as f32)
 }
 
 /// Stats of the last landed build, for the HUD.
@@ -896,10 +893,13 @@ fn camera_update(
             // The old view convenience: light rides the camera, viewed side lit.
             s.rotation = t.rotation * Quat::from_rotation_y(0.55) * Quat::from_rotation_x(-0.45);
         } else {
-            // The REAL sky: light travels from the subsolar direction toward the
-            // planet, so the terminator, the seasons, and polar day/night are the
-            // planet's actual Phase-2 rhythms, not stagecraft.
-            *s = Transform::default().looking_to(-sun_world_dir(&eph), Vec3::Y);
+            // The REAL sky. Bevy's PBR uses `transform.back()` as
+            // `direction_to_light` (toward the sun). `looking_to(d)` sets
+            // forward=d and back=-d, so we look toward the planet (−sun) and
+            // back points at the sun. Illumination and terminator then match
+            // `Planet::sun_direction_world` / insolation.
+            let to_sun = sun_world_dir(&eph);
+            *s = Transform::default().looking_to(-to_sun, Vec3::Y);
         }
     }
 }
@@ -1039,15 +1039,17 @@ fn hud_update(
         }
     };
     let yf = (eph.day as f64 / 365.25).rem_euclid(1.0);
-    let decl_deg = (Planet::EARTH.axial_tilt_rad * (std::f64::consts::TAU * yf).sin()).to_degrees();
+    let df = (eph.hour as f64 / 24.0).rem_euclid(1.0);
+    let decl_deg = Planet::EARTH.solar_declination(yf).to_degrees();
+    let sun = Planet::EARTH.sun_direction_world(df, yf);
+    let subsolar_lon_deg = sun[2].atan2(sun[0]).to_degrees();
     let sun_line = if eph.headlight {
         "sun: HEADLIGHT (view convenience, no day/night claim) | Y = real ephemeris".to_string()
     } else {
         format!(
-            "sun: day {:.0}/365 {:04.1}h @lon0 | subsolar lat {:+.1} deg (axial tilt 23.44 deg) | {} | ,/. hour N/M day P play Y headlight",
+            "sun: day {:.0}/365 {:04.1}h @lon0 | subsolar lon {subsolar_lon_deg:+.0} lat {decl_deg:+.1} deg | west-marching day; N/S tilt is season | {} | ,/. hour N/M day P play Y headlight",
             eph.day,
             eph.hour,
-            decl_deg,
             if eph.play != 0.0 { "PLAYING" } else { "paused" },
         )
     };

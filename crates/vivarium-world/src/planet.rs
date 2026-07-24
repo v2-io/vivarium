@@ -54,7 +54,7 @@ impl Planet {
     pub fn insolation(&self, geo: Geo, t: Time) -> Quantity {
         // Solar declination. Circular-orbit approximation with `year_fraction == 0`
         // taken at the (northern vernal) equinox ⇒ δ = ε·sin(2π · year_fraction).
-        let decl = self.axial_tilt_rad * (TAU * t.year_fraction()).sin();
+        let decl = self.solar_declination(t.year_fraction());
 
         // Hour angle: 0 at local solar noon, ±π at midnight. Local solar time is the
         // day fraction shifted by longitude (one full turn per day).
@@ -72,7 +72,7 @@ impl Planet {
     /// the year — the classic sunset-hour-angle integral (exact for the crude
     /// rung's circular orbit). `h0` handles polar day (π) and night (0) naturally.
     pub fn daily_insolation(&self, lat: f64, year_fraction: f64) -> f64 {
-        let decl = self.axial_tilt_rad * (TAU * year_fraction).sin();
+        let decl = self.solar_declination(year_fraction);
         let h0 = (-lat.tan() * decl.tan()).clamp(-1.0, 1.0).acos();
         (self.solar_constant / std::f64::consts::PI)
             * (h0 * lat.sin() * decl.sin() + lat.cos() * decl.cos() * h0.sin())
@@ -91,13 +91,37 @@ impl Planet {
     // T(lat, alt) formula was written here and removed the same hour — imposed
     // calibration at the flux tier is the knob pattern wearing a lab coat.
 
+    /// Solar declination (radians) at year fraction in `[0, 1)` — northern
+    /// vernal equinox at `0`, northern summer solstice near `0.25`.
+    pub fn solar_declination(&self, year_fraction: f64) -> f64 {
+        self.axial_tilt_rad * (TAU * year_fraction.rem_euclid(1.0)).sin()
+    }
+
+    /// Unit vector **from the planet toward the sun** in the world frame
+    /// (+Y = north pole; lon measured from +X toward +Z, same as [`CubeCoord`]).
+    ///
+    /// Subsolar longitude = `2π (0.5 − day_fraction)`: at lon-0 noon
+    /// (`day_fraction = 0.5`) the sun is on +X; as the day advances the
+    /// subsolar point moves **west** (−15°/hour), which is the correct
+    /// geometric counterpart of Earth rotating east.
+    pub fn sun_direction_world(&self, day_fraction: f64, year_fraction: f64) -> [f64; 3] {
+        let decl = self.solar_declination(year_fraction);
+        let df = day_fraction.rem_euclid(1.0);
+        let slon = TAU * (0.5 - df);
+        [
+            decl.cos() * slon.cos(),
+            decl.sin(),
+            decl.cos() * slon.sin(),
+        ]
+    }
+
     /// Sun direction as a unit vector in the LOCAL East-North-Up frame at `geo`,
     /// time `t` (standard solar-position identity; the same declination and hour
     /// angle as [`Self::insolation`]). `up < 0` means the sun is below the
     /// horizon. Morning ⇒ `east > 0`: the sun rises in the east, which is what
     /// finally anchors the compass to something physical.
     pub fn sun_direction_enu(&self, geo: Geo, t: Time) -> [f64; 3] {
-        let decl = self.axial_tilt_rad * (TAU * t.year_fraction()).sin();
+        let decl = self.solar_declination(t.year_fraction());
         let solar_day = (t.day_fraction() + geo.lon / TAU).rem_euclid(1.0);
         let hour = TAU * (solar_day - 0.5);
         let up = geo.lat.sin() * decl.sin() + geo.lat.cos() * decl.cos() * hour.cos();
@@ -143,5 +167,77 @@ mod tests {
         let midnight = p.insolation(equator, Time::from_deciseconds(0));
         assert!(noon.value > 1000.0, "equator noon should be strong, got {}", noon.value);
         assert_eq!(midnight.value, 0.0, "equator midnight should be dark");
+    }
+
+    #[test]
+    fn sun_world_matches_insolation_and_moves_west() {
+        let p = Planet::EARTH;
+        // World-frame sun · surface normal == cos(zenith) from the insolation identity.
+        for h in [0.0_f64, 6.0, 12.0, 18.0] {
+            let df = h / 24.0;
+            let yf = 0.0; // equinox
+            let sun = p.sun_direction_world(df, yf);
+            let geo = Geo { lat: 0.0, lon: 0.0 };
+            let n = [
+                geo.lat.cos() * geo.lon.cos(),
+                geo.lat.sin(),
+                geo.lat.cos() * geo.lon.sin(),
+            ];
+            let dot = sun[0] * n[0] + sun[1] * n[1] + sun[2] * n[2];
+            let t = Time::from_deciseconds((h * 3600.0 * 10.0) as i64);
+            let cos_z = {
+                let decl = p.solar_declination(yf);
+                let solar_day = (df + geo.lon / TAU).rem_euclid(1.0);
+                let hour = TAU * (solar_day - 0.5);
+                geo.lat.sin() * decl.sin() + geo.lat.cos() * decl.cos() * hour.cos()
+            };
+            assert!(
+                (dot - cos_z).abs() < 1e-9,
+                "h={h}: sun·n={dot} cos_z={cos_z}"
+            );
+            let _ = t;
+        }
+        // Subsolar longitude decreases 15° per hour (terminator marches west).
+        let lon = |h: f64| {
+            let s = p.sun_direction_world(h / 24.0, 0.0);
+            s[2].atan2(s[0]).to_degrees()
+        };
+        let d = (lon(13.0) - lon(12.0) + 180.0).rem_euclid(360.0) - 180.0;
+        assert!((d + 15.0).abs() < 1e-6, "subsolar should move west ~15°/h, Δ={d}");
+        // World sun projects to the same ENU as sun_direction_enu (equinox, lon 0).
+        let geo = Geo { lat: 0.6, lon: 0.0 };
+        let morning = Time::from_deciseconds((8 * 3600) * 10);
+        let enu = p.sun_direction_enu(geo, morning);
+        let sun = p.sun_direction_world(morning.day_fraction(), morning.year_fraction());
+        let e = [-geo.lon.sin(), 0.0, geo.lon.cos()];
+        let n = [
+            -geo.lat.sin() * geo.lon.cos(),
+            geo.lat.cos(),
+            -geo.lat.sin() * geo.lon.sin(),
+        ];
+        let u = [
+            geo.lat.cos() * geo.lon.cos(),
+            geo.lat.sin(),
+            geo.lat.cos() * geo.lon.sin(),
+        ];
+        let we = sun[0] * e[0] + sun[1] * e[1] + sun[2] * e[2];
+        let wn = sun[0] * n[0] + sun[1] * n[1] + sun[2] * n[2];
+        let wu = sun[0] * u[0] + sun[1] * u[1] + sun[2] * u[2];
+        let len = (we * we + wn * wn + wu * wu).sqrt();
+        assert!((we / len - enu[0]).abs() < 1e-9);
+        assert!((wn / len - enu[1]).abs() < 1e-9);
+        assert!((wu / len - enu[2]).abs() < 1e-9);
+    }
+
+    #[test]
+    fn seasons_flip_hemisphere_at_solstices() {
+        let p = Planet::EARTH;
+        // year_fraction 0 = N vernal equinox; 0.25 ≈ N summer; 0.75 ≈ N winter.
+        let d_sum = p.solar_declination(0.25).to_degrees();
+        let d_win = p.solar_declination(0.75).to_degrees();
+        assert!(d_sum > 23.0 && d_sum < 24.0, "N summer decl ~+23.4, got {d_sum}");
+        assert!(d_win < -23.0 && d_win > -24.0, "N winter decl ~-23.4, got {d_win}");
+        // Terminator *tilt* reverses with season — that is not a day/night bug.
+        assert!(d_sum * d_win < 0.0);
     }
 }
