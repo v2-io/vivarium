@@ -119,6 +119,10 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | formulation | Model | [#form-material-property-interface](src/form-material-property-interface.md) | Material property set = stable interface; model ladder behind it; undifferentiated types refine as deterministic prefix | draft |
 | sketch | Math | [#sketch-dynamic-exponent-seams](src/sketch-dynamic-exponent-seams.md) | Dynamic exponent $z$ per process; timestep-from-quadtree tactic — exploratory | draft |
 | detail | Math | [#detail-seam-precedents](src/detail-seam-precedents.md) | Primary-read seam precedents (AMR / multirate / equation-free / HMM) supporting the seam laws | draft |
+| detail | Math | [#detail-structure-scheme-map](src/detail-structure-scheme-map.md) | Structure→scheme catalogue + conflicts + consumer reconstructions (supports declare-trade) | draft |
+| detail | Math | [#detail-info-theoretic-discretisation](src/detail-info-theoretic-discretisation.md) | Sampling / anti-alias / Jensen-vs-aliasing / fated-jitter / multires dictionary (present-best) | draft |
+| detail | Math | [#detail-fvm-control-volume](src/detail-fvm-control-volume.md) | Cardiff FVM taxonomy: constructions, volume-exact reconstruction, null-space probe | draft |
+| worked-example | Model | [#worked-example-mfd-prime-question](src/worked-example-mfd-prime-question.md) | MFD as disguised geometric claim — Prime Question specimen | draft |
 | | | | *(#gap) Hydrosphere, climate, erosion, water nomoi (beyond box + #form-derived-sea-level)* — residual: wire pour/freeboard keeper into nomotheke; full field nomos segments | missing |
 
 ## VI. Process and contribution

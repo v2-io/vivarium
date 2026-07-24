@@ -2,7 +2,7 @@
 //!
 //! A multiscale, heterogeneous world is assembled from nomoi that never share
 //! mutable state: one hands another a **fluxed quantity** and nothing else
-//! (`doc/theory/multiscale-seams.md`; the coupling contract of ARCHITECTURE §9).
+//! (`.super-archive/from-theory/multiscale-seams.md (#detail-seam-precedents for primary-read support)`; the coupling contract of ARCHITECTURE §9).
 //! The contract is exactly one string-match: a nomos `produces` a quantity, a
 //! downstream nomos `consumes` the same quantity, and *that matched pair is the
 //! only thing they agree on*. So the strings must come from **one shared

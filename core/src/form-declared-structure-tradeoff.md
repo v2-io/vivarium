@@ -28,7 +28,7 @@ Every discretisation preserves some structures of its physics exactly, some appr
 
 **Max attainable: exact** as project method once ratified. **Currently `robust-qualitative`:** the principle and vocabulary are a **rediscovery of a mature field** — compatible/mimetic/structure-preserving discretisation, geometric numerical integration — per the literature recon (`msc/research-structure-preserving/`, ~45 primaries read; `DECISIONS[structure-preserving-is-a-rediscovery-adopt-the-field]`, `:by claude`, proposed). The commute law and its nonlinear boundary are read-primary (Kevlahan & Dubos; Balsara 2001; Friedrich et al. 2018 crash verified at four CFLs) — `DECISIONS[structures-cross-the-seam-only-if-linear]`, `:by claude`, proposed. The four-families census is a reading of the live crates (2026-07-13 audit day). **No Joseph DECISIONS ratification of the declare-three-lists rule as standing law** — do not cite it as `:by joseph`; the *convictability* requirement it extends is law ( #norm-declaration-must-convict ).
 
-**Not claimed:** that `NomosDecl` can hold these declarations (no field exists for preserved/sacrificed structure — named build debt, `#sketch-nomos-declaration-boxes` box ④); that entropy-stable kernels or mortar projection operators are built; a "conflicts-with" column as settled schema. Structure-table row content (which scheme preserves what) stays in `doc/theory/discretisation-and-information.md` §4.1 as teaching until per-nomos declarations exist.
+**Not claimed:** that `NomosDecl` can hold these declarations (no field exists for preserved/sacrificed structure — named build debt, `#sketch-nomos-declaration-boxes` box ④); that entropy-stable kernels or mortar projection operators are built; a "conflicts-with" column as settled schema. Structure-table row content lives in #detail-structure-scheme-map until per-nomos declarations exist.
 
 Stage `draft`.
 
@@ -38,7 +38,7 @@ This is the load-bearing generalisation of the 2026-07-13 audit day: every defec
 
 ## Working Notes
 
-- **Dual-home demote:** `doc/theory/discretisation-and-information.md` §4 (governing principle) + §4.1a (conflicts) headers point here; the structure table and worked rows stay as teaching. `doc/design/NOMOS-CONTRACT.md` box ④ section points here for the law.
+- **Dual-home demote:** `doc/theory/discretisation-and-information.md` §4 headers point here for the law; table/conflicts/consumer rows → #detail-structure-scheme-map . `doc/design/NOMOS-CONTRACT.md` box ④ section points here for the law.
 - **Instruments owed:** null-space/eigenvalue probe on each field nomos; $R\circ\mathrm{div} = \mathrm{div}\circ R_F$ commutation probe; run curl probe against *current* kernel before any mimetic rewrite (it passes vacuously after).
 - **Do not re-claim:** "the discrete topological identities are hard" — they are free on any mesh ($d\circ d=0$ is combinatorial); all difficulty lives in the Hodge star (recon carve).
 - Sibling: `#obs-routing-curl-spiral` (measured specimen of a violated identity); `#sketch-nomos-declaration-boxes` (where declarations would live on `NomosDecl`).

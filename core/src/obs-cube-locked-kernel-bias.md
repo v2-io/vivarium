@@ -37,6 +37,6 @@ Bias vs noise ( #norm-bias-vs-noise ): both defects are signed, systematic, and 
 
 ## Working Notes
 
-- **Summarizes** fan + uniform-$A$ half of cube-locked defects. Sibling spiral measurement home: #obs-routing-curl-spiral (no longer a residual gap).
+- **Summarizes** fan + uniform-$A$ half of cube-locked defects. Sibling spiral measurement home: #obs-routing-curl-spiral . Prime-Question teaching chain: #worked-example-mfd-prime-question .
 - **Instruments:** DECISIONS mfd-fan / drainage-area entries; `examples/grid_lab/`; `msc/spike-wavelet-store/` PROBE 8; `crates/vivarium-world/src/measure.rs` + fluvial `cell_area` (2026-07-23 PoC: **true A** for drainage seed and deposit volume; MFD *lengths* still uniform `cell_m` — fan residual remains).
 - **Do not claim:** “cube-locked bias fixed” after true-A only; MFD fan is independent. MFD “killed D8 anisotropy” is not current truth.

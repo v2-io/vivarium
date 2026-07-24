@@ -32,7 +32,7 @@ World-law values are obtained by **pull evaluation** of declared nomoi at comple
 
 **Currently `exact` as evaluation-strategy law.** Present crates implement the pattern in **hand-written per-nomos miniature** form; that is **illustration and compliance surface**, not the warrant for the claim. Architecture’s own honesty still stands: a generic planner/engine is a **gap** (build debt under this law, not a softener of the law).
 
-**Do not read:** “engine unbuilt” as “pattern untrue.” Strengthen-before-soften: keep the thin law; name thick aspirational pieces as residual source (three-scoped, time-DAG, prefetch).
+**Do not read:** “engine unbuilt” as “pattern untrue.” Strengthen-before-soften: keep the thin law; thick architecture residual is owned by #form-three-scoped-runtime (built/unbuilt/open labels live there).
 
 Stage `draft`. Hostile-read FE from peer adjudication `msc/agent-briefs/2026-07-23-lazy-query-graph-adjudication.md` (parent re-weighted: code rank last).
 
@@ -43,5 +43,5 @@ Represent-by-consequence ( #post-represent-by-consequence ) says *where* to spen
 ## Working Notes
 
 - **Slug:** pull-query-composition (avoids implying a built graph engine). Inventory “lazy query graph” maps here for the thin law only.
-- **Dual-home after land:** DESIGN-REDUX §11 opening; ARCHITECTURE §5 first sentences; `query.rs` module banner → this slug; leave three-scoped / prefetch / time-DAG teaching in place as source.
-- **Sibling residuals:** three-scoped pieces; time-in-every-key DAG; leaf-only vs independent tiers; full demand spool (OUTLINE builder daemon gap).
+- **Dual-home after land:** DESIGN-REDUX §11 opening; ARCHITECTURE §5 first sentences; `query.rs` module banner → this slug.
+- **Owned sibling:** three-scoped / time-DAG / prefetch → #form-three-scoped-runtime . Still residual: leaf-only vs independent tiers; full demand spool (OUTLINE builder-daemon gap); run-modes carve (OUTLINE gap).

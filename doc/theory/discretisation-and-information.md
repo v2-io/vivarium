@@ -1,8 +1,10 @@
 # Discretisation and information — what a nomos is actually claiming
 
-*Written 2026-07-12/13, out of a long dialogue between Joseph and a Claude instance, prompted by Joseph supplying Cardiff & Demirdžić's* Thirty Years of the Finite Volume Method for Solid Mechanics *(`ref/research/pdfs/markdowns/cardiff-2021-thirty/`). It is not a paper summary. It is the **mental model an agent needs before authoring or reworking any field nomos**, and the reason our existing ones are naive.*
+*Written 2026-07-12/13, out of a long dialogue between Joseph and a Claude instance, prompted by Joseph supplying Cardiff & Demirdžić's* Thirty Years of the Finite Volume Method for Solid Mechanics *(`ref/research/pdfs/markdowns/cardiff-2021-thirty/`). **Not claim canon.** Present-best peels live in core; this file is residual teaching + correction archaeology until graduated.*
 
-> **Read this before you touch a field nomos.** The existing kernels (`erosion.rs`, `water.rs`, `gen.rs`) were thrown together ad-hoc; **that is known and is not the point.** Joseph, 2026-07-12: *"There's very little invested into the existing nomos implementations' details. Let that be a trivial issue for the agent-engineer who is reworking it once we've nailed down the principles."* This document is the principles. Get these, and the tactical work per phenomenon is yours to do well.
+> **Claim homes (read these first for law).** Prime Question → `#disc-prime-question` · algorithms disguise physics → `#disc-algorithms-disguise-physics` · bias vs noise → `#norm-bias-vs-noise` · MFD/uniform-$A$ → `#obs-cube-locked-kernel-bias` · structure declare-trade → `#form-declared-structure-tradeoff` · structure table/conflicts → **`#detail-structure-scheme-map`** · info dictionary → **`#detail-info-theoretic-discretisation`** · FVM taxonomy → **`#detail-fvm-control-volume`** · MFD worked chain → **`#worked-example-mfd-prime-question`** · curl routing → `#obs-routing-curl-spiral` · column semantics → `#form-column-control-volume` · reversion/law closure → `#sketch-detail-abstract-reversion`. **Do not cite this file as parallel law.**
+
+> **Field-nomos authors:** get the claim homes above; use this document only for residual texture not yet pealed (impact tables §5–6, grid leads §7, long correction blocks as history).
 
 **Epistemic tags, used literally.** **[P]** quoted from a primary read directly · **[≡]** a restatement — the same mathematical statement in another language, not an analogy · **[thm]** a standard theorem, checkable on paper · **[D]** derived here, check it · **[M]** measured in this repo · **[me]** my inference — a claim, not a result · **[⊘]** open.
 
@@ -10,7 +12,7 @@
 
 ## 0. The Prime Question
 
-*Claim homes: `#disc-prime-question` · `#disc-algorithms-disguise-physics` · `#norm-bias-vs-noise` · **MFD / uniform-$A$ measurements → `#obs-cube-locked-kernel-bias`**. This section is **source and teaching**: the worked MFD specimen stays here. Cite the segments for the law.*
+*Claim homes: `#disc-prime-question` · `#disc-algorithms-disguise-physics` · `#norm-bias-vs-noise` · **MFD measurements → `#obs-cube-locked-kernel-bias`** · teaching chain → **`#worked-example-mfd-prime-question`**. Residual narrative below is dual-home demoted.*
 
 > # **"What physical claim is this algorithm actually making?"**
 
@@ -69,6 +71,8 @@ Same magnitude. Categorically different harm. And it **reorders the remedies ava
 ---
 
 ## 2. What Cardiff gives us — the taxonomy we lacked
+
+> **Claim home (present-best taxonomy):** `#detail-fvm-control-volume`. Correction blocks (§2.4a, §2.5 retractions) are history.
 
 ### 2.1 The sentence that indicts our current kernels
 
@@ -227,6 +231,8 @@ $$\boldsymbol{t}^{\text{stab}}_{\text{Rhie–Chow}} = \alpha^{\text{stab}} K_f\l
 
 ## 3. The information-theoretic dictionary — the more powerful lens
 
+> **Claim home (present-best dictionary):** `#detail-info-theoretic-discretisation`. Correction archaeology below is history; do not re-promote retracted [≡] claims.
+
 Everything above has an equivalent form in sampling theory and information theory, and **most of it is not an analogy — it is the same statement.** Joseph found this lens far more native, and it is also the one most likely to yield realizable algorithms with an honest physical interpretation.
 
 **Discretisation is *sampling*.** Cell size $\Delta$ ⇒ Nyquist wavenumber $k_N = \pi/\Delta$. Content above $k_N$ is **not representable**, and you have exactly two options: *filter it out before sampling*, or *let it fold back*.
@@ -363,7 +369,7 @@ Now look at what we do:
 
 ## 4. ⚖ THE GOVERNING PRINCIPLE
 
-*Claim home: `#form-declared-structure-tradeoff` (enumerate structures; they conflict; declare preserved-exact / preserved-approximate / sacrificed; family + between-family seams; linear-only seam crossing). §4–4.1a below are **source and teaching** — the structure table stays here until per-nomos declarations exist.*
+*Claim home: `#form-declared-structure-tradeoff`. **Structure table, conflicts, consumer reconstructions → `#detail-structure-scheme-map`.** §4 body below is residual dual-home / history until file graduates.*
 
 Everything above collapses into one instruction, and it is the thing to inculcate:
 
