@@ -15,9 +15,9 @@
 
 **Principle claim home:** `#post-represent-by-consequence` — spend simulation, precision, and storage only where a consumer depends on it.
 
-**Three axes** (elaborated below; not all fully segmented): (1) **substrate machinery** — multiscale, multirate systems joined by conserved fluxes, lazy memoized evaluation (§§1–5); (2) **developmental ladder** — phases freeze converged state into law the next phase reads (§6; ordinum); (3) **use-case as fidelity contract** — what the world is for sets which fidelity axes must be honest (§7; `#disc-vivarium-purpose`, `#def-in-vivia`).
+**Three axes** (budget map also `#sketch-three-project-axes`): (1) **substrate machinery** — multiscale, multirate systems joined by conserved fluxes, pull evaluation (`#form-pull-query-composition`, `#form-scale-separation-directional`; §§1–5 source); (2) **developmental ladder** — phases freeze converged state into law the next phase reads (§6; ordinum); (3) **use-case as fidelity contract** — `#disc-vivarium-purpose`, `#def-in-vivia` (§7 source).
 
-The software layer — content-addressed memo store as save file — is how axis 1 is made runnable. **AAT calibration is one privileged use-case on axis 3, not the project's only telos** (`#disc-vivarium-purpose`).
+The software layer — content-addressed memo store as save file (`#form-store-as-save`) — is how axis 1 is made runnable. **AAT calibration is one privileged use-case on axis 3, not the project's only telos.** View host: `#form-engine-bevy`.
 
 ---
 
@@ -25,15 +25,7 @@ The software layer — content-addressed memo store as save file — is how axis
 
 ## 1. The general principle — the multiscale operator algebra *(established; `doc/theory/multiscale-methods.md`)*
 
-> **Claim home:** `#form-rl-closure-algebra`. Seam fluxes / position×time → `#form-seam-flux-exchange`. Save ≡ memo store → `#form-store-as-save`. UnLawfulness budget → `#disc-unlawfulness-budget`. This section remains **source elaboration**.
-
-Every method in the numerical-analysis and Earth-system tradition, whatever its name, is built from **four objects and three laws** — the vocabulary the whole stack speaks. A "system" in vivarium is an instance of it.
-
-- **$U$** — the **macro state** (a coarse field: a 16 m height grid, a drainage graph, a climate-zone map). **$u$** — the **micro state** (0.5 m cells, individual storms).
-- **$R : u \to U$** — **restriction** (coarse-graining): how fine state summarizes upward. Many-to-one, information-destroying *by design* — the whole question is *which* information survives.
-- **$L : U \to u$** — **lifting** (reconstruction): how coarse state materializes downward. One-to-many, so **every $L$ smuggles in a *closure*** — a chosen measure over the missing detail (§3 names ours).
-
-Three laws keep the pair honest: (1) **$R \circ L = \text{id}$ on $U$** — reconstruct-then-summarize returns what the macro claimed (fidelity gate; **aspiration** — live code does not satisfy it); (2) **conservative flux exchange** — fluxes not states at seams (`#form-seam-flux-exchange`, `#form-face-flux-register`); (3) **scale separation** — where it fails, no multiscale method saves you. **Mean-pin is not that gate:** measurement home `#obs-mean-pin-manufactures-seam` (ridge, mass source, zero-physics control). Algebra claim home: `#form-rl-closure-algebra`. Everything below is this algebra, made runnable.
+> **Claim homes:** `#form-rl-closure-algebra` · `#form-seam-flux-exchange` · `#form-face-flux-register` · `#form-scale-separation-directional` · `#obs-mean-pin-manufactures-seam` · `#form-store-as-save` · `#disc-unlawfulness-budget`. This section is **source elaboration** only — do not restate FE here.
 
 ## 2. The method zoo — the shared vocabulary *(established; primaries read directly)*
 
