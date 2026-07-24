@@ -47,7 +47,9 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | normative | Ops Critical | [#norm-probes-before-claims](src/norm-probes-before-claims.md) | Probes before claims | draft |
 | normative | Ops Critical | [#norm-probe-sensitivity](src/norm-probe-sensitivity.md) | Probe sensitivity is part of the probe; known-bad and scale-separation | draft |
 | normative | Ops Critical | [#norm-regime-probes](src/norm-regime-probes.md) | Regime probes ship with every rung; known issues get the probe first | draft |
+| normative | Ops Critical | [#norm-declared-violation-is-not-license](src/norm-declared-violation-is-not-license.md) | Declared deficiency is disclosure, not permission; conservation ≠ fidelity rung | draft |
 | normative | Ops Critical | [#norm-decision-authority](src/norm-decision-authority.md) | Authority tags; evidence ≠ who decided | draft |
+| sketch | Project | [#sketch-two-layer-mind](src/sketch-two-layer-mind.md) | Fast formal / slow LLM-at-aporia agent sketch — exploratory, not primary | draft |
 | normative | Model Critical | [#norm-bias-vs-noise](src/norm-bias-vs-noise.md) | Bias versus noise is the decisive discretisation audit | draft |
 | discussion | Model Critical | [#disc-algorithms-disguise-physics](src/disc-algorithms-disguise-physics.md) | Port the physical claim, not the paper costume | draft |
 | discussion | Ops Critical | [#disc-check-the-ladder](src/disc-check-the-ladder.md) | Check the phase ladder before modern-Earth priors | draft |

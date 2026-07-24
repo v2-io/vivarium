@@ -21,7 +21,7 @@ A green probe certifies only what its discrimination covers. Before trusting a p
 
 ## Epistemic Status
 
-**Max attainable: exact** as process law. Paid-for lesson 2026-07-10: the first face-seam continuity probe **passed on a prior with measured ~3 km cliffs** because its sampling arc was coarse enough that within-face variation masked the discontinuity (`msc/reflections/session-2026-07-10-mechanics.md` §1; live comments on `gen::prior_is_continuous_across_faces_and_corners`). Companion DECISIONS specimens (seabed no-op footprints, "22888" seam ratio as divide-by-zero) are the same failure species under different costumes.
+**Max attainable: exact** as process law. Paid-for lesson 2026-07-10: the first face-seam continuity probe **passed on a prior with measured ~3 km cliffs** because its sampling arc was coarse enough that within-face variation masked the discontinuity (`.super-archive/from-msc/session-2026-07-10-mechanics.md` §1; live comments on `gen::prior_is_continuous_across_faces_and_corners`). Companion DECISIONS specimens (seabed no-op footprints, "22888" seam ratio as divide-by-zero) are the same failure species under different costumes.
 
 Stage `draft`. Authority: Joseph-era session correction + `:by joseph` probes-before-claims; this segment names the sensitivity half that was not yet segmented.
 
@@ -33,5 +33,5 @@ House culture already said "write probes." The residual failure mode is subtler:
 
 - **Specimen (continuity):** L10 / arc $3\cdot10^{-3}$ green on discontinuous v1; one-cell arc at L12 discriminates ~7× (cross-seam ~3000 m vs within-face ~440 m). Live generator test uses one-cell arc + factor-4 bound.
 - **Specimen (seabed / no-op):** `DECISIONS[seam-probes-were-measuring-seabed]` — tests passed by comparing no-ops.
-- **Companions in same reflection file (not this claim):** compensating bugs defeat pure derivation (§2); honesty machinery generates its own work queue (§5) — extract later if needed.
-- **Design dual-home:** DESIGN-REDUX §2b "regime probes" remains source; this segment owns the *sensitivity* law. Broader "every rung ships regime probes" is residual extract (`#norm-regime-probes` in design-mining remaining list).
+- **Companions:** compensating bugs (§2) stay process texture; honesty work-queue (§5) is catalyst meta; §4 → `#norm-declared-violation-is-not-license`. Trail: `.super-archive/from-msc/session-2026-07-10-mechanics.md`.
+- **Sibling:** `#norm-regime-probes` owns co-delivery with rungs.

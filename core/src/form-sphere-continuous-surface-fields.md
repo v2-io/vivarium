@@ -37,6 +37,6 @@ The cube-sphere is a *covering* of $S^2$, not six independent planets. Chart sea
 ## Working Notes
 
 - **Live:** `noise::fbm3`, `gen::bathymetry_m`, `uplift::freeboard_m`, `sea_level::tectonic_surface_m`, continuity test in `gen.rs`. Nomotheke uplift status string already says sphere-continuous bathymetry.
-- **Source / ice:** `msc/reflections/session-2026-07-10-mechanics.md` §1 (probe sensitivity specimen); DESIGN-REDUX §2b (regime probes); globe spike comments on discontinuous prior.
+- **Source / ice:** `.super-archive/from-msc/session-2026-07-10-mechanics.md` §1; `#norm-regime-probes`; globe spike comments on discontinuous prior.
 - **Do not fold in:** MFD fan / uniform cell-area / mean-pin seam ridge — those are scheme and multiscale debts with their own homes (grid segment, #form-rl-closure-algebra , #form-seam-flux-exchange ).
 - **Visual regression residual (2026-07-23):** globe still shows face/Y structure under some seeds and assembly paths; diagnose against FE(3) debt and cube-locked kernels before re-inventing outlet hacks.

@@ -84,31 +84,9 @@ or rankings until the census is derived (`doc/ARCHITECTURE.md` §8).
 
 ## The two-layer mind (proposed agent architecture)
 
-Mirrors Joseph's identity/substrate distinction — *the LLM is the mind the
-identity uses to think with, not the identity itself.*
-
-- **Fast layer** — every tick, every agent. Pure formal ASF/AAT dynamics: needs,
-  adaptation, goal-update coupling. Numeric, deterministic, hundreds of agents
-  cheap. **The fast layer is the authoritative state: the slow layer may only perturb it, never bypass it.** Architecturally it is AAT **Class 1**
-  (separation-by-construction) — and therefore *out of moral scope* (ETHICS.md).
-- **Slow layer** — rare, few agents. An LLM invoked only at decision-theoretically
-  significant junctures — genuine *aporia* (high-conflict goal state, novel social
-  situation) — **not on a clock.** Its output is constrained to *perturb the
-  formal state* (re-weight a goal, form a relationship edge), **never** to drive
-  motor actions directly. The formal layer stays the substrate; the LLM is the
-  thing the agent occasionally thinks *with*. The moment an LLM is in the loop,
-  the agent is in moral scope and ETHICS.md's constraints bind.
-
-This buys latency (LLM off the per-tick path), determinism (fast layer
-reproducible; LLM calls are logged, replayable perturbations), and cost.
-
-### An open empirical question
-
-*Guess / unverified:* whether LLM-induced perturbations stay legible enough that
-adaptation can still be measured cleanly, or whether they inject enough noise to
-wreck identifiability. It is empirical, and nothing here has tested it — do not
-assume the answer. What it bears on is the calibration-lab use specifically: a
-*recreational* round need not resolve it.
+**Exploratory home:** `#sketch-two-layer-mind` (not primary law). Fast formal
+layer / slow LLM-at-aporia; open identifiability question. Do not treat this
+section as agent-seam law — Level C + ETHICS bind any experiment.
 
 ## Engine — decided: Bevy
 

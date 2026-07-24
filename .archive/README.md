@@ -1,24 +1,17 @@
-# `.archive/` — sunset material still held for residual mine or ledger
+# `.archive/` — residual mine or standing ledger
 
-*Current working state lives in the main tree. Nothing here is a tactical current dependency. Historical / provenance pointers from the main tree are proper.*
+*Nothing here is a tactical current dependency. Historical / provenance pointers from the main tree are proper.*
 
-**Fully integrated or superseded ice** graduates to [`.super-archive/`](../.super-archive/) (see its README + MANIFEST). Do **not** re-mine super-archived files as claim sources.
+**Graduate** claim-empty material to [`.super-archive/`](../.super-archive/) — compounding: each move speeds the next pass.
 
-## Still here (residual mine or standing ledger)
+## Still here
 
-| File | Why not super-archived yet |
-|------|----------------------------|
-| `memory-surfaced-2026-07-13.md` | Inventory; contradicted entries; adjudicate before graduate |
-| `CLAUDE.md` | Re-founded live; structure-preserving texture may still mine to theory |
-| `PHASES.md` | Reportatio; ordinum is law (`:regime` already encodes machinery classes) |
-| `SUPERSEDED.md` | Retired-terms ledger until re-homed |
+| File | Why not graduated yet |
+|------|------------------------|
+| `memory-surfaced-2026-07-13.md` | Inventory; contradicted + mixed entries — peel entry-by-entry |
+| `SUPERSEDED.md` | Active retired-terms ledger until re-homed |
+| `README.md` | This index |
 
-## Graduated → `.super-archive/from-archive/`
+## Graduated (see `.super-archive/MANIFEST.md`)
 
-**Batch 1:** ORIENTATION, TODO, README.root, HANDOFF, first `core/OUTLINE` specimen, taxonomy-bdd, architecture-migration, lexicon-notes-and-scratch, universal-biological-rhythms.
-
-**Batch 2 (after peels):** VIVARIA-DEFINITIONS → `#form-kernel-imperative-boundary` + manifest/nomos segments; VIVARIA-DECLARATIVE-FRONTIER → `#form-flux-web` FE(6) + PROCESS `agentic-verdict-is-flag`.
-
-## Rule (PROCESS)
-
-Main tree must never depend on this directory for tactical current needs. Claim truth: `core/`. Super-archive = done for claim extraction.
+Re-founding ice, VIVARIA spikes, **PHASES** (reportatio path updated on ordinum), **archived CLAUDE**, consolidation-wave 2026-07-21 package, session-2026-07-10-mechanics.
