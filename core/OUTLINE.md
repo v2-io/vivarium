@@ -180,9 +180,10 @@ Live floor data: [`tabularium/terrestris.ordinum.udon`](../tabularium/terrestris
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
 | formulation | Physics Critical | [#form-isostasy-column](src/form-isostasy-column.md) | Lithosphere column → isostasy → elevation; uplift rate is diagnostic not driver | draft |
+| detail | Model | [#detail-erosion-composition](src/detail-erosion-composition.md) | Live crude fluvial rung: epoch pipeline, flux edges, measured residuals | draft |
 | observation | Model Critical | [#obs-cube-locked-kernel-bias](src/obs-cube-locked-kernel-bias.md) | MFD fan + uniform cell-area $A$ are cube-locked biases that do not converge | draft |
 | observation | Model Critical | [#obs-routing-curl-spiral](src/obs-routing-curl-spiral.md) | Routing violates contour-orthogonality: ~2% flux spirals, level-independent | draft |
-| | | | *(#gap) Erosion-composition and mantle-thermal nomos segments (isostasy column shape owned above; implementation open)* | missing |
+| | | | *(#gap) Mantle-thermal nomos segment (isostasy shape + erosion composition owned above)* | missing |
 
 **Hydrosphere & atmosphere** (water · hydrology · climate · ocean · coastal …)
 
@@ -210,14 +211,17 @@ Live floor data: [`tabularium/terrestris.ordinum.udon`](../tabularium/terrestris
 | formulation | Model | [#form-temporal-lod-regimes](src/form-temporal-lod-regimes.md) | Space/time LOD one gradient; four materialization regimes | draft |
 | detail | Machine | [#detail-drainage-dependency-planning](src/detail-drainage-dependency-planning.md) | Drainage islands as dependency map; flux magnitude sets pull fidelity | draft |
 | detail | Project | [#detail-abyssal-parity-build](src/detail-abyssal-parity-build.md) | Six-phase path to ethereal explorer in early-Abyssal | draft |
-| | | | *(#gap) Per-phase claim homes (charges/promises/gates as segments under the phase heads below)* | missing |
+| | | | *(#gap) Remaining per-phase claim homes (Abyssal piloted below; Primordial next)* | missing |
 
 ### Phase ladder
 
 1. **Ante-Mundane**
 2. **Protogenic**
-3. **Primordial** — e.g. water-cycle & atmospheric systems
-4. **Abyssal** — e.g. geological-intensive systems
+3. **Primordial** — e.g. water-cycle & atmospheric systems *(#gap phase home)*
+4. **Abyssal** — e.g. geological-intensive systems  
+   | Type | Aspect | Tag | Claim | Stage |
+   | --- | --- | --- | --- | --- |
+   | detail | Project | [#detail-phase-abyssal](src/detail-phase-abyssal.md) | Abyssal charges/promises/defeasances; keeper maturity vs ordinum data | draft |
 5. **Primeval** — e.g. early life, evolution, ecology
 6. **Archaic** — e.g. complex life; primitive endogenous agents
 7. **Aboriginal** — e.g. language & complex endogenous agents

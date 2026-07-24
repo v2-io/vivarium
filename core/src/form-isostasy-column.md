@@ -58,4 +58,4 @@ Sea level already pours a conserved ocean against solid hypsometry. Without a ma
 - **Do not re-open:** baking bimodal land into the bathymetry prior; plate state-fields as the path to first freeboard; citing iced DESIGN-MATERIAL as law (column law is #form-column-control-volume ).
 - **Next convicting work:** lithosphere column schema (even crude thickness×density with keel stub); isostasy producer of elevation; range/reachability audit for BrokenKeeper (promise predicate vs keeper range); rock-mass return from erosion.
 - **Primary literature home on the decision:** Chowdhury, Cawood & Mulder 2025 (relata: chowdhury-2025-subaerial); early-continents survey in `ref/research/` for Record targets.
-- Sibling open: mantle-thermal nomos; erosion composition; router successor under #obs-cube-locked-kernel-bias .
+- Sibling: live erosion recipe #detail-erosion-composition ; Abyssal phase home #detail-phase-abyssal ; open mantle-thermal nomos; router successor under #obs-cube-locked-kernel-bias .

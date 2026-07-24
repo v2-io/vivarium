@@ -65,6 +65,6 @@ Without a single map, agents re-invent system lists from memory and treat DESIGN
 
 ## Working Notes
 
-- **Ordinum adjacency:** approach codes may be referenced by nomotheke; charges/promises remain ordinum data (OUTLINE §IV/§VII gaps).
+- **Ordinum adjacency:** approach codes may be referenced by nomotheke; charges/promises remain ordinum data. Phase home pilot: #detail-phase-abyssal ; crude erosion recipe: #detail-erosion-composition .
 - **Probes:** #norm-regime-probes ; specimens in `examples/`.
 - Supersedes DESIGN-SYSTEMS as inventory home — do not re-mine ice.
