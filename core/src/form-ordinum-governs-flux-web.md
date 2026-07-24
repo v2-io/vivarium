@@ -26,7 +26,7 @@ The phase ladder's promises *are* flux quantities, and `:kept-by` *is* the produ
 
 **Max attainable: exact** for the governing join Joseph decided (`DECISIONS[ordinum-governs-the-flux-web]`, `:by joseph`, decided). Engine: `ordinum.rs` maturity computation + flux/audit wiring. Stage `draft`.
 
-**Known incomplete:** (1) CLI does not yet display the maturity report Joseph asked to *see* (engine exists; display does not). (2) Full phase-content segmentation of the Terrestris ordinum is open (OUTLINE §VII). (3) Freeboard stand-in vs true isostatic column: #form-derived-sea-level and #form-isostasy-column — Claimed ≠ Kept until column physics can reach the promise predicate.
+**Known incomplete:** (1) CLI does not yet display the maturity report Joseph asked to *see* (engine exists; display does not). (2) Full phase-content segmentation of the Terrestris ordinum is open (OUTLINE §VII; Abyssal piloted). (3) `emerged-land` is **Claimed** by isostasy ( #form-isostasy-column ) but not **Kept** until Record-style predicates convict per cycle.
 
 ## Discussion
 
