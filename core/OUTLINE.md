@@ -163,25 +163,52 @@ Candidate inventory (unratified scan, not canon): [`core-segment-candidates-2026
 
 ## VII. Tabularium — Terrestris phases & nomos
 
-**Terrestris is the earthlike world engine.** Findings about its systems — water, erosion, geology, climate, materials as world substrate, phase build targets — live here, next to the phase ladder. Shared multiscale/grid *tools* stay in §V; *this world's* laws and the measured convictions of *these kernels* live here. Phases say *what is charged/promised when*; system segments say *what the law is*; a cross-phase system is not filed under its debut phase.
+**Terrestris is the earthlike world engine.** Findings about its systems — water, erosion, geology, climate, materials as world substrate, phase build targets — live here, next to the phase ladder, **filed by system family** — nearly every system crosses phase boundaries, so family is the findable axis and phase is not. Shared multiscale/grid *tools* stay in §V. Phases say *what is charged/promised when*; system segments say *what the law is* — including the system's own disposition changes across phases.
 
 Live floor data: [`tabularium/terrestris.ordinum.udon`](../tabularium/terrestris.ordinum.udon). Phase list (1–9) matches that ladder; segment homes per phase still sparse.
 
-### Systems, materials, and convictions (cross-phase)
+### The systems library, by family
+
+*Nearly every system crosses phase boundaries, so "cross-phase" discriminates nothing — systems file by **family**. A system's changing disposition across phases (dormant → crude → frozen → promoted) is a property of the system and lives on its segment; phase homes cite it via the ordinum join, never the reverse. The full inventory and build-order judgment: `#detail-phenomena-systems-map`.*
+
+| Type | Aspect | Tag | Claim | Stage |
+| --- | --- | --- | --- | --- |
+| detail | Project | [#detail-phenomena-systems-map](src/detail-phenomena-systems-map.md) | Systems inventory, multirate bands, build-order judgment, fluvial ladder | draft |
+
+**Geosphere** (tectonics · uplift/isostasy · erosion/routing · seismicity …)
+
+| Type | Aspect | Tag | Claim | Stage |
+| --- | --- | --- | --- | --- |
+| observation | Model Critical | [#obs-cube-locked-kernel-bias](src/obs-cube-locked-kernel-bias.md) | MFD fan + uniform cell-area $A$ are cube-locked biases that do not converge | draft |
+| observation | Model Critical | [#obs-routing-curl-spiral](src/obs-routing-curl-spiral.md) | Routing violates contour-orthogonality: ~2% flux spirals, level-independent | draft |
+| | | | *(#gap) Erosion-composition, uplift/lithosphere-column, and mantle-thermal nomos segments (isostasy shape council-accepted in DECISIONS)* | missing |
+
+**Hydrosphere & atmosphere** (water · hydrology · climate · ocean · coastal …)
+
+| Type | Aspect | Tag | Claim | Stage |
+| --- | --- | --- | --- | --- |
+| observation | Physics | [#obs-hydrosphere-box-nomos](src/obs-hydrosphere-box-nomos.md) | Box nomos proves representation-agnostic contract | draft |
+| formulation | Physics Critical | [#form-derived-sea-level](src/form-derived-sea-level.md) | Sea level = pour ocean into solid hypsometry; freeboard earns emerged land | draft |
+| detail | Machine | [#detail-water-parallelism](src/detail-water-parallelism.md) | Gather-not-scatter; CPU reference; GPU as keyed rung | draft |
+| | | | *(#gap) Water-kernel and climate nomos segments (beyond box + sea-level + measured envelopes on the NomosDecl)* | missing |
+
+**Materials & substrate**
+
+| Type | Aspect | Tag | Claim | Stage |
+| --- | --- | --- | --- | --- |
+| formulation | Model | [#form-material-property-interface](src/form-material-property-interface.md) | Material property set = stable interface; model ladder behind it | draft |
+
+**Biosphere** (biomes · ecosystems · biogeochemistry · evolution …)
+
+*(#gap) — no segments yet; inventory rows in `#detail-phenomena-systems-map`.*
+
+**Assembly & build targets** (composing the systems into a running world)
 
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
 | formulation | Model | [#form-temporal-lod-regimes](src/form-temporal-lod-regimes.md) | Space/time LOD one gradient; four materialization regimes | draft |
-| formulation | Model | [#form-material-property-interface](src/form-material-property-interface.md) | Material property set = stable interface; model ladder behind it | draft |
-| observation | Physics | [#obs-hydrosphere-box-nomos](src/obs-hydrosphere-box-nomos.md) | Box nomos proves representation-agnostic contract | draft |
-| formulation | Physics Critical | [#form-derived-sea-level](src/form-derived-sea-level.md) | Sea level = pour ocean into solid hypsometry; freeboard earns emerged land | draft |
-| observation | Model Critical | [#obs-cube-locked-kernel-bias](src/obs-cube-locked-kernel-bias.md) | MFD fan + uniform cell-area $A$ are cube-locked biases that do not converge | draft |
-| observation | Model Critical | [#obs-routing-curl-spiral](src/obs-routing-curl-spiral.md) | Routing violates contour-orthogonality: ~2% flux spirals, level-independent | draft |
-| detail | Project | [#detail-phenomena-systems-map](src/detail-phenomena-systems-map.md) | Systems inventory, multirate bands, build-order judgment, fluvial ladder | draft |
 | detail | Machine | [#detail-drainage-dependency-planning](src/detail-drainage-dependency-planning.md) | Drainage islands as dependency map; flux magnitude sets pull fidelity | draft |
-| detail | Machine | [#detail-water-parallelism](src/detail-water-parallelism.md) | Gather-not-scatter; CPU reference; GPU as keyed rung | draft |
 | detail | Project | [#detail-abyssal-parity-build](src/detail-abyssal-parity-build.md) | Six-phase path to ethereal explorer in early-Abyssal | draft |
-| | | | *(#gap) Full field nomos segments: water kernel, erosion composition, uplift-as-nomos, climate, … (beyond box + sea-level + measured defects)* | missing |
 | | | | *(#gap) Per-phase claim homes (charges/promises/gates as segments under the phase heads below)* | missing |
 
 ### Phase ladder
