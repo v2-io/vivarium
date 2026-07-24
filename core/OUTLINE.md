@@ -26,90 +26,19 @@ The specification of what vivarium is and must do, written as **segments** in `c
 
 ---
 
-## How this outline should be organized (standing note)
+## Organizing principle
 
-*Written 2026-07-24 for continuity across sessions and compaction. **Principle over freeze:** the numbered §I–VIII tables below plus trailing unnumbered **Appendices** are the current index and will keep moving; this section is the target architecture of the index. When reordering, match *this* cut—not a convenient misread of a thin §VII, not “stuff technical things in V,” and not “VII only gets ordinum `.udon` extract.” Segments stay self-contained by slug; **only this file’s rows move.***
+**Sections partition by *subject*; epistemic weight is carried per-row (Type / status / stage), never by placement.** A sketch about seam timesteps lives beside the seam laws, visibly weak by its own label; an unratified bridge lives beside the purpose it bridges, saying so in its row. Filing by weight instead creates a dual taxonomy in which every promotion is a move and every subject must be looked up twice. In a research program, open research is the leading edge of its subject — it is never appendix material. (Joseph, 2026-07-24, correcting two opposite instances of the same error.)
 
-### Goal
+The one weight-defined section is the **Appendix — retired paths**: no-gos, dead-end galleries, and seductive wrongs kept so nobody re-walks them. "Retired" genuinely is a subject; "unsettled" is not.
 
-**Findability and honest abstraction levels.** An agent (or future-you) should know, for any claim: (1) where to *look*, (2) where to *put* a new segment, (3) what must already exist as dependency, without inventing a second law channel or a false gate.
-
-Vivarium is not ASF volumes: there is **no single proof DAG**. Outline order is **onboarding and taxonomy**, not a theorem sequence. `depends:` on each segment remains the real prerequisite graph; outline order should still **avoid inverted onboarding** (do not park sketches that presuppose multiscale algebra in §I before the toolkit exists).
-
-### Target bands (best cut)
-
-Think **systems library + assembly schedule**, not one junk drawer and not phase-number-as-only-axis.
-
-| Band | Purpose | Holds | Does **not** hold |
-|------|---------|--------|-------------------|
-| **Foundations** | Why the project exists; non-negotiable walls; how we know things | Telos, moratorium, determinism, fidelity, probe/declaration/authority norms, claim-channel | Water kernels, grid math, store CLI |
-| **Abstract machine** | Domain-agnostic coupling and persistence | Nomos, complete key, store-as-save, flux web, nomotheke, pull composition, three-scoped runtime, builder *roles* | Drainage islands, MFD, Abyssal milestone as “runtime” |
-| **Shared toolkit** | Reusable physical/mathematical machinery | Grid, R/L algebra, seams, face-flux, structure-preserving *as tools*, CellId/chunk, FVM vocabulary, info-theoretic dictionary | “Erosion is stream-power + …”; sea-level pour law |
-| **World systems (by system)** | Terrestris (and later tracks’) **engine content** | Water, erosion/routing, sea-level/freeboard, materials-as-world-substrate, climate, hydrosphere box, fluvial inventory, system-local parallelism | Phase list; store format |
-| **Developmental ladder** | When things come online and freeze | Ordinum/phases, charges–promises, Realization/unLawfulness freezes, check-the-ladder, Abyssal *parity as ladder target*, lifecycle of participation | Kernel numerics |
-| **Open research** | **Active frontiers of a research program** — exploratory *status*, first-class *action* | Named open problems, sketch-grade tactics under investigation, open-problem census (query over core gaps) | Settled law pretending to be open; retired no-gos; pure museum galleries |
-| **Ops** | Consistency of work | Audit integration, toolchain, contribution SOPs | Physics |
-| **Appendices** | Visible **non-primacy** — museum and non-engine side paths | (A) no-gos / failure galleries / seductive wrongs; (B) unratified bridges not to cite as exact; (C) play/agent sketches that are not current engine or lab-frontier work | Settled law; **active open research** (that is main-path); measured convictions (those stay next to the system/toolkit they convict) |
-
-Current §I–VIII plus trailing **Appendices** are a **partial realization** of these bands (world systems and phase ladder still share §VII; open research is §VIII; no-gos/unratified/non-frontier sketches live under unnumbered **Appendices**). Prefer evolving toward **clear band boundaries** even if section numbers shift: systems-before-or-beside phases, toolkit separate from systems, **open research on the main path with honest sketch status**, no-gos in the museum only.
-
-### Placement rules (stop guessing)
-
-1. **True for any multiscale cube-sphere world** → shared toolkit.  
-2. **True of this engine’s water / erosion / sea / material / climate laws** → **world systems** (not “principle concepts,” not “runtime”).  
-3. **True of when something may run, freeze, or admit participation** → developmental ladder.  
-4. **True of store / pull / builder without naming geology** → abstract machine.  
-5. **Convicts a system kernel** (MFD fan, routing κ, lake-at-rest WB) → **next to that system**; if it convicts the *algebra* (mean-pin vs $R\circ L$) → toolkit.  
-6. **Three different kinds of “not settled law” — do not collapse them:**  
-   - **Measured conviction** (“this operator is a mass source / this fan is cube-locked bias”) is **present truth** → lives next to the toolkit or world-system it convicts. Agents must *find* it when implementing that system.  
-   - **Open research** (exploratory *status*, active work) → **§VIII Open research** — first-class on the main path. In a research program these are often the **most** actionable rows. Honest `sketch` / open language; never dress as adopted formulation; **never relegate to appendices** as if non-primary.  
-   - **Gallery / no-go / seductive wrong** (“do not re-litigate diagonal-pipes fix,” teaching chain of a dead costume) → **Appendices A**. Visible for honesty and regression; not the path for what to build next.  
-   - **Unratified synthesis / non-frontier play sketches** → **Appendices B–C** (may point from purpose/gates; not founding walls).  
-7. **Abyssal parity / ethereal-explorer milestone** → ladder (or world-systems *build target*), **not** CLI/runtime chapter.  
-8. **Drainage dependency planning** → world composition (systems or ladder-adjacent), not store docs.  
-9. **Phases are not systems.** Water is *named* under Primordial as an example of early content; it **runs across later phases**. Do not file every water finding only under phase 3. Phase segments say *what is charged/promised when*; system segments say *what the law is*.  
-10. **Ordinum is the join**, not the only content of the world-engine band: charges/promises/gates *and* nomos findings both need homes; neither replaces the other.
-
-### Failure modes this note exists to prevent
-
-| Failure | What it looked like | Correction |
-|---------|---------------------|------------|
-| **False VII gate** | “§VII is only phase-floor extract from `terrestris.ordinum.udon`; erosion/water stay in §V tools or §II concepts.” | Invented by over-reading a *thinned* outline. Original scaffold (§VII *Tabularium & Existing Phases & Nomos*, Terrestris as earthlike **world engine**, Primordial/Abyssal as system homes) put **nomos findings** there. Systems library + ladder both belong in the world-engine story. |
-| **V as junk drawer** | Everything “technical” lands in toolsets. | Tool = reusable; system = this world’s law. |
-| **Phase-only filing** | Every finding under debut phase head. | Cross-phase systems get system homes; phases cite them. |
-| **Runtime swallows world** | Abyssal parity, drainage islands under §III because “build/plan.” | Runtime = machine; world target = systems/ladder. |
-| **Galleries on critical path** | Defect anatomy next to founding postulates. | **Appendices A** — galleries. Convictions stay with systems/toolkit. |
-| **Open research relegated to appendices** | Active frontiers filed as “non-primacy” next to museums. | **§VIII Open research** — exploratory status, main-path action. |
-| **Open research dressed as settled toolkit** | Exploratory $z$-tactic mid §V as if adopted law. | Honest sketch in §VIII (or next to its host law with open status); not mid-Critical formulation rows. |
-| **Unratified bridge in foundations** | AAT object map mid §I next to Critical walls. | **Appendices B**; purpose segment may *point*, not host. |
-| **Inverted onboarding** | Sketches in §I that `depends` on §V algebra. | Lean foundations; deep depends later. |
-| **Defending misorg as “what §VII is for”** when a human names misorg | Treating current hollow tables as intent. | Prefer project-best taxonomy; **do not correct the user out of a real organizational complaint.** |
-
-### Relation to segment files
-
-- **Slug = identity.** Moving a row does not rename a file.  
-- **No dual homes.** One primary outline row per segment; appendix rows are still primary *index* homes for non-primacy types.  
-- **Gaps stay named.** Missing field-nomos segments and per-phase charge homes remain explicit until written.  
-- **Super-archive** is not an outline section; treat ice as deleted for tactical dependence (`#scope-segment-canon`).  
-- **Candidate inventory** (`core-segment-candidates-2026-07-14.md`) is archaeology for placement flags (e.g. water/erosion → world engine), not a second outline.
-
-### Suggested evolution (when a session has outline energy)
-
-1. Split **world systems** and **phase ladder** into sibling top-level sections if §VII grows crowded—same band model, clearer scan.  
-2. Keep §I **lean** (Critical + purpose + norms); unratified bridges stay in **Appendices**; active open work stays in §VIII.  
-3. Keep §V **toolkit-only** for *settled or conviction* tools; open tactics live in §VIII (they may *depend on* toolkit law).  
-4. Audit `depends:` vs outline order after big peels; fix inverted clusters, not every edge.  
-5. Land missing **field nomos** segments (water kernel, erosion composition, uplift, …) under world systems; land **phase** segments under the ladder that *cite* them via ordinum.  
-6. When a gallery specimen graduates into a **measured conviction**, land (or keep) the observation next to the system; leave the teaching/no-go specimen in **Appendices A** — do not delete the museum when the law arrives.  
-7. When open research **closes**, promote into the band that owns the law (toolkit / systems / machine) and delete or shrink the open row — integration is replacement.
-
-Until then: **use the placement rules above when adding or reviewing rows**, even if today’s § numbers lag the ideal bands.
+Placement, in one pass: **reusable machinery for any multiscale world → §V toolkit** · **this world's systems, their laws, and what convicts their kernels → §VII Terrestris** (a conviction lives next to the kernel it convicts; phases say *what is charged when*, systems say *what the law is*, and cross-phase systems are not filed under their debut phase) · **store / pull / builder / engine without naming geology → §III machine** · **nomos grain, declaration, coupling → §II** · **telos, walls, norms, and purpose-adjacent bridges → §I** · **agents and inhabitation (the A axis, Level-C-gated) → §VIII** · **process instruments → §VI** · **retired → Appendix**. `depends:` stays the real prerequisite graph; keep onboarding un-inverted (don't seat §V-dependent material in §I), but outline order is taxonomy, not a proof sequence.
 
 ---
 
 ## I. Guiding principles, purpose, and obligations
 
-*Foundations band: telos, walls, probe/authority norms. Unratified AAT bridge lives in **Appendices B** (`#disc-aat-vivarium-object-map`); non-frontier play/agent sketches in **Appendices C** — not here. Active open research is §VIII.*
+*Telos, non-negotiable walls, epistemic norms — and the purpose-adjacent maps, at their honest strength.*
 
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
@@ -117,7 +46,10 @@ Until then: **use the placement rules above when adding or reviewing rows**, eve
 | definition | Project | [#def-vivium](src/def-vivium.md) | A vivium is one citable world-artifact | draft |
 | definition | Project | [#def-in-vivia](src/def-in-vivia.md) | *In vivia*: empirical register between toy model and field data | draft |
 | discussion | Project | [#disc-vivarium-purpose](src/disc-vivarium-purpose.md) | Dual purpose: play and *in vivia* laboratory; use-case as fidelity contract | draft |
+| sketch | Project | [#sketch-three-project-axes](src/sketch-three-project-axes.md) | Graphics / world / agents as independent budgets — exploratory map | draft |
+| discussion | Project | [#disc-aat-vivarium-object-map](src/disc-aat-vivarium-object-map.md) | AAT ↔ vivarium object map — unratified synthesis; do not cite as exact | draft |
 | scope | Project Critical | [#scope-moratorium-endogenous-emergence](src/scope-moratorium-endogenous-emergence.md) | No endogenous frontier / emergence-capable minds | draft |
+| scope | Project Critical | [#scope-asf-reading-gates](src/scope-asf-reading-gates.md) | ASF familiarity gates A/B/C; Level C hard-gates agent-seam work | draft |
 | postulate | Project Critical | [#post-determinism-as-ontology](src/post-determinism-as-ontology.md) | Determinism as ontology; fated noise | draft |
 | formulation | Project Critical | [#form-core-view-wall](src/form-core-view-wall.md) | Core / view wall; views observe only | draft |
 | postulate | Project Critical | [#post-represent-by-consequence](src/post-represent-by-consequence.md) | Represent by consequence | draft |
@@ -125,28 +57,24 @@ Until then: **use the placement rules above when adding or reviewing rows**, eve
 | formulation | Model | [#form-reductionist-fallback-cases](src/form-reductionist-fallback-cases.md) | Three reasons to leave pure reductionism; case C needs regime probes first | draft |
 | formulation | Model | [#form-fidelity-ladder](src/form-fidelity-ladder.md) | Climb to discover, descend to surrogate; model identity in the key | draft |
 | discussion | Project | [#disc-unlawfulness-budget](src/disc-unlawfulness-budget.md) | Every Realization carries an unLawfulness budget; Realized ⟂ Lawful | draft |
-| scope | Project Critical | [#scope-asf-reading-gates](src/scope-asf-reading-gates.md) | ASF familiarity gates A/B/C; Level C hard-gates agent-seam work | draft |
-| scope | Project | [#scope-agent-seam-constraints](src/scope-agent-seam-constraints.md) | Late-phase agent-seam constraints holder (not primary until Level C) | draft |
 | normative | Ops Critical | [#norm-declaration-must-convict](src/norm-declaration-must-convict.md) | A declaration that cannot fail is a wish | draft |
 | normative | Ops Critical | [#norm-probes-before-claims](src/norm-probes-before-claims.md) | Probes before claims | draft |
 | normative | Ops Critical | [#norm-probe-sensitivity](src/norm-probe-sensitivity.md) | Probe sensitivity is part of the probe; known-bad and scale-separation | draft |
 | normative | Ops Critical | [#norm-regime-probes](src/norm-regime-probes.md) | Regime probes ship with every rung; known issues get the probe first | draft |
 | normative | Ops Critical | [#norm-declared-violation-is-not-license](src/norm-declared-violation-is-not-license.md) | Declared deficiency is disclosure, not permission; conservation ≠ fidelity rung | draft |
-| normative | Ops Critical | [#norm-decision-authority](src/norm-decision-authority.md) | Authority tags; evidence ≠ who decided | draft |
+| normative | Ops Critical | [#norm-decision-authority](src/norm-decision-authority.md) | Authority tags; evidence ≠ who decided; council-accepted | draft |
 | normative | Model Critical | [#norm-bias-vs-noise](src/norm-bias-vs-noise.md) | Bias versus noise is the decisive discretisation audit | draft |
 | discussion | Model Critical | [#disc-algorithms-disguise-physics](src/disc-algorithms-disguise-physics.md) | Port the physical claim, not the paper costume | draft |
 | discussion | Ops Critical | [#disc-check-the-ladder](src/disc-check-the-ladder.md) | Check the phase ladder before modern-Earth priors | draft |
-| normative | Ops | [#ops-audit-integration](src/ops-audit-integration.md) | Audit reports: verify, adjudicate, integrate, then `.integrated/` | draft |
-| formulation | Machine | [#form-engine-bevy](src/form-engine-bevy.md) | Bevy is the view/runtime engine (project decision + spike) | draft |
 | | | | *(#gap) Epistemology ladder / weak-tier-in-canon* | missing |
 | | | | *(#gap) Strengthen-before-soften as vivarium segment* | missing |
 | | | | *(#gap) Full ETHICS segmentation (harm triple, redeemer, …)* | missing |
 
 ---
 
-## II. Principle concepts and project layout
+## II. Nomos, declaration, and coupling
 
-*Nomos grain, registry, flux coupling, declaration contract — the layout every world-system plugs into. Not the Terrestris systems themselves (those are §VII).*
+*The grain of world-law and the layout every world-system plugs into: registry, keys, flux web, declaration boxes. Not the Terrestris systems themselves (§VII).*
 
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
@@ -165,9 +93,9 @@ Until then: **use the placement rules above when adding or reviewing rows**, eve
 
 ---
 
-## III. Runtime, environment, and CLI
+## III. Runtime, machine, and CLI
 
-*Store, builder/explorer roles, pull composition, multi-process coordination — how the machine runs. Not Abyssal geology or water physics (those are §VII).*
+*Store, builder/explorer roles, pull composition, engine host — how the machine runs, without naming geology.*
 
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
@@ -176,6 +104,7 @@ Until then: **use the placement rules above when adding or reviewing rows**, eve
 | formulation | Machine Critical | [#form-depend-by-key-never-latest](src/form-depend-by-key-never-latest.md) | Depend on neighbours by complete key only; never “finest available” | draft |
 | formulation | Machine Critical | [#form-pull-query-composition](src/form-pull-query-composition.md) | World law composes by pull of keyed nomos; pattern not generic engine | draft |
 | formulation | Machine Critical | [#form-three-scoped-runtime](src/form-three-scoped-runtime.md) | Spine / cones / edit-layer decomposition; time-in-key DAG; prefetch is pure optimization | draft |
+| formulation | Machine | [#form-engine-bevy](src/form-engine-bevy.md) | Bevy is the view/runtime engine (project decision + spike) | draft |
 | detail | Machine | [#detail-builder-daemon](src/detail-builder-daemon.md) | Unbuilt builder/explorer daemon design: store-as-bus, beacons, demand spool | draft |
 | detail | Project | [#detail-vivium-lifecycle](src/detail-vivium-lifecycle.md) | Pipeline stages, capability ladder, BREAK-1/3/4/5 + doctrine | draft |
 | | | | *(#gap) Run-modes carve (thin: LEXICON open referents + root isolation; no fat enum)* | missing |
@@ -185,7 +114,7 @@ Until then: **use the placement rules above when adding or reviewing rows**, eve
 
 ## IV. Kingdoms, orders, and ordinum
 
-*Kingdom ontology and the ordinum/regula governance layer (the floor and the profile) — not the phase-by-phase physics content (that is §VII).*
+*Kingdom ontology and the ordinum/regula governance layer (the floor and the profile) — not the phase-by-phase physics content (§VII).*
 
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
@@ -196,7 +125,7 @@ Until then: **use the placement rules above when adding or reviewing rows**, eve
 
 ## V. Physical, mathematical, and algorithmic toolsets
 
-*Shared machinery every world-engine may use: grid, multiscale algebra, seams, structure-preserving discretisation, FVM vocabulary, addressing. Not the Terrestris water/erosion/geology articles themselves (§VII). Not open research tactics still under investigation (§VIII — e.g. `#sketch-dynamic-exponent-seams`). Measured toolkit convictions (e.g. mean-pin) stay here; failure *galleries* stay in **Appendices A**.*
+*Reusable machinery for any multiscale cube-sphere world: grid, multiscale algebra, seams, structure-preserving discretisation, addressing — settled law, toolkit-level convictions, and the toolkit's own open frontier, each at its honest strength. This world's kernels and their convictions are §VII.*
 
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
@@ -209,6 +138,8 @@ Until then: **use the placement rules above when adding or reviewing rows**, eve
 | formulation | Model Critical | [#form-declared-structure-tradeoff](src/form-declared-structure-tradeoff.md) | Structure preservation is a declared trade; structures conflict; linear-only seam crossing | draft |
 | formulation | Machine | [#form-cellid-chunk-patch](src/form-cellid-chunk-patch.md) | CellId canonical key; curve orders chunks; Cartesian patch + halo in hot loops | draft |
 | formulation | Model Critical | [#form-sphere-continuous-surface-fields](src/form-sphere-continuous-surface-fields.md) | Solid surface fields continuous on $S^2$; never per-face noise charts | draft |
+| sketch | Model | [#sketch-detail-abstract-reversion](src/sketch-detail-abstract-reversion.md) | Reversion frame; open: nonlinear closure for non-local flux (state half retired as measured) | draft |
+| sketch | Math | [#sketch-dynamic-exponent-seams](src/sketch-dynamic-exponent-seams.md) | Dynamic exponent $z$ per process; timestep-from-quadtree tactic — under investigation | draft |
 | detail | Math | [#detail-seam-precedents](src/detail-seam-precedents.md) | Primary-read seam precedents (AMR / multirate / equation-free / HMM) | draft |
 | detail | Math | [#detail-structure-scheme-map](src/detail-structure-scheme-map.md) | Structure→scheme catalogue + conflicts + consumer reconstructions | draft |
 | detail | Math | [#detail-info-theoretic-discretisation](src/detail-info-theoretic-discretisation.md) | Sampling / anti-alias / Jensen-vs-aliasing / fated-jitter / multires dictionary | draft |
@@ -218,10 +149,12 @@ Until then: **use the placement rules above when adding or reviewing rows**, eve
 
 ## VI. Process and contribution
 
-*SOP-grade consistency and tooling. Critical norms that bind claims also appear in §I.*
+*SOP-grade consistency, tooling, and the instruments that keep the work honest about itself.*
 
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
+| normative | Ops | [#ops-audit-integration](src/ops-audit-integration.md) | Audit reports: verify, adjudicate, integrate, then `.integrated/` | draft |
+| discussion | Project | [#disc-open-problem-census](src/disc-open-problem-census.md) | Open work derived from core gaps — index, not ranked superlatives | draft |
 | detail | Ops | [#detail-epistemics-toolchain](src/detail-epistemics-toolchain.md) | Structural vs harness tooling queue; wired clippy; skip reasons | draft |
 
 Candidate inventory (unratified scan, not canon): [`core-segment-candidates-2026-07-14.md`](../core-segment-candidates-2026-07-14.md).
@@ -230,7 +163,7 @@ Candidate inventory (unratified scan, not canon): [`core-segment-candidates-2026
 
 ## VII. Tabularium — Terrestris phases & nomos
 
-**Terrestris is the earthlike world engine.** Findings about its systems — water, erosion, geology, climate, materials as world substrate, phase build targets — live here so they have an organized home next to the phase ladder. Shared multiscale/grid *tools* stay in §V; *this world’s* laws and measured defects of *those kernels* live here.
+**Terrestris is the earthlike world engine.** Findings about its systems — water, erosion, geology, climate, materials as world substrate, phase build targets — live here, next to the phase ladder. Shared multiscale/grid *tools* stay in §V; *this world's* laws and the measured convictions of *these kernels* live here. Phases say *what is charged/promised when*; system segments say *what the law is*; a cross-phase system is not filed under its debut phase.
 
 Live floor data: [`tabularium/terrestris.ordinum.udon`](../tabularium/terrestris.ordinum.udon). Phase list (1–9) matches that ladder; segment homes per phase still sparse.
 
@@ -253,78 +186,44 @@ Live floor data: [`tabularium/terrestris.ordinum.udon`](../tabularium/terrestris
 
 ### Phase ladder
 
-1. **Ante-Mundane**  
-2. **Protogenic**  
-3. **Primordial** — e.g. water-cycle & atmospheric systems  
-4. **Abyssal** — e.g. geological-intensive systems  
-5. **Primeval** — e.g. early life, evolution, ecology  
-6. **Archaic** — e.g. complex life; primitive endogenous agents  
-7. **Aboriginal** — e.g. language & complex endogenous agents  
-8. **Prehistoric** — e.g. hominid & Holocene-like dynamics  
-9. **Scribal** — e.g. writing & game-world-like targets  
+1. **Ante-Mundane**
+2. **Protogenic**
+3. **Primordial** — e.g. water-cycle & atmospheric systems
+4. **Abyssal** — e.g. geological-intensive systems
+5. **Primeval** — e.g. early life, evolution, ecology
+6. **Archaic** — e.g. complex life; primitive endogenous agents
+7. **Aboriginal** — e.g. language & complex endogenous agents
+8. **Prehistoric** — e.g. hominid & Holocene-like dynamics
+9. **Scribal** — e.g. writing & game-world-like targets
 
 ---
 
-## VIII. Open research — active frontiers
+## VIII. Agents and inhabitation (late-phase; Level C gated)
 
-*First-class band of a research program.* Rows here carry **exploratory** (or otherwise unfinished) epistemic status — that is honesty about *strength*, not demotion of *importance*. These are often the most actionable next cuts: named problems, tactics under investigation, and the census that keeps the open set derived from core rather than from mood.
-
-**Do:** work them, probe them, promote when closed (into toolkit / systems / machine), cite them as open. **Do not:** treat sketch language as adopted formulation; hide them in appendices; rank a single “the one open problem” outside the census discipline.
+*The A axis — the project's stated bet, held at its honest exploratory strength. Nothing here is primary work until #scope-asf-reading-gates Level C is cleared; the moratorium ( #scope-moratorium-endogenous-emergence ) binds throughout. Exploratory status is strength-honesty, not demotion: these are first-class research directions of a research program.*
 
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
-| discussion | Project | [#disc-open-problem-census](src/disc-open-problem-census.md) | Open work derived from core gaps — index, not ranked superlatives | draft |
-| sketch | Model | [#sketch-detail-abstract-reversion](src/sketch-detail-abstract-reversion.md) | Reversion frame; **open:** nonlinear closure for non-local flux; state up-invalidation half **retired** (do not re-open — see also Appendices A discipline) | draft |
-| sketch | Math | [#sketch-dynamic-exponent-seams](src/sketch-dynamic-exponent-seams.md) | Dynamic exponent $z$ per process; timestep-from-quadtree tactic — under investigation, no DECISIONS row | draft |
-
-*Related open residues still owned on their host segments (not dual-homed here):* NomosDecl earning procedures on `#sketch-nomos-declaration-boxes` (§II); column statistic fork on `#form-column-control-volume`; router successor on `#obs-cube-locked-kernel-bias` / grid form — refresh the census when those move.
-
----
-
-## Appendices
-
-*Unnumbered on purpose — not a chapter of the main spine (§I–VIII). No-gos, unratified bridges, and non-frontier sketches.*
-
-**Not the research-frontier path** (that is §VIII) **and not settled law** (that is §I–VII). Retained for honesty, regression, and side-path direction that must not be mistaken for engine walls or for *active* open work.
-
-**Do not put measured convictions that *are* current truth only here.** Example: `#obs-mean-pin-manufactures-seam` and `#obs-cube-locked-kernel-bias` live in §V / §VII because an implementer of those kernels must find them. Their *teaching specimens* and *seductive wrong fixes* live below.
-
-### A. No-gos, failure galleries, seductive wrongs
-
-*Museum and specimen board.* Effective no-gos: do not re-walk, do not re-litigate the listed wrong “fixes.” Epistemic honesty requires these stay **visible** without sitting on Critical or open-research paths as if they were next work.
-
-| Type | Aspect | Tag | Claim | Stage |
-| --- | --- | --- | --- | --- |
-| detail | Model | [#detail-nomos-defect-anatomy](src/detail-nomos-defect-anatomy.md) | Jul-13 defect→box map; earning-procedure shape; failure-gallery / seductive-wrong appendix | draft |
-| worked-example | Model | [#worked-example-mfd-prime-question](src/worked-example-mfd-prime-question.md) | MFD as disguised geometric claim — Prime Question specimen of a geometric no-go costume | draft |
-
-*Related actionable convictions (not dual-homed here — find them in systems/toolkit):* `#obs-cube-locked-kernel-bias`, `#obs-routing-curl-spiral`, `#obs-mean-pin-manufactures-seam`, `#obs-hydrosphere-box-nomos`. When a gallery item becomes measured law, **add or keep the observation next to the system**; leave the gallery row so the wrong path stays named.
-
-### B. Unratified bridges (discussion-grade synthesis)
-
-*Useful maps that must not be cited as exact or as founding walls. Purpose and ASF gates may point here; they do not live *as* §I Critical.*
-
-| Type | Aspect | Tag | Claim | Stage |
-| --- | --- | --- | --- | --- |
-| discussion | Project | [#disc-aat-vivarium-object-map](src/disc-aat-vivarium-object-map.md) | AAT ↔ vivarium object map — unratified synthesis; **do not cite as exact** | draft |
-
-### C. Non-frontier exploratory sketches (play / agents axes)
-
-*Budget and agent-direction sketches that are not currently the named physics/machine research frontier. Fun and program direction allowed; not engine law and not §VIII’s active open set unless promoted there.*
-
-| Type | Aspect | Tag | Claim | Stage |
-| --- | --- | --- | --- | --- |
-| sketch | Project | [#sketch-three-project-axes](src/sketch-three-project-axes.md) | Graphics / world / agents as independent budgets — exploratory | draft |
+| scope | Project | [#scope-agent-seam-constraints](src/scope-agent-seam-constraints.md) | Late-phase agent-seam constraints holder (not primary until Level C) | draft |
+| sketch | Project | [#sketch-two-layer-mind](src/sketch-two-layer-mind.md) | Fast formal / slow LLM-at-aporia agent architecture — exploratory | draft |
 | sketch | Project | [#sketch-logozoetic-peer-view](src/sketch-logozoetic-peer-view.md) | Typed A/O peer view for logozoetic play — exploratory | draft |
 | sketch | Project | [#sketch-memory-as-core-to-agency](src/sketch-memory-as-core-to-agency.md) | Memory core to agency (Joseph research direction) — exploratory | draft |
-| sketch | Project | [#sketch-two-layer-mind](src/sketch-two-layer-mind.md) | Fast formal / slow LLM-at-aporia agent sketch — exploratory | draft |
+
+---
+
+## Appendix — retired paths and failure galleries
+
+*The one weight-defined section, and deliberately so: material retained so nobody re-walks it. No-gos, dead-end costumes, seductive wrong fixes. Not current truth (measured convictions live beside the kernels they convict — e.g. `#obs-mean-pin-manufactures-seam` §V, `#obs-cube-locked-kernel-bias` §VII) and not open work (open research lives with its subject). When a gallery specimen graduates into a measured conviction, the observation lands next to its system; the gallery row stays so the wrong path remains named.*
+
+| Type | Aspect | Tag | Claim | Stage |
+| --- | --- | --- | --- | --- |
+| detail | Model | [#detail-nomos-defect-anatomy](src/detail-nomos-defect-anatomy.md) | Jul-13 defect→box map; failure-gallery / seductive-wrong specimens | draft |
+| worked-example | Model | [#worked-example-mfd-prime-question](src/worked-example-mfd-prime-question.md) | MFD as disguised geometric claim — Prime Question specimen of a dead costume | draft |
 
 ---
 
 ## Transitional note
 
 Claim law is `core/`. Live residual process prose is mainly [`doc/PROCESS.udon`](../doc/PROCESS.udon). `LEXICON.udon`, `DECISIONS`, code, and `tabularium/` remain instruments and data. Super-archive is provenance only — treat as deleted for tactical dependence. The Jul 14 candidate list is an unratified scan, not a second outline.
-
-**Organization target:** see **“How this outline should be organized”** above (standing note). **§I–VIII = main spine** (including open research as §VIII). **Appendices** (unnumbered) = museum / unratified / non-frontier sketches.
 
 Pacing / residual intuition (not canon): [`CONSOLIDATION-STATUS.md`](../CONSOLIDATION-STATUS.md).
