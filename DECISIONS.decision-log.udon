@@ -307,8 +307,9 @@
     Joseph's intuition ("some way to do partial fluxes so that by the time you get to the worst area it's still 8 minus a little") is CORRECT. Conservation and routing do not depend on valence — flux is a boundary integral, and gradient-projected edge-flux routing (D-∞ on a mesh) fans outflow across however many edges exist as partial fluxes summing exactly. So the defect DEMOTES from a global conservation failure to a bounded local accuracy wart at 24 cells (LSQ gradients recover second order at any valence). **That is the argument that decides the grid does not need replacing.** The cube∪octahedron partition (Voronoi = cuboctahedron — Joseph guessed it before the derivation) is elegant and never evaluates a cell at a singularity, but it is an O(1)→O(N) trade and is recommended against — while its partial-edge MECHANISM is exactly right for the coarse↔fine tile seam, which is unavoidable and non-matching by nature.
   |ref ref/research/seam-adjacency-findings.md §Addendum · examples/grid_lab.rs · Snyder 1992 Table 1
 
-|decision[conservation-is-not-consistency] :date 2026-07-12 :by claude :status council-accepted :topic physics :supersedes [seam-grid-leads-snyder-healpix snyder-closes-the-projection-lead]
-  :council 2026-07-24 — Accepted: consistency=scheme+grid, the corrected-scheme direction, and the equal-area findings. The grid VERDICT itself is since carried by `the-grid-tentatively-decided-keep-the-cube-sphere-and-stagger-it` (`:by us`, tentative) — this entry adds evidence, not a second verdict. Hot-loop cost risk since measured (`corrected-scheme-is-affordable-via-precomputed-stencil`).
+|decision[conservation-is-not-consistency] :date 2026-07-12 :by claude :status superseded :topic physics :supersedes [seam-grid-leads-snyder-healpix snyder-closes-the-projection-lead]
+  :superseded-by the-grid-tentatively-decided-keep-the-cube-sphere-and-stagger-it
+  :council 2026-07-24 — Adjudicated then RE-MARKED superseded to agree with the header chain: the grid entry (`:by us`, tentative) is the sole verdict carrier. What this entry contributes SURVIVES THROUGH it — consistency=scheme+grid, the corrected-scheme direction, the equal-area findings all fed the superseding entry's reasons, and the hot-loop risk it flagged was since measured (`corrected-scheme-is-affordable-via-precomputed-stencil`). Cite the grid entry for the verdict; this one for the measurement trail only.
   :note 2026-07-12 — DOWNGRADED decided -> proposed. The MEASUREMENTS below stand and reproduce. The VERDICT ("keep the grid, change the kernels") is NOT ratified — Joseph has not adjudicated it and the discussion is still to be had. Do not cite the grid question as closed. See `grid-question-not-closed-authority-was-inflated`.
   :session 01UzCVNNAn6eynKxo2fV74MC
   THE LEAD IS CLOSED, BY MEASUREMENT — and the earlier decision reached the RIGHT CONCLUSION FOR THE WRONG REASON. Keep the equiangular cube-sphere and CellId; change the KERNELS. But the load-bearing claim underneath that — "conservation is a SCHEME property, isotropy/shape is a GRID property no scheme fixes" — is FALSE, and correcting it changes what the kernel work actually is.
@@ -346,7 +347,9 @@
     The nomos-declares-what-it-needs / grid-declares-what-it-provides / audit-matches design is unaffected and still right. Only the sizing changes: the branch is smaller than hoped (2, not 10) and the metric table is not a table at all (it is a function, or a few f32 planes per (face, level)).
   |ref ref/research/grid-comparison-report.md §4.6 · crates/vivarium-world/examples/grid_lab/probes.rs (classes)
 
-|decision[grid-report-supersedes-two-of-my-claims] :date 2026-07-12 :by claude :status council-accepted :topic physics
+|decision[grid-report-supersedes-two-of-my-claims] :date 2026-07-12 :by claude :status superseded :topic physics
+  :superseded-by the-grid-tentatively-decided-keep-the-cube-sphere-and-stagger-it
+  :council 2026-07-24 — Adjudicated (self-corrections sound, measurements reproduce) then RE-MARKED superseded to agree with the header chain: the grid entry is the verdict carrier. Cite this only for the two self-corrections' history.
   :supersedes seam-amortization-and-the-two-grid-overlay
   :note 2026-07-12 — AUTHORITY CORRECTED (was `:by us :status decided`). The `us` tag claimed Joseph decided AND Claude sustains; he did not decide it. The measurements stand; the verdict is a PROPOSAL awaiting him. See `grid-question-not-closed-authority-was-inflated`.
   :session 01UzCVNNAn6eynKxo2fV74MC
@@ -393,7 +396,9 @@
   |impact
     Add bias-vs-noise to the geometric contract as a declared, audited field. A probe is running (2026-07-12) to measure whether MFD's routing error on our grid is directional bias or noise — that number decides whether the erosion routing rewrite is urgent or merely correct.
 
-|decision[flux-on-the-face-makes-refluxing-an-invariant] :date 2026-07-13 :by claude :status proposed :topic architecture
+|decision[flux-on-the-face-makes-refluxing-an-invariant] :date 2026-07-13 :by claude :status superseded :topic architecture
+  :superseded-by [wavelet-store-solves-the-representation-not-the-dynamics the-seam-is-double-evolution-not-discarded-detail refluxing-ceases-to-exist-measured]
+  :council 2026-07-24 — Read the chain, in order: superseded by `wavelet-store-solves…` (the invariant claim hid a bill), then REINSTATED-WITH-PRICE by `the-seam-is-double-evolution…` + `refluxing-ceases-to-exist-measured` (the bill is leaf-only evolution, and it is named and measured). The design survives; this entry's without-a-bill framing does not. Do not cite this entry directly — cite the two reinstating entries (both council-accepted).
   :session 438f7e79-7d30-4492-a131-d25b5e62e099
   PROPOSAL: make the FLUX a first-class, keyed, STORED object living ON THE FACE (a staggered store), instead of a transient computed-and-discarded quantity. **Then refluxing stops being an ALGORITHM and becomes an INVARIANT: the coarse face's flux IS the sum of its children's fluxes — not by correction, but by construction, because they are the same object at two resolutions.**
   |reason
@@ -967,7 +972,7 @@
   :session 4d13314a-8a6a-4f42-9ee0-558f4acf5add
   A new `:status council-accepted` exists for ledger entries: a `:by claude` (or `:by us … proposed`) recommendation adjudicated by a delegated agent under Joseph's grant — "recommendation carried, Joseph supported."
   |reason  Joseph, 2026-07-24: *"(1) it's what I would decide very likely, and (2) it doesn't get weight accidentally as inviolable law 'because Joseph instituted it' — it allows it to have the feel of 'this wasn't done blindly in a corner' but also 'this isn't some invariant now that we have to carry if the truth tells us to do something differently.'"* The delegated adjudicator adds nuance/qualification first where needed (as `:council` note lines), and leaves reserved or superseded entries untouched.
-  |impact  Legend updated; claim home `#norm-decision-authority`; CLAUDE.md disposition line. First adjudication pass run 2026-07-24 over the 07-12/07-13 proposed set (Fable session): 31 entries council-accepted (qualifications inline as `:council` notes); left as-was: `flux-on-the-face-makes-refluxing-an-invariant` (mid-supersession-chain; present truth carried by `the-seam-is-double-evolution…` + `refluxing-ceases…`) and the `:status lead` entries (leads are not verdicts).
+  |impact  Legend updated; claim home `#norm-decision-authority`; CLAUDE.md disposition line. First adjudication pass run 2026-07-24 over the 07-12/07-13 proposed set (Fable session): 31 entries council-accepted (qualifications inline as `:council` notes); the `:status lead` entries left as-was (leads are not verdicts). Follow-up same day under Joseph's re-mark grant: three entries that were targets of `:supersedes` chains re-marked `:status superseded` with `:superseded-by` pointers so status always agrees with the chain (`flux-on-the-face…` with its reinstated-with-price story; `conservation-is-not-consistency` and `grid-report-supersedes…` deferring to the grid verdict entry) — net 29 council-accepted.
   |ref DECISIONS legend (authority + status) · core/src/norm-decision-authority.md · CLAUDE.md
 
 |decision[water-is-well-balanced-at-lake-at-rest] :date 2026-07-24 :by claude :status council-accepted :topic physics
