@@ -47,8 +47,10 @@ use crate::sphere::{CellId, CubeCoord, Face};
 /// `ASSUMPTIONS.md` "mantle potential temperature".
 pub const MANTLE_TP_C: f64 = 1550.0;
 
-/// Modern-reference mantle potential temperature (°C) for the cooling ramps.
-const TP_MODERN_C: f64 = 1350.0;
+/// Modern-reference mantle potential temperature (°C) for the cooling ramps —
+/// the asymptote the mantle-thermal cooling trajectory decays toward
+/// (`crate::mantle_thermal`).
+pub const TP_MODERN_C: f64 = 1350.0;
 
 /// Asthenosphere density (kg/m³). `ASSUMPTIONS.md` "lithosphere densities".
 pub const RHO_ASTHENOSPHERE: f64 = 3300.0;
@@ -146,7 +148,24 @@ const SAMPLE_LEVEL: u8 = 7;
 /// fixed by mass balance over the sampled sphere. Subtracting it makes the
 /// freeboard field exactly zero-mean on the sample — rise here IS subsidence
 /// there; changing the columns redistributes land, never mints it.
+///
+/// **Memoized per `(seed, tp_c)`** — this is the whole-sphere integral, so it
+/// must not be recomputed per freeboard read. Without the cache the cooling-
+/// chain pour (which reads freeboard at ~10⁵–10⁶ cells) would recompute this
+/// 10⁵-cell integral at every one of them — an O(N²) blow-up. The default path
+/// (`reference_m`) hits the same cache at `MANTLE_TP_C`.
 pub fn reference_m_at_tp(seed: u64, tp_c: f64) -> f64 {
+    use std::collections::BTreeMap;
+    use std::sync::Mutex;
+    static CACHE: Mutex<Option<BTreeMap<(u64, u64), f64>>> = Mutex::new(None);
+    let key = (seed, tp_c.to_bits());
+    {
+        let mut guard = CACHE.lock().unwrap_or_else(|e| e.into_inner());
+        let map = guard.get_or_insert_with(BTreeMap::new);
+        if let Some(&r) = map.get(&key) {
+            return r;
+        }
+    }
     let n = 1usize << SAMPLE_LEVEL;
     let mut sum = 0.0;
     let mut count = 0usize;
@@ -162,23 +181,15 @@ pub fn reference_m_at_tp(seed: u64, tp_c: f64) -> f64 {
             }
         }
     }
-    sum / count as f64
+    let r = sum / count as f64;
+    let mut guard = CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    guard.get_or_insert_with(BTreeMap::new).insert(key, r);
+    r
 }
 
-/// Memoized-per-process reference at the default temperature (deterministic;
-/// BTreeMap for the determinism ban, same pattern as the pour cache).
+/// Memoized reference at the default (present-Abyssal) temperature.
 pub fn reference_m(seed: u64) -> f64 {
-    use std::collections::BTreeMap;
-    use std::sync::Mutex;
-    static CACHE: Mutex<Option<BTreeMap<u64, f64>>> = Mutex::new(None);
-    let mut guard = CACHE.lock().unwrap_or_else(|e| e.into_inner());
-    let map = guard.get_or_insert_with(BTreeMap::new);
-    if let Some(&r) = map.get(&seed) {
-        return r;
-    }
-    let r = reference_m_at_tp(seed, MANTLE_TP_C);
-    map.insert(seed, r);
-    r
+    reference_m_at_tp(seed, MANTLE_TP_C)
 }
 
 /// **The isostasy read** — freeboard (m) at a cell: buoyancy height minus the

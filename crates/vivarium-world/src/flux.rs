@@ -83,6 +83,14 @@ pub const ATMOSPHERE_WATER: &str = "atmosphere water (m w.e.)";
 /// (the registry test `precipitation_is_now_produced_by_climate` pins it).
 pub const PRECIPITATION: &str = "precipitation (m/yr)";
 
+/// **Mantle potential temperature** (°C) — the secular-cooling driver state,
+/// produced by the `mantle-thermal` nomos as a declared trajectory `T_p(t)`
+/// (`crate::mantle_thermal`; `#form-isostasy-column` FE(2), the chain head).
+/// Consumed by `lithosphere`, whose oceanic-crust thickness/density ramp on it —
+/// so a cooling mantle deepens basins and grows land. A global scalar per epoch,
+/// not a field.
+pub const MANTLE_POTENTIAL_TEMP: &str = "mantle potential temperature (C)";
+
 /// **Lithospheric column** — per-cell crust + depleted-keel inventory
 /// (thicknesses m, densities kg/m³). Produced by the `lithosphere` nomos
 /// (conserved-inventory pattern, the hydrosphere's dual on rock); consumed by
@@ -99,6 +107,7 @@ pub const VOCABULARY: &[&str] = &[
     INSOLATION,
     EMERGED_LAND,
     ROCK_UPLIFT_RATE,
+    MANTLE_POTENTIAL_TEMP,
     LITHO_COLUMN,
     ATMOSPHERE_WATER,
     ERODED_SURFACE,

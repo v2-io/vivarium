@@ -565,6 +565,45 @@ pub static UPLIFT: NomosDecl = NomosDecl {
     timescale: Timescale { band: "deep-driver", z: None },
 };
 
+/// The mantle-thermal nomos — secular cooling as a *process*, the head of the
+/// accepted freeboard chain (`#form-isostasy-column` FE(2)). Promotes the
+/// mantle potential temperature from a declared constant to a declared cooling
+/// TRAJECTORY `T_p(t)` (`crate::mantle_thermal`), giving emergence a time axis:
+/// as the mantle cools, oceanic crust thins and densifies, basins deepen, and
+/// land rises. A declared crude rate law (physics Low) — order-of-magnitude
+/// Earth anchors, not integrated from a heat budget.
+pub static MANTLE_THERMAL: NomosDecl = NomosDecl {
+    name: "mantle-thermal",
+    version: "mantle-thermal-2026-07-24a-cooling-trajectory",
+    system: "mantle-thermal",
+    approach: Approach::Analytic, // closed-form declared trajectory
+    earth_fidelity: Tier::Low,    // order-of-magnitude era pins (~1550 Archean → ~1350 modern)
+    physics: Tier::Low,           // a DECLARED cooling curve, not a modeled heat budget
+    relation: "#mech declared secular-cooling trajectory: T_p(t) = TP_MODERN + (MANTLE_TP_C − TP_MODERN)·exp((age − present)/τ), monotone in time, passing through the present-Abyssal anchor. The SHAPE of emergence (cooling ⇒ deepening basins ⇒ growing land) is real and convictable; the rate/timing is declared crude, no plate history",
+    status: "built (mantle_thermal.rs); monotonicity + present-anchor + asymptote unit-tested; feeds lithosphere's oceanic-crust ramp; the land-fraction emergence trajectory is probed (mantle_cooling_probe). Rate law is Low — Korenaga 2017 still unread",
+    deps: &[],
+    consumes: &[], // reads canonical Time; the trajectory is a declared closed form, not a fluxed input
+    promises: &[Promise {
+        quantity: flux::MANTLE_POTENTIAL_TEMP,
+        conservation: Conservation::NotTracked, // a driver state, not a stock — nothing to conserve
+        statistic: Statistic::GlobalScalar,     // one T_p per epoch, spatially uniform
+        exactness: Exactness::Exact,            // exact evaluation of the declared curve at any t
+    }],
+    assumptions: &["mantle potential temperature", "mantle cooling trajectory"],
+    family: &[Family::PointwiseAnalytic],
+    assumes_geometry: &[],
+    structure: StructureDecl {
+        // The trajectory is monotone in time by construction (cooling never
+        // reverses) — a real invariant a probe convicts, declared here.
+        preserves_exact: &["monotonicity"],
+        preserves_approx: &[],
+        sacrifices: &[],
+    },
+    unphysical_terms: &[],
+    execution: ExecutionClass::ProceduralTight,
+    timescale: Timescale { band: "deep-driver", z: None },
+};
+
 /// The lithosphere nomos — the conserved columnar inventory (crust + depleted
 /// keel) that isostasy reads. The hydrosphere pattern, on rock: an inventory
 /// that downstream articles PARTITION and READ, never a free height field.
@@ -572,15 +611,19 @@ pub static UPLIFT: NomosDecl = NomosDecl {
 /// physics. Claim home: `#form-isostasy-column`.
 pub static LITHOSPHERE: NomosDecl = NomosDecl {
     name: "lithosphere",
-    version: "lithosphere-2026-07-24a-craton-keel",
+    version: "lithosphere-2026-07-24b-mantle-thermal-dep",
     system: "lithosphere-column",
     approach: Approach::Analytic,
     earth_fidelity: Tier::Low, // era-plausible pins (Chowdhury lineage), not Earth's actual columns
     physics: Tier::Low,        // inventory is a fated stand-in; no differentiation rate law yet
-    relation: "conserved columnar inventory: crust thickness+density (craton felsic / oceanic thermal-ramped) + depleted keel — one differentiation process, two buoyant products stacked. The mantle-thermal DRIVER is a declared constant (MANTLE_TP_C), not yet a nomos",
-    status: "v1 fated columns (lithosphere.rs); craton fraction calibration convicted by test; cooling⇒contrast-growth monotonicity unit-tested; differentiation rate law and crustal transport OPEN; erosion does not yet return mass (rock-mass ledger open)",
-    deps: &[&NOISE],
-    consumes: &[Consume { quantity: flux::SEEDED_ASYMMETRY, needs: Statistic::CenterSample }],
+    relation: "conserved columnar inventory: crust thickness+density (craton felsic / oceanic thermal-ramped) + depleted keel — one differentiation process, two buoyant products stacked. The mantle-thermal DRIVER is now a nomos (a declared cooling trajectory T_p(t)), consumed here; the oceanic-crust ramp reads it, so a cooling mantle deepens basins",
+    status: "v1 fated columns (lithosphere.rs); craton fraction calibration convicted by test; cooling⇒contrast-growth monotonicity unit-tested; NOW driven in time by the mantle-thermal nomos (emergence trajectory probed); differentiation rate law and crustal transport OPEN; erosion does not yet return mass (rock-mass ledger open)",
+    deps: &[&NOISE, &MANTLE_THERMAL],
+    consumes: &[
+        Consume { quantity: flux::SEEDED_ASYMMETRY, needs: Statistic::CenterSample },
+        // The secular-cooling driver: oceanic-crust thickness/density ramp on it.
+        Consume { quantity: flux::MANTLE_POTENTIAL_TEMP, needs: Statistic::GlobalScalar },
+    ],
     promises: &[Promise {
         quantity: flux::LITHO_COLUMN,
         conservation: Conservation::NotTracked, // static v1 inventory; becomes a real claim when transport/mass-return exists
@@ -805,7 +848,8 @@ pub static WATER: NomosDecl = NomosDecl {
 };
 
 /// Every nomos there is. A store root whose name is not here is a bug.
-pub static NOMOTHEKE: &[&NomosDecl] = &[&NOISE, &PLANET, &HYDROSPHERE, &CLIMATE, &INITIAL_TOPOGRAPHY, &UPLIFT, &LITHOSPHERE, &ISOSTASY, &EROSION, &WATER];
+pub static NOMOTHEKE: &[&NomosDecl] =
+    &[&NOISE, &PLANET, &HYDROSPHERE, &CLIMATE, &INITIAL_TOPOGRAPHY, &UPLIFT, &MANTLE_THERMAL, &LITHOSPHERE, &ISOSTASY, &EROSION, &WATER];
 
 /// Look a nomos up by its key-stem name (the part before `@`).
 pub fn lookup(name: &str) -> Option<&'static NomosDecl> {

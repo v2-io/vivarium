@@ -15,37 +15,65 @@ use crate::gen;
 use crate::hydrosphere::Hydrosphere;
 use crate::planet::Planet;
 use crate::sphere::{CubeCoord, Face};
-use crate::lithosphere;
+use crate::lithosphere::{self, MANTLE_TP_C};
+use crate::mantle_thermal;
+use crate::time::Time;
 
 /// Sampling level for the global pour (256² × 6 ≈ 393k cells). Coarse enough
 /// to be cheap; fine enough that the inverted level is stable for v0.
 const SAMPLE_LEVEL: u8 = 8;
 
-/// Sea level (m above bedrock datum) for this world-seed: ocean stock poured
-/// into the **tectonic** surface (bathymetry + freeboard). Pure function of seed.
-///
-/// Memoized per process: the pour is deterministic and seed-keyed.
+/// Sea level (m above bedrock datum) for this world-seed at the **present-
+/// Abyssal** epoch: ocean stock poured into the tectonic surface (bathymetry +
+/// freeboard) at the live mantle temperature `MANTLE_TP_C`. Pure function of
+/// seed; the seed-only entry point every existing caller uses — unchanged.
 pub fn derived_sea_level_m(seed: u64) -> f64 {
+    derived_sea_level_at_tp(seed, MANTLE_TP_C)
+}
+
+/// Sea level at an explicit mantle potential temperature `tp_c` — the pour along
+/// the mantle-thermal cooling chain. As the mantle cools, basins deepen and the
+/// derived waterline drops relative to the rising cratons. Memoized per `(seed,
+/// tp_c)` (the temperature's bit pattern is the deterministic key; the epoch
+/// chain visits only a handful of values, each poured once).
+pub fn derived_sea_level_at_tp(seed: u64, tp_c: f64) -> f64 {
     use std::sync::Mutex;
     use std::collections::BTreeMap;
-    static CACHE: Mutex<Option<BTreeMap<u64, f64>>> = Mutex::new(None);
+    static CACHE: Mutex<Option<BTreeMap<(u64, u64), f64>>> = Mutex::new(None);
+    let key = (seed, tp_c.to_bits());
     let mut guard = CACHE.lock().unwrap_or_else(|e| e.into_inner());
     let map = guard.get_or_insert_with(BTreeMap::new);
-    if let Some(&s) = map.get(&seed) {
+    if let Some(&s) = map.get(&key) {
         return s;
     }
-    let s = pour_ocean(seed);
-    map.insert(seed, s);
+    let s = pour_ocean_at_tp(seed, tp_c);
+    map.insert(key, s);
     s
 }
 
-/// Solid surface used for the pour and for land classification: bathymetry
-/// plus Abyssal freeboard (zero-mean isostatic stand-in).
-pub fn tectonic_surface_m(seed: u64, cell: crate::sphere::CellId, nyquist_level: u8) -> f64 {
-    gen::bathymetry_m(seed, cell, nyquist_level) + lithosphere::freeboard_m(seed, cell)
+/// Sea level at canonical time `t` — the mantle-thermal nomos supplies `T_p(t)`
+/// (`#form-isostasy-column` FE(2), chain head), and the pour re-derives against
+/// the freeboard that temperature earns. This is the memoized epoch chain that
+/// makes emergence run *in time*.
+pub fn derived_sea_level_at(seed: u64, t: Time) -> f64 {
+    derived_sea_level_at_tp(seed, mantle_thermal::potential_temp_c(t))
 }
 
-fn pour_ocean(seed: u64) -> f64 {
+/// Solid surface used for the pour and for land classification at the present-
+/// Abyssal epoch: bathymetry plus the isostatic freeboard read of the column.
+pub fn tectonic_surface_m(seed: u64, cell: crate::sphere::CellId, nyquist_level: u8) -> f64 {
+    tectonic_surface_at_tp(seed, cell, nyquist_level, MANTLE_TP_C)
+}
+
+/// Tectonic surface at an explicit mantle temperature — bathymetry (thermally
+/// invariant) plus the freeboard the column earns at `tp_c`. The spatial half of
+/// the cooling chain: bathymetry is fixed relief, freeboard rewrites with the
+/// driver.
+pub fn tectonic_surface_at_tp(seed: u64, cell: crate::sphere::CellId, nyquist_level: u8, tp_c: f64) -> f64 {
+    gen::bathymetry_m(seed, cell, nyquist_level) + lithosphere::freeboard_m_at_tp(seed, cell, tp_c)
+}
+
+fn pour_ocean_at_tp(seed: u64, tp_c: f64) -> f64 {
     let planet = Planet::EARTH;
     let ocean_km3 = Hydrosphere::of(&planet).ocean_km3;
     let n = 1usize << SAMPLE_LEVEL;
@@ -64,7 +92,7 @@ fn pour_ocean(seed: u64) -> f64 {
                 let u = ((i as f64 + 0.5) / n as f64) * 2.0 - 1.0;
                 let v = ((j as f64 + 0.5) / n as f64) * 2.0 - 1.0;
                 let cell = CubeCoord { face, u, v }.cell(SAMPLE_LEVEL);
-                let h = tectonic_surface_m(seed, cell, SAMPLE_LEVEL);
+                let h = tectonic_surface_at_tp(seed, cell, SAMPLE_LEVEL, tp_c);
                 // Uniform-area approx at this level — good enough for the sea-level
                 // *datum*; true spherical excess remains the probe's job.
                 let area = (4.0 * std::f64::consts::PI * r_km * r_km) / (6.0 * (n * n) as f64);
@@ -279,6 +307,39 @@ pub fn emerged_land_record(seed: u64) -> EmergedLandRecord {
     emerged_land_record_at(seed, SAMPLE_LEVEL)
 }
 
+/// The emerged-land Record at an explicit mantle temperature `tp_c` — the same
+/// measurement, taken along the cooling chain. Walking a sequence of `tp_c`
+/// (hot → cool) gives the emergence trajectory the ordinum narrates.
+pub fn emerged_land_record_at_tp(seed: u64, level: u8, tp_c: f64) -> EmergedLandRecord {
+    let sea = derived_sea_level_at_tp(seed, tp_c);
+    let n = 1usize << level;
+    let mut land = 0usize;
+    let mut total = 0usize;
+    let mut max_sub = 0.0f64;
+    for f in 0..6u8 {
+        let face = Face::from_index(f);
+        for j in 0..n {
+            for i in 0..n {
+                let u = ((i as f64 + 0.5) / n as f64) * 2.0 - 1.0;
+                let v = ((j as f64 + 0.5) / n as f64) * 2.0 - 1.0;
+                let cell = CubeCoord { face, u, v }.cell(level);
+                let h = tectonic_surface_at_tp(seed, cell, level, tp_c);
+                total += 1;
+                if h > sea {
+                    land += 1;
+                    max_sub = max_sub.max(h - sea);
+                }
+            }
+        }
+    }
+    EmergedLandRecord {
+        sea_level_m: sea,
+        land_fraction: land as f64 / total as f64,
+        max_subaerial_m: max_sub,
+        level,
+    }
+}
+
 /// Adjudicate a Record against the literature bands — the predicate itself.
 pub fn emerged_land_verdict(rec: EmergedLandRecord) -> EmergedLandVerdict {
     let (lo, hi) = EMERGED_LAND_FRACTION_BAND;
@@ -391,6 +452,47 @@ mod tests {
             );
             // The temporal clauses are named not-yet-predicable, never faked green.
             assert_eq!(v.timing, Clause::NotPredicable, "no deep time in v1 — timing cannot be convicted");
+        }
+    }
+
+    #[test]
+    fn cooling_grows_land_from_a_water_world_through_the_present() {
+        // The mantle-thermal emergence conviction (`#form-isostasy-column`
+        // FE(7); mantle_cooling_probe): walking the cooling chain, land fraction
+        // is MONOTONE non-decreasing (a cooling world does not un-emerge land),
+        // it starts a near-water-world at the hot early-Abyssal end, and the
+        // present-Abyssal epoch equals the live seed-only world exactly. Coarse
+        // (level 5) here for speed; the finding is the probe's (level 7).
+        use crate::mantle_thermal::{abyssal_epochs, potential_temp_c, present_abyssal};
+        const LVL: u8 = 5;
+        for seed in [0u64, 1, 7] {
+            let epochs = abyssal_epochs();
+            let mut prev = -1.0f64;
+            for &t in &epochs {
+                let tp = potential_temp_c(t);
+                let frac = emerged_land_record_at_tp(seed, LVL, tp).land_fraction;
+                assert!(
+                    frac + 1e-9 >= prev,
+                    "seed {seed}: land fraction fell along the cooling chain ({prev:.4} -> {frac:.4}) — emergence must be monotone"
+                );
+                prev = frac;
+            }
+            // Hot early-Abyssal end (T_p ~1641) stands almost no land — the
+            // ordinum's water-world start (thick, light oceanic crust).
+            let hot = potential_temp_c(*epochs.first().unwrap());
+            assert!(
+                emerged_land_record_at_tp(seed, LVL, hot).land_fraction < 0.02,
+                "seed {seed}: hot early-Abyssal must be near a water-world"
+            );
+            // The present-Abyssal epoch IS the live static world: the cooling
+            // law passes through MANTLE_TP_C there (the coherence pin), so the
+            // seed-only pour and the epoch-chain pour agree to float precision.
+            let present_tp = potential_temp_c(present_abyssal());
+            assert_eq!(
+                derived_sea_level_at_tp(seed, present_tp),
+                derived_sea_level_m(seed),
+                "seed {seed}: present-Abyssal epoch must equal the live seed-only world"
+            );
         }
     }
 
