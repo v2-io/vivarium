@@ -27,6 +27,7 @@ pub mod noise;
 pub mod gen;
 pub mod chunk;
 pub mod uplift;
+pub mod sea_level;
 pub mod erosion;
 pub mod water;
 pub mod sample;

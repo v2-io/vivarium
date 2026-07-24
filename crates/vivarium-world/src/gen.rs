@@ -1,12 +1,14 @@
 //! Baseline worldgen — turn a [`CellId`] into a [`Column`] (the abstract→detail
 //! *easy* direction, `doc/design/DESIGN-REDUX.md` §11, and a fidelity-ladder bottom rung §12).
 //!
+//! **Ordinum split (code-first trail from `ce55ddf` / `2f6a66d`):**
+//! - [`bathymetry_m`] — seafloor / solid prior; **not** land (no decreed freeboard).
+//! - freeboard / `emerged land` — Abyssal, via [`crate::uplift`] (later isostasy).
+//! - sea level — derived by pouring the hydrosphere ocean ([`crate::sea_level`]).
+//!
 //! [`column_from_surface`] is the **reusable assembler**: given a solid surface
-//! height it builds the stratigraphy. It is *not* throwaway — the ported erosion
-//! tier will feed it too; only the *source of the height* moves up the ladder.
-//! [`baseline_column`] is the crude interim height from coordinate noise
-//! (deterministic, pure function of the cell — §8), to be superseded by the
-//! ported erosion/hydrology.
+//! height it builds the stratigraphy. [`baseline_column`] uses tectonic surface
+//! + derived sea for seed.
 
 use crate::column::{Column, Stratum};
 use crate::material::{Category, Kind, MaterialId};
@@ -14,17 +16,26 @@ use crate::noise::fbm3;
 use crate::quantity::{Quantity, Unit};
 use crate::sphere::CellId;
 
-/// Sea-level datum, metres above the bedrock datum (`y = 0`). Provisional — a
-/// coarse global reference (see the ~20 km shell, `doc/design/DESIGN-MATERIAL.md` §8); a
-/// later tier may make it a proper planetary constant.
+/// @deprecated **Do not use for land/water classification.** Decreed 4000 m
+/// manufactured ~30% forbidden continents
+/// (`DECISIONS[water-world-is-the-promise-not-the-bug]`). Prefer
+/// [`crate::sea_level::derived_sea_level_m`]. Numeric residual for migrating
+/// call sites only.
 pub const SEA_LEVEL_M: f64 = 4000.0;
 
-/// Assemble a stratigraphic column from a solid **surface height** (m above the
-/// bedrock datum) and a soil mantle thickness. Bedrock (undifferentiated igneous —
-/// refine later, §6) fills up to `surface − soil`; a soil stratum tops it (saturated
-/// below sea level); standing water fills to [`SEA_LEVEL_M`] when the surface is
-/// below it. Reusable by any tier that produces a surface height.
+/// Assemble a column using **derived** sea level for world-seed 0 (tests that
+/// need a fixed waterline should call [`column_from_surface_at_sea`]).
 pub fn column_from_surface(cell: CellId, surface_m: f64, soil_m: f64) -> Column {
+    column_from_surface_at_sea(
+        cell,
+        surface_m,
+        soil_m,
+        crate::sea_level::derived_sea_level_m(0),
+    )
+}
+
+/// [`column_from_surface`] with an explicit sea-level datum (m above bedrock).
+pub fn column_from_surface_at_sea(cell: CellId, surface_m: f64, soil_m: f64, sea_m: f64) -> Column {
     let surface_m = surface_m.max(0.0);
     let soil = soil_m.clamp(0.0, surface_m);
     let bedrock = surface_m - soil;
@@ -34,41 +45,28 @@ pub fn column_from_surface(cell: CellId, surface_m: f64, soil_m: f64) -> Column 
         strata.push(Stratum::new(MaterialId::Undifferentiated(Category::Igneous), bedrock, 0.0));
     }
     if soil > 0.0 {
-        let saturation = if surface_m < SEA_LEVEL_M { 1.0 } else { 0.3 };
+        let saturation = if surface_m < sea_m { 1.0 } else { 0.3 };
         strata.push(Stratum::new(MaterialId::Kind(Kind::Soil), soil, saturation));
     }
-    let water = (SEA_LEVEL_M - surface_m).max(0.0);
-    Column { tile: cell, strata, water_depth: Quantity::exact(water, Unit::METRE) }
+    let water = (sea_m - surface_m).max(0.0);
+    Column {
+        tile: cell,
+        strata,
+        water_depth: Quantity::exact(water, Unit::METRE),
+    }
 }
 
-/// Crude interim baseline: a coordinate-noise elevation → a column. Deterministic
-/// (pure function of the cell), and — since v2, 2026-07-10 — **continuous across
-/// cube-face edges and corners by construction**: the noise is sampled on the
-/// 3-D unit-sphere direction (`to_unit`), not per-face `(u, v)`. (v1's per-face
-/// sampling had a measured ~2–3 km cliff across every face edge — invisible for
-/// weeks because no view spanned a face; the first whole-globe view exposed it
-/// within hours. The `prior_is_continuous_across_faces_and_corners` probe now
-/// pins continuity.)
-/// The two-band prior surface height (m above bedrock datum) for `cell`, with the
-/// mountain band's octaves truncated at `nyquist_level`'s cell size. Exposed so
-/// the eroded-region sampler can form the *detail increment*
-/// `initial_topography_m(cell, cell.level()) - initial_topography_m(cell, region_level)` —
-/// exactly the octave band finer than what the erosion grid simulated (fBm
-/// truncation is a prefix, §8, so the difference IS the fine octaves).
-pub fn initial_topography_m(seed: u64, cell: CellId, nyquist_level: u8) -> f64 {
+/// **Bathymetry / solid prior** (m above bedrock datum): two-band fBm seafloor
+/// relief **without** a decreed freeboard. Continuous across cube faces (sphere
+/// sampling). Land above the waterline is Abyssal freeboard
+/// ([`crate::uplift::freeboard_m`]), never this field alone.
+pub fn bathymetry_m(seed: u64, cell: CellId, nyquist_level: u8) -> f64 {
     let p = cell.to_cube().to_unit();
-    // Two-band prior (the 2009 neworld idea — "change parameters based on earlier
-    // noise" — and core's proven scaling). Slope is what makes terrain read, and
-    // slope ~ amplitude/wavelength: a single continental band (±1500 m over
-    // ~1250 km) is a billiard ball (~0.3% grades — measured, examples/topo.rs), so
-    // the relief that *reads* must live at short wavelengths:
-    //  • CONTINENTS: λ ~1250 km, ±1500 m — decides land vs ocean, shelf vs abyss.
-    //  • MOUNTAINS: λ ~25 km base, octaves to Nyquist, amplitude GROWN on high
-    //    continent (zero in the deep ocean, full above ~+600 m) — like core's
-    //    22 km massifs. Finer structure than ~200 m is the erosion tier's job.
-    // Frequency conversion (v1 counted features per face-width; a face edge
-    // subtends π/2 rad, and the unit vector is ~unit length, so lattice cells
-    // per unit-sphere coordinate = per_face / (π/2)):
+    // Two-band prior (neworld / core scaling). Without a sea-level offset this is
+    // honest seafloor relief: continental band is bathymetric wavelength, not
+    // manufactured freeboard.
+    //  • LONG band: λ ~1250 km, ±1500 m
+    //  • SHORT band: λ ~25 km base, octaves to Nyquist, amplitude gated on long band
     let face_edge_m = std::f64::consts::FRAC_PI_2 * crate::planet::Planet::EARTH.radius_m;
     const CONT_PER_FACE: f64 = 8.0; // λ ~1250 km
     const MTN_PER_FACE: f64 = 400.0; // λ ~25 km
@@ -77,22 +75,31 @@ pub fn initial_topography_m(seed: u64, cell: CellId, nyquist_level: u8) -> f64 {
     let cont_m =
         (fbm3(seed, 0, p[0] * f_cont, p[1] * f_cont, p[2] * f_cont, 4, 2.0, 0.5) - 0.5) * 3000.0;
     let mtn_amp = 1800.0 * ((cont_m + 200.0) / 800.0).clamp(0.0, 1.0);
-    // Mountain octaves run from the 25 km base down to the SAMPLE's Nyquist (2
-    // cells at this cell's level): un-eroded terrain is epic at every scale it is
-    // looked at — just bubblier than carved terrain (erosion adds the organized
-    // channels, not the bulk verticality). Truncating fBm at the Nyquist is a
-    // low-pass, so a coarse-level sample is the honest smoothed view of the fine
-    // one (§5 consistency; abstraction-as-prefix, §8) rather than an alias.
     let cell_m = face_edge_m / (1u64 << nyquist_level) as f64;
-    let base_lambda_m = face_edge_m / MTN_PER_FACE; // ~25 km
+    let base_lambda_m = face_edge_m / MTN_PER_FACE;
     let n_oct = ((base_lambda_m / (2.0 * cell_m)).log2().floor() as i64 + 1).clamp(1, 16) as u32;
     let mtn_m =
         (fbm3(seed, 1, p[0] * f_mtn, p[1] * f_mtn, p[2] * f_mtn, n_oct, 2.0, 0.5) - 0.5) * 2.0 * mtn_amp;
-    SEA_LEVEL_M + cont_m + mtn_m
+    // Positive bedrock-relative heights (shift so seafloor is mostly above y=0 for
+    // column assembly); not a land freeboard.
+    const SEAFLOOR_DATUM_M: f64 = 2500.0;
+    SEAFLOOR_DATUM_M + cont_m + mtn_m
+}
+
+/// Solid surface for worldgen consumers: bathymetry + Abyssal freeboard
+/// ([`crate::sea_level::tectonic_surface_m`]). Prefer that name for new call sites.
+pub fn initial_topography_m(seed: u64, cell: CellId, nyquist_level: u8) -> f64 {
+    crate::sea_level::tectonic_surface_m(seed, cell, nyquist_level)
 }
 
 pub fn baseline_column(seed: u64, cell: CellId) -> Column {
-    column_from_surface(cell, initial_topography_m(seed, cell, cell.level()), 2.0)
+    let sea = crate::sea_level::derived_sea_level_m(seed);
+    column_from_surface_at_sea(
+        cell,
+        initial_topography_m(seed, cell, cell.level()),
+        2.0,
+        sea,
+    )
 }
 
 #[cfg(test)]
@@ -106,7 +113,7 @@ mod tests {
 
     #[test]
     fn surface_assembles_dry_land() {
-        let c = column_from_surface(some_cell(0.0, 0.0), 5000.0, 2.0);
+        let c = column_from_surface_at_sea(some_cell(0.0, 0.0), 5000.0, 2.0, 4000.0);
         assert!((c.solid_thickness_m() - 5000.0).abs() < 1e-9);
         assert!((c.regolith_thickness_m() - 2.0).abs() < 1e-9); // soil on top
         assert_eq!(c.water_depth.value, 0.0); // above sea level
@@ -114,7 +121,7 @@ mod tests {
 
     #[test]
     fn surface_assembles_seabed() {
-        let c = column_from_surface(some_cell(0.1, 0.1), 3000.0, 2.0);
+        let c = column_from_surface_at_sea(some_cell(0.1, 0.1), 3000.0, 2.0, 4000.0);
         assert!((c.water_depth.value - 1000.0).abs() < 1e-9); // 4000 - 3000
         assert!((c.solid_thickness_m() - 3000.0).abs() < 1e-9);
     }
@@ -131,17 +138,17 @@ mod tests {
     }
 
     #[test]
-    fn prior_v2_golden() {
-        // Golden values pin the v2 (sphere-continuous) prior against silent
-        // drift. History: v1 goldens (per-face sampling) were retired with v1
-        // itself when its measured ~2–3 km face-edge cliffs forced the v2
-        // rewrite — same day the v1 goldens were minted. GOLDEN_V2 values
-        // captured 2026-07-10 immediately after the v2 swap.
+    fn bathymetry_v3_golden() {
+        // Pins bathymetry (no freeboard, no decreed sea) against silent drift.
+        // History: v1 per-face cliffs; v2 sphere-continuous with SEA_LEVEL_M
+        // offset (retired — manufactured land). v3 = seafloor datum + fBm only.
         use crate::sphere::Face;
         let c1 = CellId::from_face_ij(Face::from_index(2), 5308416, 13238272, 24);
         let c2 = CellId::from_face_ij(Face::from_index(1), 100, 100, 19);
-        assert_eq!(initial_topography_m(0, c1, 24), GOLDEN_V2_C1);
-        assert_eq!(initial_topography_m(0, c2, 19), GOLDEN_V2_C2);
+        // Old v2 goldens were SEA_LEVEL_M + relief; bathymetry = 2500 + same relief
+        // as (v2 - 4000), i.e. v2 - 1500.
+        assert!((bathymetry_m(0, c1, 24) - (GOLDEN_V2_C1 - 1500.0)).abs() < 1e-9);
+        assert!((bathymetry_m(0, c2, 19) - (GOLDEN_V2_C2 - 1500.0)).abs() < 1e-9);
     }
     const GOLDEN_V2_C1: f64 = 4.16019378505400800e3;
     const GOLDEN_V2_C2: f64 = 3.50238149865287596e3;
@@ -173,7 +180,7 @@ mod tests {
         let prior_at = |d: [f64; 3]| {
             let n = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
             let cell = CubeCoord::from_unit([d[0] / n, d[1] / n, d[2] / n]).cell(level);
-            initial_topography_m(0, cell, level)
+            bathymetry_m(0, cell, level)
         };
         // Pairs straddling the +X/+Z edge, the +X/+Y edge, and rays past the
         // (1,1,1) corner; matched within-face pairs at the same arc length.

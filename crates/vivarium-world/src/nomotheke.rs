@@ -247,33 +247,38 @@ pub static INITIAL_TOPOGRAPHY: NomosDecl = NomosDecl {
     approach: Approach::Analytic,
     earth_fidelity: Tier::None, // no Earth process; hypsometry measured wrong for every era
     physics: Tier::None,        // pure coordinate noise; conserves nothing
-    relation: "#mech stand-in: fBm-as-tectonics (ARCHITECTURE §2 — parameterization missing its error model); phase-structurally it impersonates Abyssal output rather than the Phase-3 submerged promise (Joseph, 2026-07-10)",
-    status: "built; deterministic + cross-face continuity + golden probed; hypsometry probe scores it (land 41.5%, unimodal, oceans shallow — all flagged)",
+    relation: "#mech stand-in: fBm bathymetry (seafloor relief) — NOT freeboard. Abyssal land is freeboard/isostasy (uplift nomos), never this prior alone (water-world-is-the-promise-not-the-bug)",
+    status: "bathymetry prior (gen::bathymetry_m); sphere-continuous; land fraction at derived sea without freeboard is ~0 (Protogenic). Freeboard is uplift's job",
     deps: &[&NOISE],
-    // The relief is BUILT ON the fated asymmetry — declaring it makes the world's one
-    // acknowledged fundamental cheat (fBm-as-tectonics) an edge in the web, not a secret.
     consumes: &[flux::SEEDED_ASYMMETRY],
     promises: &[Promise { quantity: flux::SURFACE_ELEVATION, conservation: Conservation::NotTracked }],
-    assumptions: &["SEA_LEVEL_M", "continental band", "mountain band", "fBm shape"],
+    assumptions: &["continental band", "mountain band", "fBm shape"],
 };
 
-/// The tectonic driver — rock-uplift rate, its own article of law (Joseph,
-/// 2026-07-12: "uplift is a separate nomos that right now is 30 lines"). Erosion
-/// consumes its output; without it the world planes to a peneplain and grows no
-/// macro relief. v0 is a crude declared stub (`crate::uplift`).
+/// The tectonic driver — rock-uplift rate **and** Abyssal freeboard stand-in.
+/// Freeboard keeps `emerged land` (ordinum gate); full isostasy/lithosphere later.
 pub static UPLIFT: NomosDecl = NomosDecl {
     name: "uplift-tile",
-    version: "uplift-2026-07-12a-fbm-stub",
+    version: "uplift-2026-07-23a-freeboard",
     system: "tectonic-uplift",
-    approach: Approach::Analytic, // a closed-form coordinate noise field, like the initial-topography
-    earth_fidelity: Tier::None,   // no Earth tectonic history — a placeholder curve
-    physics: Tier::None,          // no mechanics; low-frequency fBm stand-in, uncalibrated rate
-    relation: "#mech stand-in: constant rate × low-frequency fBm (differential uplift); the real driver is the thermal-initial-topography / plume-upwelling work (TODO)",
-    status: "v0 crude stub: deterministic differential uplift-rate field (band + determinism unit-tested in uplift.rs); rate is a declared placeholder, no calibration",
-    deps: &[],
-    consumes: &[], // conjured from (seed, coordinate); a real driver would consume mantle-thermal state
-    promises: &[Promise { quantity: flux::ROCK_UPLIFT_RATE, conservation: Conservation::NotTracked }],
-    assumptions: &["uplift rate"],
+    approach: Approach::Analytic,
+    earth_fidelity: Tier::None, // no Earth tectonic history — freeboard is a stand-in
+    physics: Tier::None,        // no true isostasy yet; zero-mean freeboard + rate fBm
+    relation: "#mech stand-in: (1) epoch uplift rate × low-freq fBm; (2) zero-mean freeboard (m) as isostatic buoyancy proxy — can go negative. Real path: lithosphere column thickness×density → isostasy (early-continents / Flament–Chowdhury lineage). Keeps Abyssal emerged-land as a flux promise so erosion is not silently seabed",
+    status: "v0: freeboard + rate fields (uplift.rs); freeboard earns few-% land after derived sea pour; not full plate tectonics",
+    deps: &[&NOISE],
+    consumes: &[flux::SEEDED_ASYMMETRY],
+    promises: &[
+        Promise {
+            quantity: flux::ROCK_UPLIFT_RATE,
+            conservation: Conservation::NotTracked,
+        },
+        Promise {
+            quantity: flux::EMERGED_LAND,
+            conservation: Conservation::NotTracked,
+        },
+    ],
+    assumptions: &["uplift rate", "freeboard amplitude"],
 };
 
 /// System #2 — fluvial erosion composed on the initial-topography.

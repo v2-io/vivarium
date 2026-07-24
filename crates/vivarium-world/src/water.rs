@@ -141,7 +141,10 @@ impl Default for WaterParams {
             precip: 3.0e-5,
             evaporation: 2.0e-5,
             ocean_evap: 1.0e-5,
-            sea_m: crate::gen::SEA_LEVEL_M as f32,
+            // Callers that model a real ocean set this from
+            // `sea_level::derived_sea_level_m(seed)`. Default 0 keeps inland
+            // kernel probes (bowls above a floor) from drowning under a global pour.
+            sea_m: 0.0,
             sed_capacity: 0.6,
             sed_erode: 0.1,
             sed_deposit: 0.5,
@@ -938,7 +941,8 @@ mod tests {
     #[test]
     fn conserves_in_deep_water() {
         let nx = 48;
-        let sea = crate::gen::SEA_LEVEL_M as f32;
+        // Fixed coastal datum for the kernel probe (not the planetary pour).
+        let sea = 4000.0f32;
         // Left half: 400 m-deep ocean floor; right half rises inland.
         let mut bed = vec![0.0f32; nx * nx];
         for y in 0..nx {
@@ -953,13 +957,14 @@ mod tests {
         // out-of-contract reason: the oscillating flux clamp's stage-4
         // `max(0.0)` mints small amounts. The kernel's conservation guarantee
         // is stated under the documented dt contract.)
-        let deluge = WaterParams { precip: WaterParams::default().precip * 60.0, ..Default::default() };
+        let base = WaterParams { sea_m: sea, ..Default::default() };
+        let deluge = WaterParams { precip: base.precip * 60.0, ..base };
         for _ in 0..600 {
             let dt = w.stable_dt(9.8);
             w.step(&WaterParams { dt, ..deluge });
         }
         w.rebaseline_budget();
-        let storm = WaterParams { precip: WaterParams::default().precip * 10.0, ..Default::default() };
+        let storm = WaterParams { precip: base.precip * 10.0, ..base };
         let mut sim_s = 0.0f64;
         for _ in 0..2000 {
             let dt = w.stable_dt(9.8);

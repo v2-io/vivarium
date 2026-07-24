@@ -153,8 +153,7 @@ impl<'s> World<'s> {
         (tile, Source::Computed)
     }
 
-    /// The complete key for an uplift tile (the tectonic-driver field). Pure
-    /// function of (seed, coordinates) — the uplift nomos consumes nothing.
+    /// The complete key for an uplift tile (rate + freeboard identity via nomos version).
     fn uplift_key(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> Key {
         UPLIFT
             .key()
@@ -164,6 +163,7 @@ impl<'s> World<'s> {
             .field("oi", oi)
             .field("oj", oj)
             .field("nx", nx)
+            .with_dep_versions(&UPLIFT)
     }
 
     /// The uplift nomos — a `nx × nx` tile of rock-uplift rates (m/epoch), pulled
@@ -455,11 +455,13 @@ impl<'s> World<'s> {
             precip.iter().map(|&p| p as f64).sum::<f64>() / precip.len() as f64
         };
         let precip_rate = (precip_m_yr / SEC_PER_YEAR * FILL_ACCEL) as f32;
+        let sea = crate::sea_level::derived_sea_level_m(self.seed) as f32;
         let mut sim = crate::water::WaterSim::new(face, level, (oi, oj), nx, cell_m, bed, 2.0);
         let p = crate::water::WaterParams {
             precip: precip_rate,
             evaporation: 2.0e-4, // scaled with the accelerated cycle
             ocean_evap: 1.0e-4,
+            sea_m: sea,
             ..Default::default()
         };
         for _ in 0..steps {

@@ -168,7 +168,7 @@ pub fn render_flux_web() -> String {
         if unmet.iter().any(|(_, q)| *q == crate::flux::EMERGED_LAND) {
             let _ = writeln!(
                 s,
-                "\n  ⛔ THIS WORLD CANNOT RUN FLUVIAL EROSION.\n                 \x20    It needs EMERGED LAND, and nothing produces it. That is not a bug — it is the\n                 \x20    ordinum telling the truth: the world is in its Phase-2 `water-covered-surface`\n                 \x20    state, and Abyssal's `charge[emergent-land] :tag gate` says land is \"delivered by\n                 \x20    uplift / proto-tectonic processes, NEVER an initial condition\". Until a nomos\n                 \x20    KEEPS that promise, erosion has nothing to carve — and was silently no-op'ing on\n                 \x20    seabed instead of saying so. The ladder now governs the web."
+                "\n  ⛔ THIS WORLD CANNOT RUN FLUVIAL EROSION.\n                 \x20    It needs EMERGED LAND, and nothing produces it. That is not a bug — it is the\n                 \x20    ordinum telling the truth: the world is in its Phase-2 `water-covered-surface`\n                 \x20    state, and Abyssal's `charge[emergent-land] :tag gate` says land is \"delivered by\n                 \x20    uplift / proto-tectonic processes, NEVER an initial condition\". Until a nomos\n                 \x20    KEEPS that promise, erosion has nothing to carve — and was silently no-op'ing on\n                 \x20    seabed instead of saying so. The ladder now governs the web.\n                 \x20    (If uplift-tile promises emerged land and this still prints, the registry is stale.)"
             );
         }
         if unmet.iter().any(|(_, q)| *q == crate::flux::PRECIPITATION) {
@@ -227,32 +227,34 @@ mod tests {
     }
 
     #[test]
-    fn precipitation_is_met_but_the_land_gate_is_not() {
-        // Precipitation IS met (climate keeps it) — rain falls on the Phase-2 ocean,
-        // exactly as the ordinum says it should. But the web is NOT closed, and the
-        // ONE thing outstanding is the ordinum's Abyssal gate: EMERGED LAND. Nothing
-        // keeps it, so fluvial erosion — which needs land to carve — cannot validly run.
-        // This is the ladder GOVERNING the web: an unkept promise is an unmet need.
+    fn precipitation_and_emerged_land_are_both_met() {
+        // Climate keeps precipitation; uplift freeboard keeps emerged land (Abyssal
+        // stand-in). Erosion's requisites are fully Met — lawful build without waiver.
         assert_eq!(producer_of(flux::PRECIPITATION).map(|n| n.name), Some("climate"));
-        assert!(producer_of(flux::EMERGED_LAND).is_none(), "no nomos keeps the land promise yet");
+        assert_eq!(producer_of(flux::EMERGED_LAND).map(|n| n.name), Some("uplift-tile"));
         let unmet = unmet_across_registry();
-        assert_eq!(unmet.len(), 1, "exactly one outstanding need — the land gate");
-        assert_eq!(unmet[0].0.name, "erosion-tile");
-        assert_eq!(unmet[0].1, flux::EMERGED_LAND);
+        assert!(
+            unmet.is_empty(),
+            "flux web should be closed after freeboard keeps emerged land; {} unmet",
+            unmet.len()
+        );
+        let met_land = requisites(&EROSION).into_iter().any(|r| {
+            r.quantity == flux::EMERGED_LAND
+                && matches!(r.supply, Supply::Met(p) if p.name == "uplift-tile")
+        });
+        assert!(met_land);
     }
 
     #[test]
     fn water_chain_reaches_the_hydrosphere() {
-        // The transitive closure of water now closes: eroded-surface (→erosion) →
-        // surface-elevation (→initial-topography) + rock-uplift (→uplift) + precipitation
-        // (→climate) → atmosphere-water (→hydrosphere, which consumes nothing).
-        // Every line is Met, and the chain reaches the atmosphere-water stock.
+        // Transitive closure: water → erosion → land/uplift/climate → hydrosphere.
         let chain = requisite_chain(&WATER);
-        // Water's own needs are met; but its chain runs THROUGH erosion, which needs
-        // the unkept land gate — so the transitive closure is honestly not all-met.
         assert!(
-            chain.iter().any(|l| l.quantity == flux::EMERGED_LAND && matches!(l.supply, Supply::Unmet)),
-            "water's chain inherits erosion's unmet land gate"
+            chain.iter().any(|l| {
+                l.quantity == flux::EMERGED_LAND
+                    && matches!(l.supply, Supply::Met(p) if p.name == "uplift-tile")
+            }),
+            "water's chain reaches the emerged-land keeper (uplift freeboard)"
         );
         assert!(
             chain.iter().any(|l| l.quantity == flux::PRECIPITATION && matches!(l.supply, Supply::Met(p) if p.name == "climate")),
@@ -277,10 +279,17 @@ mod tests {
     }
 
     #[test]
-    fn render_convicts_the_world_of_running_erosion_without_land() {
+    fn render_shows_closed_web_and_conservation() {
         let text = render_flux_web();
-        assert!(text.contains("UNMET"), "the land gate is flagged");
-        assert!(text.contains("CANNOT RUN FLUVIAL EROSION"), "the verdict is loud, not a footnote");
+        assert!(
+            !text.contains("CANNOT RUN FLUVIAL EROSION"),
+            "emerged land is kept by freeboard — verdict must not fire"
+        );
+        assert!(
+            text.contains("unmet flux needs: none") || !text.contains("UNMET"),
+            "closed web: no unmet edges"
+        );
         assert!(text.contains("conserved"), "conservation stances are still shown");
+        assert!(text.contains("emerged land"), "land quantity is in the web");
     }
 }

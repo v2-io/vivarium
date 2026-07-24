@@ -13,7 +13,8 @@
 //! (flux-form + a no-flux or supplied halo); the loader owns halo fill.
 
 use crate::chunk::Patch;
-use crate::gen::{self, SEA_LEVEL_M};
+use crate::gen;
+use crate::sea_level;
 use crate::sphere::{CellId, Face};
 
 /// One explicit hillslope-diffusion step: `h' = h + k·∇²h` (5-point Laplacian).
@@ -257,7 +258,7 @@ impl Fluvial {
     /// the rivers run to. Recomputed per epoch (erosion moves the waterline).
     fn outlets(&self) -> Vec<bool> {
         let nx = self.nx;
-        let sea = SEA_LEVEL_M as f32;
+        let sea = sea_level::derived_sea_level_m(self.seed) as f32;
         let mut out = vec![false; nx * nx];
         for y in 0..nx {
             for x in 0..nx {
@@ -615,12 +616,23 @@ mod fluvial_tests {
     /// floor, not a seam measurement. The tell was printed all along: the ratio
     /// was bit-identical across every age gap the probe swept.)
     ///
-    /// This region is verified LAND (relief 5072–5216 m, well above sea level),
-    /// where erosion actually executes — 80 epochs takes max slope 24% → 81%.
-    /// **A fluvial test on submarine ground tests nothing. Check the water line
-    /// before trusting a green fluvial test.**
+    /// Constructed **subaerial** bowl above derived sea — not a prior sample
+    /// (which may be mostly submarine at seed 0 after the pour). Relief is high
+    /// enough that outlets are the rim, not the coast, so incision actually runs.
     fn small() -> Fluvial {
-        Fluvial::from_prior(0, Face::ZPos, 19, 108_500, 186_350, 96)
+        let seed = 0u64;
+        let sea = crate::sea_level::derived_sea_level_m(seed);
+        let face = Face::ZPos;
+        let (level, oi, oj, nx) = (19u8, 108_500u32, 186_350u32, 96usize);
+        Fluvial::from_surface(seed, face, level, oi, oj, nx, |c| {
+            let (f, i, j, _) = c.to_face_ij();
+            let di = i.saturating_sub(oi) as f64;
+            let dj = j.saturating_sub(oj) as f64;
+            let cx = di - nx as f64 / 2.0;
+            let cy = dj - nx as f64 / 2.0;
+            // Dome peak well above sea; rim still subaerial.
+            sea + 800.0 - 0.05 * (cx * cx + cy * cy) + if f == face { 0.0 } else { 0.0 }
+        })
     }
 
     /// Guards the guard: if a future prior change drowns this footprint, every
@@ -628,11 +640,12 @@ mod fluvial_tests {
     #[test]
     fn test_footprint_is_actually_land() {
         let f = small();
-        let sea = crate::gen::SEA_LEVEL_M as f32;
+        // Seed 0, derived sea after freeboard — not the retired decreed 4000 m datum.
+        let sea = crate::sea_level::derived_sea_level_m(0) as f32;
         let above = f.h.iter().filter(|&&h| h > sea).count();
         assert!(
             above * 2 > f.h.len(),
-            "the fluvial test footprint must be mostly LAND (>{sea} m) or these tests test a no-op — \
+            "the fluvial test footprint must be mostly LAND (>{sea} m derived) or these tests test a no-op — \
              only {above}/{} cells are subaerial",
             f.h.len()
         );

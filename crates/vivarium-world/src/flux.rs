@@ -54,16 +54,9 @@ pub const INSOLATION: &str = "insolation (W/m2)";
 /// condition"* (`charge[emergent-land] :tag gate`).
 ///
 /// **Fluvial erosion CONSUMES this** — you cannot carve a landscape that is under
-/// water. Nothing produces it yet, which is the honest truth: the world is in its
-/// Phase-2 `water-covered-surface` state, and Abyssal has not yet earned its land.
-/// Declaring the need is what makes the flux web tell that truth: the audit reports
-/// erosion's requirement as **UNMET**, so the world is mechanically unrunnable for
-/// erosion rather than silently no-op'ing on seabed (which is exactly what it was
-/// doing — see `examples/sea_level_probe.rs` and the fluvial-test footprint story).
-///
-/// This is the ordinum GOVERNING the flux web (Joseph, 2026-07-12): a promise the
-/// ladder has not kept becomes an unmet need, and a world that depends on it cannot
-/// validly run.
+/// water. **Produced by** the uplift nomos's freeboard stand-in (v0 isostatic
+/// buoyancy proxy; full lithosphere→isostasy later). Without a producer the
+/// audit reports Unmet and builder refuses erosion (ordinum governing the web).
 pub const EMERGED_LAND: &str = "emerged land — surface above sea level (m)";
 
 /// The rock-uplift-rate field the uplift nomos produces (m/epoch) — the tectonic
