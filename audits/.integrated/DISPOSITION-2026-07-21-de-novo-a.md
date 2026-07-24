@@ -1,7 +1,7 @@
 # Disposition trail — de-novo project audit A (2026-07-21)
 
 **Report:** `audits/2026-07-21-de-novo-project-audit.md`  
-**Status:** in progress — default gate closed; residuals tracked.
+**Status:** RETIRED to `.integrated/` 2026-07-24 — set fully dispositioned. Residual A closed at lib level (Source::HitProvisional + end-to-end lib test, query.rs); remaining defers are durably homed: bin argv→status walk + refuse-path bin test + lock TOCTOU + swallowed puts on `#form-builder-admission` Known-incomplete; 64-bit FNV on `#form-complete-content-addressed-key`.
 
 | ID | Finding | Disposition | Landing |
 |---|---|---|---|

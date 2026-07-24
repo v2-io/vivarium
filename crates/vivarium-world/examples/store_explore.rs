@@ -66,6 +66,7 @@ fn main() -> std::io::Result<()> {
         let tag = match src {
             Source::Computed => "COMPUTED fresh (miss → eroded → memoized)",
             Source::Hit => "HIT — served from the store (persisted, no re-seed)",
+            Source::HitProvisional => "HIT (PROVISIONAL — waived admission; not lawful evidence)",
         };
         println!("\n=== step {n}: eroded+watered tile at ({oi},{oj}), L{level} {nx}×{nx} — {tag} ===");
         render(&tile, &water, nx);

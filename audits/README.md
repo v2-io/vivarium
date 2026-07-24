@@ -1,8 +1,6 @@
 # audits/ — audit outputs
 
-Where independent audit reports land. Lighter than ASF's `audits/` tree; same
-spirit: findings are instruments that feed segments, DECISIONS, and code — not
-a parallel canon (`#scope-segment-canon`, `#ops-audit-integration`).
+Where independent audit reports land. Lighter than ASF's `audits/` tree; same spirit: findings are instruments that feed segments, DECISIONS, and code — not a parallel canon (`#scope-segment-canon`, `#ops-audit-integration`).
 
 ## Layout
 
@@ -25,12 +23,12 @@ Full claim form: `#ops-audit-integration`. Spine:
 3. **Integrate** — land disposition or record decline.
 4. **Retire** — `git mv` to `audits/.integrated/` when the finding set is fully dispositioned.
 
-## Live status (pending reports)
+## Live status
 
-| Report | Focus | Status |
-|---|---|---|
-| [`2026-07-21-core-segment-floor-audit.md`](2026-07-21-core-segment-floor-audit.md) | Segment floor + front door | **Pending (near-closed).** P0s closed. Dual-home demotion largely landed for §I claims. Remaining open as **defer**: full DESIGN-REDUX/theory dual-home sweep; promotion past `draft`. See [`DISPOSITION-2026-07-21-segment-floor.md`](DISPOSITION-2026-07-21-segment-floor.md). |
-| [`2026-07-21-de-novo-project-audit.md`](2026-07-21-de-novo-project-audit.md) | Code/behaviour (A) | **In progress.** Default refuse path **verified**. Residuals: waived census/keys not marked provisional; no bin integration test. **Fixed follow-ups:** `world_dir` flag/positional bug; direct-dep versions folded into query keys + guard test. See [`DISPOSITION-2026-07-21-de-novo-a.md`](DISPOSITION-2026-07-21-de-novo-a.md). |
-| [`2026-07-21-de-novo-project-audit-b.md`](2026-07-21-de-novo-project-audit-b.md) | Canon boundaries (B, Opus, blind) | **In progress.** Integrated: abyssal-parity moratorium pointer → ETHICS/`#scope-moratorium…`; `#scope-segment-canon` carve-outs extended; worldview clock face named on `#post-determinism…`; dropped inverted probes→declaration depend. Remaining: nomos version source-hash (design), assumptions reverse-guard, program INCOHERENCE row 1 close, more depends hygiene. |
+**No pending reports** (2026-07-24). All three 2026-07-21 reports are retired to [`.integrated/`](.integrated/) with their disposition trails:
 
-When a report moves to `.integrated/`, replace its row with a one-line pointer.
+| Report | One-line disposition |
+|---|---|
+| `2026-07-21-core-segment-floor-audit.md` | P0s + follow-ups fixed; dual-home sweep completed by the design/theory graduation; promotion tracked by the stage ladder itself. |
+| `2026-07-21-de-novo-project-audit.md` | Refuse gate + provisional honesty landed (incl. `Source::HitProvisional` + lib e2e, 2026-07-24); remaining defers durably homed on `#form-builder-admission` / `#form-complete-content-addressed-key`. |
+| `2026-07-21-de-novo-project-audit-b.md` | Canon-boundary fixes landed; depends hygiene executed 2026-07-24 (four cite-or-drop); source-hash / reverse-guard / INCOHERENCE row 1 durably homed on their segments and DECISIONS. |

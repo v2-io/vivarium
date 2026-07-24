@@ -15,7 +15,7 @@ An audit report is an instrument, not a todo list and not law. Findings are veri
 
 ## Formal Expression
 
-1. **Homes.** Delivered reports live at `audits/*.md` (pending). Working cognition trails, if any, live under `audits/AUDIT-WORKING-*/`. Claim canon remains `core/src/`. Process detail for the tree: `audits/README.md`.
+1. **Homes.** Delivered reports live at `audits/*.md` (pending). Working cognition trails, if any, live under `audits/AUDIT-WORKING-*/`. Claim canon remains `core/src/` ( #scope-segment-canon ). Process detail for the tree: `audits/README.md`.
 2. **Three gates before `.integrated/`.** A report moves from `audits/` to `audits/.integrated/` only when **all** of the following hold for its finding set:
    - **Verified** — each load-bearing finding was checked against present code/segments/DECISIONS (not inherited from the report alone).
    - **Adjudicated** — each finding is dispositioned: *fix*, *strengthen then fix*, *no-go recorded*, *decline with reason*, *defer with named owner/condition*, or *not-a-defect*. Soften-first is forbidden for overclaims ( #norm-probes-before-claims; strengthen-before-soften).

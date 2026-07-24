@@ -3,8 +3,7 @@ slug: norm-declaration-must-convict
 type: normative
 status: robust-qualitative
 stage: draft
-depends:
-  - scope-segment-canon
+depends: []
 ---
 
 # A declaration that cannot fail is a wish

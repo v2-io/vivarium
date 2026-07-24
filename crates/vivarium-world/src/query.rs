@@ -35,8 +35,20 @@ use crate::store::{Key, PutOpts, Store};
 pub enum Source {
     /// Freshly computed and memoized (a store miss).
     Computed,
-    /// Served from the store (a hit) — matured state, persisted.
+    /// Served from the store (a hit) — matured, lawful state.
     Hit,
+    /// Served from the store, but the root is tagged **provisional** — written
+    /// under waived flux admission (`--allow-unmet`). Matured bytes, not lawful
+    /// *in vivia* evidence; consumers must not launder it into a lawful Hit.
+    /// (De-novo audit P0 residual A: the Hit path now surfaces the flag.)
+    HitProvisional,
+}
+
+impl Source {
+    /// Any store hit, lawful or provisional (the memoization signal alone).
+    pub fn is_hit(self) -> bool {
+        matches!(self, Source::Hit | Source::HitProvisional)
+    }
 }
 
 // Nomos identities (name, version, epistemic declaration, promises,
@@ -58,6 +70,12 @@ pub struct World<'s> {
 }
 
 impl<'s> World<'s> {
+    /// Hit source for `key`, surfacing the provisional flag (waived admission)
+    /// instead of laundering it into a lawful Hit.
+    fn hit_source(&self, key: &Key) -> Source {
+        if self.store.is_provisional(key) { Source::HitProvisional } else { Source::Hit }
+    }
+
     pub fn new(store: &'s Store, seed: u64) -> Self {
         World {
             store,
@@ -97,7 +115,7 @@ impl<'s> World<'s> {
         let key = HYDROSPHERE.key().field("seed", self.seed);
         if let Some(bytes) = self.store.get(&key) {
             if let Some(h) = crate::hydrosphere::Hydrosphere::from_bytes(&bytes) {
-                return (h, Source::Hit);
+                return (h, self.hit_source(&key));
             }
         }
         let h = crate::hydrosphere::Hydrosphere::of(&crate::planet::Planet::EARTH);
@@ -146,7 +164,7 @@ impl<'s> World<'s> {
     ) -> (Vec<f32>, Source) {
         let key = self.initial_topography_key(face, level, oi, oj, nx);
         if let Some(bytes) = self.store.get(&key) {
-            return (decode_f32(&bytes), Source::Hit);
+            return (decode_f32(&bytes), self.hit_source(&key));
         }
         let tile = self.compute_initial_topography(face, level, oi, oj, nx);
         self.put_memo(&key, &encode_f32(&tile));
@@ -173,7 +191,7 @@ impl<'s> World<'s> {
     pub fn uplift_tile(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> (Vec<f32>, Source) {
         let key = self.uplift_key(face, level, oi, oj, nx);
         if let Some(bytes) = self.store.get(&key) {
-            return (decode_f32(&bytes), Source::Hit);
+            return (decode_f32(&bytes), self.hit_source(&key));
         }
         let tile = crate::uplift::uplift_rate_tile(self.seed, face, level, oi, oj, nx);
         self.put_memo(&key, &encode_f32(&tile));
@@ -203,7 +221,7 @@ impl<'s> World<'s> {
     pub fn climate_tile(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> (Vec<f32>, Source) {
         let key = self.climate_key(face, level, oi, oj, nx);
         if let Some(bytes) = self.store.get(&key) {
-            return (decode_f32(&bytes), Source::Hit);
+            return (decode_f32(&bytes), self.hit_source(&key));
         }
         let (h, _) = self.hydrosphere();
         let mean = crate::climate::mean_precip_m_per_yr(h.atmosphere_m_we(&crate::planet::Planet::EARTH));
@@ -257,7 +275,7 @@ impl<'s> World<'s> {
     ) -> (Vec<f32>, Source) {
         let key = self.erosion_key(face, level, oi, oj, nx, epochs);
         if let Some(bytes) = self.store.get(&key) {
-            return (decode_f32(&bytes), Source::Hit);
+            return (decode_f32(&bytes), self.hit_source(&key));
         }
         // Dependencies, all pulled (memoized — recurse into their nomos): the
         // initial-topography surface it carves, the uplift field it carves against, and the
@@ -432,7 +450,7 @@ impl<'s> World<'s> {
     ) -> (Vec<f32>, Source) {
         let key = self.water_key(face, level, oi, oj, nx, erosion_epochs, steps);
         if let Some(bytes) = self.store.get(&key) {
-            return (decode_f32(&bytes), Source::Hit);
+            return (decode_f32(&bytes), self.hit_source(&key));
         }
         let (bed, _) = self.erosion_tile(face, level, oi, oj, nx, erosion_epochs);
         let (precip, _) = self.climate_tile(face, level, oi, oj, nx);
@@ -603,6 +621,41 @@ mod tests {
         let (e2, src2) = w.erosion_tile(face, 19, 1000, 2000, nx, epochs);
         assert_eq!(src2, Source::Hit);
         assert_eq!(e1, e2, "a hit returns exactly the eroded bytes it computed");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn waived_provisional_root_surfaces_on_the_hit_path() {
+        // De-novo audit P0 residual A, end-to-end at lib level: a root written
+        // under waived admission (PutOpts.provisional) must reach the consumer
+        // as HitProvisional — matured bytes, NOT laundered into a lawful Hit —
+        // and must count in the census. (The bin-level argv→status walk stays
+        // named on #form-builder-admission; this is the truth chain under it.)
+        use crate::store::PutOpts;
+        let dir = tmpdir("provisional-hit");
+        let face = Face::from_index(2);
+        let nx = 16usize;
+        let s = Store::open(&dir).unwrap();
+        let w = World::new(&s, 0);
+
+        // Lawful pull first: computes and memoizes lawfully.
+        let (t1, src1) = w.initial_topography(face, 19, 1000, 2000, nx);
+        assert_eq!(src1, Source::Computed);
+        assert_eq!(w.initial_topography(face, 19, 1000, 2000, nx).1, Source::Hit, "lawful root reads as lawful Hit");
+
+        // Re-mark the same key provisional (what a waived build writes).
+        let key = w.initial_topography_key(face, 19, 1000, 2000, nx);
+        s.put_with(&key, &encode_f32(&t1), PutOpts { provisional: true }).unwrap();
+        assert!(s.is_provisional(&key));
+
+        let (t2, src2) = w.initial_topography(face, 19, 1000, 2000, nx);
+        assert_eq!(src2, Source::HitProvisional, "waived root must surface, not launder");
+        assert!(src2.is_hit(), "still a memoization hit");
+        assert_eq!(t1, t2, "provisional affects lawfulness metadata, never bytes");
+
+        // Census sees it too.
+        let prov = s.roots().unwrap().iter().filter(|r| r.provisional).count();
+        assert_eq!(prov, 1, "census counts the waived root");
         let _ = fs::remove_dir_all(&dir);
     }
 

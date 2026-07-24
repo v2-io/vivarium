@@ -30,8 +30,9 @@ The builder may materialize only what the flux contract allows (or explicitly wa
 
 **Known incomplete (open — do not soft-close):**
 
-1. **Provisional tag (partially closed).** Waived phases set `World::set_provisional_writes`; roots gain a third-line `provisional` flag; `vivarium status` prints provisional counts (store `RootEntry` / `PutOpts`). Still open: no lib-level integration test of the end-to-end waive→census path; Hit path does not yet expose provisional in `Source`.
-2. **No lib-level integration test** of the refuse path (gate lives in the binary).
+1. **Provisional tag (closed at lib level, 2026-07-24).** Waived phases set `World::set_provisional_writes`; roots carry the third-line `provisional` flag; `vivarium status` prints counts; the Hit path surfaces `Source::HitProvisional` (waived bytes cannot launder into a lawful Hit), and a lib test walks put-provisional → census → HitProvisional end-to-end. Still open: a bin-level argv→status walk of the same chain.
+2. **No integration test of the refuse path** (gate lives in the binary; lib exercises `requisite_chain` only).
+2b. **Query `put` errors are swallowed** (`let _ =` on memo puts) — surfacing them is an API-shape change, deferred; a failed memo put today degrades to recompute, never wrong bytes.
 3. **Full builder daemon** (beacon cones, demand spool, restart-in-place) is design-grade in #detail-builder-daemon , not this segment's built surface. Do not read FE(1)–FE(4) as claiming that design is shipped.
 4. **Lock TOCTOU / atomic create** still engineering debt.
 5. Worldview spike still hybrid-evolves on explorer paths — compliance debt on #form-core-view-wall , not a license to dissolve FE(4).

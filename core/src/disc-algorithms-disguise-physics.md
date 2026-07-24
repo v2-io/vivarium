@@ -15,7 +15,7 @@ When a published algorithm's coordinate assumptions do not survive the vivium's 
 
 1. **Port the claim, not the costume.** An algorithm carries a physical claim (what is conserved, how flux splits, what the stencil approximates). That claim is what transfers. The particular neighbour fan, index tricks, or paper-default grid are not sacred.
 2. **No silent violation.** If the algorithm's assumptions fail on the cube-sphere or at a seam, the responses that are **out of bounds** are: (a) patch parameters until the picture looks right, (b) wave the violation through as "close enough," (c) contort the grid solely to host an unmodified paper method.
-3. **In-bounds response.** Name the physical claim; derive or select a scheme that asserts that claim under our operators and topology; probe it.
+3. **In-bounds response.** Name the physical claim; derive or select a scheme that asserts that claim under our operators and topology; probe it ( #norm-probes-before-claims ).
 
 ## Epistemic Status
 

@@ -1,7 +1,7 @@
 # Disposition trail — core segment floor audit (2026-07-21)
 
 **Report:** `audits/2026-07-21-core-segment-floor-audit.md`  
-**Status:** pending (not `.integrated/`) — P0s closed; follow-up notes folded.
+**Status:** RETIRED to `.integrated/` 2026-07-24 — set fully dispositioned. The "full dual-home sweep" defer is DONE (the entire design/theory middle graduated to `.super-archive/`, 2026-07-23/24); "promotion past draft" is the standing stage-ladder discipline, tracked by the `stage` column itself, not an audit residual.
 
 | ID | Finding | Disposition | Landing |
 |---|---|---|---|
