@@ -6,6 +6,8 @@
 > box ⑤ → `#disc-prime-question`; convictability → `#norm-declaration-must-convict`;
 > nomos grain → `#def-nomos`; **boxes ②–④ exploratory schema** →
 > `#sketch-nomos-declaration-boxes`. Bias adjudication → `#norm-bias-vs-noise`.
+> Preserved/sacrificed structure + family/seam declaration law →
+> `#form-declared-structure-tradeoff`.
 > Defect table below is **teaching** (specimen anatomy), not a second law home.
 
 > **The purpose is not to fix `erosion.rs`.** It is to **generalize and secure the flux-web structure so that ANY nomos can be true-to-physics** (Joseph, 2026-07-13). MFD-8 is the corpse we dissected to learn the anatomy. This document is the anatomy.
@@ -87,13 +89,15 @@ Each box gets one file at `doc/design/nomos-contract/`. **The failure mode of a 
 
 **Each file's shape:** the question · the fundamentals (the math, done, not gestured at) · the procedure · a worked specimen · **the probe** · the failure gallery · what to write in the declaration.
 
-| file | box |
+⚠ **None of these files exists yet** — `doc/design/nomos-contract/` has not been created; the table is the *intended* layout (see INTENT below, agents deliberately not launched):
+
+| file (unwritten) | box |
 |---|---|
-| [`01-quantities.md`](nomos-contract/01-quantities.md) | ① the flux web — what exists, its vocabulary discipline, and the deferred statistic contract |
-| [`02-geometry.md`](nomos-contract/02-geometry.md) | ② what the algorithm assumes about its cells |
-| [`03-semantics.md`](nomos-contract/03-semantics.md) | ③ what the number means |
-| [`04-structure.md`](nomos-contract/04-structure.md) | ④ what is preserved, sacrificed, and what conflicts |
-| [`05-claim.md`](nomos-contract/05-claim.md) | ⑤ the modified equation — the Prime Question, mechanised |
+| `01-quantities.md` | ① the flux web — what exists, its vocabulary discipline, and the deferred statistic contract |
+| `02-geometry.md` | ② what the algorithm assumes about its cells |
+| `03-semantics.md` | ③ what the number means |
+| `04-structure.md` | ④ what is preserved, sacrificed, and what conflicts |
+| `05-claim.md` | ⑤ the modified equation — the Prime Question, mechanised |
 
 ---
 
@@ -134,6 +138,8 @@ That gap is the next build. It is small, and it is the whole point: **`ARCHITECT
 ---
 
 ## ⚠ And a fact that shapes all of it: we do not have *an* FVM approach
+
+*Claim home for family-declaration + seams-between-families + the linear-only commute law: `#form-declared-structure-tradeoff`. The census below is source.*
 
 Joseph's plural was doing real work. **We already run four distinct discretisation families in one world:**
 

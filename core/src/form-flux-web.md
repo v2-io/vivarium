@@ -34,6 +34,8 @@ Live: vocabulary module, `consumes`/`promises` on `NomosDecl`, `audit::producer_
 
 The flux web is how "rain without a sky" and "erosion without land" stop being oral tradition and become failed builds or loud audits. It is representation-agnostic: a box hydrosphere and a field erosion tile couple by quantity, not by shared mesh.
 
+Per-quantity granularity is also the upgrade path: a higher-fidelity producer that *enriches* the flux (erosion-v2 fluxing grain-size, not just volume) adds a **new** quantity — consumers that read it gain a key input and rerun ( #form-complete-content-addressed-key ); consumers that do not are untouched. A monolithic flux blob would over-invalidate on every model upgrade, which is why the interface stays fine-grained.
+
 ## Working Notes
 
 - Ice/pointer targets once stable: `flux.rs` module docs; ARCHITECTURE §9 coupler bullets; regula-conformance-design §3 (reasoning trail).

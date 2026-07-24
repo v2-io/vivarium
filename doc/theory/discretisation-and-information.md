@@ -363,6 +363,8 @@ Now look at what we do:
 
 ## 4. ⚖ THE GOVERNING PRINCIPLE
 
+*Claim home: `#form-declared-structure-tradeoff` (enumerate structures; they conflict; declare preserved-exact / preserved-approximate / sacrificed; family + between-family seams; linear-only seam crossing). §4–4.1a below are **source and teaching** — the structure table stays here until per-nomos declarations exist.*
+
 Everything above collapses into one instruction, and it is the thing to inculcate:
 
 > # **Identify the STRUCTURE the physics has — conservation laws, potentials, topological identities, symmetries, the second law, realizability, the timescale hierarchy — and choose a discretisation that preserves THAT structure EXACTLY.**

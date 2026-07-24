@@ -138,6 +138,8 @@ Consequences, in order of importance:
 
 ## 4. The two consistency laws, as we've already paid for them
 
+*The floating-point-is-the-bottom-most-seam rule now lives in `#form-seam-flux-exchange` FE(7); the twin-f32 specimens below are its history.*
+
 Worth naming that both laws have already drawn blood here:
 
 - **R∘L=id violations**: painted sub-voxel detail ("detail must be earned"),

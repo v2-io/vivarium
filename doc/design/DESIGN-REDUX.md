@@ -1,7 +1,8 @@
 # vivarium — design redux (elaboration in progress)
 
-*Started 2026-07-01. This is a **living elaboration** of the multi-fidelity
-thinking that `doc/design/DESIGN.md` §"Multi-fidelity world" opens but does not develop.
+*Started 2026-07-01. This is a **living elaboration** of the project's
+multi-fidelity thinking (opened by the founding DESIGN, now graduated to
+`.super-archive/from-design/DESIGN.md`).
 **Claim canon is `core/src/`** (`core/OUTLINE.md` · `#scope-segment-canon`); where a
 segment owns a law, cite the segment — this file and `DESIGN.md` are source /
 teaching substrate, not parallel law. Epistemic status is marked inline:
@@ -70,6 +71,11 @@ regime probes). Regime-probe law: `#norm-regime-probes` · `#norm-probe-sensitiv
 ---
 
 ## 3. Two axes of level-of-detail
+
+**Claim home:** `#form-temporal-lod-regimes` (one gradient; four regimes —
+global time-uniform / history-free lazy / history-dependent catch-up /
+equilibrium-attractor; lag-tolerance condition; non-locality caveat).
+Elaboration below is source substrate, not a second home.
 
 LOD here is not only a *display* concern — it is also *how much simulation has
 been run*. Both axes drive both.
@@ -636,6 +642,10 @@ contouring for sub-voxel surfaces.
 
 ## 15. The material property set (material model as a fidelity ladder)
 
+**Claim home:** `#form-material-property-interface` (property set as stable
+interface; ladder rungs; SHALSTAB one-substrate evidence). Property tables
+below are TENTATIVE source.
+
 *Grounded in an adversarially-verified deep-research survey (Dwarf Fortress
 material tokens; Mohr–Coulomb / infinite-slope geotechnics; SHALSTAB; shallow-water
 + stream-power erosion; μ(I) granular rheology; DEM). The **spanning claim and the
@@ -715,4 +725,4 @@ substrate per physics.**
   evaluation, so it stops being an eagerly-baked fixed patch (the audit's finding)
   and becomes the first rung of a swappable ladder. That single change exercises
   §5, §8, §11, and §12 at once on a system we already have.
-- **Not yet superseding `doc/design/DESIGN.md`:** this is elaboration; adopt deliberately.
+- **Adoption:** claims from this file become law only as segments in `core/src/` (`#scope-segment-canon`); the founding DESIGN it elaborated is graduated (`.super-archive/from-design/DESIGN.md`).

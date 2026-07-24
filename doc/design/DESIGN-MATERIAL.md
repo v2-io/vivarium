@@ -52,8 +52,8 @@ core: strata are the substrate; bodies (and user edits) override it in a region.
 **Key consequence:** a voxel is *not* the storage primitive — it is a query view.
 "10.5 m of sand" is **one** `Stratum{sand, 10.5 m}`, not 21 half-metre cubes;
 voxels are materialized from strata only where per-cell detail is asked for. This
-is the "view-resolution decoupled from intrinsic-resolution" idea from `doc/design/DESIGN.md`,
-applied to the vertical.
+is the founding "view-resolution decoupled from intrinsic-resolution" idea
+(graduated DESIGN, `.super-archive/from-design/DESIGN.md`), applied to the vertical.
 
 ---
 
@@ -116,6 +116,10 @@ staggering; Volume-of-Fluid (Hirt & Nichols); marching cubes / dual contouring.
 ---
 
 ## 5. The property set *(research-backed; the exact schema is TENTATIVE)*
+
+**Claim home:** `#form-material-property-interface` (property set as stable
+coupler interface; ladder behind it; undifferentiated refinement). Tables and
+schema below are TENTATIVE source substrate.
 
 The survey confirmed the list core already implied is **very nearly spanning**.
 Grouped by where each property lives; **(+)** = surfaced by the survey as missing.
@@ -234,6 +238,10 @@ frontier (§6) is exactly "absorb a body's effect back into the macro."
 ---
 
 ## 8. Spatial and material binding *(settled / research-backed)*
+
+**Claim home:** `#form-cellid-chunk-patch` (CellId canonical key; chunk vs
+patch tiers; Cartesian interior + halos; hex declined). Rationale texture
+below is source.
 
 - **Address — the nailed-down plan** *(settled; rationale in
   [`ref/research/spatial-key-bench.md`](../../ref/research/spatial-key-bench.md) and

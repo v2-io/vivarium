@@ -73,6 +73,8 @@ Berger–Oliger's load-bearing design choice is the one vivarium needs: **subgri
 
 ## 3. Position and time are one seam — the resolution light-cone and the dynamic exponent *(stance)*
 
+*Exploratory home for the $z$ material: `#sketch-dynamic-exponent-seams` ($z$ per process; live water-$z{=}1$ / clamped creep-$z{=}2$ asymmetry; timestep-from-quadtree tactic; $z$-reconciliation open). Cone imagery and the relativity boundary below stay teaching.*
+
 The four seam types above are usually drawn as if space (2.1) and time (2.2, 2.3) were separate. The primaries say otherwise, and the unification is the load-bearing idea for the architecture. It has a genuinely deep form, worked at the end of this section: a *causal cone* whose scaling is set by a *dynamic exponent*, with special relativity as one member of the family.
 
 **A seam is a boundary in the (space × time × fidelity) product, and one flux crosses it.** AMR refines space and time together (constant $\lambda$); equation-free's gap-tooth patches are finite in space *and* run for short bursts in time; a river crossing a tile edge couples in **space** (its upstream catchment closure) *and* **time** (the slow erosion tier reads it as time-averaged discharge). So the flux at a tile boundary is a sufficient statistic **integrated over space and averaged over time at once** — spatially-integrated discharge, temporally-averaged sediment flux. There is no separate "spatial seam discipline" and "temporal seam discipline"; there is one, and the two axes are the arguments.

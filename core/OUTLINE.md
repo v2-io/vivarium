@@ -112,8 +112,13 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | observation | Math Critical | [#obs-mean-pin-manufactures-seam](src/obs-mean-pin-manufactures-seam.md) | Mean-pin manufactures seam ridge and mass; not $R\circ L=\mathrm{id}$; zero-physics control | draft |
 | formulation | Math Critical | [#form-grid-equiangular-staggered](src/form-grid-equiangular-staggered.md) | Equiangular cube-sphere + Arakawa-C + per-cell metrics (tentative keep); router open; cube-locked control mandatory | draft |
 | observation | Model Critical | [#obs-cube-locked-kernel-bias](src/obs-cube-locked-kernel-bias.md) | MFD fan + uniform cell-area A are cube-locked biases that do not converge; cube control mandatory | draft |
+| observation | Model Critical | [#obs-routing-curl-spiral](src/obs-routing-curl-spiral.md) | Routing violates contour-orthogonality: ~2% flux spirals, level-independent; face-centre probe is a null test | draft |
+| formulation | Model Critical | [#form-declared-structure-tradeoff](src/form-declared-structure-tradeoff.md) | Structure preservation is a declared trade; structures conflict; linear-only seam crossing | draft |
+| formulation | Machine | [#form-cellid-chunk-patch](src/form-cellid-chunk-patch.md) | CellId canonical key; curve orders chunks; Cartesian patch + halo in hot loops | draft |
+| formulation | Model | [#form-temporal-lod-regimes](src/form-temporal-lod-regimes.md) | Space/time LOD one gradient; four materialization regimes (global / lazy / catch-up / attractor) | draft |
+| formulation | Model | [#form-material-property-interface](src/form-material-property-interface.md) | Material property set = stable interface; model ladder behind it; undifferentiated types refine as deterministic prefix | draft |
+| sketch | Math | [#sketch-dynamic-exponent-seams](src/sketch-dynamic-exponent-seams.md) | Dynamic exponent $z$ per process; timestep-from-quadtree tactic — exploratory | draft |
 | | | | *(#gap) Hydrosphere, climate, erosion, water nomoi (beyond box + #form-derived-sea-level)* — residual: wire pour/freeboard keeper into nomotheke; full field nomos segments | missing |
-| | | | *(#gap) Routing curl / potential-identity specimen (sibling of cube-locked bias)* | missing |
 
 ## VI. Process and contribution
 

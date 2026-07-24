@@ -38,6 +38,8 @@ A seam is a boundary in space, time, or both. What crosses is a flux of a conser
 
 Stage `draft`.
 
+7. **Floating-point is the bottom-most seam.** Conservation discipline reaches down to arithmetic: an increment that must *land* (bed deadband) or must be *counted* (rain/evap bias) is a seam crime at the scale below the smallest grid seam. Where conservation is claimed, choose the accounting explicitly per site — realized-delta accounting or compensated summation — rather than trusting bare `f32` addition. (Paid-for: the twin f32 finds, 2026-07; specimen trail in `doc/theory/multiscale-methods.md` §4.)
+
 ## Discussion
 
 The seam fix and tile composability are the same work: honest boundary conditions *from* spine and neighbour fluxes. Cosmetic clamps on floating mesas do not replace that. Observer-side, the fidelity invariant ( #lexicon/term/fidelity-invariant ) is this rule restated for participants — resolve spatial and temporal resolution only as fine as the most demanding present consumer needs.
