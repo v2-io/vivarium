@@ -31,7 +31,7 @@ The content-addressed memo store is the world's portable saved state — not a d
 
 ## Epistemic Status
 
-**Max attainable: exact** as architecture law under complete keys and determinism-as-ontology. Live substrate: `crates/vivarium-world/src/store.rs` (objects + roots; domain-neutral; atomic temp-then-rename put). Stage `draft`. Sources: DESIGN-REDUX §13, ARCHITECTURE §5, store module honesty; consolidation-wave design + decisions-code + theory-plan drafts merged onto this single slug.
+**Max attainable: exact** as architecture law under complete keys and determinism-as-ontology. Live substrate: `crates/vivarium-world/src/store.rs` (objects + roots; domain-neutral; atomic temp-then-rename put). Stage `draft`. Sources: graduated DESIGN-REDUX §13 (`.super-archive/from-design/`), ARCHITECTURE §5, store module honesty.
 
 **Known incomplete (MVP / compliance debt — not a soften of the law):**
 
@@ -47,5 +47,9 @@ Treating the store as "just a cache" reintroduces a second home for world truth 
 ## Working Notes
 
 - **Sole home.** Do not reintroduce `form-save-is-memo-store` or `form-store-is-save` as parallel slugs.
-- **Dual homes demoted:** DESIGN-REDUX §13; ARCHITECTURE §5; `store.rs` / `query.rs` module docs; plan headers (workflow, builder-explorer, abyssal-parity, framework-to-status-quo). Layout examples and tentative GC discussion left as source.
-- **Residual:** run-mode root guard and regenerable/irreducible GC still compliance debt (body Epistemic Status), not dual-home prose.
+- **Dual homes demoted:** DESIGN-REDUX §13 (file graduated `.super-archive/from-design/DESIGN-REDUX.md`); ARCHITECTURE §5; `store.rs` / `query.rs` module docs; plan headers.
+- **Residual / TENTATIVE shapes reserved from graduated REDUX §13 (not FE):**
+  - **Thin vs fat save policy** — thin = nomoi + irreducible + roots (regenerate rest); fat = also ship materialized regenerable for instant / version-drift-robust pickup; natural “fat for developed regions, thin elsewhere.” Exact policy unfixed.
+  - **Regenerable bit derivation** — how the regenerable/irreducible tag is computed; GC that prunes regenerable freely on algo-version bump while never touching irreducible.
+  - **Mutation-log schema** — append-only, ordered, keyed by (region, time), pins algo-versions; log is primary, object store supporting cache. Full design deferred; law-closure frontier for edit *effects* → #sketch-detail-abstract-reversion .
+- **Residual:** run-mode root guard and regenerable/irreducible GC still compliance debt (body Epistemic Status).

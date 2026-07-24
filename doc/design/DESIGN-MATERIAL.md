@@ -1,6 +1,6 @@
 # vivarium — the matter data model (columns · strata · voxels · bodies · properties)
 
-*Started 2026-07-01. This is the concrete **data-model** companion to `doc/design/DESIGN-REDUX.md` (which carries the general fidelity/LOD/runtime philosophy). Where REDUX asks "how does representation follow consequence," this asks the narrow, load-bearing question: **what does a piece of the world actually store, and what does each stored value mean?** It is grounded in the adversarially- verified survey at [`ref/research/material-models-survey.md`](../../ref/research/material-models-survey.md) and in `doc/design/DESIGN-REDUX.md` §§5, 8, 11–15.*
+*Started 2026-07-01. This is the concrete **data-model** companion to `.super-archive/from-design/DESIGN-REDUX.md` (which carries the general fidelity/LOD/runtime philosophy). Where REDUX asks "how does representation follow consequence," this asks the narrow, load-bearing question: **what does a piece of the world actually store, and what does each stored value mean?** It is grounded in the adversarially- verified survey at [`ref/research/material-models-survey.md`](../../ref/research/material-models-survey.md) and in `.super-archive/from-design/DESIGN-REDUX.md` §§5, 8, 11–15.*
 
 *Epistemic status is marked inline: **settled** (a decision already made, often in code), **our stance** (reasoned, adopt-unless-contradicted), **research-backed** (confirmed by the survey), **TENTATIVE** (shape reserved, decide with real usage). The concrete schema in §9 is TENTATIVE throughout — it is a starting proposal, not a fixed API.*
 

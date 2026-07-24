@@ -1,6 +1,6 @@
 # vivarium — the world-phenomena graph (systems · timescales · size-scales)
 
-*The concrete aspect-list for the multirate coupling (`doc/design/DESIGN-REDUX.md` §4) and a build-order guide. Each system is a tier in the lazy query graph (§11); the ones that must run share the property substrate of `doc/design/DESIGN-MATERIAL.md` §5.*
+*The concrete aspect-list for the multirate coupling (`.super-archive/from-design/DESIGN-REDUX.md` §4) and a build-order guide. Each system is a tier in the lazy query graph (§11); the ones that must run share the property substrate of `doc/design/DESIGN-MATERIAL.md` §5.*
 
 > **Status: source / inventory, not claim canon.** Multirate coupling, fidelity
 > ladder, and column/material substrate have claim homes when segmented

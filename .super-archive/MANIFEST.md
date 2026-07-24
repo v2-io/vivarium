@@ -2,6 +2,12 @@
 
 *Present-tense index of graduated substrate. Not claim law. Newest batches first.*
 
+## 2026-07-24 batch 6 — DESIGN-REDUX graduate
+
+| Path | From | Superseded by / ice |
+|------|------|---------------------|
+| `from-design/DESIGN-REDUX.md` | `doc/design/DESIGN-REDUX.md` (full body; pre-mv byte-match) | Fidelity / LOD / reductionist / pull / three-scoped / ladder / store / material / column / reversion already in core. TENTATIVE thin-fat / mutation-log → `#form-store-as-save` WN; jitter engineering → `#post-determinism-as-ontology` WN; §10 lineage = ice. Live path removed. |
+
 ## 2026-07-24 batch 5 — claim-empty theory zoo
 
 | Path | From | Superseded by / ice |
@@ -52,7 +58,7 @@
 | Location | Contents |
 |----------|----------|
 | `.archive/` | `SUPERSEDED.md` (active ledger) + `README.md` (index) |
-| Live `doc/` | DESIGN-REDUX, MATERIAL, SYSTEMS, NOMOS-CONTRACT, multiscale-seams, discretisation, plan, ARCHITECTURE, toolchain (methods zoo graduated) |
+| Live `doc/` | DESIGN-MATERIAL, SYSTEMS, NOMOS-CONTRACT, discretisation (partially pealed), plan, ARCHITECTURE, toolchain (REDUX + multiscale theory graduated) |
 | Live instruments | spikes, DECISIONS, `ref/` primaries |
 
 ## Provenance audit 2026-07-23

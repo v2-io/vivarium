@@ -1,5 +1,8 @@
 # vivarium — design redux (elaboration in progress)
 
+> **Graduated 2026-07-24** to `.super-archive/from-design/`. **Do not re-mine as claim source.** Claim homes live in `core/src/` (fidelity, temporal LOD, reductionist cases, pull/three-scoped, store-as-save, ladder, material, column, reversion sketch, …). TENTATIVE save policy / mutation-log → `#form-store-as-save` Working Notes; jitter engineering → `#post-determinism-as-ontology` Working Notes; lineage §10 = ice. Teaching texture only.
+
+
 *Started 2026-07-01. This is a **living elaboration** of the project's multi-fidelity thinking (opened by the founding DESIGN, now graduated to `.super-archive/from-design/DESIGN.md`).  
 **Claim canon is `core/src/`** (`core/OUTLINE.md` · `#scope-segment-canon`); where a segment owns a law, cite the segment — this file and `DESIGN.md` are source / teaching substrate, not parallel law. Epistemic status is marked inline: **established** (a real, mature field), **our stance** (a design commitment we've reasoned to), **open** (genuinely unsolved / research-flavored). Prior-art names are field-level and confident; specific author/year attributions should be verified before any external citation.*
 

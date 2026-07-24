@@ -27,4 +27,4 @@
 
 ## The standing principle
 
-Two kinds of tooling: **structural** (types, lints, key discipline — shapes what code can be written; adopt before habits form) and **harness** (external checkers — measures what was written; adopt when there's something to measure). The queue above sorts by that line. The build-time nomos-version hash (`build.rs` source-hashing, DESIGN-REDUX §12) remains the highest-value *structural* item not yet built — it belongs with the regula.rs wave.
+Two kinds of tooling: **structural** (types, lints, key discipline — shapes what code can be written; adopt before habits form) and **harness** (external checkers — measures what was written; adopt when there's something to measure). The queue above sorts by that line. The build-time nomos-version hash (`build.rs` source-hashing; complete-key / store law in `#form-complete-content-addressed-key` · `#form-store-as-save`) remains the highest-value *structural* item not yet built — it belongs with the regula.rs wave.

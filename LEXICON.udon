@@ -127,7 +127,7 @@
     |term[fidelity-ladder] :status settled
       Spend representation by consequence; every aspect has a ladder of model rungs and may honestly occupy any rung whose sufficient statistics its consumers need.
       |rel :to rung :kind composed-of
-      |source doc/design/DESIGN-REDUX.md §12
+      |source .super-archive/from-design/DESIGN-REDUX.md §12
 
     |term[telescope] :status settled
       Nested resolution tiers around a focus, re-anchored on drift (the erosion telescope is the built instance).
@@ -148,7 +148,7 @@
     |term[memo] :status settled
       A cached converged state in the lazy query-graph runtime; the memo left at a phase-transition is the largest. The save-file IS the memo store.
       |not "checkpoint" (retired; see the collision ledger, §5).
-      |source doc/design/DESIGN-REDUX.md §11-13
+      |source .super-archive/from-design/DESIGN-REDUX.md §11-13
 
     |term[system] :status settled
       The phenomenon-level unit a phase runs — erosion, hydrology, climate (doc/design/DESIGN-SYSTEMS.md rows; the ARCHITECTURE §9 contract is what one declares to join the machine).
@@ -341,7 +341,7 @@
 
       Terms where vivarium and ASF usage could confuse, with the rule for each:
       - regime: ours (§1) = dominance structure of world systems; ASF's dynamic-regime axis (R0-R3) = interaction-dynamics class of composite agents. Near ASF material say "world regime" vs "dynamic regime Rn".
-      - checkpoint: RESOLVED 2026-07-04 — vivarium retired it for phase boundaries (-> phase-transition / phase-gate; cache sense -> memo); ceded to ASF's agent-state-snapshot sense. In vivarium work "checkpoint" means an agent snapshot — which matters exactly in fork/save design where world-forks meet agent-checkpoints. PENDING (Joseph's call): doc/design/DESIGN-REDUX.md still uses it in a runtime durability sense at four sites — decide memo vs a distinct persist-boundary name (candidates save, snapshot; NOT checkpoint).
+      - checkpoint: RESOLVED 2026-07-04 — vivarium retired it for phase boundaries (-> phase-transition / phase-gate; cache sense -> memo); ceded to ASF's agent-state-snapshot sense. In vivarium work "checkpoint" means an agent snapshot — which matters exactly in fork/save design where world-forks meet agent-checkpoints. PENDING (Joseph's call): .super-archive/from-design/DESIGN-REDUX.md still uses it in a runtime durability sense at four sites — decide memo vs a distinct persist-boundary name (candidates save, snapshot; NOT checkpoint).
       - persistence: reserved for the AAT property (bounded mismatch under drift). For disk say storage, memoization, or save — never "persistence".
       - tempo: reserved for AAT's $\mathcal{T} = \sum \nu \cdot \eta^\ast$ (rate of useful information gain). The HUD's sim-rate lines are RATES, not tempo, until they measure information.
       - epoch: no conflict (ours is the erosion solver's tick; ASF doesn't claim it) — recorded as checked.

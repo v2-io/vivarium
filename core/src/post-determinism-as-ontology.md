@@ -32,3 +32,4 @@ Without fated noise, the store cannot be the save, explorers and builders cannot
 ## Working Notes
 
 - Mechanical bans (`thread_rng`, etc.) in world crates are consequences for the toolchain wave, not substitutes for this postulate.
+- **World-side jitter engineering (from graduated DESIGN-REDUX §8 — not second law):** hash quality matters (avalanche finalizer; avoid axis-aligned lattice from naive linear congruential mixes); distribution must match phenomenon (FBM micro-relief, Gaussian scatter, blue-noise placement — uniform is rarely honest); same key family for agent decisions as `(agent_id, tick, purpose)`. Amplitude measurement path for discarded variance lives under #detail-info-theoretic-discretisation FE(5).
