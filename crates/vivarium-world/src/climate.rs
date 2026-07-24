@@ -53,10 +53,13 @@ pub const PRECIP_JITTER: f64 = 0.5;
 /// - **Low-frequency**, not white noise. Rain is spatially correlated at synoptic /
 ///   continental scales (hundreds of km); per-cell white noise would be *less* true
 ///   than uniform. Features here are ~1000+ km.
-/// - **Mean-preserving** (the fBm is zero-mean about 1.0), so the global integral
-///   still equals the reservoir's throughput — the conservation we just established
-///   is not broken by adding variance. (Preserved in *expectation*; exact global
-///   closure is a probe worth writing.)
+/// - **Mean-preserving in expectation** — measured (examples/jitter_mean_probe,
+///   3 seeds × 3 faces × 196k samples): spatial mean drifts +0.1%..+3.0% per
+///   seed. So the promise's exactness is honestly `Approximate`; exact closure
+///   needs normalization over the consumer's domain (open design, not built).
+///   The trailing `.max(0.0)` guard is MEASURED INERT at the declared amplitude
+///   (fBm ∈ [0,1) ⇒ factor ∈ [1−J, 1+J] ⊂ [0.5, 1.5) at J=0.5) — a guard for
+///   larger amplitudes, not a live sign-definite clip; a test convicts this.
 ///
 /// **What it does NOT claim:** the *pattern* is noise, not meteorology. It buys
 /// "there are wet places and dry places" — it does not buy "*where*". The real
@@ -123,5 +126,23 @@ mod tests {
         let adjacent = (at(1000, 1000) - at(1001, 1000)).abs();
         let distant = (at(1000, 1000) - at(1000 + 3000, 1000)).abs();
         assert!(adjacent < distant.max(1e-6), "jitter must be low-frequency (correlated), not white noise");
+    }
+
+    #[test]
+    fn clip_is_inert_at_declared_amplitude() {
+        // fBm ∈ [0,1) ⇒ factor ∈ [1−J, 1+J]; the .max(0.0) cannot fire at
+        // J = 0.5. If someone raises PRECIP_JITTER past 1.0 the clip goes
+        // live and becomes a sign-definite bias — this test is the tripwire.
+        use crate::sphere::{CellId, Face};
+        assert!(PRECIP_JITTER <= 1.0, "amplitude > 1 makes the clip a live sign-definite bias");
+        for f in [Face::XPos, Face::YNeg, Face::ZPos] {
+            for i in (0..4096u32).step_by(64) {
+                for j in (0..4096u32).step_by(64) {
+                    let v = precip_jitter_factor(7, CellId::from_face_ij(f, i, j, 12));
+                    assert!(v >= 1.0 - PRECIP_JITTER - 1e-9 && v <= 1.0 + PRECIP_JITTER + 1e-9);
+                }
+            }
+        }
+
     }
 }

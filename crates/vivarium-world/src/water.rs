@@ -55,6 +55,24 @@ pub struct WaterParams {
     /// Sea level (m, bed datum): cells with bed at/below it are held at the
     /// waterline, exchanging with the counted ocean store.
     pub sea_m: f32,
+    /// θ flux-smoothing gain (Lax–Friedrichs-class artificial diffusion; de
+    /// Almeida et al. 2012). Physical claim NONE — declared as an Even/Bias
+    /// term on the WATER NomosDecl (preserves flux mean, destroys variance).
+    /// A parameter so the probes the council-accepted order-of-work demands
+    /// (`DECISIONS[theta-is-lax-friedrichs-not-rhie-chow]`) can vary it.
+    pub theta: f32,
+    /// Jarrett slope-roughness coefficient: n = manning_n + jarrett_slope·S.
+    /// A REGRESSION used as a live constitutive law — a measured positive
+    /// feedback on gentle slopes (`DECISIONS[jarrett-roughness-is-a-positive-
+    /// feedback…]`). Parameterized so the control (hold n constant) is runnable.
+    pub jarrett_slope: f32,
+    /// Cap on slope-adjusted Manning n (Jarrett linearization ceiling).
+    pub jarrett_n_cap: f32,
+    /// Froude breaking cap multiplier: f ≤ froude_cap·√(g·h)·h·l. Measured
+    /// SATURATED on eroded land (a SignDefinite/Bias term on the NomosDecl —
+    /// the instrument reads its own clamp). Parameterized so that saturation
+    /// is testable rather than baked.
+    pub froude_cap: f32,
     // --- Sediment (Mei et al. stage; core had this OFF — the multirate frame is
     // where it can be ON). Capacity ∝ flow speed; erode toward capacity, settle
     // above it, advect with the flow. bed + suspended is exactly conserved.
@@ -145,6 +163,10 @@ impl Default for WaterParams {
             // `sea_level::derived_sea_level_m(seed)`. Default 0 keeps inland
             // kernel probes (bowls above a floor) from drowning under a global pour.
             sea_m: 0.0,
+            theta: 0.8,
+            jarrett_slope: 1.6,
+            jarrett_n_cap: 0.13,
+            froude_cap: 2.0,
             sed_capacity: 0.6,
             sed_erode: 0.1,
             sed_deposit: 0.5,
@@ -224,9 +246,20 @@ impl WaterSim {
     /// as real, simulated water — currents, sediment, deltas all live there; only
     /// the REGION EDGE is a boundary condition (the rest-of-world ocean).
     pub fn new(face: Face, level: u8, origin: (u32, u32), nx: usize, cell_m: f32, bed: Vec<f32>, atmosphere_m: f64) -> Self {
+        // Compat residual: the decreed datum is retired as a land gate
+        // (`#form-derived-sea-level` FE(6)); it survives here only as the
+        // initial-fill default the existing probes' beds are built around.
+        // New callers with a real ocean use `new_at_sea` with
+        // `sea_level::derived_sea_level_m(seed)`.
+        Self::new_at_sea(face, level, origin, nx, cell_m, bed, atmosphere_m, crate::gen::SEA_LEVEL_M as f32)
+    }
+
+    /// [`Self::new`] with the initial-fill waterline passed explicitly —
+    /// the derived-sea path (`sea_level::derived_sea_level_m`), not a decree.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_at_sea(face: Face, level: u8, origin: (u32, u32), nx: usize, cell_m: f32, bed: Vec<f32>, atmosphere_m: f64, sea: f32) -> Self {
         assert_eq!(bed.len(), nx * nx);
         let z = vec![0.0f32; nx * nx];
-        let sea = crate::gen::SEA_LEVEL_M as f32;
         let depth: Vec<f32> = bed.iter().map(|&b| (sea - b).max(0.0)).collect();
         let mut this = Self {
             nx,
@@ -382,7 +415,7 @@ impl WaterSim {
         // depth field (Joseph's multi-metre blobs winding down channels, shape
         // intact — probe-confirmed: Fr max 226, 75% cell-to-cell depth swings).
         // In-place (Gauss–Seidel) sweep: slightly asymmetric, faster-damping.
-        let theta = 0.8f32;
+        let theta = p.theta;
         for y in 0..nx {
             for x in 1..nx - 1 {
                 let i = y * nx + x;
@@ -404,7 +437,8 @@ impl WaterSim {
         // on a depth the constriction doesn't have. Standard in the
         // local-inertial literature (h_flow).
         #[inline]
-        fn pipe_step(f: f32, eta_i: f32, eta_j: f32, b_i: f32, b_j: f32, dt: f32, g: f32, n_base: f32, l: f32) -> f32 {
+        #[allow(clippy::too_many_arguments)]
+        fn pipe_step(f: f32, eta_i: f32, eta_j: f32, b_i: f32, b_j: f32, dt: f32, g: f32, n_base: f32, l: f32, jarrett_slope: f32, jarrett_n_cap: f32, froude_cap: f32) -> f32 {
             let hflow = eta_i.max(eta_j) - b_i.max(b_j);
             if hflow < 1e-4 {
                 return 0.0; // no conveyance over the sill
@@ -413,7 +447,7 @@ impl WaterSim {
             // Slope-dependent roughness (Jarrett 1984, linearized): steep
             // reaches are rough — this is what holds torrents to nature's
             // 2–4 m/s instead of Manning-lowland's 10+.
-            let n = (n_base + 1.6 * (head.max(0.0) / l)).min(0.13);
+            let n = (n_base + jarrett_slope * (head.max(0.0) / l)).min(jarrett_n_cap);
             let accel = (f + dt * g * hflow * head).max(0.0);
             let v = accel / (hflow * l);
             let f = accel / (1.0 + dt * g * n * n * v / hflow.powf(4.0 / 3.0));
@@ -422,7 +456,7 @@ impl WaterSim {
             // shed momentum as turbulence. Without this loss the roll waves a
             // deluge excites grow unbounded (Joseph's multi-metre travelling
             // blobs; probe: near-dry gaps between 3 m lumps).
-            f.min(2.0 * (g * hflow).sqrt() * hflow * l)
+            f.min(froude_cap * (g * hflow).sqrt() * hflow * l)
         }
         let n_base = p.manning_n;
         let (mut fr_max, mut fr_wet, mut fr_sup) = (0.0f32, 0u32, 0u32);
@@ -439,22 +473,22 @@ impl WaterSim {
                 };
                 if x > 0 {
                     let j = i - 1;
-                    self.fl[i] = pipe_step(self.fl[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l);
+                    self.fl[i] = pipe_step(self.fl[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l, p.jarrett_slope, p.jarrett_n_cap, p.froude_cap);
                     probe(self.fl[i], self.bed[j] + self.depth[j], self.bed[j]);
                 }
                 if x < nx - 1 {
                     let j = i + 1;
-                    self.fr[i] = pipe_step(self.fr[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l);
+                    self.fr[i] = pipe_step(self.fr[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l, p.jarrett_slope, p.jarrett_n_cap, p.froude_cap);
                     probe(self.fr[i], self.bed[j] + self.depth[j], self.bed[j]);
                 }
                 if y > 0 {
                     let j = i - nx;
-                    self.ft[i] = pipe_step(self.ft[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l);
+                    self.ft[i] = pipe_step(self.ft[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l, p.jarrett_slope, p.jarrett_n_cap, p.froude_cap);
                     probe(self.ft[i], self.bed[j] + self.depth[j], self.bed[j]);
                 }
                 if y < nx - 1 {
                     let j = i + nx;
-                    self.fb[i] = pipe_step(self.fb[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l);
+                    self.fb[i] = pipe_step(self.fb[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l, p.jarrett_slope, p.jarrett_n_cap, p.froude_cap);
                     probe(self.fb[i], self.bed[j] + self.depth[j], self.bed[j]);
                 }
                 drop(probe);

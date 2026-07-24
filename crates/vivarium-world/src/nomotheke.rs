@@ -472,10 +472,11 @@ pub static CLIMATE: NomosDecl = NomosDecl {
         quantity: flux::PRECIPITATION,
         conservation: Conservation::Conserved,
         statistic: Statistic::Mean,
-        // Mean preservation is unit-tested only to ±7% (0.93..1.07) and climate.rs's
-        // own doc says "preserved in expectation; exact global closure is a probe
-        // worth writing"; the jitter factor also carries a sign-definite .max(0.0)
-        // clip. Approximate until the jitter is normalized over its domain.
+        // Approximate, measured: spatial jitter mean drifts +0.1%..+3.0% per seed
+        // (jitter_mean_probe, 3 seeds × 3 faces × 196k samples); exact closure
+        // needs domain normalization (open design). The .max(0.0) guard is
+        // measured INERT at the declared amplitude (factor ∈ [0.5, 1.5)) — a
+        // tripwire test convicts it staying inert.
         exactness: Exactness::Approximate,
     }],
     assumptions: &["atmosphere residence time", "precip jitter"],
@@ -712,13 +713,13 @@ pub static WATER: NomosDecl = NomosDecl {
             term: "flux clip accel.max(0.0)",
             parity: Parity::SignDefinite,
             verdict: ErrVerdict::Bias,
-            note: "one-sided by construction; activation rate unprobed",
+            note: "one-sided by construction; measured 2026-07-24 (water_structures energy, gentle/bumpy windows): fired on 0.000% of cell-steps — inert in those regimes; activation on steep eroded land still unprobed",
         },
         UnphysicalTerm {
             term: "Froude breaking cap (f ≤ 2√(gh)·h·l)",
             parity: Parity::SignDefinite,
             verdict: ErrVerdict::Bias,
-            note: "measured saturated on eroded land — the cap is doing steady work, not guarding an edge case",
+            note: "measured saturated on eroded land — the cap is doing steady work there, not guarding an edge case; on gentle/bumpy energy-probe windows it removes zero energy (regime-dependent, as a Fr-gated term should be)",
         },
         UnphysicalTerm {
             term: "outflow scale-down",
