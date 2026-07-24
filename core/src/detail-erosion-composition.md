@@ -34,7 +34,7 @@ What the shipped `erosion-tile` nomos **is** today: one composed crude rung (upl
    7. **Talus** relaxation (repose slope).
    8. **Hillslope creep** — one explicit 5-point Laplacian step per epoch (diffusivity $\kappa$ in m²/epoch; diffusion-number clamp $k\le 0.24$ at fine levels).
 
-3. **Geometry inputs (present tense).** Drainage **seed area** and deposit volume use **true spherical cell area** per cell (`measure::cell_area_m2`). MFD neighbour **lengths** still use uniform `cell_m` and diagonal $\mathrm{cell}_m\sqrt{2}$. Outlets use derived / declared sea as coast, not only tile edge.
+3. **Geometry inputs (present tense).** Drainage **seed area** and deposit volume use **true spherical cell area** per cell (`measure::cell_area_m2`); D8 slope, MFD slope-weights, incision length and talus all use **true great-circle neighbour distances** between cell centres (`measure::gc_dist_m` / `Fluvial::dist_m`), not uniform `cell_m` / diagonal $\mathrm{cell}_m\sqrt{2}$. Creep still uses `cell_m²` as its diffusion length² (a face-mean stand-in, not the fan path). Honest metrics do **not** cure the directional fan ( #obs-cube-locked-kernel-bias FE(1)). Outlets use derived / declared sea as coast, not only tile edge.
 
 4. **What this rung is for.** Crude-rung dendritic dissection of a land surface under precipitation and differential uplift — Cordonnier/Braun-family CG terrain method family ( #detail-phenomena-systems-map ). Enough for early-Abyssal *look* and for probes that convict scheme defects. **Not:** grain-size split, bank mechanics, meandering, debris flows, rock-mass return to a lithosphere column, or a correct router on the equiangular cube-sphere.
 
@@ -46,6 +46,7 @@ What the shipped `erosion-tile` nomos **is** today: one composed crude rung (upl
    | Mean-pin multiscale "consistency" | manufactures seam + mass | #obs-mean-pin-manufactures-seam |
    | $p=1.1$ first-moment lattice bias | **retired live** ($p=1.0$) | ASSUMPTIONS + nomotheke note |
    | Uniform $A$ for drainage | **retired** for seed/deposit $A$ | #obs-cube-locked-kernel-bias FE(3) present tense |
+   | Uniform neighbour **length** (D8/MFD/incision/talus) | **retired** — true great-circle distances | #obs-cube-locked-kernel-bias FE(3) present tense |
    | Priority-Flood $\varepsilon$-fill | sign-definite mass mint in sinks | nomotheke unphysical term |
    | Creep $k$ clamp | fidelity compromise, not $z=2$ substeps | nomotheke; #sketch-dynamic-exponent-seams |
    | Rock-mass export without column return | missing conservation / rebound | #form-isostasy-column FE(8); ASSUMPTIONS |

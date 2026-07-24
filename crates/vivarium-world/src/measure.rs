@@ -37,6 +37,41 @@ pub fn cell_area_m2(face: Face, i: u64, j: u64, level: u8, radius_m: f64) -> f64
     cell_solid_angle(face, i, j, level) * radius_m * radius_m
 }
 
+/// Unit direction vector at the **centre** of cell `(face, i, j)` at `level`.
+/// (The equiangular `tan` map; face-relative — feeds true neighbour distances.)
+#[inline]
+pub fn cell_center_unit(face: Face, i: u64, j: u64, level: u8) -> [f64; 3] {
+    let n = (1u64 << level) as f64;
+    let u = 2.0 * (i as f64 + 0.5) / n - 1.0;
+    let v = 2.0 * (j as f64 + 0.5) / n - 1.0;
+    crate::sphere::CubeCoord { face, u, v }.to_unit()
+}
+
+/// Great-circle distance (m) between two unit direction vectors on a sphere of
+/// `radius_m`. `atan2(|a×b|, a·b)` — robust for the near-parallel vectors that
+/// adjacent cell centres give (no catastrophic cancellation at fine levels).
+#[inline]
+pub fn gc_dist_m(a: [f64; 3], b: [f64; 3], radius_m: f64) -> f64 {
+    let cx = a[1] * b[2] - a[2] * b[1];
+    let cy = a[2] * b[0] - a[0] * b[2];
+    let cz = a[0] * b[1] - a[1] * b[0];
+    let s = (cx * cx + cy * cy + cz * cz).sqrt();
+    let dot = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    s.atan2(dot) * radius_m
+}
+
+/// True great-circle distance (m) between the centres of cell `(i, j)` and its
+/// neighbour at offset `(di, dj)`, same `level`. This is the honest slope/flux
+/// **length** the fluvial kernels use in place of uniform `cell_m` / diagonal
+/// `cell_m·√2` — a cube-locked length bias that overstates distances toward the
+/// cube corners (the length sibling of uniform-area, `#obs-cube-locked-kernel-bias`).
+#[inline]
+pub fn neighbor_center_dist_m(face: Face, i: u64, j: u64, level: u8, di: i64, dj: i64, radius_m: f64) -> f64 {
+    let a = cell_center_unit(face, i, j, level);
+    let b = cell_center_unit(face, (i as i64 + di) as u64, (j as i64 + dj) as u64, level);
+    gc_dist_m(a, b, radius_m)
+}
+
 /// Uniform-area stand-in: one cell size squared at this level (the **bias**
 /// `#obs-cube-locked-kernel-bias` measures). Kept for probes that need the bad control.
 #[inline]
@@ -89,6 +124,39 @@ mod tests {
         assert!(
             (mean_over - 0.17810).abs() < 0.005,
             "face mean overstatement {mean_over:.5} expected ~0.17810"
+        );
+    }
+
+    /// Length sibling of the PROBE-8 area control: uniform `cell_m` (/ `√2` on
+    /// diagonals) overstates true neighbour distance toward the cube corners, and
+    /// matches it at the face centre. Uniform would make every ratio below exactly
+    /// 1.0 — so this control **fails on the old uniform-length kernel** and passes
+    /// only on the true spherical metric (`#norm-probe-sensitivity` known-bad-first).
+    #[test]
+    fn neighbor_length_vs_uniform_is_cube_locked() {
+        let r = Planet::EARTH.radius_m;
+        let level = 7u8; // 128 cells/edge
+        let n = 1u64 << level;
+        let cell_m = crate::sample::cell_size_m(level, r);
+        let sqrt2 = std::f64::consts::SQRT_2;
+
+        // Face centre: true east-neighbour distance ≈ uniform (ratio ~1).
+        let ctr_east = neighbor_center_dist_m(Face::ZPos, n / 2, n / 2, level, 1, 0, r);
+        assert!(
+            (ctr_east / cell_m - 1.0).abs() < 1e-3,
+            "centre east ratio {} should be ~1", ctr_east / cell_m
+        );
+        // Corner cell (0,0): east neighbour ~6.3% shorter than uniform.
+        let cor_east = neighbor_center_dist_m(Face::ZPos, 0, 0, level, 1, 0, r);
+        assert!(
+            (cor_east / cell_m - 0.9372).abs() < 0.01,
+            "corner east ratio {} expected ~0.937 (uniform would be 1.0)", cor_east / cell_m
+        );
+        // Corner diagonal (0,0)->(1,1): ~33% shorter than the uniform diagonal.
+        let cor_diag = neighbor_center_dist_m(Face::ZPos, 0, 0, level, 1, 1, r);
+        assert!(
+            (cor_diag / (cell_m * sqrt2) - 0.672).abs() < 0.01,
+            "corner diagonal ratio {} expected ~0.672 (uniform would be 1.0)", cor_diag / (cell_m * sqrt2)
         );
     }
 

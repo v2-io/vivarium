@@ -159,13 +159,20 @@ impl Default for FluvialParams {
 /// core's `Heightfield`. Heights in metres above the bedrock datum.
 pub struct Fluvial {
     pub nx: usize,
-    /// Characteristic cell length (m) at this level — still used for *lengths*
-    /// (slope arms, talus, creep). **Not** for cell area; see [`Self::cell_area`].
+    /// Characteristic cell length (m) at this level — the face-mean cell size.
+    /// Still used for the creep diffusion-number `κ/cell²`; slope/flux **lengths**
+    /// now use true per-neighbour great-circle distances ([`Self::dist_m`]), not
+    /// this uniform value. **Not** for cell area; see [`Self::cell_area`].
     pub cell_m: f32,
     /// True spherical cell area (m²) per cell — equiangular closed form
     /// (`crate::measure`). Retires uniform `cell_m²` for drainage / deposition
     /// volume (`#obs-cube-locked-kernel-bias`).
     pub cell_area: Vec<f32>,
+    /// Unit direction vector at each cell centre (`crate::measure::cell_center_unit`).
+    /// Source for true neighbour **lengths** ([`Self::dist_m`]) — retires uniform
+    /// `cell_m` / diagonal `cell_m·√2`, a cube-locked length bias that overstates
+    /// distances toward the cube corners (`#obs-cube-locked-kernel-bias`).
+    centers: Vec<[f64; 3]>,
     pub h: Vec<f32>,
     /// MFD drainage area (m²) from the last epoch — the dendritic-ness instrument.
     pub drainage: Vec<f32>,
@@ -211,6 +218,7 @@ impl Fluvial {
         let cell_m = crate::sample::cell_size_m(level, radius) as f32;
         let mut h = vec![0.0f32; nx * nx];
         let mut cell_area = vec![0.0f32; nx * nx];
+        let mut centers = vec![[0.0f64; 3]; nx * nx];
         for y in 0..nx {
             for x in 0..nx {
                 let gi = oi + x as u32;
@@ -219,12 +227,15 @@ impl Fluvial {
                 h[y * nx + x] = surf(cell) as f32;
                 cell_area[y * nx + x] =
                     crate::measure::cell_area_m2(face, gi as u64, gj as u64, level, radius) as f32;
+                centers[y * nx + x] =
+                    crate::measure::cell_center_unit(face, gi as u64, gj as u64, level);
             }
         }
         Self {
             nx,
             cell_m,
             cell_area,
+            centers,
             h,
             drainage: vec![0.0; nx * nx],
             face,
@@ -283,6 +294,17 @@ impl Fluvial {
     #[inline]
     fn is_edge(nx: usize, x: usize, y: usize) -> bool {
         x == 0 || y == 0 || x == nx - 1 || y == nx - 1
+    }
+
+    /// True great-circle distance (m) between the centres of cells at linear
+    /// indices `a` and `b` — the honest slope/flux **length**, retiring uniform
+    /// `cell_m` / diagonal `cell_m·√2` for D8, MFD, incision and talus. On the
+    /// equiangular cube-sphere the uniform value overstates distance toward the
+    /// cube corners (`#obs-cube-locked-kernel-bias`); true metrics are necessary
+    /// but not sufficient against the fan's structural bias (`#norm-bias-vs-noise`).
+    #[inline]
+    fn dist_m(&self, a: usize, b: usize) -> f32 {
+        crate::measure::gc_dist_m(self.centers[a], self.centers[b], crate::planet::Planet::EARTH.radius_m) as f32
     }
 
     /// Outlets: coast (`h ≤ sea`) always; **tile-edge sinks only when this tile
@@ -400,11 +422,7 @@ impl Fluvial {
                         continue;
                     }
                     let j = ny_ as usize * nx + nx_ as usize;
-                    let dist = if dx != 0 && dy != 0 {
-                        self.cell_m * std::f32::consts::SQRT_2
-                    } else {
-                        self.cell_m
-                    };
+                    let dist = self.dist_m(i, j);
                     let slope = (hi - self.h[j]) / dist;
                     if slope > best_slope {
                         best_slope = slope;
@@ -447,7 +465,7 @@ impl Fluvial {
                 let j = nyp as usize * nx + nxp as usize;
                 let drop = hi - self.h[j];
                 if drop > 0.0 {
-                    let dist = if *dx != 0 && *dy != 0 { self.cell_m * std::f32::consts::SQRT_2 } else { self.cell_m };
+                    let dist = self.dist_m(i, j);
                     let w = (drop / dist).powf(P);
                     weights[k] = w;
                     total += w;
@@ -469,15 +487,12 @@ impl Fluvial {
     /// already solved: `h ← (h + f·h_r)/(1 + f)`, `f = K·dt·Aᵐ/dist`. Exact and
     /// unconditionally stable.
     fn incise(&mut self, p: &FluvialParams, recv: &[usize], order: &[usize]) {
-        let nx = self.nx;
         for &i in order {
             let r = recv[i];
             if r == i {
                 continue;
             }
-            let (x, y) = (i % nx, i / nx);
-            let (rx, ry) = (r % nx, r / nx);
-            let dist = if x != rx && y != ry { self.cell_m * std::f32::consts::SQRT_2 } else { self.cell_m };
+            let dist = self.dist_m(i, r);
             let f = p.k_dt * self.drainage[i].powf(p.m) / dist;
             self.h[i] = (self.h[i] + f * self.h[r]) / (1.0 + f);
         }
@@ -521,7 +536,7 @@ impl Fluvial {
                 let (mut best, mut best_drop, mut best_dist) = (i, 0.0f32, self.cell_m);
                 for (dx, dy) in NEIGHBORS {
                     let j = (y as i32 + dy) as usize * nx + (x as i32 + dx) as usize;
-                    let dist = if dx != 0 && dy != 0 { self.cell_m * std::f32::consts::SQRT_2 } else { self.cell_m };
+                    let dist = self.dist_m(i, j);
                     let drop = hi - snapshot[j];
                     if drop / dist > best_drop / best_dist {
                         best_drop = drop;
@@ -707,6 +722,30 @@ mod fluvial_tests {
             "the fluvial test footprint must be mostly LAND (>{sea} m derived) or these tests test a no-op — \
              only {above}/{} cells are subaerial",
             f.h.len()
+        );
+    }
+
+    /// The fluvial kernels read TRUE spherical neighbour lengths, not uniform
+    /// `cell_m` / `cell_m·√2`. Anchored at the face corner (origin 0,0) where the
+    /// equiangular map shrinks cells: uniform would make both ratios exactly 1.0,
+    /// so reverting `dist_m` to the old constants fails this probe
+    /// (`#obs-cube-locked-kernel-bias`, `#norm-probe-sensitivity` known-bad).
+    #[test]
+    fn neighbor_lengths_are_true_spherical_not_uniform() {
+        let nx = 8usize;
+        let f = Fluvial::from_surface(0, Face::ZPos, 7, 0, 0, nx, |_| 0.0);
+        let idx = |x: usize, y: usize| y * nx + x;
+        // Corner cell (0,0) east neighbour: ~6.3% shorter than uniform cell_m.
+        let ratio_e = f.dist_m(idx(0, 0), idx(1, 0)) / f.cell_m;
+        assert!(
+            (ratio_e - 0.9372).abs() < 0.01,
+            "corner east ratio {ratio_e} expected ~0.937 (uniform would be 1.0)"
+        );
+        // Corner diagonal: ~33% shorter than the uniform diagonal cell_m·√2.
+        let ratio_d = f.dist_m(idx(0, 0), idx(1, 1)) / (f.cell_m * std::f32::consts::SQRT_2);
+        assert!(
+            (ratio_d - 0.672).abs() < 0.01,
+            "corner diagonal ratio {ratio_d} expected ~0.672 (uniform would be 1.0)"
         );
     }
 
