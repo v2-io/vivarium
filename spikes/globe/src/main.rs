@@ -6,11 +6,11 @@
 //! Google-Earth verbs only: drag to spin, wheel to zoom.
 //!
 //! **The discipline this view exists to demonstrate** (the new frame, `store.rs` +
-//! `query.rs`): a view *only queries; it owns no world state*. Elevations arrive
-//! through [`query::World::surface_prefer_eroded`] — hit the eroded root if present,
-//! else initial topography (which may still compute-and-memoize). The view never
-//! triggers a cold erosion run; that is the builder's job. The HUD reports hits
-//! and whether the surface is eroded or prior. Camera + meshes only live here.
+//! `query.rs`): a view *only queries; it owns no world state*. Elevations come
+//! from store census — every builder `erosion-tile` root loads as an
+//! `ErodedRegion`, then each face is assembled with `World::assemble_surface_tile`
+//! (prior outside tiles). That matches the builder's 64×64 sweep; a single
+//! full-face key would miss those tiles. Never cold-runs fluvial erosion.
 //!
 //! **Honesty line** (also on the HUD): the fBm prior is a placeholder that
 //! conserves nothing and encodes no tectonics; eroded tiles are fluvial carving
@@ -46,7 +46,7 @@ use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 
 use vivarium_world::gen::{self, SEA_LEVEL_M};
 use vivarium_world::planet::Planet;
-use vivarium_world::query::{Source, World};
+use vivarium_world::query::World;
 use vivarium_world::spec::WorldSpec;
 use vivarium_world::sphere::{CubeCoord, Face};
 use vivarium_world::store::Store;
@@ -81,10 +81,6 @@ struct FaceMesh {
     indices: Vec<u32>,
 }
 
-/// Builder-default erosion epochs — must match `vivarium build`'s default so a
-/// built world and the globe share keys. Views never invent a different run.
-const EROSION_EPOCHS: u32 = 40;
-
 /// A completed whole-globe build.
 struct GlobeMsg {
     level: u8,
@@ -94,9 +90,9 @@ struct GlobeMsg {
     /// pick reports elevation from the same queried data the meshes were built
     /// from — never a separate computation that could drift.
     tiles: Vec<Vec<f32>>,
-    computed: usize,
-    hits: usize,
-    /// How many of the six faces came from a store-hit eroded tile.
+    /// How many store erosion tiles the census loaded (all faces/levels).
+    store_eroded_tiles: usize,
+    /// How many of the six faces had any cell covered by a store erosion tile.
     eroded_faces: usize,
     pull_s: f32,
     /// Fraction of cells above [`SEA_LEVEL_M`] (≈ by-area: equiangular cells
@@ -404,9 +400,10 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx
         let world = World::new(&store, seed);
         while let Ok((level, exag, audit)) = rx.recv() {
             let t0 = std::time::Instant::now();
+            // Reload each request so a builder running alongside the globe is visible.
+            let regions = world.load_eroded_regions();
+            let store_eroded_tiles = regions.len();
             let nx = 1usize << level;
-            let mut computed = 0usize;
-            let mut hits = 0usize;
             let mut eroded_faces = 0usize;
             let mut land = 0usize;
             let mut total = 0usize;
@@ -414,33 +411,26 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx
             let mut seam = SeamStats::default();
             let faces: Vec<FaceMesh> = std::thread::scope(|s| {
                 let world = &world;
+                let regions = &regions;
                 let handles: Vec<_> = (0u8..6)
                     .map(|f| {
                         s.spawn(move || {
                             let face = Face::from_index(f);
-                            let (tile, src, eroded) = world.surface_prefer_eroded(
-                                face,
-                                level,
-                                0,
-                                0,
-                                nx,
-                                EROSION_EPOCHS,
-                            );
+                            // Observe-only assemble: builder's 64×64 tiles + prior,
+                            // never a cold fluvial run and never a full-face key miss.
+                            let (tile, eroded) =
+                                world.assemble_surface_tile(face, level, 0, 0, nx, regions);
                             let land = tile.iter().filter(|&&h| h as f64 > SEA_LEVEL_M).count();
                             let (mesh, fseam) = build_face(world, face, level, &tile, exag, audit);
-                            (mesh, tile, src, land, fseam, eroded)
+                            (mesh, tile, land, fseam, eroded)
                         })
                     })
                     .collect();
                 handles
                     .into_iter()
                     .map(|h| {
-                        let (fm, tile, src, l, fseam, eroded) =
+                        let (fm, tile, l, fseam, eroded) =
                             h.join().expect("face build panicked");
-                        match src {
-                            Source::Computed => computed += 1,
-                            Source::Hit => hits += 1,
-                        }
                         if eroded {
                             eroded_faces += 1;
                         }
@@ -461,8 +451,7 @@ fn spawn_worker(world_dir: PathBuf, seed: u64, rx: Receiver<(u8, f32, bool)>, tx
                 exag,
                 faces,
                 tiles,
-                computed,
-                hits,
+                store_eroded_tiles,
                 eroded_faces,
                 pull_s: t0.elapsed().as_secs_f32(),
                 land_frac: land as f32 / total.max(1) as f32,
@@ -545,9 +534,9 @@ fn sun_world_dir(eph: &SunEphemeris) -> Vec3 {
 struct BuiltStats {
     level: u8,
     exag: f32,
-    computed: usize,
-    hits: usize,
-    /// Faces that landed from a store-hit eroded tile (0..=6).
+    /// Count of `erosion-tile` roots loaded from the store census.
+    store_eroded_tiles: usize,
+    /// Faces with any cell covered by a store erosion tile (0..=6).
     eroded_faces: usize,
     pull_s: f32,
     land_frac: f32,
@@ -878,8 +867,7 @@ fn apply_builds(
     state.built = Some(BuiltStats {
         level: msg.level,
         exag: msg.exag,
-        computed: msg.computed,
-        hits: msg.hits,
+        store_eroded_tiles: msg.store_eroded_tiles,
         eroded_faces: msg.eroded_faces,
         pull_s: msg.pull_s,
         land_frac: msg.land_frac,
@@ -1003,11 +991,22 @@ fn hud_update(
                 (s.within_sum / s.n.max(1) as f64) as f32,
             );
             let surface = if b.eroded_faces == 6 {
-                format!("eroded (all 6 faces, {EROSION_EPOCHS} ep)")
+                format!(
+                    "eroded (all 6 faces, {} store tiles)",
+                    b.store_eroded_tiles
+                )
             } else if b.eroded_faces > 0 {
-                format!("mixed: {}/6 eroded, rest fBm prior", b.eroded_faces)
+                format!(
+                    "mixed: {}/6 faces eroded ({} store tiles), rest fBm prior",
+                    b.eroded_faces, b.store_eroded_tiles
+                )
+            } else if b.store_eroded_tiles > 0 {
+                format!(
+                    "fBm at this L ({} store tiles at other levels — zoom or rebuild)",
+                    b.store_eroded_tiles
+                )
             } else {
-                "fBm prior (no eroded roots at this level)".to_string()
+                "fBm prior (no erosion-tile roots — run vivarium build)".to_string()
             };
             let honesty = if b.eroded_faces > 0 {
                 "fluvial on fBm prior -- not earned Abyssal land (emerged-land gate still open)"
@@ -1015,7 +1014,7 @@ fn hud_update(
                 "fBm surface prior -- placeholder: conserves nothing, no tectonics/erosion yet"
             };
             format!(
-                "world \"{}\" (seed {:016x}) | {surface} L{} | cell ~{cell_km:.0} km | pull {} computed / {} hit, {:.2} s | land ~{:.0}%{}\n\
+                "world \"{}\" (seed {:016x}) | {surface} L{} | cell ~{cell_km:.0} km | assemble {:.2} s | land ~{:.0}%{}\n\
                  alt {alt:.0} km | centre {:.1}{} {:.1}{} | relief x{:.0} (1 = honest) | level {}\n\
                  {pick_line}\n\
                  face-seam dh: cross {c_mean:.0} m mean, {:.0} m max | within-face {w_mean:.0} m mean, {:.0} m max{}\n\
@@ -1024,8 +1023,6 @@ fn hud_update(
                 ident.name,
                 ident.seed,
                 b.level,
-                b.computed,
-                b.hits,
                 b.pull_s,
                 b.land_frac * 100.0,
                 if inflight { " | rebuilding..." } else { "" },

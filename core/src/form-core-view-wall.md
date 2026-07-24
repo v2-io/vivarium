@@ -34,6 +34,6 @@ Headless calibration, human play, and logozoetic play-as-oneself are the same wo
 ## Working Notes
 
 - Worldview gate: `VIVARIUM_ALLOW_VIEW_EVOLUTION` (default off). Module docs + Cargo.toml comment name the split.
-- Next strengthen: pull matured tiles via store query (`surface_prefer_eroded` / demand spool) so the ethereal path shows builder work without re-enabling in-view evolution.
-- Workspace `clippy` disallows for rendering crates in world packages remain desirable enforcement, not yet the segment's burden.
+- **Store observe path (landed):** `World::load_eroded_regions` + `assemble_surface_tile`; globe and worldview default paths consume builder 64×64 tiles (not full-face keys). Seed from vivium manifest via `$VIVARIUM_WORLD`.
+- Next strengthen: demand spool; water-tile depth load into observe path; periodic store reload while a builder runs; clippy bans for rendering crates in world packages.
 - Specimen of FE(4) violation and revert: `DECISIONS[core-view-wall-observe-only]` (history layer).

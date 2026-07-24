@@ -21,9 +21,9 @@
 //! save — `#form-store-as-save`). Dependencies between systems become recursion
 //! in the pull.
 
-use std::cell::Cell;
+use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::erosion::{Fluvial, FluvialParams};
+use crate::erosion::{self, ErodedRegion, Fluvial, FluvialParams};
 use crate::gen;
 use crate::nomotheke::{CLIMATE, EROSION, HYDROSPHERE, INITIAL_TOPOGRAPHY, UPLIFT, WATER};
 use crate::sphere::{CellId, Face};
@@ -53,7 +53,8 @@ pub struct World<'s> {
     store: &'s Store,
     seed: u64,
     /// When set, memo puts tag roots `provisional` (builder waived unmet flux).
-    provisional_writes: Cell<bool>,
+    /// Atomic so `World` stays `Sync` for parallel face pulls (globe worker).
+    provisional_writes: AtomicBool,
 }
 
 impl<'s> World<'s> {
@@ -61,7 +62,7 @@ impl<'s> World<'s> {
         World {
             store,
             seed,
-            provisional_writes: Cell::new(false),
+            provisional_writes: AtomicBool::new(false),
         }
     }
 
@@ -73,7 +74,7 @@ impl<'s> World<'s> {
     /// Tag subsequent memo puts as provisional (or clear the tag). Builder sets
     /// this for phases admitted only under `--allow-unmet`.
     pub fn set_provisional_writes(&self, provisional: bool) {
-        self.provisional_writes.set(provisional);
+        self.provisional_writes.store(provisional, Ordering::Relaxed);
     }
 
     fn put_memo(&self, key: &Key, value: &[u8]) {
@@ -81,7 +82,7 @@ impl<'s> World<'s> {
             key,
             value,
             PutOpts {
-                provisional: self.provisional_writes.get(),
+                provisional: self.provisional_writes.load(Ordering::Relaxed),
             },
         );
     }
@@ -298,6 +299,10 @@ impl<'s> World<'s> {
     ///
     /// Returns `(heights, source, eroded)` where `eroded` is true iff the
     /// surface came from a memoized fluvial tile at `epochs`.
+    ///
+    /// **Note:** this hits one complete key `(oi,oj,nx,epochs)`. The builder
+    /// sweeps many 64×64 tiles; for a whole-face or free-roam view that must
+    /// see *all* of them, use [`load_eroded_regions`] + [`assemble_surface_tile`].
     pub fn surface_prefer_eroded(
         &self,
         face: Face,
@@ -313,6 +318,80 @@ impl<'s> World<'s> {
         }
         let (tile, src) = self.initial_topography(face, level, oi, oj, nx);
         (tile, src, false)
+    }
+
+    /// Materialize every `erosion-tile` root as an [`ErodedRegion`] for observe-
+    /// only sampling. Never runs the fluvial kernel — pure store census.
+    /// Order is coarse → fine by level (required by [`erosion::surface_at`]).
+    pub fn load_eroded_regions(&self) -> Vec<ErodedRegion> {
+        let Ok(roots) = self.store.roots() else {
+            return Vec::new();
+        };
+        let mut out = Vec::new();
+        for r in roots {
+            if !r.key.starts_with("erosion-tile@") {
+                continue;
+            }
+            let Some(face_i) = key_field(&r.key, "face").and_then(|v| v.parse::<u8>().ok()) else {
+                continue;
+            };
+            let Some(level) = key_field(&r.key, "level").and_then(|v| v.parse::<u8>().ok()) else {
+                continue;
+            };
+            let Some(oi) = key_field(&r.key, "oi").and_then(|v| v.parse::<u32>().ok()) else {
+                continue;
+            };
+            let Some(oj) = key_field(&r.key, "oj").and_then(|v| v.parse::<u32>().ok()) else {
+                continue;
+            };
+            let Some(nx) = key_field(&r.key, "nx").and_then(|v| v.parse::<usize>().ok()) else {
+                continue;
+            };
+            let Some(bytes) = self.store.object_bytes(&r.object) else {
+                continue;
+            };
+            let h = decode_f32(&bytes);
+            if h.len() != nx * nx {
+                continue;
+            }
+            out.push(ErodedRegion {
+                face: Face::from_index(face_i),
+                level,
+                oi,
+                oj,
+                nx,
+                h,
+                seed: self.seed,
+            });
+        }
+        out.sort_by_key(|r| r.level);
+        out
+    }
+
+    /// Assemble an `nx×nx` height tile at `(face, level, oi, oj)` from loaded
+    /// store regions + fated prior. **Observe-only:** no erosion compute, no
+    /// store write. `any_eroded` is true if any cell was covered by a region.
+    pub fn assemble_surface_tile(
+        &self,
+        face: Face,
+        level: u8,
+        oi: u32,
+        oj: u32,
+        nx: usize,
+        regions: &[ErodedRegion],
+    ) -> (Vec<f32>, bool) {
+        let mut tile = Vec::with_capacity(nx * nx);
+        let mut any_eroded = false;
+        for j in 0..nx as u32 {
+            for i in 0..nx as u32 {
+                let cell = CellId::from_face_ij(face, oi + i, oj + j, level);
+                if erosion::tier_at(cell, regions).is_some() {
+                    any_eroded = true;
+                }
+                tile.push(erosion::surface_at(self.seed, cell, regions) as f32);
+            }
+        }
+        (tile, any_eroded)
     }
 
     /// The complete key for a water tile — upstream identity folded in through
@@ -406,6 +485,12 @@ fn decode_f32(b: &[u8]) -> Vec<f32> {
         .collect()
 }
 
+/// Pull `name=value` from a canonical complete-key string.
+fn key_field<'a>(key: &'a str, name: &str) -> Option<&'a str> {
+    let pfx = format!("{name}=");
+    key.split('|').find_map(|f| f.strip_prefix(&pfx))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -462,6 +547,30 @@ mod tests {
         let w2 = World::new(&s2, 0);
         let (_t, src) = w2.initial_topography(face, 19, 100, 100, nx);
         assert_eq!(src, Source::Hit, "reopened store still holds the walked world");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn load_eroded_regions_sees_builder_tiles_not_only_full_face_keys() {
+        // Builder writes 64×64 tiles; a full-face surface_prefer_eroded key does
+        // not hit them. Census → ErodedRegion must recover the carved surface.
+        let dir = tmpdir("census-eroded");
+        let face = Face::from_index(2);
+        let (level, nx, epochs) = (6u8, 16usize, 5u32);
+        let s = Store::open(&dir).unwrap();
+        let w = World::new(&s, 7);
+        let (_h, src) = w.erosion_tile(face, level, 0, 0, nx, epochs);
+        assert_eq!(src, Source::Computed);
+        let regions = w.load_eroded_regions();
+        assert_eq!(regions.len(), 1);
+        assert_eq!(regions[0].nx, nx);
+        assert_eq!(regions[0].level, level);
+        let (tile, any) = w.assemble_surface_tile(face, level, 0, 0, nx, &regions);
+        assert!(any, "assembled tile must report eroded coverage");
+        assert_eq!(tile.len(), nx * nx);
+        // Pure prior path (no regions) still works and does not claim eroded.
+        let (_prior, none) = w.assemble_surface_tile(face, level, 0, 0, nx, &[]);
+        assert!(!none);
         let _ = fs::remove_dir_all(&dir);
     }
 

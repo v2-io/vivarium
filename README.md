@@ -27,10 +27,24 @@ Big-picture residual / ice vs segment intuition (not law): [`CONSOLIDATION-STATU
 cargo test -p vivarium-world --lib
 cargo run -p vivarium-world --bin vivarium -- status
 cargo run -p vivarium-world --bin vivarium -- info --width 80
-cargo run --release -p vivarium-globe   # store-backed planet view
+cargo run --release -p vivarium-globe      # store-backed planet (observe-only)
+cargo run --release -p vivarium-worldview  # first-person store surface (observe-only)
 ```
 
-Default world dir: `$VIVARIUM_WORLD` or `~/.cache/vivarium/globe-world`.
+**See a built world (builder + views share one store):**
+
+```bash
+export VIVARIUM_WORLD="${VIVARIUM_WORLD:-$HOME/.cache/vivarium/globe-world}"
+cargo run -p vivarium-world --bin vivarium -- new "$VIVARIUM_WORLD" first-light
+# emerged-land flux is still unmet — waive for provisional materialization:
+cargo run -p vivarium-world --bin vivarium -- build "$VIVARIUM_WORLD" --level 6 --epochs 20 --allow-unmet
+cargo run -p vivarium-world --bin vivarium -- status "$VIVARIUM_WORLD"   # pyramid + provisional column
+cargo run --release -p vivarium-globe                                    # spin the built surface
+# optional: first-person over the same store (no VIVARIUM_ALLOW_VIEW_EVOLUTION)
+cargo run --release -p vivarium-worldview
+```
+
+Default world dir: `$VIVARIUM_WORLD` or `~/.cache/vivarium/globe-world`. Views load builder `erosion-tile` roots via store census — they do not cold-run fluvial evolution.
 
 ## Standing law
 

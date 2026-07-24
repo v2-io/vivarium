@@ -10,6 +10,12 @@
 //! evolution, and it does not own world-evolution parameters. That is the path
 //! that may claim ethereal / moratorium-clear observe-only.
 //!
+//! **Store-backed observe (default).** Opens `$VIVARIUM_WORLD` (same default
+//! dir as `vivarium` / vivarium-globe), loads every `erosion-tile` root as an
+//! `ErodedRegion`, and samples through `erosion::surface_at` — so a
+//! `vivarium build` shows up in the first-person view without the view
+//! inventing evolution.
+//!
 //! **Opt-in physics testbench.** `VIVARIUM_ALLOW_VIEW_EVOLUTION=1` re-enables
 //! the hybrid live-erosion / fill workers (epoch knobs, rain, settle). That
 //! path is a **named FE(4) debt** — useful for watching kernels, not a lawful
@@ -38,20 +44,72 @@ use std::sync::{Arc, Mutex};
 
 use vivarium_world::erosion::{self, ErodedRegion, Fluvial, FluvialParams};
 use vivarium_world::gen::SEA_LEVEL_M;
+use vivarium_world::query::World;
 use vivarium_world::sphere::Geo;
 use vivarium_world::planet::Planet;
 use vivarium_world::sample::{cell_size_m, sample_surface_with, SurfacePatch};
+use vivarium_world::spec::WorldSpec;
+use vivarium_world::store::Store;
 use vivarium_world::water::{WaterParams, WaterRegion, WaterSim};
 use vivarium_world::sphere::{CellId, Face};
 
-/// The world-seed for this testbench run — `VIVARIUM_SEED` env, default 0 (the
-/// long-lived legacy world every probe baseline was captured against; seed 0 is
-/// bit-identical to the pre-seed code, pinned by golden tests in `noise.rs`).
+/// Vivium directory: `$VIVARIUM_WORLD`, else `~/.cache/vivarium/globe-world`
+/// (same default as `vivarium` CLI and vivarium-globe).
+fn world_dir() -> PathBuf {
+    if let Ok(p) = std::env::var("VIVARIUM_WORLD") {
+        return PathBuf::from(p);
+    }
+    let cache = std::env::var("XDG_CACHE_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".into())).join(".cache")
+        });
+    cache.join("vivarium").join("globe-world")
+}
+
+/// World-seed: manifest of the opened vivium when present; else `VIVARIUM_SEED`
+/// (default 0) for pure testbench runs with no store.
 fn world_seed() -> u64 {
     static SEED: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
     *SEED.get_or_init(|| {
-        std::env::var("VIVARIUM_SEED").ok().and_then(|s| s.parse().ok()).unwrap_or(0)
+        let dir = world_dir();
+        if let Ok(Some(spec)) = WorldSpec::load(&dir) {
+            return spec.seed;
+        }
+        std::env::var("VIVARIUM_SEED")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0)
     })
+}
+
+/// Observe-only: load every builder `erosion-tile` into telescope tiers.
+/// Empty when the store is missing or not yet built.
+fn load_store_eroded_tiers() -> Vec<ErodedRegion> {
+    let dir = world_dir();
+    let Ok(store) = Store::open(&dir) else {
+        eprintln!("[worldview] no store at {} — prior-only surface", dir.display());
+        return Vec::new();
+    };
+    let seed = world_seed();
+    let world = World::new(&store, seed);
+    let regions = world.load_eroded_regions();
+    let provisional = store
+        .roots()
+        .map(|rs| rs.iter().filter(|r| r.provisional).count())
+        .unwrap_or(0);
+    eprintln!(
+        "[worldview] store {} — seed {:016x}, {} erosion-tile root(s){} (observe-only assemble)",
+        dir.display(),
+        seed,
+        regions.len(),
+        if provisional > 0 {
+            format!(", {provisional} provisional")
+        } else {
+            String::new()
+        }
+    );
+    regions
 }
 
 /// FE(4) gate: in-view erosion/water evolution is off unless explicitly waived.
@@ -868,7 +926,8 @@ fn water_update(rx: Res<WaterRx>, mut water: ResMut<WaterRes>, mut meta: ResMut<
 }
 
 fn main() {
-    let _ = view_evolution_allowed(); // print FE(4) mode banner once at startup
+    let evolve = view_evolution_allowed(); // FE(4) mode banner once at startup
+    let _ = world_seed(); // resolve seed (manifest or env) before any sampling
     let view = View::default();
     // The session's fixed instant (until #11 wires real time controls):
     // VIVARIUM_DAY = day of year (0 = vernal equinox; default late spring),
@@ -881,24 +940,48 @@ fn main() {
         WorldClock(vivarium_world::time::Time::from_deciseconds((((day + df) * 86_400.0) * 10.0) as i64))
     };
     let (mesher_tx, mesher_rx) = spawn_mesher();
-    let tier0 = build_tier0(&view);
+    // Observe-only: store census → ErodedRegion telescope (builder tiles show).
+    // Evolution path: in-view tier0 + fine workers (named FE(4) debt).
+    let tier0 = if evolve {
+        build_tier0(&view)
+    } else {
+        load_store_eroded_tiers()
+    };
     let focus = SharedFocus(Arc::new(Mutex::new((view.focus.x, view.focus.y, view.level))));
     let (tx, rx) = std::sync::mpsc::channel::<TierMsg>();
     // Bounded: when streaming per-step, the worker's blocking send paces the
     // sim to exactly what the view consumes — sim-time slows instead of frames
     // being skipped. (Burst mode sends rarely and never fills 2 slots.)
     let (wtx, wrx) = std::sync::mpsc::sync_channel::<WaterMsg>(2);
-    spawn_fine_tiers(&view, tier0.clone(), tx, wtx, focus.clone());
-    let meta = TierMeta(tier0.iter().map(|r| (r.level, std::time::Instant::now(), FluvialParams::default().epochs, 0.0, f32::INFINITY)).collect());
+    if evolve {
+        spawn_fine_tiers(&view, tier0.clone(), tx, wtx, focus.clone());
+    }
+    let meta = TierMeta(
+        tier0
+            .iter()
+            .map(|r| {
+                (
+                    r.level,
+                    std::time::Instant::now(),
+                    FluvialParams::default().epochs,
+                    0.0,
+                    f32::INFINITY,
+                )
+            })
+            .collect(),
+    );
     let eroded = Eroded(Arc::new(tier0));
+    let title = if std::env::var_os("VIVARIUM_AUTOSHOT").is_some() {
+        "[autoshot] vivarium — worldview".into()
+    } else if evolve {
+        "vivarium — worldview (VIEW EVOLUTION — FE4 debt)".into()
+    } else {
+        "vivarium — worldview (store observe-only)".into()
+    };
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: if std::env::var_os("VIVARIUM_AUTOSHOT").is_some() {
-                    "[autoshot] vivarium — worldview (verification run)".into()
-                } else {
-                    "vivarium — worldview (cube-sphere frame)".into()
-                },
+                title,
                 resolution: bevy::window::WindowResolution::new(1280, 720),
                 ..default()
             }),

@@ -129,7 +129,13 @@ impl Store {
     pub fn get(&self, key: &Key) -> Option<Vec<u8>> {
         let root = fs::read_to_string(self.roots.join(hex(key.hash()))).ok()?;
         let obj = root.lines().next()?.trim();
-        fs::read(self.objects.join(obj)).ok()
+        self.object_bytes(obj)
+    }
+
+    /// Read an object by content hash (hex) — census → materialization without
+    /// reconstructing the complete key.
+    pub fn object_bytes(&self, object_hash: &str) -> Option<Vec<u8>> {
+        fs::read(self.objects.join(object_hash)).ok()
     }
 
     /// Whether the root for `key` is tagged provisional (false if missing or untagged).
