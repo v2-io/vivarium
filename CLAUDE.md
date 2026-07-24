@@ -32,7 +32,7 @@ A deterministic constructed-world laboratory (and sim game) in the RimWorld / DF
 | **Residual mine** | [`.archive/`](.archive/) **and live `doc/`** (design / theory / plan / ARCHITECTURE) — extract gold → segments; not tactical claim law |
 | **Fully integrated / superseded** | [`.super-archive/`](.super-archive/) — graduated from archive *or* doc; do not re-mine as claim source; see `MANIFEST.md` |
 
-**Main objective this phase:** peel residual prose (especially `.archive/` and `doc/`) into **core segments**, **Working Notes**, or **`.super-archive/`** — that is what *integration is replacement* means (`#scope-segment-canon`). **No path ban** on graduation. A live “claim home: #slug” pointer table is dual-home cosplay, not integration; OUTLINE is the index. **Every graduated file speeds the next adjudication.** Novel not-ready-for-primacy: Working Notes, `type: sketch`, or `msc/`.
+**Main objective this phase:** peel residual prose into **core** (present best); graduate claim-empty mine to **`.super-archive/`**. **Integration is replacement** (`#scope-segment-canon`): core body holds current best; text removed *from core* goes to the **history layer** (git / DECISIONS / changelog), not a softened twin. Working Notes = forward residue, not history dump. Pointer tables are not integration. **Every graduated file speeds the next adjudication.** Novel not-ready-for-primacy: Working Notes, `type: sketch`, or `msc/`.
 
 Candidate inventory (unratified scan, not canon): [`core-segment-candidates-2026-07-14.md`](core-segment-candidates-2026-07-14.md).
 

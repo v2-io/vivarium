@@ -24,12 +24,12 @@ Every settled claim about what vivarium is, must do, or may conclude lives in a 
    - **ASF reading gates** — Level A/B/C for vivarium work: #scope-asf-reading-gates (Level C is a hard gate before agent-seam work). `ASF.md` is a historical non-authoritative router only — not a claim home.
    - **Foreign Archema claims** — cite as `#asf/1-aat/<slug>` etc. (FORMAT §5.2); do not restate ASF mathematics in vivarium segments.
    - **Executable state** — code, store roots, and probes *convict or implement* claims; they do not replace the claim text.
-4. **Integration is replacement.** When a segment lands or is corrected, the claim’s home **becomes** one of:
-   - **`core/src/`** — primary segment body (law / observation / …), or  
-   - **Working Notes** on a related segment (forward residue, open tension, provenance — not a second FE), or  
-   - **`.super-archive/`** — claim-empty ice / superseded substrate (provenance only).
-
-   Prior dual-home prose (live design restating the FE, or a live file that is only a table of “claim home: #slug” links) is **not** integrated — that is still a second outline. Unpealed mine (teaching bodies, open extract not yet in core/WN/super-archive) may stay in live `doc/` until pealed; that is unfinished work.
+4. **Integration is replacement.** The claim channel states **present best only**.
+   - **`core/src/` body** — current law / observation / formulation (sole claim truth).
+   - When core is corrected and old FE text leaves the body, that retired text goes to the **history layer** (git, commit messages, DECISIONS, changelog — not a softened twin in the segment body).
+   - **Working Notes** — forward residue (open tension, do-not-reclaim, instruments), not a dump of deleted FE history.
+   - **`.super-archive/`** — graduated *mine* substrate (design/archive peals) once claim-empty; provenance of sources, not core’s changelog.
+   - **Not integration:** live dual-home restatements of the FE, or a live “claim home: #slug” pointer table (second OUTLINE). Unpealed mine may stay in live `doc/` until pealed.
 5. **Session success.** Work that does not move a segment (or produce a probe / decision a segment will cite) does not advance claim-truth, however useful it is for play or engineering.
 
 ## Epistemic Status
