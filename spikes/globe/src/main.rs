@@ -22,10 +22,9 @@
 //! Controls: drag spin (inertia) · wheel / -/= zoom · arrows spin · [ ] level ·
 //!           A auto-level · X relief factor · ,/. scrub solar hour · N/M scrub
 //!           day-of-year · P play the diurnal cycle · Y headlight-vs-ephemeris ·
-//!           R reset · Esc quit. The sun is the REAL Phase-2 ephemeris by
-//!           default (terminator, seasons, polar day/night from planet.rs's
-//!           identities); the ethereal viewer scrubs time freely — a pure view
-//!           freedom, since the analytic regime makes any moment queryable.
+//!           O overhead north pole · R reset · Esc quit. The sun is the REAL
+//!           Phase-2 ephemeris by default (terminator, seasons, polar day/night
+//!           from planet.rs's identities); the ethereal viewer scrubs time freely.
 //! Env: VIVARIUM_WORLD (world dir = manifest + store; default
 //!      ~/.cache/vivarium/globe-world — a fresh seed is minted and *persisted*
 //!      on first run, deterministic ever after; point at another world dir to
@@ -668,7 +667,7 @@ fn setup(mut commands: Commands) {
         HudText,
     ));
 
-    println!("[globe] drag spin · wheel zoom · [ ] level · A auto-level · X relief · ,/. hour · N/M day · P play · Y headlight · R reset · Esc quit");
+    println!("[globe] drag spin · wheel zoom · [ ] level · A auto · X relief · O north pole · ,/. hour · N/M day · P play · Y headlight · R reset · Esc quit");
 }
 
 /// Google-Earth verbs: drag spins (with inertia), wheel zooms toward the surface.
@@ -729,6 +728,14 @@ fn input_update(
         orbit.pitch -= key_rate;
     }
     orbit.pitch = orbit.pitch.clamp(-1.55, 1.55);
+
+    // O — snap to axial north pole (+Y): look straight down the rotation axis.
+    if keys.just_pressed(KeyCode::KeyO) {
+        orbit.pitch = std::f32::consts::FRAC_PI_2;
+        orbit.yaw = 0.0;
+        orbit.vel_yaw = 0.0;
+        orbit.vel_pitch = 0.0;
+    }
 
     // Ethereal time scrub (the Phase-2 sky): ,/. hour · N/M day · P play · Y headlight.
     if keys.pressed(KeyCode::Comma) {
@@ -884,7 +891,10 @@ fn camera_update(
         orbit.pitch.cos() * orbit.yaw.sin(),
     );
     let eye = dir * orbit.dist;
-    let t = Transform::from_translation(eye).looking_at(Vec3::ZERO, Vec3::Y);
+    // Near the poles, world +Y is parallel to the view axis — looking_at would
+    // be singular. Use +X as screen-up so lon 0 sits at the top of the frame.
+    let up = if dir.y.abs() > 0.98 { Vec3::X } else { Vec3::Y };
+    let t = Transform::from_translation(eye).looking_at(Vec3::ZERO, up);
     if let Ok(mut c) = cam.single_mut() {
         *c = t;
     }
@@ -1019,7 +1029,7 @@ fn hud_update(
                  {pick_line}\n\
                  face-seam dh: cross {c_mean:.0} m mean, {:.0} m max | within-face {w_mean:.0} m mean, {:.0} m max{}\n\
                  {honesty}\n\
-                 drag spin | wheel zoom | [ ] level | A auto | X relief | S seam audit | R reset | Esc quit",
+                 drag spin | wheel zoom | [ ] level | A auto | O north pole | X relief | S seam audit | R reset | Esc quit",
                 ident.name,
                 ident.seed,
                 b.level,
