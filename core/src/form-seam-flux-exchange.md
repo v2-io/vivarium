@@ -44,6 +44,6 @@ The seam fix and tile composability are the same work: honest boundary condition
 
 ## Working Notes
 
-- **Pointer targets:** `doc/theory/multiscale-seams.md` mental model + §§1–2; ARCHITECTURE §4; `doc/plan/framework-to-status-quo.md` §3 (drainage-shaped dependency); abyssal-parity-plan Phase 3 (flux-BC tiles).
+- **Dual homes demoted:** multiscale-seams header + mental model; ARCHITECTURE §4; framework-to-status-quo §3; abyssal-parity checklist item 4; DESIGN-REDUX §5 join. Phase-3 flux-BC tile plan remains build trail.
 - **Do not absorb:** method zoo, $z$-from-quadtree tactical item, detail→abstract rename, full four-seam catalogue — extract later if needed.
 - **Conflict guard:** do not restate superseded "flux-on-the-face makes refluxing an invariant without a bill" without the wavelet-store correction (`DECISIONS[wavelet-store-solves-the-representation-not-the-dynamics]` family).

@@ -43,5 +43,5 @@ Status can print "unmet" while a naive builder still writes eroded tiles — tha
 ## Working Notes
 
 - **Promoted** from `msc/consolidation-wave-2026-07-21/draft-form-builder-admission.md`; store sibling fixed to #form-store-as-save (not `form-store-is-save`).
-- Ice dual-homes carefully: plan doc remains design for unbuilt daemon pieces; only the admission + observe-only pull claims move here.
+- **Dual homes demoted carefully:** `doc/plan/builder-explorer-decoupling.md` header (admission + observe-only + store bus); `query.rs` observe-only surface; abyssal-parity explorer roles. Unbuilt daemon / beacons / demand spool remain plan design — not claimed by this segment.
 - Pair with maturity CLI display debt on #form-ordinum-governs-flux-web — different surface, same "show the convicting truth" telos.

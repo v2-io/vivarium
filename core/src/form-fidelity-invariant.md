@@ -35,5 +35,5 @@ Without the invariant, LOD is a bag of performance hacks that silently disagree.
 
 ## Working Notes
 
-- **Demote dual homes:** DESIGN.md multi-fidelity paragraph; DESIGN-REDUX §1 (invariant + co-fidelity) and §0 principle pointer via represent-by-consequence; ARCHITECTURE spine bullets that restate the invariant.
+- **Dual homes demoted (claim-home banners):** DESIGN.md multi-fidelity; DESIGN-REDUX §0/§1; ARCHITECTURE §4 observer-side restatement; abyssal-parity checklist item 5; multiscale-seams §3 observer-side line. Teaching texture left in place.
 - **Siblings not this file:** multirate coupling; sufficient-statistic seam; column control volume; regime-probe methodology; lazy query-graph runtime shape.

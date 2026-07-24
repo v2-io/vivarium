@@ -1,5 +1,7 @@
 # Abyssal parity plan — an ethereal explorer in an early-Abyssal world
 
+> **Claim homes for laws this plan *honors* (not owns).** Realized ⟂ Lawful / unLawfulness budget → `#disc-unlawfulness-budget`. Seam fluxes / position×time → `#form-seam-flux-exchange`. Fidelity on both axes → `#form-fidelity-invariant`. Save ≡ memo store → `#form-store-as-save`. Builder/explorer roles → `#form-builder-admission`. Moratorium → `#scope-moratorium-endogenous-emergence`. Determinism / complete key / core-view wall → their segments. This file is the **build sequence** toward the milestone — not parallel claim law.
+
 *2026-07-10. The phased path from today's fixed-patch physics testbench to the first playable milestone: **an ethereal explorer roaming some of a Realized early-Abyssal world**, produced principled-and-global rather than as one baked patch, conforming to the consolidated architecture. Rests on `doc/ARCHITECTURE.md` (the three axes), `doc/theory/multiscale-seams.md` (position AND time at the seams — the technical core), `doc/plan/framework-to-status-quo.md` (the verified status quo + the store/spine/tile/query build shape), and `LEXICON.udon` (canonical vocabulary). Status inline: **decision** (Joseph's call, gating) / **build** / **gap** / **open**. This is the primary plan; alternative sequencings are flagged where they exist.*
 
 ---
@@ -9,7 +11,7 @@
 **"Ethereal-explorer-exploring-some-of-Abyssal"** decomposes cleanly against the settled ontology, and every term is load-bearing:
 
 - **Exploration**, not participation (`LEXICON.udon` §7.4) — the observer is **ethereal**: a UI over the world with **no causal access, no action-space**. It only queries. This is the observe-only register, and it is why the milestone is **moratorium-clear**: no endo agent is instantiated, nothing is *governed by* the world, so `ETHICS.md` Standing Moratorium Imperative (and `#scope-moratorium-endogenous-emergence`) is satisfied by construction. (An ethereal observer sits at the Adaptive-System tier, `taxonomy-formalization-spike.md` §4 — it can perceive and even be moved, but it holds no action space and no endo mind is created.)
-- A **Realized, not Lawful, early-Abyssal world** (`LEXICON.udon` §7.2) — law immutable (Realized), but honestly *not* self-consistent-to-the-limit (not Lawful): a natural-modeling world is merely Realized, carrying its unLawfulness budget openly. "Early-Abyssal" means the phase's geology/hydrology run (erosion + water cycle) but its later charges (biomineralization, oxygenation) do **not** — habitability *within* the phase does not require the charges that gate the transition *out* of it (`tabularium/terrestris.ordinum.udon`).
+- A **Realized, not Lawful, early-Abyssal world** (`LEXICON.udon` §7.2; claim home `#disc-unlawfulness-budget`) — law immutable (Realized), but honestly *not* self-consistent-to-the-limit (not Lawful): a natural-modeling world is merely Realized, carrying its unLawfulness budget openly. "Early-Abyssal" means the phase's geology/hydrology run (erosion + water cycle) but its later charges (biomineralization, oxygenation) do **not** — habitability *within* the phase does not require the charges that gate the transition *out* of it (`tabularium/terrestris.ordinum.udon`).
 - **Principled and global** — produced by the store/spine/flux-BC-tile/query frame (§§below), so the world exists everywhere at coarse fidelity and materializes fine near the observer, rather than as one fixed ~5 km patch that forgets itself on movement.
 
 And Joseph's original ask sits exactly here: *"keep playing with the erosion and water-cycle with an actual exploration agent"* — the explorer roams a live-ish Abyssal world where erosion and water are running or freshly settled, and you can dial the parameters and watch.
@@ -20,13 +22,13 @@ And Joseph's original ask sits exactly here: *"keep playing with the erosion and
 
 Everything the last weeks consolidated, as a checklist the build is measured against:
 
-1. **Determinism-as-ontology via fated lifting** — all sub-grid detail is **fated noise** (KRNG/DRNG), so every tile is memoizable and the world is a pure function of (seed, keys).
-2. **The complete content-addressed key** — every memo keyed by inputs + coupling params + seed + source-derived nomos-version; over-key, never under-key.
-3. **The core/view wall** — the ethereal explorer is a *peer view* that only queries; `vivarium-world` never learns it exists.
-4. **The seam discipline, position AND time** (`doc/theory/multiscale-seams.md`) — tiles coupled only by fluxes-as-sufficient-statistics; the space seam drawn by the coarse spine's drainage graph, the time seam by the multirate bands, with each system's dynamic exponent $z$ reconciled at the coupling.
-5. **The fidelity invariant on both axes** — spatial LOD by distance-from-observer, temporal LOD by the perceptual band / horizon; the world ages toward the observer.
+1. **Determinism-as-ontology via fated lifting** (`#post-determinism-as-ontology`) — all sub-grid detail is **fated noise** (KRNG/DRNG), so every tile is memoizable and the world is a pure function of (seed, keys).
+2. **The complete content-addressed key** (`#form-complete-content-addressed-key`) — every memo keyed by inputs + coupling params + seed + source-derived nomos-version; over-key, never under-key.
+3. **The core/view wall** (`#form-core-view-wall`) — the ethereal explorer is a *peer view* that only queries; `vivarium-world` never learns it exists.
+4. **The seam discipline, position AND time** (`#form-seam-flux-exchange`; teaching: `doc/theory/multiscale-seams.md`) — tiles coupled only by fluxes-as-sufficient-statistics; the space seam drawn by the coarse spine's drainage graph, the time seam by the multirate bands, with each system's dynamic exponent $z$ reconciled at the coupling.
+5. **The fidelity invariant on both axes** (`#form-fidelity-invariant`) — spatial LOD by distance-from-observer, temporal LOD by the perceptual band / horizon; the world ages toward the observer.
 6. **Epistemic honesty (the four axes)** — every phenomenon tagged A/B/C/D; the first landmasses honestly flagged low-A/low-B (conservation-honest only), so a viewer is never misled that fBm relief is principled geology.
-7. **Represent by consequence** — nothing computed finer than a consumer (here, the ethereal observer) depends on.
+7. **Represent by consequence** (`#post-represent-by-consequence`) — nothing computed finer than a consumer (here, the ethereal observer) depends on.
 
 ---
 

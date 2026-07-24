@@ -1,10 +1,10 @@
 # vivarium — design redux (elaboration in progress)
 
 *Started 2026-07-01. This is a **living elaboration** of the multi-fidelity
-thinking that `doc/design/DESIGN.md` §"Multi-fidelity world" opens but does not develop. It
-is intended to **eventually supersede** `doc/design/DESIGN.md`, but does not yet — until it
-is complete and adopted, `doc/design/DESIGN.md` remains authoritative and this is the place
-where the harder thinking is worked out. Epistemic status is marked inline:
+thinking that `doc/design/DESIGN.md` §"Multi-fidelity world" opens but does not develop.
+**Claim canon is `core/src/`** (`core/OUTLINE.md` · `#scope-segment-canon`); where a
+segment owns a law, cite the segment — this file and `DESIGN.md` are source /
+teaching substrate, not parallel law. Epistemic status is marked inline:
 **established** (a real, mature field), **our stance** (a design commitment we've
 reasoned to), **open** (genuinely unsolved / research-flavored). Prior-art names
 are field-level and confident; specific author/year attributions should be
@@ -196,6 +196,8 @@ own timestep. The forward direction and the coupling are decades mature. Only
 ---
 
 ## 5. The seam is a *sufficient statistic*, not a number
+
+**Claim homes:** consumer-dependent statistics at scale seams → `#form-seam-flux-exchange` · `#form-rl-closure-algebra` (law 1 + consumer-dependent $R$); fidelity cash-out → `#form-fidelity-invariant`; column as control volume / sufficient statistic frame → `#form-column-control-volume`. Worked water surface-vs-depth specimen below is **source and teaching**, not a second home for those laws.
 
 When a region resolves macro→micro, the fine detail must **prove the macro true**
 (the fidelity invariant, made operational). But "the median of the 8 m voxels
@@ -690,6 +692,8 @@ rather than fatal.
 ---
 
 ## 14. Representations of matter, and what a cell value *means* (TENTATIVE)
+
+**Claim home for the column frame:** `#form-column-control-volume` (control volume + sufficient statistic + declared semantics; strata/voxel/body frame). Full matter elaboration: `DESIGN-MATERIAL.md`. Everything concrete below is **TENTATIVE source** — reserve the shapes; do not treat this section as a second column law.
 
 *Everything in §14 is **TENTATIVE** — reserve the shapes, do not fix them; this is
 exactly the kind of thing future us will have far more tactical wisdom for. Marked

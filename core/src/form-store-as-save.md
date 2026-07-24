@@ -47,5 +47,5 @@ Treating the store as "just a cache" reintroduces a second home for world truth 
 ## Working Notes
 
 - **Sole home.** Do not reintroduce `form-save-is-memo-store` or `form-store-is-save` as parallel slugs.
-- **Pointer targets:** DESIGN-REDUX §13; ARCHITECTURE §5; `store.rs` module docs; LEXICON memo line.
-- **Ice once stable:** design/architecture claim prose → one-line home; keep layout examples and tentative GC discussion as source.
+- **Dual homes demoted:** DESIGN-REDUX §13; ARCHITECTURE §5; `store.rs` / `query.rs` module docs; plan headers (workflow, builder-explorer, abyssal-parity, framework-to-status-quo). Layout examples and tentative GC discussion left as source.
+- **Residual:** run-mode root guard and regenerable/irreducible GC still compliance debt (body Epistemic Status), not dual-home prose.

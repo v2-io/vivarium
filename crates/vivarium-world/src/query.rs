@@ -1,6 +1,10 @@
 //! The lazy pull-query + the first nomoi — the runtime as a demand-driven,
 //! memoized query graph (`doc/design/DESIGN-REDUX.md` §11).
 //!
+//! Claim homes: store as durable state → `#form-store-as-save`; observe-only
+//! surface pull (no cold long-evolution on the view path) →
+//! `#form-builder-admission`; complete keys → `#form-complete-content-addressed-key`.
+//!
 //! Queries are methods on a [`World`]: the context that owns `(store, seed)`
 //! **together**, so the same field feeds both the key construction and the
 //! compute — the world-seed in the key and the world-seed in the KRNG draws
@@ -14,7 +18,8 @@
 //! on a miss computes via the nomos and memoizes the result. Walking the world
 //! is then just pulling the tiles around the observer — revisits hit the store,
 //! so matured state **persists** (no re-seed-from-raw-prior; the store is the
-//! save). Dependencies between systems become recursion in the pull.
+//! save — `#form-store-as-save`). Dependencies between systems become recursion
+//! in the pull.
 
 use std::cell::Cell;
 

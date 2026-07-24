@@ -40,9 +40,7 @@ This is the severity half of the Prime Question stack: #disc-prime-question reco
 
 ## Working Notes
 
-- **Claim home once this lands:** `doc/theory/discretisation-and-information.md` **§1** becomes teaching/source; cite `#norm-bias-vs-noise` for the law. Keep worked MFD / θ / clip specimens in theory + DECISIONS.
+- **Dual homes demoted:** discretisation-and-information.md §1 (teaching); NOMOS-CONTRACT bias adjudication section; `.archive/CLAUDE.md` archive banner + bias paragraph pointer. Worked MFD / θ / clip specimens stay in theory + DECISIONS.
 - **`#disc-prime-question` Working Notes** already deferred this cut here — no fork of the rule back into that segment.
-- **Ice (definitional dual-homes only):**
-  - `.archive/CLAUDE.md` bias-vs-noise paragraph under the Prime Question block — pointer to this slug; do not re-promote the archived front door.
 - **Unbuilt surface:** geometric-contract / `NomosDecl` field for declared bias-vs-noise class of each residual — `doc/design/NOMOS-CONTRACT.md` and DECISIONS impact; not invented schema here.
 - **Related open:** Jensen / sufficient-statistic contract and column cell-average vs point-sample fork need their own segments; this norm only asserts the audit cut they must answer.

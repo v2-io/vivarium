@@ -1,5 +1,7 @@
-//! Content-addressed, memoized store — the framework's persistence initial-topography
-//! (`doc/design/DESIGN-REDUX.md` §13: "the save-file *is* the memo store").
+//! Content-addressed, memoized store — the world's portable saved state.
+//! Claim home: `#form-store-as-save` (save ≡ memo store; invalidation vs
+//! eviction; regenerable/irreducible frame). Teaching source:
+//! `doc/design/DESIGN-REDUX.md` §13; architecture map: `doc/ARCHITECTURE.md` §5.
 //!
 //! **Domain-neutral by construction.** Keys and values here are opaque; the
 //! nomoi above (`query.rs`) give them meaning. Nothing in this module knows
@@ -8,7 +10,7 @@
 //! through this *same* interface. That neutrality is the framework's invariant
 //! (`doc/ARCHITECTURE.md` domain-fixation guard), not a courtesy.
 //!
-//! Shape (git-repo-like, §13): `objects/<value-hash>` hold immutable bytes;
+//! Shape (git-repo-like): `objects/<value-hash>` hold immutable bytes;
 //! `roots/<key-hash>` point at the object a complete key resolves to. Content-
 //! addressing buys dedup (two keys computing identical bytes share one object)
 //! and makes eviction cost only a recompute, never correctness. Copy the

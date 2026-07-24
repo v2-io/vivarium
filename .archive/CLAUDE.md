@@ -1,5 +1,7 @@
 # vivarium — context for Claude (and successors)
 
+> **Archived front door (not claim canon).** Live agent orientation is repo-root `Claude.md` / `core/`. Claim homes that supersede dual-homes in this file: Prime Question → `#disc-prime-question`; bias-vs-noise audit → `#norm-bias-vs-noise`; column control-volume frame → `#form-column-control-volume`. Teaching texture below is provenance only — do not re-promote as law.
+
 **What this is.** A simulation game (RimWorld/DF lineage) on a deterministic 3-D voxel planet, whose real bet is *simulation-grade agents and community dynamics* built on the Agentic Systems Framework (ASF/AAT) — and, dual to that, a high-identifiability laboratory where AAT quantities have ground truth by construction. Vivarium is a member of the **Archema program** (`~/src/archema-io/`) and a **supporting project for ASF** (`~/src/archema-io/asf/`).
 
 ## Reading gates — tiered, so onboarding is minutes not hours
@@ -32,7 +34,7 @@ Published algorithms are **not physics**. They are physics traded against comput
 
 The worked example that earned it. `erosion.rs` routes drainage with **MFD**: split outflow among the 8 Moore neighbours, slope-weighted. Its *coordinate* assumption is "8 neighbours, 45° apart, diagonals at cell·√2." Its *physical* claim is **"distribute outflow over the downhill directions in proportion to slope"** — MFD is a **quadrature**, and those 8 cells are its **nodes**. Two things follow that no amount of valence-auditing would ever have surfaced: four of those "neighbours" share only a **vertex** — a zero-length edge, across which **no flux physically crosses** (the diagonals were never physics; they were a hack against grid bias); and on our sphere the nodes are **not evenly spaced**, so the quadrature is **biased** — measured, and **it does not converge away** (it is fixed by the projection's Jacobian, which has no $N$ in it). Net: **MFD reintroduces exactly the grid-aligned-channel artifact it was adopted to remove.** Recover the physical claim and the honest kernel falls out directly — take the flow *direction* from the reconstructed gradient and split across the cell's **real edges**, of which there are exactly 4 everywhere.
 
-**And when the claim is violated, the first question is not "how big is the error" — it is: is it a BIAS, or is it NOISE?** Noise washes out under summation; a bias **manufactures a fake physical law** and compounds. "It's negligible at this scale" is admissible **only** for noise.
+**And when the claim is violated, the first question is not "how big is the error" — it is: is it a BIAS, or is it NOISE?** *(Claim home: `#norm-bias-vs-noise`.)* Noise washes out under summation; a bias **manufactures a fake physical law** and compounds. "It's negligible at this scale" is admissible **only** for noise.
 
 ### The governing principle it serves
 

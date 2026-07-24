@@ -35,6 +35,6 @@ Calling a column a heightfield pixel collapses conservation, rendering, and coll
 
 ## Working Notes
 
-- **Pointer once stable:** DESIGN-MATERIAL §§2–5; DESIGN-REDUX §5 / §14; DECISIONS column-is-a-control-volume entry remains history of ratification, not claim home.
+- **Dual homes demoted:** DESIGN-MATERIAL §§2–5; DESIGN-REDUX §5 / §14; ARCHITECTURE §5 column sentence; archive CLAUDE banner. DECISIONS column-is-a-control-volume remains ratification history, not claim home.
 - **Do not invent** a fixed property schema or close the point/mean/band-limited fork without Joseph or a convicting design.
 - Sibling extracts: sufficient-statistic flux contract; CellId/chunk/patch binding; body overlay regenerable/irreducible.

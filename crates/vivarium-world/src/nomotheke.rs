@@ -2,6 +2,10 @@
 //! would love code-level enforcement of exactly what is being promised and
 //! the epistemic labels and propagations").
 //!
+//! Claim home for the registry contract: `#form-nomotheke-registry` (undeclared
+//! law is unlawful; declaration is the key stem; live test surfaces). One
+//! article of law: `#def-nomos`. Flux vocabulary join: `#form-flux-web`.
+//!
 //! Every nomos declares itself here: its identity, its **epistemic tags**
 //! (LEXICON §5's four axes — declared on the version, once), its **deps**
 //! (from which *derived* state quality is computed by weakest-link fold — a
@@ -14,7 +18,8 @@
 //! archaeology), and its **assumptions** (entries in `ASSUMPTIONS.md`, the
 //! magic-constant ledger).
 //!
-//! Enforcement (structural, not hortatory):
+//! Enforcement (structural, not hortatory) — see the claim segment for the
+//! law; this module is the executable surface:
 //! - A nomos's store [`Key`] is minted through [`NomosDecl::key`] — the
 //!   declaration IS the key source, so an undeclared nomos has no way into
 //!   the store's world-law namespace. (`Key::new` remains public for the

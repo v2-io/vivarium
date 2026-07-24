@@ -48,5 +48,5 @@ World-law algorithms enter the store only through declared nomos. The registry i
 ## Working Notes
 
 - **Promoted** from `msc/consolidation-wave-2026-07-21/draft-form-nomotheke-registry.md` (decisions-code draft; design wave integration).
-- Ice dual-homes once stable: ARCHITECTURE §9 "adding a system" registry bullets → pointer; `nomotheke.rs` module header → pointer; leave per-nomos epistemic status strings as data, not re-prose.
+- **Dual homes demoted:** ARCHITECTURE §9 "adding a system" registry bullets; `nomotheke.rs` module header. Per-nomos epistemic status strings remain data, not re-prose.
 - Sibling gaps: ASSUMPTIONS generated ledger; geometric contract as second declare/match surface; NOMOS-CONTRACT boxes ②–④ fields on `NomosDecl`.

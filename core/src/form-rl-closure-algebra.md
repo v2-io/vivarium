@@ -49,6 +49,6 @@ Without this algebra named, every multiscale construct looks like a one-off inve
 
 ## Working Notes
 
-- **Pointer targets once stable:** `doc/theory/multiscale-methods.md` §1 algebra; ARCHITECTURE §1; multiscale-seams §1 operator restatement. Leave method-zoo rows, dynamic-exponent $z$, and detail→abstract open problem in source until segmented.
+- **Dual homes demoted (prior wave + this):** multiscale-methods header + §1; ARCHITECTURE §1; multiscale-seams header + §1; DESIGN-REDUX §5 algebra join. Method-zoo rows, dynamic-exponent $z$, and detail→abstract open problem remain source until segmented.
 - **Sibling claims (not this segment):** #form-seam-flux-exchange (fluxes-not-states); #form-store-as-save; consumer-dependent statistic contract as flux-edge field; wavelet/Haar store spike findings.
 - **Do not re-assert** "mean-pin enforces $R \circ L = \mathrm{id}$ live" in any file — the corrected law is aspiration + compliance debt.

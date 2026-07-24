@@ -42,6 +42,6 @@ This is why the Abyssal parity target is honestly **Realized, not Lawful** early
 
 ## Working Notes
 
-- **Pointer targets:** `doc/plan/vivium-operational-workflow.md` Stage 1 BREAK-2 + standing doctrine item 3; ARCHITECTURE §6 honest catch paragraph; LEXICON realized/lawful; abyssal-parity-plan milestone language.
+- **Dual homes demoted:** vivium-operational-workflow header + BREAK-2 trail; ARCHITECTURE §6 honest catch; abyssal-parity milestone + checklist (pointers, not re-owned); LEXICON realized/lawful already pointed here.
 - **Siblings:** run-modes carve; component-E stage chains ($\varepsilon$ as data); full ETHICS harm-triple segmentation; ASF checkpoint-forking foreign claim for BREAK-5 only (`#asf/…` when citing).
 - **Do not re-rank** "THE one hard research problem" — superlatives are predicate-free (FORMAT §6); BREAK-2 is *a* structural break, not a ranking.

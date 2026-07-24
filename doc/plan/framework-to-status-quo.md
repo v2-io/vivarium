@@ -3,6 +3,8 @@
 > [!note]
 > **Terminology (2026-07-10):** “recipe” throughout this dated document = **nomos** (pl. *nomoi*) — the term settled after this was written (LEXICON §2). Kept verbatim as history.
 
+> **Claim homes for seam / fidelity law restated in §3:** fluxes as sufficient statistics at tile edges → `#form-seam-flux-exchange`; fidelity pull threshold → `#form-fidelity-invariant`; store as save (build shape A) → `#form-store-as-save`. This file remains a **dated status-quo + dependency design trail**, not claim canon.
+
 *2026-07-09. Written after Joseph corrected a session's overclaim that the worldview spike was "the workflow, just manually cranked." It is not, and this file records
 (1) the code-verified status quo, (2) what the framework target actually requires that has zero implementation, (3) a design answer to Joseph's dependency question —
 "what coarse-pos/coarse-time evolution needs to run on adjacent areas, lazily pulled?" — whose answer is drainage-shaped, and (4) the build shape. Facts below are marked **[code]** (read in source this session) or **[design]** (hypothesis/proposal).*
@@ -54,7 +56,7 @@ The design answer, in three steps:
 
 3. **Degree is quantitative, not heuristic: the cut is flux magnitude.** The coupling strength across a tile edge *is* the discharge (and sediment flux)
    crossing it, read off the coarse MFD accumulation. Small creek in → the neighbor can be closed with a coarse boundary-condition approximation; major river in → the upstream tile must be evolved (or at least its time-averaged discharge/sediment flux memoized — the already-queued "sediment coupling:
-   time-averaged discharge → erosion's A" item is this) before X is honest. This is §5's sufficient-statistic seam applied to tile composition: **the flux across the boundary is the sufficient statistic, and its magnitude sets the required fidelity of the pull.** The fidelity invariant gives the threshold form: pull the neighbor at the coarsest rung whose flux error at the shared edge stays within the consumer's tolerance.
+   time-averaged discharge → erosion's A" item is this) before X is honest. This is the sufficient-statistic seam applied to tile composition (claim home `#form-seam-flux-exchange`): **the flux across the boundary is the sufficient statistic, and its magnitude sets the required fidelity of the pull.** The fidelity invariant (`#form-fidelity-invariant`) gives the threshold form: pull the neighbor at the coarsest rung whose flux error at the shared edge stays within the consumer's tolerance.
 
 Corollary: the seam fix and the framework are the same work. "Fix the floating mesa" by clamping is cosmetic; giving tiles honest boundary conditions *from the spine's fluxes* makes tiles composable, which is what makes lazy regional pull correct at all. The `seam_ridge` probe graduates from cosmetic gate to correctness gate.
 
