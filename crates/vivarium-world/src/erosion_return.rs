@@ -121,15 +121,44 @@ struct Ledger {
     post_reference: f64,
 }
 
+/// Process-global **working-set staging** for the ledger integrals — NOT a memo
+/// tier. `#form-store-as-save` FE(6) (decided 2026-07-24,
+/// `DECISIONS[memoized-means-store-object]`): the durable memo is the store's
+/// epoch-reduction object (`query::World::epoch_reduction`); this RAM map only
+/// stages the two global reductions `(deposit_m, post_reference)` so per-cell
+/// `column_after_erosion` / `freeboard_after_erosion` reads are O(1) within a
+/// process. [`prime_ledger`] fills it from a store Hit; a cold miss runs the two
+/// ~393k-cell passes below and the caller persists the store citizen.
+static LEDGER_CACHE: std::sync::Mutex<Option<std::collections::BTreeMap<(u64, u64), Ledger>>> =
+    std::sync::Mutex::new(None);
+
+/// Stage a known ledger `(deposit_m, post_reference)` for `(seed, tp_c)` — used
+/// when the values arrived from a store Hit, so the two global passes are skipped.
+pub fn prime_ledger(seed: u64, tp_c: f64, deposit_m: f64, post_reference: f64) {
+    let mut guard = LEDGER_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    guard
+        .get_or_insert_with(std::collections::BTreeMap::new)
+        .insert((seed, tp_c.to_bits()), Ledger { deposit_m, post_reference });
+}
+
+/// The ledger's two global reductions `(deposit_m, post_reference)` for
+/// `(seed, tp_c)` — computed (two ~393k passes) on first touch, then staged. The
+/// builder reads these to persist the store citizen; the store Hit path primes
+/// them back via [`prime_ledger`].
+pub fn ledger_scalars(seed: u64, tp_c: f64) -> (f64, f64) {
+    let l = ledger(seed, tp_c);
+    (l.deposit_m, l.post_reference)
+}
+
 fn ledger(seed: u64, tp_c: f64) -> Ledger {
     use std::collections::BTreeMap;
-    use std::sync::Mutex;
-    static CACHE: Mutex<Option<BTreeMap<(u64, u64), Ledger>>> = Mutex::new(None);
     let key = (seed, tp_c.to_bits());
     {
-        let mut guard = CACHE.lock().unwrap_or_else(|e| e.into_inner());
-        if let Some(&l) = guard.get_or_insert_with(BTreeMap::new).get(&key) {
-            return l;
+        let guard = LEDGER_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(map) = guard.as_ref() {
+            if let Some(&l) = map.get(&key) {
+                return l;
+            }
         }
     }
 
@@ -166,7 +195,7 @@ fn ledger(seed: u64, tp_c: f64) -> Ledger {
     let post_reference = buoy_sum / area_sum;
 
     let l = Ledger { deposit_m, post_reference };
-    let mut guard = CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    let mut guard = LEDGER_CACHE.lock().unwrap_or_else(|e| e.into_inner());
     guard.get_or_insert_with(BTreeMap::new).insert(key, l);
     l
 }
@@ -206,23 +235,38 @@ pub fn tectonic_surface_after_erosion_at_tp(seed: u64, cell: CellId, level: u8, 
     gen::bathymetry_m(seed, cell, level) + freeboard_after_erosion_m_at_tp(seed, cell, tp_c)
 }
 
+/// Process-global **working-set staging** for the post-erosion pour — NOT a memo
+/// tier (`#form-store-as-save` FE(6), decided; the store's epoch-reduction object
+/// is the durable memo). Stages one f64 per `(seed, T_p_bits)`.
+static POST_SEA_CACHE: std::sync::Mutex<Option<std::collections::BTreeMap<(u64, u64), f64>>> =
+    std::sync::Mutex::new(None);
+
+/// Stage a known post-erosion derived sea for `(seed, tp_c)` from a store Hit, so
+/// the ~393k-cell re-pour is skipped for this process.
+pub fn prime_derived_sea_after_erosion(seed: u64, tp_c: f64, sea_m: f64) {
+    let mut guard = POST_SEA_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    guard.get_or_insert_with(std::collections::BTreeMap::new).insert((seed, tp_c.to_bits()), sea_m);
+}
+
 /// Derived sea level (m) re-poured against the post-erosion surface under `tp_c`
 /// — the ledger loads basins with sediment and shaves the cratons, so the
-/// waterline shifts. Memoized per `(seed, T_p)`.
+/// waterline shifts. The durable memo is the store's epoch reduction; this stages
+/// it per process (FE(6)).
 pub fn derived_sea_level_after_erosion_at_tp(seed: u64, tp_c: f64) -> f64 {
-    use std::collections::BTreeMap;
-    use std::sync::Mutex;
-    static CACHE: Mutex<Option<BTreeMap<(u64, u64), f64>>> = Mutex::new(None);
     let key = (seed, tp_c.to_bits());
-    let mut guard = CACHE.lock().unwrap_or_else(|e| e.into_inner());
-    let map = guard.get_or_insert_with(BTreeMap::new);
-    if let Some(&s) = map.get(&key) {
-        return s;
+    {
+        let guard = POST_SEA_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(map) = guard.as_ref() {
+            if let Some(&s) = map.get(&key) {
+                return s;
+            }
+        }
     }
     let s = sea_level::pour_ocean_over(SAMPLE_LEVEL, |coord| {
         tectonic_surface_after_erosion_at_tp(seed, coord.cell(SAMPLE_LEVEL), SAMPLE_LEVEL, tp_c)
     });
-    map.insert(key, s);
+    let mut guard = POST_SEA_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    guard.get_or_insert_with(std::collections::BTreeMap::new).insert(key, s);
     s
 }
 

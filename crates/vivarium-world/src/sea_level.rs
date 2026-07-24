@@ -77,24 +77,45 @@ pub fn tectonic_surface_pre_ledger_at_tp(seed: u64, cell: crate::sphere::CellId,
     gen::bathymetry_m(seed, cell, nyquist_level) + lithosphere::freeboard_m_at_tp(seed, cell, tp_c)
 }
 
+/// Process-global **working-set staging** for the pre-ledger pour (one f64 per
+/// `(seed, T_p_bits)`) — NOT a memo tier. `#form-store-as-save` FE(6) (decided
+/// 2026-07-24, `DECISIONS[memoized-means-store-object]`): the durable memo is the
+/// store's epoch-reduction object under a complete key; this RAM map only stages
+/// what the store owns for hot per-cell reads within a process. A reader that
+/// gets a store Hit [`prime_derived_sea_pre_ledger`]s this cache so the ~393k-cell
+/// pour never re-runs in a warmed process; on a cold miss the compute below fills
+/// it and the store citizen is written by the caller (query::World::epoch_reduction).
+static PRE_LEDGER_SEA_CACHE: std::sync::Mutex<Option<std::collections::BTreeMap<(u64, u64), f64>>> =
+    std::sync::Mutex::new(None);
+
+/// Insert a known pre-ledger derived sea into the L1 memo — used when a caller
+/// has read the value from the store (or another authority) and wants the pour
+/// short-circuited for this process. Idempotent; a later compute would produce
+/// the identical f64 (pure function of the keyed inputs).
+pub fn prime_derived_sea_pre_ledger(seed: u64, tp_c: f64, sea_m: f64) {
+    let mut guard = PRE_LEDGER_SEA_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    guard.get_or_insert_with(std::collections::BTreeMap::new).insert((seed, tp_c.to_bits()), sea_m);
+}
+
 /// The **pre-ledger** derived waterline at `tp_c` — the pour against the raw
 /// isostatic surface, before the rock-mass ledger. Memoized per `(seed, tp_c)`;
 /// the ledger consumes it as an intermediate. The live default is
 /// [`derived_sea_level_at_tp`].
 pub fn derived_sea_level_pre_ledger_at_tp(seed: u64, tp_c: f64) -> f64 {
-    use std::sync::Mutex;
-    use std::collections::BTreeMap;
-    static CACHE: Mutex<Option<BTreeMap<(u64, u64), f64>>> = Mutex::new(None);
     let key = (seed, tp_c.to_bits());
-    let mut guard = CACHE.lock().unwrap_or_else(|e| e.into_inner());
-    let map = guard.get_or_insert_with(BTreeMap::new);
-    if let Some(&s) = map.get(&key) {
-        return s;
+    {
+        let guard = PRE_LEDGER_SEA_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(map) = guard.as_ref() {
+            if let Some(&s) = map.get(&key) {
+                return s;
+            }
+        }
     }
     let s = pour_ocean_over(SAMPLE_LEVEL, |coord| {
         tectonic_surface_pre_ledger_at_tp(seed, coord.cell(SAMPLE_LEVEL), SAMPLE_LEVEL, tp_c)
     });
-    map.insert(key, s);
+    let mut guard = PRE_LEDGER_SEA_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    guard.get_or_insert_with(std::collections::BTreeMap::new).insert(key, s);
     s
 }
 

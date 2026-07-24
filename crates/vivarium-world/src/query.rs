@@ -25,7 +25,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::erosion::{self, ErodedRegion, Fluvial, FluvialParams};
 use crate::gen;
-use crate::nomotheke::{CLIMATE, EROSION, HYDROSPHERE, INITIAL_TOPOGRAPHY, UPLIFT, WATER};
+use crate::nomotheke::{
+    CLIMATE, EROSION, HYDROSPHERE, INITIAL_TOPOGRAPHY, ISOSTASY, LITHOSPHERE, MANTLE_THERMAL, UPLIFT,
+    WATER,
+};
+use crate::{erosion_return, sea_level};
 use crate::sphere::{CellId, Face};
 use crate::store::{Key, PutOpts, Store};
 
@@ -48,6 +52,50 @@ impl Source {
     /// Any store hit, lawful or provisional (the memoization signal alone).
     pub fn is_hit(self) -> bool {
         matches!(self, Source::Hit | Source::HitProvisional)
+    }
+}
+
+/// The store-citizen reduction of the mantle-thermal cooling chain at one epoch
+/// mantle temperature `T_p` — the four global f64 scalars every per-cell surface
+/// read of that epoch needs, so once these are in hand a `tectonic_surface_at_tp`
+/// read is O(1) (no ~393k-cell pour or ledger pass). This is the durable memo the
+/// store owns (`#form-store-as-save` FE(6), decided: memoized ≡ store object); the
+/// in-RAM caches in `sea_level` / `erosion_return` are working-set staging primed
+/// from it. The big surface FIELD is deliberately NOT stored — it regenerates
+/// O(1)/cell from these scalars at whatever resolution a viewer wants (thin-save,
+/// FE(7): regenerable state is not materialized, and storing it would lock the
+/// sample level).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EpochReduction {
+    /// Pre-ledger derived sea (m) — the pour against the raw isostatic surface.
+    pub pre_ledger_sea_m: f64,
+    /// Rock-mass ledger: uniform submarine sediment thickness (m) deposited.
+    pub deposit_m: f64,
+    /// Rock-mass ledger: area-mean post-erosion buoyancy reference (m).
+    pub post_reference_m: f64,
+    /// The live derived sea (m) — pour against the post-erosion surface.
+    pub derived_sea_m: f64,
+}
+
+impl EpochReduction {
+    fn to_bytes(self) -> Vec<u8> {
+        let mut b = Vec::with_capacity(32);
+        for x in [self.pre_ledger_sea_m, self.deposit_m, self.post_reference_m, self.derived_sea_m] {
+            b.extend_from_slice(&x.to_le_bytes());
+        }
+        b
+    }
+    fn from_bytes(b: &[u8]) -> Option<Self> {
+        if b.len() != 32 {
+            return None;
+        }
+        let f = |i: usize| f64::from_le_bytes(b[i * 8..i * 8 + 8].try_into().unwrap());
+        Some(EpochReduction {
+            pre_ledger_sea_m: f(0),
+            deposit_m: f(1),
+            post_reference_m: f(2),
+            derived_sea_m: f(3),
+        })
     }
 }
 
@@ -556,6 +604,67 @@ impl<'s> World<'s> {
         self.put_memo(&key, &encode_f32(&depth));
         (depth, Source::Computed)
     }
+
+    /// The complete key for an epoch reduction at mantle temperature `tp_c`.
+    ///
+    /// Keyed through the declared chain HEAD [`MANTLE_THERMAL`] — the nomos that
+    /// indexes epochs (it produces `T_p`) and the head of the freeboard chain
+    /// `mantle-thermal → lithosphere → isostasy → sea-level → erosion`. The
+    /// reduction is a memoized *composition* of that already-declared chain, not a
+    /// new article of law (LITHOSPHERE's own declaration names "wiring derived-sea
+    /// as its own nomos edge" a deferred owned nicety — bordering the live isostasy
+    /// seam — so this does NOT mint a new nomos). Completeness is guaranteed by
+    /// `src=SRC_HASH` on the stem (the whole-crate source digest folds every module
+    /// the pour/ledger touch — `sea_level`, `erosion_return`, `gen` bathymetry,
+    /// hydrosphere — #form-complete-content-addressed-key FE(4)); the downstream
+    /// chain versions are folded explicitly for legibility. `tp_bits` is the exact
+    /// f64 so two epochs never alias; `aspect` distinguishes these global-scalar
+    /// roots from the mantle-thermal driver itself.
+    fn epoch_reduction_key(&self, tp_c: f64) -> Key {
+        MANTLE_THERMAL
+            .key()
+            .field("seed", self.seed)
+            .field("tp_bits", tp_c.to_bits())
+            .field("aspect", "epoch-reduction")
+            .field(LITHOSPHERE.name, LITHOSPHERE.version)
+            .field(ISOSTASY.name, ISOSTASY.version)
+            .field(HYDROSPHERE.name, HYDROSPHERE.version)
+    }
+
+    /// Pull the [`EpochReduction`] for mantle temperature `tp_c` through the store:
+    /// Hit → decode + **stage** into the `sea_level` / `erosion_return` working-set
+    /// caches (so every subsequent per-cell `tectonic_surface_at_tp` read in this
+    /// process is O(1), with no pour); Miss → compute the four global reductions
+    /// once and Put the store citizen. This is where "the cost belongs at build
+    /// time" is realized: a warmed process that Hits never runs the ~393k-cell pour
+    /// or ledger passes at all (`#form-store-as-save` FE(6), decided).
+    ///
+    /// A Hit is byte-identical to a fresh compute (the reductions are pure f64
+    /// functions of the keyed inputs) — the staleness/purity conviction the probe
+    /// carries.
+    pub fn epoch_reduction(&self, tp_c: f64) -> (EpochReduction, Source) {
+        let key = self.epoch_reduction_key(tp_c);
+        if let Some(bytes) = self.store.get(&key) {
+            if let Some(r) = EpochReduction::from_bytes(&bytes) {
+                // Stage the store-owned reduction into the per-process caches, so
+                // the pour/ledger never run in this warmed process (FE(6): RAM is
+                // staging of what the store owns, never a home of record).
+                sea_level::prime_derived_sea_pre_ledger(self.seed, tp_c, r.pre_ledger_sea_m);
+                erosion_return::prime_ledger(self.seed, tp_c, r.deposit_m, r.post_reference_m);
+                erosion_return::prime_derived_sea_after_erosion(self.seed, tp_c, r.derived_sea_m);
+                return (r, self.hit_source(&key));
+            }
+        }
+        // Miss: compute the four global reductions (each stages its own cache as a
+        // side effect; order respects the chain — pre-ledger pour, then ledger,
+        // then the post-erosion pour that reads both).
+        let pre_ledger_sea_m = sea_level::derived_sea_level_pre_ledger_at_tp(self.seed, tp_c);
+        let (deposit_m, post_reference_m) = erosion_return::ledger_scalars(self.seed, tp_c);
+        let derived_sea_m = erosion_return::derived_sea_level_after_erosion_at_tp(self.seed, tp_c);
+        let r = EpochReduction { pre_ledger_sea_m, deposit_m, post_reference_m, derived_sea_m };
+        self.put_memo(&key, &r.to_bytes());
+        (r, Source::Computed)
+    }
 }
 
 fn encode_f32(v: &[f32]) -> Vec<u8> {
@@ -802,6 +911,42 @@ mod tests {
         let (d2, src2) = w.water_tile(face, 19, 2000, 3000, nx, eepochs, steps);
         assert_eq!(src2, Source::Hit);
         assert_eq!(d1, d2);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn epoch_reduction_hit_equals_recompute_byte_identical() {
+        // The staleness/purity conviction for the epoch-reduction store citizen
+        // (#form-store-as-save FE(6), decided): the reduction is a pure f64 function
+        // of the keyed inputs, so a store Hit must return EXACTLY the value a fresh
+        // compute produced and persisted — no drift, no lie. If the compute ever
+        // depended on unkeyed state (or the encode/decode lost a bit) this fails.
+        use crate::lithosphere::MANTLE_TP_C;
+        let dir = tmpdir("epoch-reduction");
+        let tp = MANTLE_TP_C;
+        let s = Store::open(&dir).unwrap();
+
+        // Cold: compute + persist.
+        let (r1, src1) = World::new(&s, 7).epoch_reduction(tp);
+        assert_eq!(src1, Source::Computed, "first pull computes the reduction");
+
+        // Warm (fresh World, same store): Hit, byte-identical.
+        let (r2, src2) = World::new(&s, 7).epoch_reduction(tp);
+        assert_eq!(src2, Source::Hit, "second pull hits the store citizen");
+        assert_eq!(r1, r2, "a store Hit returns exactly the reduction that was computed");
+
+        // The stored derived sea IS the canonical present-Abyssal waterline (the
+        // value the whole codebase reads via derived_sea_level_m) — the citizen is
+        // not a parallel truth, it is the same law value memoized to disk.
+        assert_eq!(
+            r1.derived_sea_m,
+            crate::sea_level::derived_sea_level_m(7),
+            "reduction.derived_sea_m must equal the canonical derived sea at MANTLE_TP_C"
+        );
+
+        // Survives a fresh store open — the store IS the save.
+        let s2 = Store::open(&dir).unwrap();
+        assert_eq!(World::new(&s2, 7).epoch_reduction(tp).1, Source::Hit, "reopened store still holds the reduction");
         let _ = fs::remove_dir_all(&dir);
     }
 

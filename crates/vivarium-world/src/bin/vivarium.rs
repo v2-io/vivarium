@@ -33,6 +33,8 @@ use std::io::Write as _;
 use std::path::{Path, PathBuf};
 
 use vivarium_world::audit;
+use vivarium_world::lithosphere::MANTLE_TP_C;
+use vivarium_world::mantle_thermal::{abyssal_epochs, potential_temp_c};
 use vivarium_world::nomotheke;
 use vivarium_world::ordinum;
 use vivarium_world::query::{Source, World};
@@ -357,6 +359,37 @@ fn cmd_build(rest: &[String]) -> i32 {
         world.set_provisional_writes(false);
         computed = 0;
     }
+    // Epoch-ladder reductions — the cost belongs here, at build time. Materialize
+    // each epoch's global scalars (derived sea + rock-mass-ledger integrals) as
+    // store citizens under complete keys, so a fresh globe/explorer process HITS
+    // them and never runs a cold ~393k-cell pour to warm an epoch
+    // (`#form-store-as-save` FE(6), decided: memoized ≡ store object; closes
+    // `#form-builder-admission` FE(4)/#5 store-side half). Present epoch first (the
+    // live world), then the abyssal cooling chain. Always lawful (the isostasy
+    // chain has no unmet flux), so these write non-provisional roots.
+    world.set_provisional_writes(false);
+    {
+        let mut tps: Vec<f64> = vec![MANTLE_TP_C];
+        tps.extend(abyssal_epochs().iter().map(|&t| potential_temp_c(t)));
+        let t0 = std::time::Instant::now();
+        let mut seen = std::collections::BTreeSet::new();
+        let mut computed = 0usize;
+        for tp in tps {
+            if !seen.insert(tp.to_bits()) {
+                continue; // present may coincide exactly with an epoch T_p
+            }
+            if world.epoch_reduction(tp).1 == Source::Computed {
+                computed += 1;
+            }
+        }
+        out.line(&format!(
+            "epoch reductions: {} materialized ({computed} computed, {} were hits) in {:.1?} — fresh processes warm every epoch from the store, no cold pour",
+            seen.len(),
+            seen.len() - computed,
+            t0.elapsed()
+        ));
+    }
+
     out.status("idle", done, total);
     out.line("build complete — the store is the save; explorers see everything already.");
     0

@@ -74,6 +74,7 @@ use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 use vivarium_world::erosion;
 use vivarium_world::gen;
 use vivarium_world::hydrosphere::Hydrosphere;
+use vivarium_world::lithosphere::MANTLE_TP_C;
 use vivarium_world::mantle_thermal::{abyssal_epochs, potential_temp_c, present_abyssal};
 use vivarium_world::sea_level;
 use vivarium_world::planet::Planet;
@@ -488,9 +489,12 @@ fn build_face(
 /// to the first frame; `#form-builder-admission` FE(4)). Same pour algorithm as
 /// `sea_level::pour_ocean`, read-only over the pub `tectonic_surface_m`, at
 /// `level` (≈L5) instead of L8. It is a *coarse estimate*, honestly labeled on the
-/// HUD as "provisional" until the real value refines in and triggers a rebuild;
-/// the store-side memoize-at-build half (so no pour is needed at all) is the
-/// remaining owed piece, deliberately left to the sea_level/builder owners.
+/// HUD as "provisional" until the real value refines in and triggers a rebuild.
+/// The store-side memoize-at-build half is now landed
+/// (`DECISIONS[epoch-surfaces-are-store-citizens]`): the refine thread reads the
+/// present derived sea from the store (`World::epoch_reduction(MANTLE_TP_C)`), so
+/// on a built world the real L8 value is a store round-trip, not a pour — this
+/// coarse L4 estimate covers only the first frames of a *cold/unbuilt* store.
 fn provisional_sea_m(seed: u64, level: u8) -> f64 {
     let planet = Planet::EARTH;
     let ocean_km3 = Hydrosphere::of(&planet).ocean_km3;
@@ -597,8 +601,18 @@ fn spawn_worker(
         {
             let (sea_bits, sea_ready, last_req, poke) =
                 (sea_bits.clone(), sea_ready.clone(), last_req.clone(), self_poke.clone());
+            let refine_dir = world_dir.clone();
             std::thread::spawn(move || {
-                let real = sea_level::derived_sea_level_m(seed);
+                // Store-backed present sea: a Hit (builder materialized it) skips the
+                // cold L8 pour entirely and primes the process's staging caches so
+                // the worker's per-cell present reads are O(1); a Miss computes it
+                // here (off the frame path) and persists the citizen. The present
+                // derived sea IS the MANTLE_TP_C epoch reduction — the same value the
+                // old `derived_sea_level_m(seed)` returned. `#form-store-as-save` FE(6).
+                let real = match Store::open(&refine_dir) {
+                    Ok(store) => World::new(&store, seed).epoch_reduction(MANTLE_TP_C).0.derived_sea_m,
+                    Err(_) => sea_level::derived_sea_level_m(seed), // store unavailable: compute-only
+                };
                 sea_bits.store(real.to_bits(), Ordering::Relaxed);
                 sea_ready.store(true, Ordering::Relaxed);
                 // Re-trigger the latest build so the surface refines to the real sea
@@ -945,7 +959,7 @@ fn main() {
     spawn_worker(dir.clone(), spec.seed, req_rx, res_tx, req_tx.clone());
 
     // The deep-time epoch ladder (the LAW's cooling chain) + its background warmer.
-    let deep_time = build_deep_time(spec.seed);
+    let deep_time = build_deep_time(dir.clone(), spec.seed);
 
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -978,7 +992,7 @@ fn main() {
 /// discipline applied to time instead of space. Order: present first (so toggling
 /// into playback lands instantly on the world we know), then hot → cool so the
 /// emergence sequence's opening is ready first.
-fn build_deep_time(seed: u64) -> DeepTime {
+fn build_deep_time(world_dir: PathBuf, seed: u64) -> DeepTime {
     let epochs: Vec<WorldTime> = abyssal_epochs();
     let present = present_abyssal();
     let ages_ga: Vec<f32> = epochs.iter().map(|t| (-t.years() / 1.0e9) as f32).collect();
@@ -995,11 +1009,23 @@ fn build_deep_time(seed: u64) -> DeepTime {
     {
         let (sea_bits, ready, tps) = (sea_bits.clone(), ready.clone(), tps.clone());
         std::thread::spawn(move || {
+            // The warmer is a store reader (`#form-builder-admission` FE(4)): it
+            // opens the same store the worker uses and pulls each epoch's reduction.
+            // A store Hit (the builder materialized it) primes this process's
+            // sea_level/erosion_return staging caches, so the worker's per-cell
+            // `tectonic_surface_at_tp` reads are O(1) — with NO cold pour. A Miss
+            // computes the reduction here (off the frame path, as before) AND
+            // persists the store citizen, so the next process Hits. `#form-store-as-save`.
+            let store = match Store::open(&world_dir) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("[globe] warmer: cannot open store at {}: {e}", world_dir.display());
+                    return;
+                }
+            };
+            let world = World::new(&store, seed);
             for i in order {
-                // The heavy step: warms this epoch's derived sea AND (inside it) the
-                // rock-mass-ledger + pour integrals, so the worker's per-cell
-                // `tectonic_surface_at_tp` reads are memo-cheap once `ready`.
-                let s = sea_level::derived_sea_level_at_tp(seed, tps[i]);
+                let s = world.epoch_reduction(tps[i]).0.derived_sea_m;
                 sea_bits[i].store(s.to_bits(), Ordering::Relaxed);
                 ready[i].store(true, Ordering::Relaxed);
                 // No poke needed: the ECS polls `ready` each frame (epoch_update /
