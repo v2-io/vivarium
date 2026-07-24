@@ -58,54 +58,14 @@ consistent at the coarsest of their materialized resolutions.
 
 ---
 
-## 2. When to be reductionist — and when you can't (three cases, not one)
+## 2. When to be reductionist — and when you can't
 
-Preferred default: **fine-grained reductionist simulation with all macro
-behaviour emergent.** But there are three distinct reasons to fall back to an
-imposed/abstract model, and they demand *different* machinery — conflating them
-hides which mechanism a given aspect needs:
+**Claim home:** `#form-reductionist-fallback-cases` (three cases; case C needs
+regime probes). Regime-probe law: `#norm-regime-probes` · `#norm-probe-sensitivity`.
 
-1. **Laws unknown.** No trustworthy micro-model exists (ecosystem dynamics,
-   anything consciousness-adjacent). → You must *impose* a phenomenological macro
-   model and be honest that it is imposed.
-2. **Laws known but intractable at fine grain.** We have the physics; we cannot
-   afford it everywhere (erosion, fluid dynamics from first principles over a
-   continent). → Run fine **only** in the observed/active locus; a cheap
-   surrogate elsewhere. *This is most of vivarium.*
-3. **Laws known and affordable but not yet validated** to integrate to the right
-   macro. → You need the reconciliation harness (§5) *before* you trust the
-   emergence.
-
-The interesting failures will cluster at (3): the model runs, looks plausible,
-and silently fails to reproduce the macro it replaced.
-
-### 2b. The reconciliation harness, concretized: regime probes *(added 2026-07-03, empirically grounded)*
-
-**Claim homes:** `#norm-probes-before-claims` · `#norm-probe-sensitivity` ·
-`#norm-regime-probes` (co-delivery with rungs; known issues first). Specimens
-below are instruments, not a second law home.
-
-The harness case (3) demands existed for one day before proving itself. The
-2026-07-02 "travelling blob" hunt (multi-metre water solitons winding down
-channels) was won not by staring at the render but by an **instrument asserting
-a falsifiable physical invariant per flow regime**: *subcritical flow must be
-smooth* (`crates/vivarium-world/examples/channel_profile.rs`). The subcritical
-control passing acquitted the kernel's core; the supercritical case failing
-localized the bug to three missing physical terms (θ momentum-diffusion,
-sill-depth conveyance, Fr-capped breaking — de Almeida & Bates 2013; Grant
-1997). Siblings: `spike_probe` (erosion spire instability), `topo` (prior
-slope statistics).
-
-**The methodology (Joseph's TDD framing):** every aspect rung ships with
-**regime probes** — cheap, renderer-free instruments asserting invariants
-nature guarantees in a known regime — and **known issues get their probe
-written first**, then the physics is fixed until the probe passes. This is
-domain-level test-driven development, and it keeps us *strictly honest at the
-seams*, where artifacts hide best. First named seam invariant, currently
-failing in the wild: **the differential-aging ridge** — where localized erosion
-has run more epochs than an adjacent region, a physically-implausible ridge
-can develop along the boundary; a cross-seam slope/curvature-continuity probe
-makes that seam's quality measurable instead of anecdotal.
+**Teaching specimen (not second law):** the 2026-07-02 travelling-blob hunt —
+`channel_profile.rs` subcritical-must-be-smooth; supercritical failure localized
+θ / sill / Fr-cap. Seam ridge remains a named failing invariant (`seam_ridge`).
 
 ---
 
@@ -230,56 +190,10 @@ the numerics question (posits) and the LOD question are the same question.
 
 ## 6. Reversion — forgetting, done honestly (the open frontier)
 
-The reverse of materialization: when interest moves away, a fully-fleshed region
-should be allowed to **revert to a cheaper abstraction**. Upscaling the
-*dynamics* here has real prior art (HMM, superparameterization, two-way grid
-nesting; and **Vandenbulcke & Barth 2019**, *Upscaling of a local model into a
-larger-scale model* — EnKF pseudo-observations, whose "representativity error" is
-precisely our §5 sufficient-statistics choice). The genuinely thin part is
-narrower, and it is the audit's hard **detail→abstract** direction (see the
-"open residue" below).
-
-**Our stance — reversion is cache eviction with regeneration on miss.** Split the
-fine state into:
-- (i) the part **derivable from seed + macro** — safe to evict, regenerate on
-  return; and
-- (ii) the **irreducible residual** — agent edits, placed structures, history —
-  which *must* be kept.
-
-That split is already the core's shape (**seed + sparse edits**). From it, the
-distance-vs-time question resolves rigorously: **evict by probability of
-return.**
-- **Space** near the player is *reversible* (turn around → high return
-  probability) → **keep**. Evicting on spatial distance alone is unwise — it
-  risks pop and pays regeneration cost on a likely return.
-- **Deep past** is *monotone* (zero return probability) → **forget freely.**
-
-So: **forget along the irreversible axis (time); conserve along the reversible
-axis (space).** The instinct was right; this is the reason.
-
-*(2026-07-03)* The §3 equilibrium regime sharpens the split: **attractor-seeking
-aspects are evictable almost for free** — their state regenerates by
-re-relaxation from the (kept) macro, no history required; only genuinely
-path-dependent aspects (erosion's carved record) need checkpoints. A living
-region the pawn left does not need "what the river did while we were gone"
-stored — re-settling against the absorbed bed *is* the honest regeneration,
-provided the macro received the sediment deltas (the §5↔§6 tie again).
-
-**The ratchet is real but slowable.** As irreducible residual accumulates
-(permanent structures, long-lived objects, history), the must-keep set grows
-monotonically → storage grows (typical of the genre). But the same principle
-recurses onto the residual itself: **apply temporal-LOD to the accumulated
-history** — a 500-year-old ruin can be stored coarser than yesterday's dig.
-
-**The open residue (narrower than it first looks):** upscaling continuous
-*dynamics* is mature (above). What is *not* solved anywhere we've found is
-upscaling **irreducible discrete edits** — a dammed stream — into a
-**content-addressed, memoized** macro *with correct up-invalidation*: the change
-must alter the macro hydrology after the fine locus collapses, and only works if
-the macro stored the **right sufficient statistics (§5)** to receive it. Get the
-statistics wrong and reversion is lossy in a way that *silently corrupts the
-macro*. This §5↔§6 tie — discrete edits + memoized up-invalidation — is the
-single sharpest open problem in this document.
+**Exploratory home:** `#sketch-detail-abstract-reversion` (not primacy). Dynamics
+upscaling prior art and the discrete-edit residue are named there. Teaching
+texture (evict by return probability; attractor-seeking vs path-dependent) may
+expand under that sketch’s Working Notes when needed — do not restate as law here.
 
 ---
 
@@ -490,55 +404,13 @@ scoped pieces, and *that decomposition is the actual architecture*:
 
 ## 12. The fidelity ladder — start crude, sharpen any layer later
 
-This is where the query graph pays off as *methodology*, not just performance.
+**Claim home:** `#form-fidelity-ladder` (climb / descend; key identity). Key
+discipline: `#form-complete-content-addressed-key`. Specimens and GPU-rung plan
+texture remain below only as **teaching** where still present — do not restate
+the FE.
 
-**Most layers can start at a low-fidelity, macro-statistic-matching model, and
-that is not a compromise — it is correct, provided the crude model honours the
-sufficient statistics its consumers need (§5).** Layers we expect to be fine with
-for a long time:
-- initial unformed land as **Perlin/FBM**, not early-Earth pre-tectonic
-  fluid/gravity/chemistry;
-- conserving **mineral totals** rather than element totals; later, element totals
-  rather than modelling decay;
-- a **simple water cycle**; a **single material hardness** for erosion (today).
-
-So each aspect has a **ladder of models** — crude rung → higher-fidelity rung —
-and you may occupy any rung. The fidelity invariant (§1) is what makes a low rung
-*honest* rather than a lie: it must reproduce the macro statistics (§5) its
-consumers read, with known bounded error (§9's ubit).
-
-### The ladder runs both ways *(Joseph, 2026-07-03)*
-Rungs are usually climbed toward more physics — but the economically crucial
-move is the DESCENT: climb stepwise-emergent to *discover* a system's
-behaviour; once its patterns are characterized and probe-validated, descend to
-a tight procedural surrogate that reproduces the discovered statistics (§5
-agreement is the honesty gate), keeping the expensive rung as calibrator —
-re-run on nomos change, feeding the surrogate's calibration. Insolation
-already lives at the bottom (closed-form); weather should end there; Abyssal
-geology never needs to descend because checkpoints amortize it to zero. Every
-system-in-a-phase declares its execution class (batch-deep / relaxation /
-procedural-tight) in its nomos — see `doc/ARCHITECTURE.md` §2 (the carve's
-origin trail: `.archive/architecture-migration-2026-07-03.md`).
-
-### The payoff: swap a model, rerun only what changed
-The requirement that makes the ladder practical: **memoize each aspect's progress
-to disk, keyed so that the model's own identity and version are part of the key —
-not just its data inputs.** This is the Nix insight (a derivation's hash includes
-its *recipe* — Nix's word for what we call a **nomos**, claim home `#def-nomos` —
-so changing it rebuilds exactly that and its dependents).
-Then swapping erosion-v1 (single hardness) for erosion-v2 (layered hardness)
-changes erosion's key ⇒ **its cached outputs and everything downstream invalidate;
-everything else stays cached. No more, no less.** Independent aspects are
-untouched; the rerun is minimal *by construction*.
-
-**Accelerated backends are rungs too** *(2026-07-03)*: a GPU implementation of
-a kernel is a swappable rung behind the same flux interface — with the CPU
-kernel kept forever as the *reference implementation* (canon for tests,
-replay, probes), backend identity in the nomos key (GPU bit-reproducibility
-is per-device, not universal), and agreement validated by probe within a
-written tolerance. Plan: `doc/plan/water-parallelism.md`.
-
-**Correctness discipline (this is where it's actually hard):** claim home `#form-complete-content-addressed-key` — key completeness, the over-key/under-key asymmetry, determinism as the precondition, and the hand-stamped-version weak link all live there. The elaboration below is source.
+**Correctness discipline:** claim home `#form-complete-content-addressed-key`.
+Elaboration of under-keying failure modes continues as source:
 
 - **The key must capture every input that affects the output** — upstream data,
   the model identity+version, coupling parameters, the seed. *Under*-keying ⇒

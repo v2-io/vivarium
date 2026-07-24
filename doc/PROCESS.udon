@@ -95,7 +95,7 @@
 
     |norm[agentic-verdict-is-flag]
       :kind prescription
-      :source .archive/VIVARIA-DECLARATIVE-FRONTIER.md correction header (2026-07-12)
+      :source .super-archive/from-archive/VIVARIA-DECLARATIVE-FRONTIER.md correction header (2026-07-12)
       Static or agentic audit output is a **fallible flag**, never a keyed store
       citizen and never a verified record by itself. Same-model "assessed" rungs
       are correlated opinion. Ground truth is probe / formal graph / human
@@ -212,7 +212,7 @@
 
     |norm[flagged-file-routing]
       :kind prescription
-      :files ["ref/research/est-tiw-dossier.md" ".archive/universal-biological-rhythms.md"]  ; quoted: bare items with dots hit udon defect #13 (fix pending)
+      :files ["ref/research/est-tiw-dossier.md" ".super-archive/from-archive/universal-biological-rhythms.md"]  ; quoted: bare items with dots hit udon defect #13 (fix pending)
       Two reference files trip the current Fable model-family safeguard
       (verified 2026-07-10 twice, again 2026-07-11). REFINEMENT (Fable-agent
       test, 2026-07-11): the safeguard fires on Fable *generation about* this

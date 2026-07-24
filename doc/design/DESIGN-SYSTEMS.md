@@ -173,7 +173,7 @@ fines sorting robust; armor-vs-eddy interaction and source-cell zero-incision an
 
 ---
 
-*The ledger below was relocated here 2026-07-11 from `.archive/PHASES.md` (now archived as the Terrestris ordinum's reportatio). It is DESIGN-SYSTEMS-native — how each process wants to be modelled — and the `nomotheke` references its approach codes. The per-process status columns are a first-pass snapshot; the live per-nomos status is the nomotheke's declarations.*
+*The ledger below was relocated here 2026-07-11 from `.super-archive/from-archive/PHASES.md` (now archived as the Terrestris ordinum's reportatio). It is DESIGN-SYSTEMS-native — how each process wants to be modelled — and the `nomotheke` references its approach codes. The per-process status columns are a first-pass snapshot; the live per-nomos status is the nomotheke's declarations.*
 
 ## Algorithms & approaches ledger *(first pass — accrete as we hit them in practice)*
 

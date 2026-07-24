@@ -38,7 +38,8 @@ Suggested layout as batches grow (optional subdirs, not required):
 1. **Claim homes exist** for every load-bearing assertion the file was carrying — or the file is pure process/history with no remaining claim residue (honest ice).
 2. **No tactical dependency** from main tree code or segments on that path.
 3. **MANIFEST entry** names path, date, superseding slug(s) or “pure ice / re-founding specimen.”
-4. Prefer **`git mv`**; update live pointers that still cited the old path (one-line claim-home or remove).
+4. Prefer **`git mv`**; update live citations that still named the old path.
+5. **Provenance:** before graduating, **diff against the last pre-peel known-good parent** (or document an intentional intermediate with a section checklist). “Looks complete” and “claim homes exist” are not provenance. (Audit 2026-07-23 — DESIGN intermediate-peel failure class.)
 
 **Not ready *yet*** (same rule for every path): still has unextracted gold; or is the **primary instrument** for a live measurement (e.g. spike `RUN.txt` until numbers live only in segments / DECISIONS citations). That is a *readiness* check, not a forever ban.
 

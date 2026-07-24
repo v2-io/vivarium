@@ -44,9 +44,23 @@
 
 | Location | Contents |
 |----------|----------|
-| `.archive/` | `SUPERSEDED.md` only (ledger) |
+| `.archive/` | `SUPERSEDED.md` (active ledger) + `README.md` (index) |
 | Live `doc/` | DESIGN-REDUX, MATERIAL, SYSTEMS, NOMOS-CONTRACT, theory, plan, ARCHITECTURE |
 | Live instruments | spikes, DECISIONS, `ref/` primaries |
+
+## Provenance audit 2026-07-23
+
+Report: `msc/agent-briefs/2026-07-23-super-archive-provenance-audit.md`.
+
+| Finding | Disposition |
+|---------|-------------|
+| DESIGN intermediate peel | **Fixed** — byte-match `0a5050e^` re-verified this session |
+| No second DESIGN-class truncation | **Accepted** |
+| Stale live `.archive/…` paths after graduation | **Fixed** for LEXICON, PROCESS, regula-conformance, multiscale-methods, DESIGN-SYSTEMS, NOMOS-CONTRACT (sweep) |
+| PHASES `:reportatio-pin 42621d5` | **Honest residual** — pin may predate archive banners on graduated file; pin = historical authorization, path = current reportatio body; not silent re-pin |
+| MANIFEST residual incomplete | **Fixed** (README + SUPERSEDED) |
+
+**Graduation checklist (process hardening):** before `git mv` to super-archive, diff against last pre-peel known-good parent; “looks complete” is not provenance.
 
 ## Same-day non-archive work (not super-archived)
 

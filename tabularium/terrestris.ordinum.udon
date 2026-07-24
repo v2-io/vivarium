@@ -5,6 +5,8 @@
   :created 2026-07-11
   :manifold cube-sphere-3d-voxel
   :reportatio .super-archive/from-archive/PHASES.md
+  ; pin is historical authorization commit (may predate archive editorial banners
+  ; on the graduated file body — not re-pinned silently; path is current reportatio)
   :reportatio-pin 42621d5
 
   ; Terrestris = the earthlike world-kind — the TRACK. Its floor (this ordinum)

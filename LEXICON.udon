@@ -42,7 +42,7 @@
       |rel :to charge :kind opened-by
 
     |term[phase-transition] :status settled :since 2026-07-04
-      The regime-change EVENT at a phase-gate. Incremental, never a wholesale swap: most systems perpetuate, a few sunset, a larger group of new and finer-scale systems spins up at the gate (.archive/PHASES.md Design notes). It leaves the largest memo, and it promotes converged state into Law.
+      The regime-change EVENT at a phase-gate. Incremental, never a wholesale swap: most systems perpetuate, a few sunset, a larger group of new and finer-scale systems spins up at the gate (.super-archive/from-archive/PHASES.md Design notes). It leaves the largest memo, and it promotes converged state into Law.
       |rel :to law :kind revises
       |rel :to memo :kind leaves
       |rel :to ordinum :kind floor-checked-against
@@ -64,7 +64,7 @@
 
     |term[defeasance] :status settled :since 2026-07-11
       The mechanism of "defeasible": a later phase's explicit retirement of a prior promise (`|defeasance :voids "<phase.promise>" :by <charge>`, with an honest reason). Phases declare only their NOVEL promises; inherited promises CONTINUE IMPLICITLY (no re-listing — the mind should not carry ancient ongoing processes as clutter). So the promises IN FORCE at phase N = union(promises 1..N) minus union(defeasances 1..N). Canonical instance: Phase 7's decomposers void Phase 6's coal-window limit.
-      |confused .archive/PHASES.md's "sunset" (a system stopping) — sunset is the friendly gloss for the regime case; defeasance is the precise mechanism, and it pairs with the property word "defeasible".
+      |confused .super-archive/from-archive/PHASES.md's "sunset" (a system stopping) — sunset is the friendly gloss for the regime case; defeasance is the precise mechanism, and it pairs with the property word "defeasible".
       |rel :to promise :kind voids
       |rel :to permit :kind same-shape-as
       |source tabularium/terrestris.ordinum.udon (reading-rules)
@@ -84,7 +84,7 @@
 
     |term[ordinum] :status settled :since 2026-07-11
       :forms full formal name Ordinatio Ordinum; keyed ordinum@version
-      The codified, pinned, versioned phase-expectations artifact — the per-phase Charge/Promise floor as DATA, which every regula cites as the floor it may extend but never silently undercut. .archive/PHASES.md is its reportatio (the prose working text the authorized version compiles from — the medieval ordinatio-vs-reportatio carve, Scotus precedent) and archives once codification lands. A PHASES revision yields a NEW ordinum version; existing regulae keep their pinned floor and opt in by re-versioning — integration-is-replacement applied to the constitution.
+      The codified, pinned, versioned phase-expectations artifact — the per-phase Charge/Promise floor as DATA, which every regula cites as the floor it may extend but never silently undercut. .super-archive/from-archive/PHASES.md is its reportatio (the prose working text the authorized version compiles from — the medieval ordinatio-vs-reportatio carve, Scotus precedent) and archives once codification lands. A PHASES revision yields a NEW ordinum version; existing regulae keep their pinned floor and opt in by re-versioning — integration-is-replacement applied to the constitution.
       |not a stage-synonym source: stages remain PHASES — "order" is not adopted (it would re-blur sequence-vs-class; class-of-regna stays extensional, "Terrestris regna").
       |context grammar held honestly — standalone "ordinum" is a bare genitive plural; the elided head noun (ordinatio) makes the full form exact. Deliberate ellipsis, Joseph's euphony call.
       |rel :to regula :kind floor-of

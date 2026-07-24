@@ -2,12 +2,11 @@
 
 *Written 2026-07-13, after a day auditing the project's kernels. The defects found that day sort into five kinds; the flux web declares only the first. The five boxes were abstracted from those defects, so the sort is a restatement of that sample — not evidence the set is closed.*
 
-> **Status:** source / procedure design, not claim canon. Settled claim homes for
-> pieces already segmented: box ① quantities → `#form-flux-web` (+
-> `#form-ordinum-governs-flux-web`); box ⑤ claim / Prime Question →
-> `#disc-prime-question`; convictability of declarations →
-> `#norm-declaration-must-convict`; nomos grain → `#def-nomos`. Boxes ②–④ and the
-> five-box schema itself remain extraction candidates (see consolidation mining).
+> **Status:** source / procedure design, not claim canon. Box ① → `#form-flux-web`;
+> box ⑤ → `#disc-prime-question`; convictability → `#norm-declaration-must-convict`;
+> nomos grain → `#def-nomos`; **boxes ②–④ exploratory schema** →
+> `#sketch-nomos-declaration-boxes`. Bias adjudication → `#norm-bias-vs-noise`.
+> Defect table below is **teaching** (specimen anatomy), not a second law home.
 
 > **The purpose is not to fix `erosion.rs`.** It is to **generalize and secure the flux-web structure so that ANY nomos can be true-to-physics** (Joseph, 2026-07-13). MFD-8 is the corpse we dissected to learn the anatomy. This document is the anatomy.
 
@@ -104,7 +103,7 @@ Each box gets one file at `doc/design/nomos-contract/`. **The failure mode of a 
 
 **Common brief for all five** (each is one agent, they are independent, run them in parallel):
 
-> Onboard: `CLAUDE.md` (telos: segments sole claim truth) · `core/OUTLINE.md` · **this file** · `doc/theory/discretisation-and-information.md` (Prime Question = modified-equation **computation**, not a disposition) · `DECISIONS.decision-log.udon` — **the authority legend, then ALL of 2026-07-12/13** (source material; ~20 entries, nearly all `:by claude :status proposed`) · `ASSUMPTIONS.md` · project memory (does NOT autoload) · the spikes in `msc/`. Archaeology only: `.archive/ORIENTATION.md` HANDOFF residue — not a tactical current dependency.
+> Onboard: `CLAUDE.md` (telos: segments sole claim truth) · `core/OUTLINE.md` · **this file** · `doc/theory/discretisation-and-information.md` (Prime Question = modified-equation **computation**, not a disposition) · `DECISIONS.decision-log.udon` — **the authority legend, then ALL of 2026-07-12/13** (source material; ~20 entries, nearly all `:by claude :status proposed`) · `ASSUMPTIONS.md` · project memory (does NOT autoload) · the spikes in `msc/`. Archaeology only: `.super-archive/from-archive/ORIENTATION.md` HANDOFF residue — not a tactical current dependency.
 >
 > **Write ONE file: `doc/design/nomos-contract/0N-<box>.md`. It is a PROCEDURE, NOT A TAXONOMY.** Its shape: **the question · the fundamentals (do the math, do not gesture at it) · the procedure · a worked specimen · THE PROBE · the failure gallery · what to write in the declaration.**
 >

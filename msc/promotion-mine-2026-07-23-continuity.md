@@ -1,32 +1,30 @@
 # Promotion mine tracker
 
-*Not claim canon. Full-speed pass 2026-07-23.*
+*Not claim canon.*
 
-## Compounding super-archive
+## Super-archive provenance audit (adjudicated)
 
-Batches 1–4: archive ice, VIVARIA, PHASES, CLAUDE, consolidation-wave, session-07-10, **memory-surfaced**, **DESIGN body**. **`.archive/` residual:** SUPERSEDED ledger only.
+Report: `msc/agent-briefs/2026-07-23-super-archive-provenance-audit.md`
 
-## Landed (batch 4)
+- **No second DESIGN-class truncation** — accepted  
+- **DESIGN byte-match** `0a5050e^` — re-verified exact  
+- **Stale path sweep** — LEXICON / PROCESS / regula / theory / design citations updated  
+- **PHASES pin** — honest residual (authorization pin vs bannered body)
 
-`#sketch-three-project-axes` · `#sketch-logozoetic-peer-view` · `#form-engine-bevy` · `#sketch-memory-as-core-to-agency` · `#form-scale-separation-directional` · DESIGN.md → pointer shell
+## REDUX mine this pass
 
-## Residual EXTRACT
+| Landed | Notes |
+|--------|--------|
+| `#form-reductionist-fallback-cases` | Three cases |
+| `#form-fidelity-ladder` | Climb / descend |
+| `#sketch-detail-abstract-reversion` | Open frontier |
+| `#sketch-nomos-declaration-boxes` | Boxes ②–④ |
+| REDUX §2, §6, §12 dual-home collapse | FE → core; specimens teaching |
 
-| # | Item | Notes |
-|---|------|--------|
-| 1 | Thin run-modes carve | Optional |
-| 2 | routing-curl obs | Cube sibling |
-| 3 | execution-class / timescale-band | Design/ARCHITECTURE |
-| 4 | REDUX residual (three-scoped, multirate bands, fidelity ladder non-key) | Main mass |
-| 5 | MATERIAL / SYSTEMS / NOMOS-CONTRACT / theory teaching | Main mass |
-| 6 | SUPERSEDED re-home | Ledger |
+## Residual mine mass
 
-## Code PoC
+DESIGN-REDUX (remaining teaching), MATERIAL, SYSTEMS, theory bodies, plans, SUPERSEDED ledger.
 
-True spherical cell area in fluvial drainage/deposit (`measure.rs`); MFD lengths still open.
+## Integration reminder
 
-## Lanes
-
-- **Primary:** exact/draft Critical segments  
-- **Sketch:** e.g. two-layer mind  
-- **Graduate:** claim-empty files ASAP  
+Core body = present best. Retired core text → history layer. Super-archive = graduated mine.
