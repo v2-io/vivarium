@@ -30,9 +30,12 @@
 //! monotonicity a test can fail.
 //!
 //! **Declared omissions (v1, honest):** no water loading in the balance
-//! (ρ_sw terms of the full freeboard equation); no crustal transport or
-//! erosion mass-return yet (the rock-mass ledger stays open); the craton
-//! field is fated geometry, not a differentiation rate law. Physics tier is
+//! (ρ_sw terms of the full freeboard equation); no crustal transport yet; the
+//! craton field is fated geometry, not a differentiation rate law. Erosion's
+//! mass-return to the column IS built (the rock-mass ledger, `erosion_return.rs`
+//! / `#form-isostasy-column` FE(9)) — a measured operator that debits crust,
+//! rebounds via this Airy read, and credits sediment, but is not yet wired into
+//! the default surface. Physics tier is
 //! declared Low on the nomos — the *balance* is real physics; the *inventory*
 //! is a stand-in.
 
@@ -60,6 +63,12 @@ pub const RHO_CONTINENTAL: f64 = 2750.0;
 /// acts over 150+ km of keel. Same anchor.
 pub const KEEL_DENSITY_DEFICIT: f64 = 25.0;
 
+/// Sediment density (kg/m³) — eroded rock redeposited on submarine columns by
+/// the rock-mass ledger (`crate::erosion_return`). Wet clastic/sedimentary-rock
+/// order; lighter than felsic crust, so a sediment blanket adds buoyant load.
+/// `ASSUMPTIONS.md` "lithosphere densities".
+pub const RHO_SEDIMENT: f64 = 2500.0;
+
 /// Cratonic crust thickness (m) where cratonization saturates.
 /// `ASSUMPTIONS.md` "craton geometry".
 pub const CRATON_CRUST_M: f64 = 35_000.0;
@@ -79,6 +88,13 @@ pub struct Column {
     /// Depleted continental-lithospheric-mantle keel (m); density is
     /// `RHO_ASTHENOSPHERE − KEEL_DENSITY_DEFICIT`.
     pub keel_m: f64,
+    /// Redeposited sediment thickness (m), density [`RHO_SEDIMENT`) — the credit
+    /// half of the rock-mass ledger (`crate::erosion_return`). Zero on the fated
+    /// pre-erosion column; positive on submarine columns after an erosion pass
+    /// (eroded craton crust returned as a submarine blanket). A buoyant load, so
+    /// depositing here *raises* the read (basins fill) while the eroded cratons
+    /// rebound down — relief compresses from both ends.
+    pub sediment_m: f64,
 }
 
 /// Oceanic crust thickness (m) at mantle potential temperature `tp_c` —
@@ -124,6 +140,7 @@ pub fn column_at_tp(seed: u64, cell: CellId, tp_c: f64) -> Column {
         // density blends toward felsic as cratonization completes
         crust_rho: rho_oc + w * (RHO_CONTINENTAL - rho_oc),
         keel_m: w * CRATON_KEEL_M,
+        sediment_m: 0.0, // fated pre-erosion column carries no redeposited sediment
     }
 }
 
@@ -137,7 +154,22 @@ pub fn column(seed: u64, cell: CellId) -> Column {
 /// stand, before the global reference is subtracted.
 pub fn buoyancy_height_m(c: &Column) -> f64 {
     let rho_a = RHO_ASTHENOSPHERE;
-    c.crust_m * (rho_a - c.crust_rho) / rho_a + c.keel_m * KEEL_DENSITY_DEFICIT / rho_a
+    c.crust_m * (rho_a - c.crust_rho) / rho_a
+        + c.keel_m * KEEL_DENSITY_DEFICIT / rho_a
+        + c.sediment_m * (rho_a - RHO_SEDIMENT) / rho_a
+}
+
+/// **Isostatic rebound of erosional unloading, as a pure algebraic identity.**
+/// Removing crust thickness `δ` (density `crust_rho`) from a column lowers its
+/// isostatic stand by only `δ·(ρ_a − crust_rho)/ρ_a` — *not* by `δ`. The
+/// difference `δ·crust_rho/ρ_a` is the rebound: the lightened column floats
+/// back up, so most of the rock removed is given back as uplift. This is why
+/// erosion *bounds* relief rather than planing it flat, and the reason a
+/// rock-mass ledger (`crate::erosion_return`) trims the amber over-stand toward
+/// the band instead of collapsing it (`#form-isostasy-column` FE(8)).
+/// For felsic crust: `(3300 − 2750)/3300 ≈ 0.167`, so ~83 % rebounds.
+pub fn surface_drop_per_crust_removed(crust_rho: f64) -> f64 {
+    (RHO_ASTHENOSPHERE - crust_rho) / RHO_ASTHENOSPHERE
 }
 
 /// Sampling level for the global reference (matches the pour's diagnostic
@@ -293,6 +325,7 @@ mod tests {
             crust_m: CRATON_CRUST_M,
             crust_rho: RHO_CONTINENTAL,
             keel_m: CRATON_KEEL_M,
+            sediment_m: 0.0,
         });
         assert!(craton - cool > craton - hot, "craton/ocean contrast grows under cooling");
         assert!(craton > hot, "cratons stand above even the hot Archean seafloor");
@@ -303,10 +336,29 @@ mod tests {
         // Removing the keel from a craton column must cost a substantial part
         // of its stand — the decision's "the keel is half of it" clause, order
         // of magnitude: 180 km × 25 kg/m³ / 3300 ≈ 1.4 km of the ~7 km stand.
-        let with = buoyancy_height_m(&Column { crust_m: CRATON_CRUST_M, crust_rho: RHO_CONTINENTAL, keel_m: CRATON_KEEL_M });
-        let without = buoyancy_height_m(&Column { crust_m: CRATON_CRUST_M, crust_rho: RHO_CONTINENTAL, keel_m: 0.0 });
+        let with = buoyancy_height_m(&Column { crust_m: CRATON_CRUST_M, crust_rho: RHO_CONTINENTAL, keel_m: CRATON_KEEL_M, sediment_m: 0.0 });
+        let without = buoyancy_height_m(&Column { crust_m: CRATON_CRUST_M, crust_rho: RHO_CONTINENTAL, keel_m: 0.0, sediment_m: 0.0 });
         let keel_share = (with - without) / with;
         assert!(keel_share > 0.15, "keel contributes materially ({:.0}%)", keel_share * 100.0);
+    }
+
+    #[test]
+    fn erosional_unloading_rebounds_surface_falls_by_less_than_the_rock_removed() {
+        // The rock-mass ledger's load-bearing physics (`#form-isostasy-column`
+        // FE(8)): strip crust δ from a craton and the isostatic stand falls by
+        // only δ·(ρ_a−ρ_crust)/ρ_a — the lightened column rebounds. A failable
+        // statement that erosion BOUNDS relief (rebound-aware) rather than
+        // planing it 1:1. If someone deleted the rebound (subtracted δ from the
+        // stand directly), this fails.
+        let full = Column { crust_m: CRATON_CRUST_M, crust_rho: RHO_CONTINENTAL, keel_m: CRATON_KEEL_M, sediment_m: 0.0 };
+        let delta = 3_000.0; // remove 3 km of crust
+        let eroded = Column { crust_m: CRATON_CRUST_M - delta, ..full };
+        let surface_drop = buoyancy_height_m(&full) - buoyancy_height_m(&eroded);
+        let expected = delta * surface_drop_per_crust_removed(RHO_CONTINENTAL);
+        assert!((surface_drop - expected).abs() < 1e-6, "rebound identity broken: {surface_drop} vs {expected}");
+        // The surface falls by far LESS than the rock removed (most rebounds).
+        assert!(surface_drop < 0.25 * delta, "felsic rebound gives back ~83%: drop {surface_drop} of {delta} removed");
+        assert!(surface_drop > 0.0, "removing crust still lowers the stand");
     }
 
     #[test]

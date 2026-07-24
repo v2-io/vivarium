@@ -30,6 +30,7 @@ pub mod uplift;
 pub mod lithosphere;
 pub mod mantle_thermal;
 pub mod sea_level;
+pub mod erosion_return;
 pub mod erosion;
 pub mod water;
 pub mod sample;

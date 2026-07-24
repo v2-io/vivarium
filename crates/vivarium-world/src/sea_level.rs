@@ -21,7 +21,7 @@ use crate::time::Time;
 
 /// Sampling level for the global pour (256² × 6 ≈ 393k cells). Coarse enough
 /// to be cheap; fine enough that the inverted level is stable for v0.
-const SAMPLE_LEVEL: u8 = 8;
+pub(crate) const SAMPLE_LEVEL: u8 = 8;
 
 /// Sea level (m above bedrock datum) for this world-seed at the **present-
 /// Abyssal** epoch: ocean stock poured into the tectonic surface (bathymetry +
@@ -74,9 +74,21 @@ pub fn tectonic_surface_at_tp(seed: u64, cell: crate::sphere::CellId, nyquist_le
 }
 
 fn pour_ocean_at_tp(seed: u64, tp_c: f64) -> f64 {
+    pour_ocean_over(SAMPLE_LEVEL, |coord| {
+        tectonic_surface_at_tp(seed, coord.cell(SAMPLE_LEVEL), SAMPLE_LEVEL, tp_c)
+    })
+}
+
+/// Invert the conserved ocean stock onto an arbitrary solid `surface` sampled at
+/// `level` — the pour, factored out of [`pour_ocean_at_tp`] so the rock-mass
+/// ledger (`crate::erosion_return`) can re-pour against the *post-erosion*
+/// tectonic surface with the identical hypsometric inversion (no forked pour).
+/// Returns the waterline (m); a total water-world when basins cannot hold the
+/// inventory (ordinum promise).
+pub(crate) fn pour_ocean_over(level: u8, surface: impl Fn(CubeCoord) -> f64) -> f64 {
     let planet = Planet::EARTH;
     let ocean_km3 = Hydrosphere::of(&planet).ocean_km3;
-    let n = 1usize << SAMPLE_LEVEL;
+    let n = 1usize << level;
     let r_km = planet.radius_m / 1000.0;
     let mut heights: Vec<f64> = Vec::with_capacity(6 * n * n);
     let mut areas: Vec<f64> = Vec::with_capacity(6 * n * n);
@@ -91,8 +103,7 @@ fn pour_ocean_at_tp(seed: u64, tp_c: f64) -> f64 {
             for i in 0..n {
                 let u = ((i as f64 + 0.5) / n as f64) * 2.0 - 1.0;
                 let v = ((j as f64 + 0.5) / n as f64) * 2.0 - 1.0;
-                let cell = CubeCoord { face, u, v }.cell(SAMPLE_LEVEL);
-                let h = tectonic_surface_at_tp(seed, cell, SAMPLE_LEVEL, tp_c);
+                let h = surface(CubeCoord { face, u, v });
                 // Uniform-area approx at this level — good enough for the sea-level
                 // *datum*; true spherical excess remains the probe's job.
                 let area = (4.0 * std::f64::consts::PI * r_km * r_km) / (6.0 * (n * n) as f64);

@@ -617,7 +617,7 @@ pub static LITHOSPHERE: NomosDecl = NomosDecl {
     earth_fidelity: Tier::Low, // era-plausible pins (Chowdhury lineage), not Earth's actual columns
     physics: Tier::Low,        // inventory is a fated stand-in; no differentiation rate law yet
     relation: "conserved columnar inventory: crust thickness+density (craton felsic / oceanic thermal-ramped) + depleted keel — one differentiation process, two buoyant products stacked. The mantle-thermal DRIVER is now a nomos (a declared cooling trajectory T_p(t)), consumed here; the oceanic-crust ramp reads it, so a cooling mantle deepens basins",
-    status: "v1 fated columns (lithosphere.rs); craton fraction calibration convicted by test; cooling⇒contrast-growth monotonicity unit-tested; NOW driven in time by the mantle-thermal nomos (emergence trajectory probed); differentiation rate law and crustal transport OPEN; erosion does not yet return mass (rock-mass ledger open)",
+    status: "v1 fated columns (lithosphere.rs); craton fraction calibration convicted by test; cooling⇒contrast-growth monotonicity unit-tested; NOW driven in time by the mantle-thermal nomos (emergence trajectory probed); differentiation rate law and crustal transport OPEN; erosion's mass-return is BUILT as a measured pour-grain operator (erosion_return.rs, closed-box conserved) but not yet the default — so this promise's Conservation stays NotTracked until adoption (#form-flux-web owed decl upgrade)",
     deps: &[&NOISE, &MANTLE_THERMAL],
     consumes: &[
         Consume { quantity: flux::SEEDED_ASYMMETRY, needs: Statistic::CenterSample },
