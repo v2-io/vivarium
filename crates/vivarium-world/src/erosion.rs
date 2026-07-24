@@ -104,7 +104,7 @@ mod tests {
 // Per epoch: (1) uplift non-outlets, (2) Priority-Flood depression filling with an
 // ε-gradient (Barnes, Lehman & Mulla 2014; deterministic tie-breaks by insertion
 // seq, never float chance), (3) D8 steepest-descent receivers (the tree the
-// implicit solve needs), (4) MFD drainage-area accumulation (Quinn et al., p=1.1 —
+// implicit solve needs), (4) MFD drainage-area accumulation (Quinn et al.; live p=1.0 —
 // dissolves D8's grid-locked ribs; this is what decides WHERE channels form),
 // (5) implicit stream-power incision, n=1 (Whipple & Tucker 1999 à la Braun &
 // Willett 2013 — exact, unconditionally stable, bit-deterministic in fixed order),
@@ -427,7 +427,7 @@ impl Fluvial {
     /// MFD drainage accumulation (high→low, slopeᵖ-weighted to ALL lower
     /// neighbours) — dissolves D8's grid-aligned rib artifact.
     fn accumulate_drainage(&mut self, order: &[usize]) {
-        const P: f32 = 1.1;
+        const P: f32 = 1.0; // directional first-moment unbiased on square lattice; DECISIONS[the-router-is-a-scalar…] / #obs-cube-locked-kernel-bias
         let nx = self.nx;
         // Local runoff = true spherical cell area × local precip weight.
         // (Uniform cell_m² was a cube-locked bias — `#obs-cube-locked-kernel-bias`.)

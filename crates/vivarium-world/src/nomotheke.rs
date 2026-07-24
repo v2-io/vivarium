@@ -561,7 +561,7 @@ pub static UPLIFT: NomosDecl = NomosDecl {
 /// System #2 — fluvial erosion composed on the initial-topography.
 pub static EROSION: NomosDecl = NomosDecl {
     name: "erosion-tile",
-    version: "erosion-2026-07-23a-true-cell-area", // spherical A for drainage/deposit; not MFD lengths
+    version: "erosion-2026-07-24a-p1-true-cell-area", // spherical A; MFD p=1.0; split lengths still uniform
     system: "fluvial-erosion",
     approach: Approach::Procedural,
     earth_fidelity: Tier::Med, // stream-power/Davy–Lague are how real landscapes are modeled
@@ -626,13 +626,7 @@ pub static EROSION: NomosDecl = NomosDecl {
             term: "MFD fan deflection (sheared quadrature)",
             parity: Parity::Directional,
             verdict: ErrVerdict::Bias,
-            note: "474 km plume drift on a cone; refining worsens it",
-        },
-        UnphysicalTerm {
-            term: "p = 1.1 outflow exponent",
-            parity: Parity::Directional,
-            verdict: ErrVerdict::Bias,
-            note: "45°-periodic grid-locked first-moment deflection (rms 0.2419°, eight attractors); exactly zero at p = 1 — a theorem. Live at erosion.rs P",
+            note: "474 km plume drift on a cone; refining worsens it. (Outflow exponent p fixed to 1.0 — first-moment lattice bias retired; fan geometry residual remains.)",
         },
         UnphysicalTerm {
             term: "Priority-Flood ε-fill (mass minted in depressions)",
@@ -801,7 +795,7 @@ mod tests {
     #[test]
     fn declarations_mint_the_keys() {
         assert!(INITIAL_TOPOGRAPHY.key().as_str().starts_with("initial-topography@initial-topography-2026-07-10b-sphere3d"));
-        assert!(EROSION.key().as_str().starts_with("erosion-tile@erosion-2026-07-23a-true-cell-area"));
+        assert!(EROSION.key().as_str().starts_with("erosion-tile@erosion-2026-07-24a-p1-true-cell-area"));
     }
 
     #[test]
