@@ -175,12 +175,15 @@ mod tests {
         // face deltas at ~2-cell separation were large enough to mask a 2–3 km
         // cliff). At one-cell separation the discrimination is ~7×: v1 measured
         // cross-seam ~3,000 m vs within-face ~440 m at L12.
+        //
+        // Checks **tectonic** surface (bathymetry + freeboard): freeboard must
+        // also be sphere-continuous, or the globe shows cube-face cliffs.
         let level = 12u8;
         let arc = std::f64::consts::FRAC_PI_2 / 4096.0; // one cell at L12
         let prior_at = |d: [f64; 3]| {
             let n = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
             let cell = CubeCoord::from_unit([d[0] / n, d[1] / n, d[2] / n]).cell(level);
-            bathymetry_m(0, cell, level)
+            initial_topography_m(0, cell, level)
         };
         // Pairs straddling the +X/+Z edge, the +X/+Y edge, and rays past the
         // (1,1,1) corner; matched within-face pairs at the same arc length.
