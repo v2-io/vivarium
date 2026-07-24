@@ -20,11 +20,18 @@ Adjudicated ice in `msc/consolidation-wave-2026-07-21/archive-mining-report.md` 
 
 **Still in `.archive/` (residual mine or ledger):** `memory-surfaced-2026-07-13.md`, archived `CLAUDE.md`, `PHASES.md`, `VIVARIA-DEFINITIONS.md`, `VIVARIA-DECLARATIVE-FRONTIER.md`, `SUPERSEDED.md`, `.archive/README.md`.
 
-## Claim promotions same day (not moved; instruments stay live)
+## Claim promotions (instruments stay live; not super-archived)
 
 | Segment | Primary sources (still live) |
 |---------|------------------------------|
 | `#form-face-flux-register` | `msc/spike-wavelet-store/` PROBE 7, DECISIONS flux-on-face / refluxing-ceases family |
+| `#obs-mean-pin-manufactures-seam` | PROBE 6–7, DECISIONS mean-pin family |
+| `#obs-cube-locked-kernel-bias` | DECISIONS mfd-fan + drainage-area-uniform; grid_lab; PROBE 8 |
+| `#form-manifest-prescribes-vivium` | DECISIONS regula-collapse; residual VIVARIA-DEFINITIONS L3 |
 | `#form-sphere-continuous-surface-fields` | `gen.rs`, session-2026-07-10-mechanics |
 | `#norm-probe-sensitivity` | same reflection §1 |
 | `#form-grid-equiangular-staggered` | grid-comparison-report, DECISIONS tentative keep |
+
+## Dual-home demotions (source stays; law prose collapsed)
+
+ARCHITECTURE §1 mean-pin essay · multiscale-methods §1 mean-pin / AMR note · discretisation header → cube-locked obs. Tracker: `msc/promotion-mine-2026-07-23-continuity.md`.

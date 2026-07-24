@@ -69,9 +69,9 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | observation | Physics | [#obs-hydrosphere-box-nomos](src/obs-hydrosphere-box-nomos.md) | Box nomos proves representation-agnostic contract | draft |
 | formulation | Physics Critical | [#form-derived-sea-level](src/form-derived-sea-level.md) | Sea level = pour ocean into solid hypsometry; freeboard earns emerged land (not decreed continents) | draft |
 | formulation | Model Critical | [#form-sphere-continuous-surface-fields](src/form-sphere-continuous-surface-fields.md) | Solid surface fields are continuous on $S^2$ (unit-sphere sampling); never per-face noise charts | draft |
+| formulation | Project Critical | [#form-manifest-prescribes-vivium](src/form-manifest-prescribes-vivium.md) | Manifest = per-vivium prescription; ordinum = kind floor; no regula artifact for now | draft |
 | discussion | Model Critical | [#disc-prime-question](src/disc-prime-question.md) | Prime Question = modified-equation analysis | draft |
 | | | | *(#gap) Full Terrestris phase-content segments* | missing |
-| | | | *(#gap) Manifest / vivium identity* | missing |
 
 ## III. Runtime, environment, and CLI
 
@@ -95,8 +95,9 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | formulation | Math Critical | [#form-face-flux-register](src/form-face-flux-register.md) | Hanging-node single-valued face flux (Berger–Colella register); refluxing ceases under three conditions | draft |
 | observation | Math Critical | [#obs-mean-pin-manufactures-seam](src/obs-mean-pin-manufactures-seam.md) | Mean-pin manufactures seam ridge and mass; not $R\circ L=\mathrm{id}$; zero-physics control | draft |
 | formulation | Math Critical | [#form-grid-equiangular-staggered](src/form-grid-equiangular-staggered.md) | Equiangular cube-sphere + Arakawa-C + per-cell metrics (tentative keep); router open; cube-locked control mandatory | draft |
+| observation | Model Critical | [#obs-cube-locked-kernel-bias](src/obs-cube-locked-kernel-bias.md) | MFD fan + uniform cell-area A are cube-locked biases that do not converge; cube control mandatory | draft |
 | | | | *(#gap) Hydrosphere, climate, erosion, water nomoi (beyond box + #form-derived-sea-level)* — residual: wire pour/freeboard keeper into nomotheke; full field nomos segments | missing |
-| | | | *(#gap) Cube-locked bias specimens as own observation segments (MFD fan; uniform cell-area A; routing curl) — folded summary in #form-grid-equiangular-staggered until extracted* | missing |
+| | | | *(#gap) Routing curl / potential-identity specimen (sibling of cube-locked bias)* | missing |
 
 ## VI. Process and contribution
 

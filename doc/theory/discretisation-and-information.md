@@ -10,7 +10,7 @@
 
 ## 0. The Prime Question
 
-*Claim home: `#disc-prime-question` (the question, and that its answer is modified-equation analysis — a term with a sign and a differential order, not a disposition). Porting rule: `#disc-algorithms-disguise-physics`. This section is **source and teaching**: the worked MFD specimen below is why the claim is believed, and it stays here. Cite the segments for the law.*
+*Claim homes: `#disc-prime-question` · `#disc-algorithms-disguise-physics` · `#norm-bias-vs-noise` · **MFD / uniform-$A$ measurements → `#obs-cube-locked-kernel-bias`**. This section is **source and teaching**: the worked MFD specimen stays here. Cite the segments for the law.*
 
 > # **"What physical claim is this algorithm actually making?"**
 

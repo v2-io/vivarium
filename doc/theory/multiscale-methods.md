@@ -35,10 +35,8 @@ Every multiscale method, whatever its name, is built from:
 Two consistency laws make the pair honest:
 
 1. **R ∘ L = identity on U** — reconstruct then summarize must give back what
-   the macro claimed. (Claim home: `#form-rl-closure-algebra`. This is the
-   *fidelity invariant* / sufficient-statistic seam. ⚠ **Not live in code:**
-   mean-pinning is **not** $R\circ L=\mathrm{id}$ on the mean —
-   `DECISIONS[mean-pin-does-not-preserve-block-means]`. Aspiration + compliance debt.)
+   the macro claimed. (Claim home: `#form-rl-closure-algebra`. ⚠ **Not live:**
+   mean-pin convicts the implementation — `#obs-mean-pin-manufactures-seam`.)
 2. **Conservative exchange** — when a conserved quantity crosses a seam
    (scale-to-scale or aspect-to-aspect), exchange **fluxes, not states**, and
    the fluxes must balance exactly (claim home: `#form-seam-flux-exchange`).
@@ -64,10 +62,8 @@ Ordered roughly by how much micro physics each keeps alive:
   ("refluxing"). *Vivarium:* the **telescope** is AMR with the refinement
   criterion = observer attention rather than error estimate; **finishers**
   are the fine substeps; mean-pinning is the **injection/update** (averaged
-  fine→coarse). *(Corrected 2026-07-10 after the primary read: mean-pin is NOT
-  refluxing — refluxing is the distinct conservative flux correction at the
-  coarse–fine boundary (Berger–Colella 1989), which vivarium does not yet do;
-  that gap is why `seam_ridge` is red. See `doc/theory/multiscale-seams.md` §2.1.)*
+  fine→coarse). Mean-pin ≠ refluxing; hanging-node conservation →
+  `#form-face-flux-register`; pin defects → `#obs-mean-pin-manufactures-seam`.*
 - **Multirate time integration** (Gear & Wells 1984 lineage). Split one system by
   timescale; fast components substep with interpolated slow forcings; slow
   components see time-averaged fast output. *Vivarium:* §4's stance verbatim;
