@@ -83,6 +83,13 @@ pub const ATMOSPHERE_WATER: &str = "atmosphere water (m w.e.)";
 /// (the registry test `precipitation_is_now_produced_by_climate` pins it).
 pub const PRECIPITATION: &str = "precipitation (m/yr)";
 
+/// **Lithospheric column** — per-cell crust + depleted-keel inventory
+/// (thicknesses m, densities kg/m³). Produced by the `lithosphere` nomos
+/// (conserved-inventory pattern, the hydrosphere's dual on rock); consumed by
+/// `isostasy`, whose read of it is the freeboard that earns emerged land
+/// (`#form-isostasy-column`).
+pub const LITHO_COLUMN: &str = "lithospheric column (crust + keel inventory)";
+
 /// Every fluxed quantity a nomos may name. A `produces`/`consumes` string not in
 /// this list is a typo (or an undeclared vocabulary addition) — a test convicts
 /// it, so a broken coupling edge cannot masquerade as an obvious one.
@@ -92,6 +99,7 @@ pub const VOCABULARY: &[&str] = &[
     INSOLATION,
     EMERGED_LAND,
     ROCK_UPLIFT_RATE,
+    LITHO_COLUMN,
     ATMOSPHERE_WATER,
     ERODED_SURFACE,
     STANDING_WATER_DEPTH,

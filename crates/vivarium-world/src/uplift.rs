@@ -11,6 +11,16 @@
 //! and the flux web shows the dependency. Swap this kernel — no-op, constant,
 //! or a real mantle-driven field later — and erosion recomputes by key.
 //!
+//! **Freeboard moved out (2026-07-24):** the zero-mean fBm freeboard stand-in
+//! this module carried is RETIRED, replaced by the mass-conserving isostasy
+//! read of the lithosphere column (`crate::lithosphere::freeboard_m` —
+//! `#form-isostasy-column`). What remains here is the RATE field only — and
+//! under that segment's law a height-rate is a *diagnostic/driver for erosion
+//! carving*, not the article that earns land. Strictly-positive range is this
+//! field's convicted limitation (`DECISIONS[uplift-is-structurally-
+//! incapable-of-keeping-its-promise]`) — acceptable for a carving driver,
+//! disqualifying for a freeboard keeper, which it no longer is.
+//!
 //! **What v0 is, honestly: ~30 lines of crude stand-in.** A single declared rate
 //! constant (`ASSUMPTIONS.md` "uplift rate") times a low-frequency fBm, so the
 //! land rises *differentially* — blocks lift at ~0.25×–1.75× the base rate and
@@ -30,12 +40,6 @@ use crate::sphere::{CellId, Face};
 /// rate"), not a measured tectonic rate. Set to 0.0 for a no-op world.
 pub const UPLIFT_RATE_M_PER_EPOCH: f32 = 0.5;
 
-/// Peak amplitude (m) of the **zero-mean freeboard** stand-in: Abyssal crustal
-/// buoyancy proxy so some surface can stand above derived sea level.
-/// Full isostasy (thickness × density, conserved) replaces this later.
-/// (`ASSUMPTIONS.md` "freeboard amplitude"; early-continents ~few% land target.)
-pub const FREEBOARD_AMP_M: f64 = 4500.0;
-
 /// The rock-uplift rate at one cell (m/epoch): the base rate modulated by a
 /// low-frequency fBm so uplift is differential (`~0.25×–1.75×`). Pure function of
 /// (seed, cell) — fated noise, memoizable, replayable.
@@ -46,19 +50,6 @@ pub fn uplift_rate_m_per_epoch(seed: u64, cell: CellId) -> f64 {
     let f = noise::fbm(seed, 3, (c.u + 1.0) * 2000.0, (c.v + 1.0) * 2000.0, 3, 2.0, 0.5);
     let weight = 0.25 + 1.5 * f; // ~0.25× .. 1.75×
     UPLIFT_RATE_M_PER_EPOCH as f64 * weight
-}
-
-/// **Crustal freeboard** (m, zero-mean): isostatic stand-in for lower-density /
-/// thicker crust rising and denser crust subsiding. **Must be able to go
-/// negative** (`DECISIONS` isostasy conservation intuition). Pure function of
-/// (seed, cell). Not plate tectonics — the named later path is lithosphere
-/// column → true isostasy (early-continents survey / Flament–Chowdhury lineage).
-pub fn freeboard_m(seed: u64, cell: CellId) -> f64 {
-    let p = cell.to_cube().to_unit();
-    // Long-wavelength only (~continental / craton scale), sphere-continuous.
-    let f = 2.5; // ~ few large features per face
-    let n = noise::fbm3(seed, 5, p[0] * f, p[1] * f, p[2] * f, 3, 2.0, 0.5);
-    (n - 0.5) * 2.0 * FREEBOARD_AMP_M
 }
 
 /// A tile of rock-uplift rates (m/epoch), row-major `nx × nx` over `face` cells

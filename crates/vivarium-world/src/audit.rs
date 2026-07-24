@@ -276,10 +276,11 @@ mod tests {
 
     #[test]
     fn precipitation_and_emerged_land_are_both_met() {
-        // Climate keeps precipitation; uplift freeboard keeps emerged land (Abyssal
-        // stand-in). Erosion's requisites are fully Met — lawful build without waiver.
+        // Climate keeps precipitation; the ISOSTASY read of the lithosphere
+        // column keeps emerged land (the freeboard stand-in retired 2026-07-24
+        // — #form-isostasy-column). Erosion's requisites are fully Met.
         assert_eq!(producer_of(flux::PRECIPITATION).map(|n| n.name), Some("climate"));
-        assert_eq!(producer_of(flux::EMERGED_LAND).map(|n| n.name), Some("uplift-tile"));
+        assert_eq!(producer_of(flux::EMERGED_LAND).map(|n| n.name), Some("isostasy"));
         let unmet = unmet_across_registry();
         assert!(
             unmet.is_empty(),
@@ -288,21 +289,22 @@ mod tests {
         );
         let met_land = requisites(&EROSION).into_iter().any(|r| {
             r.quantity == flux::EMERGED_LAND
-                && matches!(r.supply, Supply::Met(p) if p.name == "uplift-tile")
+                && matches!(r.supply, Supply::Met(p) if p.name == "isostasy")
         });
         assert!(met_land);
     }
 
     #[test]
     fn water_chain_reaches_the_hydrosphere() {
-        // Transitive closure: water → erosion → land/uplift/climate → hydrosphere.
+        // Transitive closure: water → erosion → land/uplift/climate → hydrosphere,
+        // with emerged land kept by the isostasy→lithosphere chain.
         let chain = requisite_chain(&WATER);
         assert!(
             chain.iter().any(|l| {
                 l.quantity == flux::EMERGED_LAND
-                    && matches!(l.supply, Supply::Met(p) if p.name == "uplift-tile")
+                    && matches!(l.supply, Supply::Met(p) if p.name == "isostasy")
             }),
-            "water's chain reaches the emerged-land keeper (uplift freeboard)"
+            "water's chain reaches the emerged-land keeper (the isostasy read)"
         );
         assert!(
             chain.iter().any(|l| l.quantity == flux::PRECIPITATION && matches!(l.supply, Supply::Met(p) if p.name == "climate")),

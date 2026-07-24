@@ -223,10 +223,13 @@
     |charge[proto-biomes] :tag emergent
       Alien proto-biomes, hostile to complex life.
     |promises
-      |promise[emerged-land].state :from emergent-land
+      |promise[emerged-land].state :kept-by isostasy :from emergent-land
         THE LAND ITSELF — continents, relief, and drainage networks; every
-        future rain-shadow, watershed, and harbor is drawn here.
-        |predicate land rises above sea level, non-volcanic; land-fraction toward the early-Earth target band (survey §6).
+        future rain-shadow, watershed, and harbor is drawn here. Kept by the
+        isostasy read of the lithosphere column (mass-conserving freeboard —
+        `#form-isostasy-column`), 2026-07-24; the strictly-positive rate
+        stand-in never could keep it (range/reachability conviction).
+        |predicate land rises above sea level, non-volcanic; land-fraction toward the early-Earth target band (survey §6). Live check: sea_level::land_fraction_at_derived_sea in the Abyssal band (test freeboard_earns_some_emerged_land).
       |promise[erosion-substrate].regime :kept-by erosion-tile :from erosion-carving
         Fluvial erosion continues running as the geological substrate beneath
         every later phase.

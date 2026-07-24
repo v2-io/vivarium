@@ -267,16 +267,22 @@ mod tests {
     }
 
     #[test]
-    fn the_land_promise_is_unkept_and_that_is_the_point() {
-        // The whole reason this module exists: Abyssal's `emerged-land` — the LAND
-        // ITSELF — has a falsifiable predicate but NO nomos claims to keep it. That is
-        // the #1 gap in the ladder, and it should be what drives the next nomos.
+    fn the_land_promise_is_claimed_by_isostasy() {
+        // History: this test was `the_land_promise_is_unkept_and_that_is_the_point`
+        // — the module's founding specimen: emerged-land had a predicate and NO
+        // keeper, and that gap was what the ladder drove. On 2026-07-24 the gap
+        // did exactly what it existed to do: it drove the lithosphere→isostasy
+        // chain into existence (#form-isostasy-column), and the promise is now
+        // CLAIMED by a registered nomos. Kept still requires the predicate
+        // verified per geological cycle — Claimed ≠ Kept, and this test does
+        // not assert Kept.
         let o = terrestris();
         let ab = o.phase(4).unwrap();
         let land = ab.promises.iter().find(|p| p.slug == "emerged-land").expect("emerged-land");
-        assert!(land.predicate.is_some(), "it is specified — something could convict it");
-        assert_eq!(land.kept_by, None, "and NOTHING keeps it — the gap the ladder is pointing at");
-        assert_eq!(land.maturity(), Maturity::Specified);
+        assert!(land.predicate.is_some(), "specified — something can convict it");
+        assert_eq!(land.kept_by.as_deref(), Some("isostasy"), "the isostasy read claims it");
+        assert!(crate::nomotheke::lookup("isostasy").is_some(), "and the keeper is registered — not BrokenKeeper");
+        assert_eq!(land.maturity(), Maturity::Claimed);
     }
 
     #[test]

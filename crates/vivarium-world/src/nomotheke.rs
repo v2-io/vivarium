@@ -531,28 +531,85 @@ pub static UPLIFT: NomosDecl = NomosDecl {
     approach: Approach::Analytic,
     earth_fidelity: Tier::None, // no Earth tectonic history — freeboard is a stand-in
     physics: Tier::None,        // no true isostasy yet; zero-mean freeboard + rate fBm
-    relation: "#mech stand-in: (1) epoch uplift rate × low-freq fBm; (2) zero-mean freeboard (m) as isostatic buoyancy proxy — can go negative. Real path: lithosphere column thickness×density → isostasy (early-continents / Flament–Chowdhury lineage). Keeps Abyssal emerged-land as a flux promise so erosion is not silently seabed",
-    status: "v0: freeboard + rate fields (uplift.rs); freeboard earns few-% land after derived sea pour; not full plate tectonics",
+    relation: "#mech stand-in: epoch uplift rate × low-freq fBm — the DRIVER erosion carves against, and per #form-isostasy-column a rate is a diagnostic-grade driver, never the article that earns land (its strictly-positive range is the convicted limitation). Freeboard moved to the lithosphere→isostasy chain 2026-07-24",
+    status: "v0 rate field only (uplift.rs); the fBm freeboard stand-in is RETIRED — emerged land is the isostasy nomos's read of the lithosphere column",
     deps: &[&NOISE],
     consumes: &[Consume { quantity: flux::SEEDED_ASYMMETRY, needs: Statistic::CenterSample }],
-    promises: &[
-        Promise {
-            quantity: flux::ROCK_UPLIFT_RATE,
-            conservation: Conservation::NotTracked,
-            statistic: Statistic::CenterSample, // pointwise fBm evaluation
-            exactness: Exactness::Exact,
-        },
-        Promise {
-            quantity: flux::EMERGED_LAND,
-            conservation: Conservation::NotTracked,
-            statistic: Statistic::CenterSample,
-            exactness: Exactness::Exact,
-        },
-    ],
-    assumptions: &["uplift rate", "freeboard amplitude"],
+    promises: &[Promise {
+        quantity: flux::ROCK_UPLIFT_RATE,
+        conservation: Conservation::NotTracked,
+        statistic: Statistic::CenterSample, // pointwise fBm evaluation
+        exactness: Exactness::Exact,
+    }],
+    assumptions: &["uplift rate"],
     family: &[Family::PointwiseAnalytic],
     assumes_geometry: &[],
     structure: StructureDecl { preserves_exact: &[], preserves_approx: &[], sacrifices: &[] },
+    unphysical_terms: &[],
+    execution: ExecutionClass::ProceduralTight,
+    timescale: Timescale { band: "deep-driver", z: None },
+};
+
+/// The lithosphere nomos — the conserved columnar inventory (crust + depleted
+/// keel) that isostasy reads. The hydrosphere pattern, on rock: an inventory
+/// that downstream articles PARTITION and READ, never a free height field.
+/// v1 inventory is a declared differentiation stand-in; the Airy read is real
+/// physics. Claim home: `#form-isostasy-column`.
+pub static LITHOSPHERE: NomosDecl = NomosDecl {
+    name: "lithosphere",
+    version: "lithosphere-2026-07-24a-craton-keel",
+    system: "lithosphere-column",
+    approach: Approach::Analytic,
+    earth_fidelity: Tier::Low, // era-plausible pins (Chowdhury lineage), not Earth's actual columns
+    physics: Tier::Low,        // inventory is a fated stand-in; no differentiation rate law yet
+    relation: "conserved columnar inventory: crust thickness+density (craton felsic / oceanic thermal-ramped) + depleted keel — one differentiation process, two buoyant products stacked. The mantle-thermal DRIVER is a declared constant (MANTLE_TP_C), not yet a nomos",
+    status: "v1 fated columns (lithosphere.rs); craton fraction calibration convicted by test; cooling⇒contrast-growth monotonicity unit-tested; differentiation rate law and crustal transport OPEN; erosion does not yet return mass (rock-mass ledger open)",
+    deps: &[&NOISE],
+    consumes: &[Consume { quantity: flux::SEEDED_ASYMMETRY, needs: Statistic::CenterSample }],
+    promises: &[Promise {
+        quantity: flux::LITHO_COLUMN,
+        conservation: Conservation::NotTracked, // static v1 inventory; becomes a real claim when transport/mass-return exists
+        statistic: Statistic::CenterSample,
+        exactness: Exactness::Exact,
+    }],
+    assumptions: &["mantle potential temperature", "lithosphere densities", "craton geometry"],
+    family: &[Family::PointwiseAnalytic],
+    assumes_geometry: &[],
+    structure: StructureDecl { preserves_exact: &[], preserves_approx: &[], sacrifices: &[] },
+    unphysical_terms: &[],
+    execution: ExecutionClass::ProceduralTight,
+    timescale: Timescale { band: "deep-driver", z: None },
+};
+
+/// The isostasy nomos — consumes the lithosphere column, produces emerged
+/// land as a mass-conserving READING: Airy buoyancy height minus the global
+/// reference fixed by area mass balance (rise here IS subsidence there; the
+/// field spans basins and land — the range the retired rate-keeper lacked).
+pub static ISOSTASY: NomosDecl = NomosDecl {
+    name: "isostasy",
+    version: "isostasy-2026-07-24a-airy",
+    system: "isostatic-freeboard",
+    approach: Approach::Analytic,
+    earth_fidelity: Tier::Low, // read of a stand-in inventory
+    physics: Tier::Med,        // the Airy balance itself is real, standard physics
+    relation: "derived reading: freeboard = Σ tᵢ(ρ_a−ρᵢ)/ρ_a − global mass-balance reference. Declared omission: no water loading (ρ_sw terms of the full freeboard equation) in v1",
+    status: "live (lithosphere.rs::freeboard_m); feeds the derived-sea pour via tectonic_surface_m; zero-mean by construction on the reference grid (unit-tested); range spans basins and land (reachability test — the emerged-land keeper can now keep)",
+    deps: &[&LITHOSPHERE],
+    consumes: &[Consume { quantity: flux::LITHO_COLUMN, needs: Statistic::CenterSample }],
+    promises: &[Promise {
+        quantity: flux::EMERGED_LAND,
+        conservation: Conservation::NotTracked,
+        statistic: Statistic::CenterSample,
+        exactness: Exactness::Exact, // exact read of the declared column; the column itself is the stand-in
+    }],
+    assumptions: &["lithosphere densities"],
+    family: &[Family::PointwiseAnalytic],
+    assumes_geometry: &[],
+    structure: StructureDecl {
+        preserves_exact: &["local-conservation"], // area-mean freeboard ≡ 0 by the reference construction — unit-tested
+        preserves_approx: &[],
+        sacrifices: &[],
+    },
     unphysical_terms: &[],
     execution: ExecutionClass::ProceduralTight,
     timescale: Timescale { band: "deep-driver", z: None },
@@ -568,7 +625,7 @@ pub static EROSION: NomosDecl = NomosDecl {
     physics: Tier::Med,        // real process laws, uncalibrated rates, hardcoded edge policy
     relation: "mechanistic-causal (stream-power incision + deposition + talus + creep), on a stand-in substrate",
     status: "kernel probe-verified in the testbench (channel_profile, spike_probe, armor_regimes 1/3); tile form has fixed epochs (no convergence-ε — component E) and non-composable edges (plan Phase-3)",
-    deps: &[&INITIAL_TOPOGRAPHY, &UPLIFT, &CLIMATE],
+    deps: &[&INITIAL_TOPOGRAPHY, &UPLIFT, &CLIMATE, &ISOSTASY],
     // Three needs, all now MET: the surface it carves (→ INITIAL_TOPOGRAPHY), the rock-uplift
     // rate it carves AGAINST (→ UPLIFT), and the rain that drives incision
     // (→ CLIMATE, the precipitation throughput of the conserved reservoir).
@@ -733,7 +790,7 @@ pub static WATER: NomosDecl = NomosDecl {
 };
 
 /// Every nomos there is. A store root whose name is not here is a bug.
-pub static NOMOTHEKE: &[&NomosDecl] = &[&NOISE, &PLANET, &HYDROSPHERE, &CLIMATE, &INITIAL_TOPOGRAPHY, &UPLIFT, &EROSION, &WATER];
+pub static NOMOTHEKE: &[&NomosDecl] = &[&NOISE, &PLANET, &HYDROSPHERE, &CLIMATE, &INITIAL_TOPOGRAPHY, &UPLIFT, &LITHOSPHERE, &ISOSTASY, &EROSION, &WATER];
 
 /// Look a nomos up by its key-stem name (the part before `@`).
 pub fn lookup(name: &str) -> Option<&'static NomosDecl> {

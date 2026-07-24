@@ -15,7 +15,7 @@ use crate::gen;
 use crate::hydrosphere::Hydrosphere;
 use crate::planet::Planet;
 use crate::sphere::{CubeCoord, Face};
-use crate::uplift;
+use crate::lithosphere;
 
 /// Sampling level for the global pour (256² × 6 ≈ 393k cells). Coarse enough
 /// to be cheap; fine enough that the inverted level is stable for v0.
@@ -42,7 +42,7 @@ pub fn derived_sea_level_m(seed: u64) -> f64 {
 /// Solid surface used for the pour and for land classification: bathymetry
 /// plus Abyssal freeboard (zero-mean isostatic stand-in).
 pub fn tectonic_surface_m(seed: u64, cell: crate::sphere::CellId, nyquist_level: u8) -> f64 {
-    gen::bathymetry_m(seed, cell, nyquist_level) + uplift::freeboard_m(seed, cell)
+    gen::bathymetry_m(seed, cell, nyquist_level) + lithosphere::freeboard_m(seed, cell)
 }
 
 fn pour_ocean(seed: u64) -> f64 {
