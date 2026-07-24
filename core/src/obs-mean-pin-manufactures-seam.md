@@ -57,5 +57,5 @@ A green in-tree guard with a $2\,\mathrm{m}$ tolerance sized to the residual is 
 
 - **Owns measurements;** #form-rl-closure-algebra keeps a short compliance-debt pointer and may drop duplicated residual numbers once this slug is stable.
 - **Do not re-claim:** "mean-pin enforces $R\circ L=\mathrm{id}$ live"; "storing details makes the seam an identity"; injection-alone as seam fix.
-- **Dual-home demote:** ARCHITECTURE §1 mean-pin residual block; multiscale-methods / multiscale-seams corrected lines already partly pointed; DECISIONS long forms remain history.
+- **Dual-home demote:** ARCHITECTURE §1 mean-pin residual block; multiscale-methods graduated (`.super-archive/from-theory/`); multiscale-seams corrected lines; DECISIONS long forms remain history.
 - **Open code residual:** replace bilinear delta with block-constant injection *or* delete pin under leaf-only — experiment can fail; not decided here.

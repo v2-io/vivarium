@@ -64,6 +64,8 @@ Temporally-different neighbours stay consistent because terrain is quasi-static 
 
 ## 4. Multi-aspect, multi-timescale: coupled multirate, not one grid
 
+**Claim homes:** one seam on two axes / fluxes-not-states → `#form-seam-flux-exchange`; fast→slow weak / scale separation → `#form-scale-separation-directional`; R/L honesty → `#form-rl-closure-algebra`. Temporal LOD regimes → `#form-temporal-lod-regimes`. Do **not** re-promote a multirate *package* segment (adjudicated dual-home kill 2026-07-23). Elaboration below is source/teaching only.
+
 The instinct to "settle for one time/area gradation that works for all aspects" is the **right worry and the wrong answer.** The aspects have wildly different natural scales — tectonics (Myr), glaciation (10–100 Kyr), erosion (Kyr), soil/nitrogen (years), hydrology (days), weather (hours), ecology (years–decades). Forcing them onto a single grid distorts most of them.
 
 **Our stance:** couple them **multirate**, each aspect on its own step — *fast processes see slow ones as quasi-static; slow processes see fast ones as time-averaged (aggregated) forcings*, exchanged on a defined coupling schedule. This is not new to us: it *is* the load-bearing hydrology lesson already banked in `CLAUDE.md` — "**separate the timescales**… do not couple them on one timestep" — generalized from two aspects to N.
@@ -96,12 +98,14 @@ So the real design decision is **which invariants must survive downscaling**, an
 
 ## 7. The four seams (a maturity map)
 
+**Claim homes:** types 1–3 discipline → `#form-seam-flux-exchange` (+ `#form-face-flux-register` for hanging nodes; `#form-scale-separation-directional` for multirate weak coupling). Type 4 open residue → `#sketch-detail-abstract-reversion` (not primacy). Teaching detail: `doc/theory/multiscale-seams.md` §2. Do not treat this map as a second seam law.
+
 "The seams are the big question" is truer as: there are ~four seam *types*, and only one is open — which is far more encouraging.
 
 1. **Spatial seam** (LOD boundary, one instant) — no cracks/pops + statistical match. *Established* (geomorphing, mesh stitching).
 2. **Temporal downscaling seam** (macro-epoch → fine-epoch handoff) — the fine sim's initial condition must be a valid downscaling of the macro end-state. *Established-ish*: this is regional-climate-model nesting, with a **known artifact** — spin-up transients near the boundary.
 3. **Aspect-coupling seam** (geology↔hydrology↔ecology↔…) — flux exchange on a schedule. *Established* (Earth-system couplers; §4).
-4. **Reversion / upscaling seam** (fine + edits → macro) — dynamics-upscaling is *mature* (HMM, two-way nesting, Vandenbulcke & Barth 2019); the **open** residue is discrete-edit up-invalidation into a memoized macro (= §6, = detail→abstract).
+4. **Reversion / upscaling seam** (fine + edits → macro) — dynamics-upscaling is *mature* (HMM, two-way nesting, Vandenbulcke & Barth 2019); the **open** residue is discrete-edit up-invalidation into a memoized macro (= §6; sketch home above).
 
 Lean on prior art for 1–3 *and* the dynamics half of 4; only the discrete-edit up-invalidation in 4 is genuinely research.
 
@@ -151,6 +155,8 @@ The through-line: the ubit is the computational analog of the project's epistemi
 ---
 
 ## 10. Lineage and prior-art coordinates
+
+*Pure history / reading list — claim-empty ice. Prefer BIBLIOGRAPHY + segments for law; this section may graduate to super-archive when no live author still needs the map.*
 
 **Roots (`~/src/neworld`, 2009)** — this is not a fresh idea; three threads are sixteen years old:
 - *Vision-and-Philosophy* — the telos in §0 (representation must serve depth, not confine it; "bad causation" as artistic dishonesty → truth-honoring).

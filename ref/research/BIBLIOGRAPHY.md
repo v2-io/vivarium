@@ -16,7 +16,7 @@ PDFs are registered in relata's external store where we could legitimately obtai
 > [!warning]
 > **Relata is under heavy construction (2026-07-10) — new registrations DEFERRED until after the refactor.** Do not add new relata-backed rows below until relata stabilizes; track pending items here and revisit then. **Pending registrations:** **`cordonnier-2018-sculpting`** (CCB\*18 — *Sculpting Mountains: Interactive terrain modeling based on subsurface geology*, IEEE TVCG 24(5):1756–1769, 2018; metadata from `galin-2019-review`'s reference list; already *cited* in `doc/design/DESIGN-SYSTEMS.md` but unregistered), plus any ⭐ items from `ref/research/frontier-2026-07-10/frontier-scan-2026-07-10.md` promoted to citable use (e.g. Tzathas–Cordonnier 2024 analytical erosion, Braun–Deal 2023 threshold-SPIM, L'Ecuyer 2021 splittable RNG, Doehring 2024 AMR-multirate, Kang–Masud 2025 two-way coupling).
 
-## Multiscale & heterogeneous methods (the `doc/theory/multiscale-methods.md` spine)
+## Multiscale & heterogeneous methods (graduated teaching zoo: `.super-archive/from-theory/multiscale-methods.md`)
 
 | relata key | what it is | PDF |
 |---|---|---|
@@ -99,7 +99,7 @@ git-ignored local copies per the note at top): `berger-1984-adaptive`,
 - **"Schott 2023" disambiguated**: it is *Large-scale terrain authoring through interactive erosion simulation*, ToG 42(5), DOI 10.1145/3592787.
   The adjacent 10.1145/3618350 is the same group's meandering-rivers paper —
   a nice future source for the bank-mechanics rung, but a different paper.
-- **All attributions in `doc/theory/multiscale-methods.md` checked out** (Berger &
+- **All attributions in `.super-archive/from-theory/multiscale-methods.md` checked out** (Berger &
   Oliger 1984; Brandt 1977; E & Engquist 2003; Kevrekidis et al. 2003; Gear
   & Wells 1984; Grabowski 2001 / Khairoutdinov & Randall 2001) — its
   "unverified training memory" caveat is now discharged and the doc updated with exact years.

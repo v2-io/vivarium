@@ -2,7 +2,7 @@
 
 *Source / consolidating overview — **not claim canon.** Settled claims live in `core/src/` (`core/OUTLINE.md` · `#scope-segment-canon`). Use this file as extraction substrate and mental-model map; when a segment exists, the segment wins.*
 
-*v0.3, 2026-07-10 (body). Derivations and detail still pointed here: `doc/theory/multiscale-methods.md`, `doc/theory/multiscale-seams.md`, `doc/design/DESIGN-REDUX.md`, `doc/design/DESIGN-MATERIAL.md`, `doc/design/DESIGN-SYSTEMS.md`, `tabularium/terrestris.ordinum.udon`, `LEXICON.udon`, `ASF.md`. Status marked inline: **settled** / **stance** / **open** / **gap**. Vocabulary is `LEXICON.udon`-canonical.*
+*v0.3, 2026-07-10 (body). Derivations and detail still pointed here: `doc/theory/multiscale-seams.md`, `doc/design/DESIGN-REDUX.md`, `doc/design/DESIGN-MATERIAL.md`, `doc/design/DESIGN-SYSTEMS.md`, `tabularium/terrestris.ordinum.udon`, `LEXICON.udon`, `ASF.md`. Graduated teaching zoo: `.super-archive/from-theory/multiscale-methods.md`. Status marked inline: **settled** / **stance** / **open** / **gap**. Vocabulary is `LEXICON.udon`-canonical.*
 
 > [!note]
 > Erosion and hydrology appear below only as **two early instances of many more systems to come** — the systems that happen to exist in code, not the subject. The subject is the general machinery that lets an arbitrary number of interdependent systems be developed in parallel, each principled.
@@ -23,26 +23,15 @@ The software layer — content-addressed memo store as save file (`#form-store-a
 
 # Axis 1 — the substrate machinery
 
-## 1. The general principle — the multiscale operator algebra *(established; `doc/theory/multiscale-methods.md`)*
+## 1. The general principle — the multiscale operator algebra *(established)*
 
-> **Claim homes:** `#form-rl-closure-algebra` · `#form-seam-flux-exchange` · `#form-face-flux-register` · `#form-scale-separation-directional` · `#obs-mean-pin-manufactures-seam` · `#form-store-as-save` · `#disc-unlawfulness-budget`. This section is **source elaboration** only — do not restate FE here.
+> **Claim homes:** `#form-rl-closure-algebra` · `#form-seam-flux-exchange` · `#form-face-flux-register` · `#form-scale-separation-directional` · `#obs-mean-pin-manufactures-seam` · `#form-store-as-save` · `#disc-unlawfulness-budget`. This section is **source elaboration** only — do not restate FE here. Teaching zoo (AMR/HMM/multirate map) graduated: `.super-archive/from-theory/multiscale-methods.md`.
 
-## 2. The method zoo — the shared vocabulary *(established; primaries read directly)*
+## 2. The method zoo — shared vocabulary *(established; primaries read; dual-home collapsed)*
 
-The one axis that organizes the zoo: *where does the missing information (the closure) come from?* Each system declares which method it is (often a blend); naming it stops each construct from looking like a one-off invention.
+> **Claim homes:** algebra / closure → `#form-rl-closure-algebra`; seam fluxes → `#form-seam-flux-exchange`; face register → `#form-face-flux-register`; ladder climb/descend → `#form-fidelity-ladder`. **Teaching table (method × closure source × vivarium instance)** lives in graduated `.super-archive/from-theory/multiscale-methods.md` §2 — do not restate as parallel law here.
 
-| method | closure source | vivarium instance |
-|---|---|---|
-| **AMR / nesting** (Berger–Oliger 1984) | locally refine the same model in space *and* time where demand is | the **telescope** (refined by observer *attention*, not an error estimate); mean-pin = the fine→coarse **injection/update** (compliance debt: `#form-rl-closure-algebra`); hanging-node conservation = **single-valued face flux register** (`#form-face-flux-register`, measured) — Berger–Colella refluxing as a *pass* only if double-evolve is retained |
-| **Multirate** (Gear–Wells 1984) | split by timescale; interpolate the slow for the fast, extrapolate the fast for the slow (vivarium additionally *time-averages* the fast — an HMM/upscaling move, not Gear–Wells) | §6's coupling schedule; erosion-slow / water-fast |
-| **HMM** (E & Engquist 2003) | macro runs everywhere; spawn a short constrained micro *on demand* for a missing flux | the §5 lazy query graph — "HMM made lazy"; our twist: the pull is **backwards-from-now** and observer-driven |
-| **Equation-free** (Kevrekidis 2003) | lift → evolve (short) → restrict → step the *implicit* macro; **gap-tooth** = micro only in small patches, interpolated across a coarse mesh | the **relaxation** regime; **gap-tooth patches ARE the flux-BC tiles**; the deluge fill was coarse-integration-to-steady-state, the analytic init replaces it with an explicit solve (the classic upgrade) |
-| **Superparameterization** (Grabowski 2001) | embed a cheap fine model inside each coarse cell | none yet; the template for storm-scale weather in climate cells, **and for cognitive LOD** |
-| **Sub-grid parameterization** (climate/NWP) | a fitted statistical closure + a *known error budget* | every #mech stand-in (fBm-as-tectonics) — *missing its error model*, which is what #mech honestly marks |
-| **Flux coupler** (Earth-system models) | different models per aspect, exchanging conservative fluxes on a schedule | the phase structure at world scale; **a phase-transition is a coupler interface** (§6) |
-| **Coarse-graining / renormalization** | derive the effective macro *law* by integrating out fine DOF | mostly aspirational; the systematic way to discover a phase's macro variables |
-
-**The ladder runs both ways.** Climb (stepwise, emergent) to *discover* a system's behaviour; once probe-validated, **descend** to a tight surrogate reproducing the discovered statistics ($R\circ L=\text{id}$ on the chosen statistics is the honesty gate), keeping the expensive rung as calibrator. Each system declares an **execution class** — batch-deep (rare, cache to zero), relaxation (settle per phase, then live), procedural-tight (closed-form/surrogate, evaluated constantly).
+**The ladder runs both ways** (cash-out: `#form-fidelity-ladder`). Climb (stepwise, emergent) to *discover* a system's behaviour; once probe-validated, **descend** to a tight surrogate reproducing the discovered statistics ($R\circ L=\text{id}$ on the chosen statistics is the honesty gate), keeping the expensive rung as calibrator. Each system declares an **execution class** — batch-deep (rare, cache to zero), relaxation (settle per phase, then live), procedural-tight (closed-form/surrogate, evaluated constantly) — residual declaration debt under `#form-kernel-imperative-boundary` / add-a-system checklist (§9), not a second multirate package.
 
 ## 3. What is distinctively ours — the closure choice *(stance)*
 
@@ -135,4 +124,4 @@ To add a world-system and have the machine compose it, declare its place in the 
 
 ---
 
-*This does not supersede `doc/design/DESIGN.md`; it consolidates the architecture that `doc/design/DESIGN.md` opens and the DESIGN-REDUX / DESIGN-MATERIAL / DESIGN-SYSTEMS / multiscale docs develop. The concrete build sequence toward the first playable milestone is `doc/plan/abyssal-parity-plan.md`. Future instances inherit what we leave.*
+*Founding DESIGN is graduated (`.super-archive/from-design/DESIGN.md`). This file consolidates substrate map + residual teaching; claim law is `core/`. Live companions: DESIGN-REDUX / DESIGN-MATERIAL / DESIGN-SYSTEMS / multiscale-seams. Build sequence: `doc/plan/abyssal-parity-plan.md`. Future instances inherit what we leave.*

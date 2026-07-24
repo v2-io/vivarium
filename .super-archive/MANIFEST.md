@@ -2,6 +2,12 @@
 
 *Present-tense index of graduated substrate. Not claim law. Newest batches first.*
 
+## 2026-07-24 batch 5 — claim-empty theory zoo
+
+| Path | From | Superseded by / ice |
+|------|------|---------------------|
+| `from-theory/multiscale-methods.md` | `doc/theory/multiscale-methods.md` (full body; provenance = HEAD pre-mv byte-match) | Algebra/seam/fated → `#form-rl-closure-algebra`, `#form-seam-flux-exchange`, `#post-determinism-as-ontology` (+ face register / mean-pin obs). Pure teaching zoo + novelty inventory — **zero residual claim debt.** Live path removed; ARCHITECTURE §2 dual-home collapsed to pointer. |
+
 ## 2026-07-23 batch 4 — DESIGN peel + memory-surfaced
 
 | Path | From | Superseded by / ice |
@@ -45,7 +51,7 @@
 | Location | Contents |
 |----------|----------|
 | `.archive/` | `SUPERSEDED.md` (active ledger) + `README.md` (index) |
-| Live `doc/` | DESIGN-REDUX, MATERIAL, SYSTEMS, NOMOS-CONTRACT, theory, plan, ARCHITECTURE |
+| Live `doc/` | DESIGN-REDUX, MATERIAL, SYSTEMS, NOMOS-CONTRACT, multiscale-seams, discretisation, plan, ARCHITECTURE, toolchain (methods zoo graduated) |
 | Live instruments | spikes, DECISIONS, `ref/` primaries |
 
 ## Provenance audit 2026-07-23
