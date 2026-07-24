@@ -1,7 +1,8 @@
 //! The probes. Each one is written so that it *could* return the answer I do not want.
 
 use vivarium_world::erosion::{self, Fluvial, FluvialParams};
-use vivarium_world::gen::{self, SEA_LEVEL_M};
+use vivarium_world::gen;
+use vivarium_world::sea_level;
 use vivarium_world::sphere::CellId;
 
 use crate::area::cell_solid_angle;
@@ -44,8 +45,9 @@ pub fn assert_land() {
     let p = prior_grid();
     let lo = p.v.iter().cloned().fold(f64::INFINITY, f64::min);
     let hi = p.v.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-    let land = p.v.iter().filter(|&&h| h > SEA_LEVEL_M).count();
-    println!("prior relief      : {lo:.0} .. {hi:.0} m   (sea level {SEA_LEVEL_M:.0} m)");
+    let sea = sea_level::derived_sea_level_m(SEED);
+    let land = p.v.iter().filter(|&&h| h > sea).count();
+    println!("prior relief      : {lo:.0} .. {hi:.0} m   (DERIVED sea level {sea:.0} m)");
     println!("subaerial cells   : {land} / {} = {:.1}%", NX * NX, 100.0 * land as f64 / (NX * NX) as f64);
 
     // The REAL guard: does the fluvial kernel actually EXECUTE here? A submarine
@@ -542,16 +544,28 @@ enum Outside {
     Zero,
 }
 
+/// How the fine tier is coerced toward the coarse target before composition.
+#[derive(Clone, Copy, PartialEq)]
+enum PinMode {
+    /// No pin — leaf-only (delete-the-operator path). Measured 2.03 at 80e/150e.
+    Off,
+    /// Today's live operator: per-block delta, BILINEARLY upsampled. Does not pin the mean.
+    Bilinear,
+    /// EXPERIMENT CANDIDATE: per-block delta added as a CONSTANT (`h ← h + Δ_block`).
+    /// Genuinely pins the mean; still injection-alone (no refluxing partner).
+    BlockConst,
+}
+
 #[allow(clippy::too_many_arguments)]
 fn seam_run(
     macro_epochs: u32,
     fine_epochs: u32,
-    pin: bool,
+    pin: PinMode,
     up_propagate: bool,
     outside: Outside,
     label: &str,
 ) {
-    let (oi, oj, nx) = (108_500u32, 186_350u32, 128usize);
+    let (oi, oj, nx) = (OI as u32, OJ as u32, NX);
     let fine_level = LEVEL + 2; // L21
 
     // Macro tier at L19.
@@ -569,8 +583,14 @@ fn seam_run(
     });
     f.erode(&FluvialParams { epochs: fine_epochs, ..Default::default() });
 
-    if pin {
-        f.pin_block_means(LEVEL, |c| erosion::surface_at(SEED, c, std::slice::from_ref(&macro_r)));
+    match pin {
+        PinMode::Off => {}
+        PinMode::Bilinear => {
+            f.pin_block_means(LEVEL, |c| erosion::surface_at(SEED, c, std::slice::from_ref(&macro_r)));
+        }
+        PinMode::BlockConst => {
+            f.pin_block_means_const(LEVEL, |c| erosion::surface_at(SEED, c, std::slice::from_ref(&macro_r)));
+        }
     }
     let fine_h: Vec<f64> = f.h.iter().map(|&x| x as f64).collect();
 
@@ -664,7 +684,7 @@ fn seam_run(
 /// enforces R∘L = id "on the mean". The code bilinearly upsamples a per-block delta —
 /// and bilinear upsampling of a piecewise-constant field does NOT preserve block means.)
 fn pin_fidelity() {
-    let (oi, oj, nx) = (108_500u32, 186_350u32, 128usize);
+    let (oi, oj, nx) = (OI as u32, OJ as u32, NX);
     let fine_level = LEVEL + 2;
     let mut m = Fluvial::from_prior(SEED, FACE, LEVEL, oi, oj, nx);
     m.erode(&FluvialParams::default());
@@ -675,30 +695,42 @@ fn pin_fidelity() {
         erosion::surface_at(SEED, c, std::slice::from_ref(&macro_r))
     });
     f.erode(&FluvialParams { epochs: 150, ..Default::default() });
-    f.pin_block_means(LEVEL, |c| erosion::surface_at(SEED, c, std::slice::from_ref(&macro_r)));
+    // Snapshot the eroded field so both operators start from the same state.
+    let eroded = f.h.clone();
 
-    // After pinning: does each 4×4 block's mean equal the macro's value there?
     let b = 4usize;
     let nb = nx / b;
-    let mut err = Vec::new();
-    for by in 0..nb {
-        for bx in 0..nb {
-            let mut sum = 0.0f64;
-            for y in 0..b {
-                for x in 0..b {
-                    sum += f.h[(by * b + y) * nx + bx * b + x] as f64;
+    let block_err = |h: &[f32]| -> (f64, f64) {
+        let mut err = Vec::new();
+        for by in 0..nb {
+            for bx in 0..nb {
+                let mut sum = 0.0f64;
+                for y in 0..b {
+                    for x in 0..b {
+                        sum += h[(by * b + y) * nx + bx * b + x] as f64;
+                    }
                 }
+                let mean = sum / (b * b) as f64;
+                let cx = foi + (bx * b + b / 2) as u32;
+                let cy = foj + (by * b + b / 2) as u32;
+                let target = erosion::surface_at(SEED, CellId::from_face_ij(FACE, cx, cy, fine_level), std::slice::from_ref(&macro_r));
+                err.push((mean - target).abs());
             }
-            let mean = sum / (b * b) as f64;
-            let cx = foi + (bx * b + b / 2) as u32;
-            let cy = foj + (by * b + b / 2) as u32;
-            let target = erosion::surface_at(SEED, CellId::from_face_ij(FACE, cx, cy, fine_level), std::slice::from_ref(&macro_r));
-            err.push((mean - target).abs());
         }
-    }
-    let mx = err.iter().cloned().fold(0.0f64, f64::max);
-    let mut e = err.clone();
-    println!("  after pin_block_means, |block mean − coarse target|:  median {:.3} m   max {:.3} m", median(&mut e), mx);
+        let mx = err.iter().cloned().fold(0.0f64, f64::max);
+        (median(&mut err.clone()), mx)
+    };
+
+    // Bilinear (today's live operator).
+    f.pin_block_means(LEVEL, |c| erosion::surface_at(SEED, c, std::slice::from_ref(&macro_r)));
+    let (med, mx) = block_err(&f.h);
+    println!("  after pin_block_means (BILINEAR, today), |block mean − coarse target|:  median {med:.3} m   max {mx:.3} m");
+
+    // Block-const candidate, from the same eroded snapshot.
+    f.h = eroded;
+    f.pin_block_means_const(LEVEL, |c| erosion::surface_at(SEED, c, std::slice::from_ref(&macro_r)));
+    let (medc, mxc) = block_err(&f.h);
+    println!("  after pin_block_means_const (CANDIDATE), |block mean − coarse target|:  median {medc:.5} m   max {mxc:.5} m  ⇐ genuinely pins the mean");
     println!("  ⇒ mean-pin does NOT pin the mean. It computes a per-block delta and then BILINEARLY");
     println!("    UPSAMPLES it — and a bilinear upsample of a piecewise-constant field does not preserve");
     println!("    block means. So `R∘L = id on the mean` is FALSE IN THE CODE, not merely lossy.");
@@ -714,7 +746,7 @@ pub fn seam() {
 
     println!("  [today's composition: pin ON, no up-propagation, outside = prior octaves]");
     for (me, fe) in [(80u32, 18u32), (80, 60), (80, 80), (80, 150), (18, 150), (150, 150), (150, 18)] {
-        seam_run(me, fe, true, false, Outside::PriorOctaves, &format!("macro {me}e / fine {fe}e"));
+        seam_run(me, fe, PinMode::Bilinear, false, Outside::PriorOctaves, &format!("macro {me}e / fine {fe}e"));
     }
 
     println!("\n  ⇒ ON \"GROWING WITH THE DIFFERENTIAL AGE GAP\" — ORIENTATION IS RIGHT, AND I WAS WRONG.");
@@ -732,15 +764,17 @@ pub fn seam() {
     println!("Both tiers run ZERO epochs. There is no differential aging, no erosion, no detail carved at all:");
     println!("the fine tier is the prior, the macro tier is the prior. **Any ridge here is manufactured by the");
     println!("TILE MACHINERY ALONE.** If the ratio is ~1, the seam is physics; if it is >1, it is representation.\n");
-    seam_run(0, 0, true, false, Outside::PriorOctaves, "0e / 0e, pin ON, today's compose");
-    seam_run(0, 0, false, false, Outside::PriorOctaves, "0e / 0e, pin OFF");
+    seam_run(0, 0, PinMode::Bilinear, false, Outside::PriorOctaves, "0e / 0e, pin ON (bilinear), today's compose");
+    seam_run(0, 0, PinMode::BlockConst, false, Outside::PriorOctaves, "0e / 0e, pin ON (BLOCK-CONST candidate)");
+    seam_run(0, 0, PinMode::Off, false, Outside::PriorOctaves, "0e / 0e, pin OFF");
 
     println!("\n\nTHE DECOMPOSITION — one variable at a time, at the worst case (macro 80e / fine 150e):\n");
-    seam_run(80, 150, true, false, Outside::PriorOctaves, "A. TODAY (pin ON, stale coarse, prior octaves)");
-    seam_run(80, 150, false, false, Outside::PriorOctaves, "B. pin OFF (the coercion removed)");
-    seam_run(80, 150, false, true, Outside::PriorOctaves, "C. + UP-PROPAGATE (injection, not pinning)");
-    seam_run(80, 150, false, true, Outside::Zero, "D. + outside detail ≡ 0 (naive wavelet store)");
-    seam_run(80, 150, true, false, Outside::Zero, "E. pin ON, outside detail ≡ 0");
+    seam_run(80, 150, PinMode::Bilinear, false, Outside::PriorOctaves, "A. TODAY (pin ON bilinear, stale coarse, prior octaves)");
+    seam_run(80, 150, PinMode::Off, false, Outside::PriorOctaves, "B. pin OFF (the coercion removed)");
+    seam_run(80, 150, PinMode::BlockConst, false, Outside::PriorOctaves, "B2. BLOCK-CONST CANDIDATE (honest injection, no reflux)");
+    seam_run(80, 150, PinMode::Off, true, Outside::PriorOctaves, "C. + UP-PROPAGATE (injection, not pinning)");
+    seam_run(80, 150, PinMode::Off, true, Outside::Zero, "D. + outside detail ≡ 0 (naive wavelet store)");
+    seam_run(80, 150, PinMode::Bilinear, false, Outside::Zero, "E. pin ON, outside detail ≡ 0");
 
     println!("\n\nAND: does `pin_block_means` even do what its docstring says?\n");
     pin_fidelity();
@@ -995,7 +1029,7 @@ pub fn refluxing_invariant() {
 
     // ── What does mean-pin cost in mass? (The operator we use INSTEAD of all of this.)
     println!("\n\n  AND THE PRICE OF WHAT WE DO INSTEAD — is `pin_block_means` conservative?\n");
-    let (oi, oj, nx) = (108_500u32, 186_350u32, 128usize);
+    let (oi, oj, nx) = (OI as u32, OJ as u32, NX);
     let fine_level = LEVEL + 2;
     let mut m = Fluvial::from_prior(SEED, FACE, LEVEL, oi, oj, nx);
     m.erode(&FluvialParams::default());
@@ -1016,6 +1050,24 @@ pub fn refluxing_invariant() {
         let dv = after - before;
         println!(
             "  fine {fe:>3}e:  ∫h dA before pin {before:.6e} m³ → after {after:.6e} m³   Δ = {dv:+.4e} m³  ({:+.4}%)",
+            100.0 * dv / before
+        );
+    }
+    println!("\n  BLOCK-CONST CANDIDATE — same question (does the honest injection stop being a mass source?):\n");
+    for fe in [18u32, 80, 150] {
+        let mut f = Fluvial::from_surface(SEED, FACE, fine_level, foi, foj, nx, |c| {
+            erosion::surface_at(SEED, c, std::slice::from_ref(&macro_r))
+        });
+        f.erode(&FluvialParams { epochs: fe, ..Default::default() });
+        let g0 = Grid::new(FACE, fine_level, foi as u64, foj as u64, nx, f.h.iter().map(|&x| x as f64).collect());
+        let a = g0.areas(RADIUS_M);
+        let before = g0.integral(&a);
+        f.pin_block_means_const(LEVEL, |c| erosion::surface_at(SEED, c, std::slice::from_ref(&macro_r)));
+        let g1 = Grid::new(FACE, fine_level, foi as u64, foj as u64, nx, f.h.iter().map(|&x| x as f64).collect());
+        let after = g1.integral(&a);
+        let dv = after - before;
+        println!(
+            "  fine {fe:>3}e:  ∫h dA before {before:.6e} m³ → after {after:.6e} m³   Δ = {dv:+.4e} m³  ({:+.4}%)",
             100.0 * dv / before
         );
     }

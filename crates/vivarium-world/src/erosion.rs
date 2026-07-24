@@ -560,16 +560,20 @@ impl Fluvial {
         }
     }
 
-    /// Joseph's conservation constraint ("lift relative to neighbours"): a fine
-    /// tier maintains the coarse tier's average height as it erodes — fine epochs
-    /// REDISTRIBUTE relief (carve detail into the coarse surface) rather than
-    /// export elevation; absolute elevation evolution belongs to the macro tier
-    /// alone (§4 role separation; §5 mean-consistency made operational). Per
-    /// parent-cell block (B = 2^(level−parent_level) fine cells): delta = parent
-    /// surface at the block centre − block mean, bilinearly upsampled and added.
-    /// Boundary blocks re-pin to the same coarse surface the exterior samples, so
-    /// the tile-edge seam shrinks to the high band. Also how a fine tier rides
-    /// the macro's uplift between re-seeds.
+    /// CONVICTED OPERATOR — retained only as the instrument that demonstrates its own
+    /// defects (`#obs-mean-pin-manufactures-seam`; council `mean-pin-manufactures-the-seam-and-the-mass`,
+    /// retire-or-replace). **No production caller**: world-gen composition (`query.rs`) seeds a
+    /// fine tier from the coarse surface and never pins. It was written to enforce
+    /// `#form-rl-closure-algebra` law (1) `R∘L = id` on the block mean — and it does NOT: it
+    /// computes a per-block delta (coarse point-sample − fine block mean) and BILINEARLY
+    /// upsamples it, and a bilinear upsample of a piecewise-constant field does not preserve
+    /// block means (residual median ~0.5 m, max ~3 m). It is also a mass source (~+0.22% at
+    /// 150 fine epochs on high-relief land) and the single largest manufacturer of the tile
+    /// seam it was meant to prevent (removing it takes the zero-physics seam ratio ~1.96→1.17,
+    /// the worst-case ~12.8→3.8). Do NOT re-introduce it into a live surface, and do NOT
+    /// re-assert the `R∘L = id` claim in its name. See `pin_block_means_const` for the honest
+    /// injection form (pins the mean exactly but keeps the mass source and washboards the
+    /// interior — also convicted); the admissible fix is leaf-only + `#form-face-flux-register`.
     pub fn pin_block_means(&mut self, parent_level: u8, parent: impl Fn(CellId) -> f64) {
         debug_assert!(parent_level < self.level);
         let b = 1usize << (self.level - parent_level);
@@ -606,6 +610,44 @@ impl Fluvial {
                     + delta[y1 * nb + x0] * (1.0 - fx) * fy
                     + delta[y1 * nb + x1] * fx * fy;
                 self.h[y * self.nx + x] += d;
+            }
+        }
+    }
+
+    /// EXPERIMENT CANDIDATE (council `mean-pin-manufactures-the-seam-and-the-mass`,
+    /// retire-or-replace, replacement judged against FE(8) — can fail). Block-constant
+    /// injection `h ← h + Δ_block`: the honest form of the operator #obs-mean-pin-manufactures-seam
+    /// FE(1) names. Same per-block delta (coarse point-sample target − fine block mean) but
+    /// added as a CONSTANT over the block instead of bilinearly upsampled — so it genuinely
+    /// preserves block means (R∘L = id on the mean becomes TRUE), unlike the bilinear form.
+    /// It does NOT claim to fix the seam or the mass source: it still coerces the fine tier
+    /// toward the stale coarse target (injection alone, no refluxing partner — that lives on
+    /// #form-face-flux-register). Measured, not shipped-by-default. Not in the live pipeline.
+    pub fn pin_block_means_const(&mut self, parent_level: u8, parent: impl Fn(CellId) -> f64) {
+        debug_assert!(parent_level < self.level);
+        let b = 1usize << (self.level - parent_level);
+        let nb = self.nx / b;
+        if nb < 2 {
+            return;
+        }
+        for by in 0..nb {
+            for bx in 0..nb {
+                let mut sum = 0.0f64;
+                for y in 0..b {
+                    for x in 0..b {
+                        sum += self.h[(by * b + y) * self.nx + bx * b + x] as f64;
+                    }
+                }
+                let mean = sum / (b * b) as f64;
+                let cx = self.origin.0 + (bx * b + b / 2) as u32;
+                let cy = self.origin.1 + (by * b + b / 2) as u32;
+                let target = parent(CellId::from_face_ij(self.face, cx, cy, self.level));
+                let d = (target - mean) as f32;
+                for y in 0..b {
+                    for x in 0..b {
+                        self.h[(by * b + y) * self.nx + bx * b + x] += d;
+                    }
+                }
             }
         }
     }
@@ -760,38 +802,71 @@ mod fluvial_tests {
         assert_eq!(a.drainage, b.drainage);
     }
 
+    /// CONVICTING probe (was `pin_preserves_parent_means`, a green with a 2 m tolerance
+    /// "sized to the residual" — the `#norm-probe-sensitivity` failure species that certified
+    /// the very lie `#obs-mean-pin-manufactures-seam` retracts). Restated to convict:
+    /// `pin_block_means` (BILINEAR) does NOT pin the block mean, while `pin_block_means_const`
+    /// (the honest injection form) does — to machine precision. The relative gap is asserted,
+    /// self-calibrating, so it cannot be re-tuned into a false green. Hermetic: an analytic
+    /// rough fine surface pinned to an analytic (curved) coarse parent — no ocean pour, no
+    /// erosion, so the probe isolates the OPERATOR, not the machinery around it.
     #[test]
-    fn pin_preserves_parent_means() {
-        let p = FluvialParams { epochs: 6, ..Default::default() };
-        let mut f = small();
-        let seed_h = f.h.clone();
-        f.erode(&p); // drifts the means (mass exported to outlets)
-        // Pin to the SEED surface as the "parent": block means must return to it.
-        let nx = f.nx;
-        let (oi, oj, level) = (f.origin.0, f.origin.1, f.level);
-        let seed_at = move |c: CellId| -> f64 {
+    fn bilinear_pin_does_not_preserve_means_block_const_does() {
+        let (face, level, oi, oj, nx) = (Face::ZPos, 19u8, 100_000u32, 180_000u32, 64usize);
+        // Rough fine surface: within-block variation (sinusoid) + between-block curvature.
+        let fine_surf = |c: CellId| -> f64 {
             let (_, i, j, _) = c.to_face_ij();
-            seed_h[((j - oj) as usize) * nx + (i - oi) as usize] as f64
+            let (di, dj) = ((i - oi) as f64, (j - oj) as f64);
+            100.0 * (di * 0.30).sin() * (dj * 0.25).cos() + 0.02 * (di * di + dj * dj)
         };
-        f.pin_block_means(level - 2, &seed_at); // B = 4
-        let b = 4usize;
-        let nb = nx / b;
-        for by in (0..nb).step_by(7) {
-            for bx in (0..nb).step_by(7) {
-                let mut m = 0.0f64;
-                let cx = oi + (bx * b + b / 2) as u32;
-                let cy = oj + (by * b + b / 2) as u32;
-                for y in 0..b {
-                    for x in 0..b {
-                        m += f.h[(by * b + y) * nx + bx * b + x] as f64;
+        // Coarse parent: a smooth, CURVED field — so the per-block delta varies between
+        // blocks and a bilinear upsample of it cannot preserve block means.
+        let parent = |c: CellId| -> f64 {
+            let (_, i, j, _) = c.to_face_ij();
+            let (di, dj) = ((i - oi) as f64, (j - oj) as f64);
+            500.0 + 0.05 * (di * di + dj * dj) - 3.0 * di
+        };
+        let block_residual = |f: &Fluvial| -> f64 {
+            let b = 4usize; // pin to level-2
+            let nb = nx / b;
+            let mut worst = 0.0f64;
+            for by in 0..nb {
+                for bx in 0..nb {
+                    let mut m = 0.0f64;
+                    for y in 0..b {
+                        for x in 0..b {
+                            m += f.h[(by * b + y) * nx + bx * b + x] as f64;
+                        }
                     }
+                    m /= (b * b) as f64;
+                    let cx = oi + (bx * b + b / 2) as u32;
+                    let cy = oj + (by * b + b / 2) as u32;
+                    let t = parent(CellId::from_face_ij(face, cx, cy, level));
+                    worst = worst.max((m - t).abs());
                 }
-                m /= (b * b) as f64;
-                let t = seed_at(CellId::from_face_ij(Face::ZPos, cx, cy, level));
-                // Bilinear upsampling smooths deltas, so means match approximately.
-                assert!((m - t).abs() < 2.0, "block ({bx},{by}) mean {m:.1} vs target {t:.1}");
             }
-        }
+            worst
+        };
+
+        let mut fb = Fluvial::from_surface(0, face, level, oi, oj, nx, fine_surf);
+        fb.pin_block_means(level - 2, parent);
+        let bilinear_worst = block_residual(&fb);
+
+        let mut fc = Fluvial::from_surface(0, face, level, oi, oj, nx, fine_surf);
+        fc.pin_block_means_const(level - 2, parent);
+        let const_worst = block_residual(&fc);
+
+        // Block-const pins to ~machine precision; bilinear does not, by orders of magnitude.
+        // Absolute thresholds are avoided so this can never be re-tuned into a false green.
+        assert!(
+            const_worst < 1e-2,
+            "block-const injection must pin the mean (worst |mean−target| = {const_worst:.5} m)"
+        );
+        assert!(
+            bilinear_worst > 50.0 * const_worst.max(1e-4),
+            "bilinear pin must be convicted as NOT pinning: bilinear worst {bilinear_worst:.4} m \
+             vs block-const worst {const_worst:.6} m (expected orders larger)"
+        );
     }
 
     #[test]

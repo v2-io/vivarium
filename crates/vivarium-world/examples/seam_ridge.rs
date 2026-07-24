@@ -27,18 +27,34 @@ fn main() {
 fn run(fine_epochs: u32) {
     let face = Face::ZPos;
     // SUBAERIAL footprint — load-bearing. This probe reported "SEAM RIDGE RATIO
-    // 22888" for months. That number was `0 ÷ 1e-9`: the old footprint
-    // (165_800, 413_600) sits at 3709-3715 m, entirely BELOW sea level (4000), so
-    // every cell was an outlet, erosion no-op'd, the interior curvature was exactly
-    // zero, and the ratio was a divide-by-zero against the epsilon floor. The tell
-    // was printed all along — the ratio was bit-identical across every age gap
-    // swept. THE SEAM HAD NEVER ACTUALLY BEEN MEASURED. This region is verified
-    // land (relief 5072-5216 m), where the fluvial kernel actually executes.
-    let (oi, oj, nx) = (108_500u32, 186_350u32, 128usize);
+    // 22888" for months: `0 ÷ 1e-9` on an all-submarine footprint where erosion
+    // no-op'd and the ratio was a divide-by-zero against the epsilon floor.
+    //
+    // RE-BASED 2026-07-24: the previous footprint (108_500, 186_350) fell into the
+    // SAME trap a second time. It was land only against the DEPRECATED decreed
+    // datum (gen::SEA_LEVEL_M = 4000). Once sea level became *derived*
+    // (sea_level::derived_sea_level_m(0) ≈ 5106 m) it is ~2 km of deep ocean, and
+    // this probe reported a fake ~1.70 on no-op submarine terrain — the exact
+    // failure the comment above warns about (norm-probe-sensitivity seabed species).
+    // (135_168, 167_936) is interior face ZPos, 100% subaerial under DERIVED sea,
+    // relief ~370 m — verified by examples/land_scan during the mean-pin retirement.
+    let (oi, oj, nx) = (135_168u32, 167_936u32, 128usize);
     let p = FluvialParams::default();
 
     // Macro tier (L19), fully eroded.
     let mut macro_t = Fluvial::from_prior(0, face, 19, oi, oj, nx);
+    // LAND GUARD (derived sea) — fail loudly if a future prior/sea-level change
+    // drowns this footprint, rather than silently measuring a no-op again.
+    {
+        let sea = vivarium_world::sea_level::derived_sea_level_m(0) as f32;
+        let land = macro_t.h.iter().filter(|&&h| h > sea).count();
+        assert!(
+            land * 4 > macro_t.h.len(),
+            "seam_ridge footprint is not substantially land (>{sea:.0} m derived): {land}/{} \
+             subaerial — the fluvial kernel no-ops and the ratio is a fabrication",
+            macro_t.h.len()
+        );
+    }
     macro_t.erode(&p);
     let macro_r = macro_t.to_region();
 
