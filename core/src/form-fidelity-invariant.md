@@ -25,7 +25,7 @@ Fidelity is lazily materialized; any materialization must be statistically consi
 
 **Max attainable: exact** as project architecture law (founding multi-fidelity commitment; LEXICON settled). Stage `draft`. Co-fidelity is empirically forced by a live 2026-07-03 violation and the repair rule that followed — still formulation-grade law, not a measured theorem about all seams.
 
-**Ceiling / open residue.** Forward materialization and three of four seam types lean on mature prior art (multiscale modeling, couplers, nesting). The hard open half is **detail→abstract**: absorbing irreducible discrete edits back into a memoized macro with correct up-invalidation under the right sufficient statistics. That frontier is **not** solved by restating this invariant; it needs its own segments (sufficient-statistic seams, store up-invalidation). Do not cite this file as closing that problem.
+**Ceiling / open residue.** Forward materialization and three of four seam types lean on mature prior art (multiscale modeling, couplers, nesting). The hard open half is the **nonlinear closure for a non-local flux** ( #sketch-detail-abstract-reversion FE(5) — the *state* up-propagation half of the old "detail→abstract" framing is measured solved; the *law* does not commute with restriction). That frontier is **not** solved by restating this invariant. Do not cite this file as closing that problem.
 
 **Not claimed:** posit/ubit numerics as adopted; a specific consumer-statistic schema as built; "the one hard research problem" ranking (forbidden absolute; census must be derived).
 

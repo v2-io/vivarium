@@ -95,7 +95,7 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | formulation | Machine Critical | [#form-pull-query-composition](src/form-pull-query-composition.md) | World law composes by pull of keyed nomoi; pattern not generic engine | draft |
 | | | | *(#gap) Run-modes carve (thin: LEXICON open referents + root isolation; no fat enum)* | missing |
 | | | | *(#gap) Full builder daemon (beacon / demand spool)* | missing |
-| | | | *(#gap) Three-scoped runtime / time-DAG / prefetch (source only; not under pull-composition)* | missing |
+| formulation | Machine Critical | [#form-three-scoped-runtime](src/form-three-scoped-runtime.md) | Spine / cones / edit-layer decomposition; time-in-key DAG; prefetch is pure optimization | draft |
 
 ## IV. Kingdoms, orders, and ordinum
 

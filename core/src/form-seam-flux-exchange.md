@@ -34,7 +34,7 @@ A seam is a boundary in space, time, or both. What crosses is a flux of a conser
 
 **Max attainable: exact** for "exchange fluxes, not states" as Earth-system coupler and AMR practice (Berger–Oliger / Berger–Colella; Gear–Wells multirate; HMM on-demand micro) — established in primary reads summarized in `doc/theory/multiscale-seams.md`.
 
-**Currently `robust-qualitative`:** the project formulation (one seam on two axes; drainage-shaped space seam; flux magnitude as degree) is stance-grade architecture written into ARCHITECTURE §4 and the multiscale theory pair. Dynamic-exponent $z$ reconciliation at a seam is **project coinage / conjecture**, not claimed here as established numerics. Type-4 reversion seam (detail→abstract / irreducible edit upscaling) is **open** and explicitly not on the ethereal-explorer path.
+**Currently `robust-qualitative`:** the project formulation (one seam on two axes; drainage-shaped space seam; flux magnitude as degree) is stance-grade architecture written into ARCHITECTURE §4 and the multiscale theory pair. Dynamic-exponent $z$ reconciliation at a seam is **project coinage / conjecture**, not claimed here as established numerics. Type-4 reversion seam is **split** ( #sketch-detail-abstract-reversion ): state up-propagation measured solved; the nonlinear closure for a non-local flux remains open — and explicitly not on the ethereal-explorer path.
 
 **Known compliance debt:** tile kernels still seed drainage from own area and hardcode edge-outlets; `seam_ridge` is red by design (measures the honesty gap); production face-keyed flux register and leaf-only evolution unbuilt (measured in spike — #form-face-flux-register ). Debt does not soften the law ( #norm-declaration-must-convict ).
 
@@ -47,6 +47,6 @@ The seam fix and tile composability are the same work: honest boundary condition
 ## Working Notes
 
 - **Dual homes demoted:** multiscale-seams header + mental model; ARCHITECTURE §4; framework-to-status-quo §3; abyssal-parity checklist item 4; DESIGN-REDUX §5 join. Phase-3 flux-BC tile plan remains build trail.
-- **Do not absorb:** method zoo (graduated `.super-archive/from-theory/multiscale-methods.md`), $z$-from-quadtree tactical item, detail→abstract rename, full four-seam catalogue — extract later if needed.
+- **Do not absorb:** method zoo (graduated `.super-archive/from-theory/multiscale-methods.md`), $z$-from-quadtree tactical item, full four-seam catalogue — extract later if needed. (The detail→abstract rename is executed at #sketch-detail-abstract-reversion .)
 - **Face register / hanging nodes:** #form-face-flux-register (measured single-valued vs two-sided; three conditions; leaf-only price). Do not restate "wavelets make the seam free" without that segment's retraction of representation≠dynamics.
 - **Conflict guard:** "flux-on-the-face makes refluxing an invariant *without a bill*" is superseded; the bill is leaf-only (or explicit correction under double-evolve).
