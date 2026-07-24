@@ -40,6 +40,10 @@ Code least principled for architecture; probes convict behavior; true-A PoC is *
 
 **Main work:** peel residual prose → segments (or ice) → **`.super-archive/`**. **No path ban** (archive, doc, even ref/). “Still under X” = residual gold or still useful as live reference, not a proscription. Corrected 2026-07-23.
 
+**Compounding / low-hanging fruit:** graduate claim-empty files early — each move shrinks the mine for the next pass.
+
+**Not-yet-primary novel:** Working Notes · sketch/exploratory segments · msc/ — not forced primacy, not left as dual-home law.
+
 ## Agent briefs this wave
 
 - `2026-07-23-sufficient-statistic-adjudication.md`
