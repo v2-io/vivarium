@@ -611,13 +611,13 @@ pub static MANTLE_THERMAL: NomosDecl = NomosDecl {
 /// physics. Claim home: `#form-isostasy-column`.
 pub static LITHOSPHERE: NomosDecl = NomosDecl {
     name: "lithosphere",
-    version: "lithosphere-2026-07-24b-mantle-thermal-dep",
+    version: "lithosphere-2026-07-24c-rock-mass-ledger-conserved",
     system: "lithosphere-column",
     approach: Approach::Analytic,
     earth_fidelity: Tier::Low, // era-plausible pins (Chowdhury lineage), not Earth's actual columns
     physics: Tier::Low,        // inventory is a fated stand-in; no differentiation rate law yet
     relation: "conserved columnar inventory: crust thickness+density (craton felsic / oceanic thermal-ramped) + depleted keel — one differentiation process, two buoyant products stacked. The mantle-thermal DRIVER is now a nomos (a declared cooling trajectory T_p(t)), consumed here; the oceanic-crust ramp reads it, so a cooling mantle deepens basins",
-    status: "v1 fated columns (lithosphere.rs); craton fraction calibration convicted by test; cooling⇒contrast-growth monotonicity unit-tested; NOW driven in time by the mantle-thermal nomos (emergence trajectory probed); differentiation rate law and crustal transport OPEN; erosion's mass-return is BUILT as a measured pour-grain operator (erosion_return.rs, closed-box conserved) but not yet the default — so this promise's Conservation stays NotTracked until adoption (#form-flux-web owed decl upgrade)",
+    status: "v1 fated columns (lithosphere.rs); craton fraction calibration convicted by test; cooling⇒contrast-growth monotonicity unit-tested; driven in time by the mantle-thermal nomos (emergence trajectory probed); differentiation rate law OPEN; erosion's mass-return is BUILT and ADOPTED (erosion_return.rs) — the ledger is the live default surface (sea_level repoints to the post-erosion pour), so LITHO_COLUMN is Conserved (closed-box probe as instrument). Open rungs: routed deposition (v1 uniform blanket), iterated erode→rebound epochs (v1 one φ=1 step), water loading",
     deps: &[&NOISE, &MANTLE_THERMAL],
     consumes: &[
         Consume { quantity: flux::SEEDED_ASYMMETRY, needs: Statistic::CenterSample },
@@ -625,12 +625,20 @@ pub static LITHOSPHERE: NomosDecl = NomosDecl {
         Consume { quantity: flux::MANTLE_POTENTIAL_TEMP, needs: Statistic::GlobalScalar },
     ],
     promises: &[Promise {
+        // The column material is CONSERVED under the rock-mass ledger transport
+        // that now acts on it (crate::erosion_return): erosion debits craton
+        // crust, the mass is returned as a submarine sediment blanket, and the
+        // closed box Σ(crust·ρ_c + sed·ρ_sed)·area is invariant to float
+        // precision. Convicting instrument: `erosion_return::
+        // rock_mass_is_conserved_across_the_ledger_pass`. (The ledger is the
+        // live default surface via sea_level as of 2026-07-24; wiring it as its
+        // own nomos edge is an owned nicety, #form-flux-web.)
         quantity: flux::LITHO_COLUMN,
-        conservation: Conservation::NotTracked, // static v1 inventory; becomes a real claim when transport/mass-return exists
+        conservation: Conservation::Conserved,
         statistic: Statistic::CenterSample,
         exactness: Exactness::Exact,
     }],
-    assumptions: &["mantle potential temperature", "lithosphere densities", "craton geometry"],
+    assumptions: &["mantle potential temperature", "lithosphere densities", "craton geometry", "erosion maturity"],
     family: &[Family::PointwiseAnalytic],
     assumes_geometry: &[],
     structure: StructureDecl { preserves_exact: &[], preserves_approx: &[], sacrifices: &[] },

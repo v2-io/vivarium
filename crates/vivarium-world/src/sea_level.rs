@@ -24,19 +24,64 @@ use crate::time::Time;
 pub(crate) const SAMPLE_LEVEL: u8 = 8;
 
 /// Sea level (m above bedrock datum) for this world-seed at the **present-
-/// Abyssal** epoch: ocean stock poured into the tectonic surface (bathymetry +
-/// freeboard) at the live mantle temperature `MANTLE_TP_C`. Pure function of
-/// seed; the seed-only entry point every existing caller uses — unchanged.
+/// Abyssal** epoch: ocean stock poured into the **live (post-rock-mass-ledger)**
+/// tectonic surface at the live mantle temperature `MANTLE_TP_C`. Pure function
+/// of seed; the seed-only entry point every existing caller uses.
 pub fn derived_sea_level_m(seed: u64) -> f64 {
     derived_sea_level_at_tp(seed, MANTLE_TP_C)
 }
 
-/// Sea level at an explicit mantle potential temperature `tp_c` — the pour along
-/// the mantle-thermal cooling chain. As the mantle cools, basins deepen and the
-/// derived waterline drops relative to the rising cratons. Memoized per `(seed,
-/// tp_c)` (the temperature's bit pattern is the deterministic key; the epoch
-/// chain visits only a handful of values, each poured once).
+/// Sea level at an explicit mantle potential temperature `tp_c` — poured against
+/// the **live default surface**, which since the 2026-07-24 adoption *is* the
+/// post-erosion surface: the rock-mass ledger (`crate::erosion_return`) has
+/// debited the over-standing cratons, rebounded them, and returned the mass as a
+/// submarine sediment blanket. As the mantle cools, basins deepen and the
+/// waterline drops relative to the rising cratons. Memoized per `(seed, tp_c)`.
+/// The *pre-ledger* isostatic waterline is [`derived_sea_level_pre_ledger_at_tp`].
 pub fn derived_sea_level_at_tp(seed: u64, tp_c: f64) -> f64 {
+    crate::erosion_return::derived_sea_level_after_erosion_at_tp(seed, tp_c)
+}
+
+/// Sea level at canonical time `t` — the mantle-thermal nomos supplies `T_p(t)`
+/// (`#form-isostasy-column` FE(2), chain head), and the pour re-derives against
+/// the (post-ledger) freeboard that temperature earns. The memoized epoch chain
+/// that makes emergence run *in time*.
+pub fn derived_sea_level_at(seed: u64, t: Time) -> f64 {
+    derived_sea_level_at_tp(seed, mantle_thermal::potential_temp_c(t))
+}
+
+/// Solid surface used for the pour and for land classification at the present-
+/// Abyssal epoch: bathymetry plus the **post-ledger** freeboard (see
+/// [`tectonic_surface_at_tp`]).
+pub fn tectonic_surface_m(seed: u64, cell: crate::sphere::CellId, nyquist_level: u8) -> f64 {
+    tectonic_surface_at_tp(seed, cell, nyquist_level, MANTLE_TP_C)
+}
+
+/// The **live default tectonic surface** at mantle temperature `tp_c` — since the
+/// 2026-07-24 adoption this is the *post-erosion* surface: bathymetry plus the
+/// rebounded freeboard the rock-mass ledger (`crate::erosion_return`) earns
+/// (cratons eroded-and-rebounded, basins sediment-loaded). Every downstream
+/// reader (pour, land classification, `emerged_land_record`, globe, `gen`,
+/// `query`, erosion outlets) reads *this* honest surface. The pre-ledger
+/// isostatic surface is [`tectonic_surface_pre_ledger_at_tp`].
+pub fn tectonic_surface_at_tp(seed: u64, cell: crate::sphere::CellId, nyquist_level: u8, tp_c: f64) -> f64 {
+    crate::erosion_return::tectonic_surface_after_erosion_at_tp(seed, cell, nyquist_level, tp_c)
+}
+
+/// The **pre-ledger** tectonic surface — bathymetry (thermally invariant) plus
+/// the raw isostatic freeboard the column earns at `tp_c`, *before* the rock-mass
+/// ledger. This is what the ledger consumes (to classify subaerial/submarine and
+/// measure stand) and what probes compare the trimmed default against. Not the
+/// live surface — use [`tectonic_surface_at_tp`] for that.
+pub fn tectonic_surface_pre_ledger_at_tp(seed: u64, cell: crate::sphere::CellId, nyquist_level: u8, tp_c: f64) -> f64 {
+    gen::bathymetry_m(seed, cell, nyquist_level) + lithosphere::freeboard_m_at_tp(seed, cell, tp_c)
+}
+
+/// The **pre-ledger** derived waterline at `tp_c` — the pour against the raw
+/// isostatic surface, before the rock-mass ledger. Memoized per `(seed, tp_c)`;
+/// the ledger consumes it as an intermediate. The live default is
+/// [`derived_sea_level_at_tp`].
+pub fn derived_sea_level_pre_ledger_at_tp(seed: u64, tp_c: f64) -> f64 {
     use std::sync::Mutex;
     use std::collections::BTreeMap;
     static CACHE: Mutex<Option<BTreeMap<(u64, u64), f64>>> = Mutex::new(None);
@@ -46,43 +91,18 @@ pub fn derived_sea_level_at_tp(seed: u64, tp_c: f64) -> f64 {
     if let Some(&s) = map.get(&key) {
         return s;
     }
-    let s = pour_ocean_at_tp(seed, tp_c);
+    let s = pour_ocean_over(SAMPLE_LEVEL, |coord| {
+        tectonic_surface_pre_ledger_at_tp(seed, coord.cell(SAMPLE_LEVEL), SAMPLE_LEVEL, tp_c)
+    });
     map.insert(key, s);
     s
 }
 
-/// Sea level at canonical time `t` — the mantle-thermal nomos supplies `T_p(t)`
-/// (`#form-isostasy-column` FE(2), chain head), and the pour re-derives against
-/// the freeboard that temperature earns. This is the memoized epoch chain that
-/// makes emergence run *in time*.
-pub fn derived_sea_level_at(seed: u64, t: Time) -> f64 {
-    derived_sea_level_at_tp(seed, mantle_thermal::potential_temp_c(t))
-}
-
-/// Solid surface used for the pour and for land classification at the present-
-/// Abyssal epoch: bathymetry plus the isostatic freeboard read of the column.
-pub fn tectonic_surface_m(seed: u64, cell: crate::sphere::CellId, nyquist_level: u8) -> f64 {
-    tectonic_surface_at_tp(seed, cell, nyquist_level, MANTLE_TP_C)
-}
-
-/// Tectonic surface at an explicit mantle temperature — bathymetry (thermally
-/// invariant) plus the freeboard the column earns at `tp_c`. The spatial half of
-/// the cooling chain: bathymetry is fixed relief, freeboard rewrites with the
-/// driver.
-pub fn tectonic_surface_at_tp(seed: u64, cell: crate::sphere::CellId, nyquist_level: u8, tp_c: f64) -> f64 {
-    gen::bathymetry_m(seed, cell, nyquist_level) + lithosphere::freeboard_m_at_tp(seed, cell, tp_c)
-}
-
-fn pour_ocean_at_tp(seed: u64, tp_c: f64) -> f64 {
-    pour_ocean_over(SAMPLE_LEVEL, |coord| {
-        tectonic_surface_at_tp(seed, coord.cell(SAMPLE_LEVEL), SAMPLE_LEVEL, tp_c)
-    })
-}
-
 /// Invert the conserved ocean stock onto an arbitrary solid `surface` sampled at
-/// `level` — the pour, factored out of [`pour_ocean_at_tp`] so the rock-mass
-/// ledger (`crate::erosion_return`) can re-pour against the *post-erosion*
-/// tectonic surface with the identical hypsometric inversion (no forked pour).
+/// `level` — the shared pour, used by both [`derived_sea_level_pre_ledger_at_tp`]
+/// and the rock-mass ledger's post-erosion re-pour
+/// (`crate::erosion_return::derived_sea_level_after_erosion_at_tp`) so both use
+/// the identical hypsometric inversion (no forked pour).
 /// Returns the waterline (m); a total water-world when basins cannot hold the
 /// inventory (ordinum promise).
 pub(crate) fn pour_ocean_over(level: u8, surface: impl Fn(CubeCoord) -> f64) -> f64 {
@@ -335,6 +355,40 @@ pub fn emerged_land_record_at_tp(seed: u64, level: u8, tp_c: f64) -> EmergedLand
                 let v = ((j as f64 + 0.5) / n as f64) * 2.0 - 1.0;
                 let cell = CubeCoord { face, u, v }.cell(level);
                 let h = tectonic_surface_at_tp(seed, cell, level, tp_c);
+                total += 1;
+                if h > sea {
+                    land += 1;
+                    max_sub = max_sub.max(h - sea);
+                }
+            }
+        }
+    }
+    EmergedLandRecord {
+        sea_level_m: sea,
+        land_fraction: land as f64 / total as f64,
+        max_subaerial_m: max_sub,
+        level,
+    }
+}
+
+/// The emerged-land Record on the **pre-ledger** isostatic surface at `tp_c` —
+/// the surface *before* the rock-mass ledger trims it. Used to convict and
+/// display the ledger's amber-relief trim (probes compare this against the live
+/// default `emerged_land_record_at_tp`). Not the live world.
+pub fn emerged_land_record_pre_ledger_at_tp(seed: u64, level: u8, tp_c: f64) -> EmergedLandRecord {
+    let sea = derived_sea_level_pre_ledger_at_tp(seed, tp_c);
+    let n = 1usize << level;
+    let mut land = 0usize;
+    let mut total = 0usize;
+    let mut max_sub = 0.0f64;
+    for f in 0..6u8 {
+        let face = Face::from_index(f);
+        for j in 0..n {
+            for i in 0..n {
+                let u = ((i as f64 + 0.5) / n as f64) * 2.0 - 1.0;
+                let v = ((j as f64 + 0.5) / n as f64) * 2.0 - 1.0;
+                let cell = CubeCoord { face, u, v }.cell(level);
+                let h = tectonic_surface_pre_ledger_at_tp(seed, cell, level, tp_c);
                 total += 1;
                 if h > sea {
                     land += 1;

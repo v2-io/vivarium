@@ -179,7 +179,7 @@ Live floor data: [`tabularium/terrestris.ordinum.udon`](../tabularium/terrestris
 
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
-| formulation | Physics Critical | [#form-isostasy-column](src/form-isostasy-column.md) | Lithosphere column + Airy read live; mantle-thermal cooling nomos drives emergence in time (water-world → in-band present → cooling); rock-mass ledger returns erosion mass + isostatic rebound (measured operator, trims the amber over-stand toward the band); emerged-land Claimed by isostasy (not Kept) | draft |
+| formulation | Physics Critical | [#form-isostasy-column](src/form-isostasy-column.md) | Lithosphere column + Airy read live; mantle-thermal cooling nomos drives emergence in time (water-world → in-band present → cooling); rock-mass ledger (erosion mass-return + isostatic rebound) adopted as the live default surface, trims the amber over-stand toward the band (LITHO_COLUMN Conserved); emerged-land Claimed by isostasy (not Kept) | draft |
 | detail | Model | [#detail-erosion-composition](src/detail-erosion-composition.md) | Live crude fluvial rung: epoch pipeline, flux edges, measured residuals | draft |
 | observation | Model Critical | [#obs-cube-locked-kernel-bias](src/obs-cube-locked-kernel-bias.md) | MFD fan + uniform cell-area $A$ are cube-locked biases that do not converge | draft |
 | observation | Model Critical | [#obs-routing-curl-spiral](src/obs-routing-curl-spiral.md) | Routing violates contour-orthogonality: ~2% flux spirals, level-independent | draft |

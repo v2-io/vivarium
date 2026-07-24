@@ -31,12 +31,23 @@
 //!
 //! **The conservation claim (failable).** Rock mass is conserved across the
 //! pass — `Σ (crust·ρ_crust + sediment·ρ_sed)·area` is invariant to float
-//! precision (`rock_mass_balance`, the closed-box probe). This is what turns
-//! `lithosphere`'s `LITHO_COLUMN` promise from `NotTracked` toward a real
-//! `Conserved` edge; the decl upgrade + wiring the post-erosion surface into the
-//! default pour are adoption steps (a globe-visible change bordering the view),
-//! deliberately **not** taken here — this module is the measured operator and
-//! the probes that convict it, keeping the default surface untouched.
+//! precision (`rock_mass_balance`, the closed-box probe). This is what makes
+//! `lithosphere`'s `LITHO_COLUMN` promise honestly `Conserved` (the closed-box
+//! probe is its convicting instrument).
+//!
+//! **Adopted as the live default surface (2026-07-24, council-ruled under
+//! Joseph's standing grant).** `sea_level::{tectonic_surface_at_tp,
+//! derived_sea_level_at_tp}` — and thus every downstream reader (the pour, land
+//! classification, `emerged_land_record`, the globe, `gen`, `query`, erosion
+//! outlets) — now read the **post-erosion** surface this module produces. The
+//! pre-ledger isostatic surface is retained as `sea_level::*_pre_ledger_*` (the
+//! ledger consumes it; probes compare against it). The reasoning: the ledger is
+//! the *honest* surface (the pre-ledger one over-stands by known-missing
+//! physics), and `#norm-declared-violation-is-not-license` cuts against leaving
+//! a built conservation fix unwired as a display piece. **v1 is one erosion
+//! `maturity` step (φ = 1)**; iterated erode→rebound sub-maturity epochs, and
+//! routed/proximity deposition (v1 is a uniform submarine blanket), are named
+//! later rungs, not this adoption.
 //!
 //! **Purity.** Like the rest of the chain, everything is a pure function of
 //! `(seed, cell, T_p)`: the per-cell debit/credit reads memoized global
@@ -86,8 +97,8 @@ fn for_each_sample<F: FnMut(CellId, f64)>(mut f: F) {
 /// **felsic pile** (crust above the oceanic thickness) — erosion strips the
 /// buoyant continental crust, never the oceanic floor. Zero on submarine cells.
 pub fn crust_eroded_m(seed: u64, cell: CellId, tp_c: f64) -> f64 {
-    let sea = sea_level::derived_sea_level_at_tp(seed, tp_c);
-    let surf = sea_level::tectonic_surface_at_tp(seed, cell, SAMPLE_LEVEL, tp_c);
+    let sea = sea_level::derived_sea_level_pre_ledger_at_tp(seed, tp_c);
+    let surf = sea_level::tectonic_surface_pre_ledger_at_tp(seed, cell, SAMPLE_LEVEL, tp_c);
     let stand = surf - sea;
     if stand <= 0.0 {
         return 0.0;
@@ -122,13 +133,13 @@ fn ledger(seed: u64, tp_c: f64) -> Ledger {
         }
     }
 
-    let sea = sea_level::derived_sea_level_at_tp(seed, tp_c);
+    let sea = sea_level::derived_sea_level_pre_ledger_at_tp(seed, tp_c);
 
     // Pass 1 — the debit and the submarine catchment.
     let mut eroded_mass = 0.0f64;
     let mut submarine_area = 0.0f64;
     for_each_sample(|cell, area| {
-        let surf = sea_level::tectonic_surface_at_tp(seed, cell, SAMPLE_LEVEL, tp_c);
+        let surf = sea_level::tectonic_surface_pre_ledger_at_tp(seed, cell, SAMPLE_LEVEL, tp_c);
         if surf > sea {
             let base = lithosphere::column_at_tp(seed, cell, tp_c);
             let eroded = crust_eroded_m(seed, cell, tp_c);
@@ -164,7 +175,7 @@ fn ledger(seed: u64, tp_c: f64) -> Ledger {
 /// — the shared kernel of the two ledger passes and the public read.
 fn column_after_erosion_inner(seed: u64, cell: CellId, tp_c: f64, sea: f64, deposit_m: f64) -> Column {
     let base = lithosphere::column_at_tp(seed, cell, tp_c);
-    let surf = sea_level::tectonic_surface_at_tp(seed, cell, SAMPLE_LEVEL, tp_c);
+    let surf = sea_level::tectonic_surface_pre_ledger_at_tp(seed, cell, SAMPLE_LEVEL, tp_c);
     if surf > sea {
         // Subaerial: debit crust.
         Column { crust_m: base.crust_m - crust_eroded_m(seed, cell, tp_c), ..base }
@@ -178,7 +189,7 @@ fn column_after_erosion_inner(seed: u64, cell: CellId, tp_c: f64, sea: f64, depo
 /// — crust debited on land, sediment credited under the sea.
 pub fn column_after_erosion(seed: u64, cell: CellId, tp_c: f64) -> Column {
     let l = ledger(seed, tp_c);
-    let sea = sea_level::derived_sea_level_at_tp(seed, tp_c);
+    let sea = sea_level::derived_sea_level_pre_ledger_at_tp(seed, tp_c);
     column_after_erosion_inner(seed, cell, tp_c, sea, l.deposit_m)
 }
 
@@ -256,7 +267,7 @@ pub fn emerged_land_record_after_erosion_at_tp(seed: u64, level: u8, tp_c: f64) 
 /// gap (and can *fail* if the debit and credit integrals ever diverge).
 pub fn rock_mass_balance(seed: u64, tp_c: f64) -> (f64, f64) {
     let l = ledger(seed, tp_c);
-    let sea = sea_level::derived_sea_level_at_tp(seed, tp_c);
+    let sea = sea_level::derived_sea_level_pre_ledger_at_tp(seed, tp_c);
     let mut before = 0.0f64;
     let mut after = 0.0f64;
     for_each_sample(|cell, area| {
@@ -318,7 +329,10 @@ mod tests {
         // never a Kept mark.
         let tp = lithosphere::MANTLE_TP_C;
         for seed in [0u64, 7] {
-            let pre = sea_level::emerged_land_record_at_tp(seed, LVL, tp);
+            // "pre" is the pre-ledger isostatic surface; "post" is the ledger
+            // surface (which is now the live default — this test convicts the
+            // move that adoption ships).
+            let pre = sea_level::emerged_land_record_pre_ledger_at_tp(seed, LVL, tp);
             let post = emerged_land_record_after_erosion_at_tp(seed, LVL, tp);
             assert!(
                 post.max_subaerial_m < pre.max_subaerial_m,

@@ -49,7 +49,7 @@ What the shipped `erosion-tile` nomos **is** today: one composed crude rung (upl
    | Uniform neighbour **length** (D8/MFD/incision/talus) | **retired** — true great-circle distances | #obs-cube-locked-kernel-bias FE(3) present tense |
    | Priority-Flood $\varepsilon$-fill | sign-definite mass mint in sinks | nomotheke unphysical term |
    | Creep $k$ clamp | fidelity compromise, not $z=2$ substeps | nomotheke; #sketch-dynamic-exponent-seams |
-   | Fine-grain tile export without column debit | **pour-grain ledger built** ( #form-isostasy-column FE(9): debit + Airy rebound + submarine-sediment credit, closed-box conserved); the fluvial *tile* pipeline here still exports carved rock without debiting its column | #form-isostasy-column FE(9); `erosion_return.rs` |
+   | Fine-grain tile export without column debit | **pour-grain ledger built + adopted as the live default surface** ( #form-isostasy-column FE(9): debit + Airy rebound + submarine-sediment credit, closed-box conserved, LITHO_COLUMN Conserved); the fluvial *tile* pipeline here still exports carved rock without debiting its column — bridging the two grains is a later rung | #form-isostasy-column FE(9); `erosion_return.rs` |
    | Uplift **rate** field strictly positive | diagnostic carving driver only — freeboard is isostasy's job | #form-isostasy-column ; live `uplift.rs` |
 
 6. **Open successor (not adopted).** Kill diagonals → real edge fluxes → Coatléven-style vector reconstruction for magnitude+direction from one object; separate non-orthogonality fix for face gradients ( #obs-routing-curl-spiral remedy stack). Until then, cube-face attractors can still manufacture geography — cube control remains mandatory for any "emergent plates" claim.
