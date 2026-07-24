@@ -18,7 +18,7 @@ The hydrosphere article is a global reservoir (no grid): conserved water invento
 1. **Shape.** Hydrosphere is a **box / reservoir** nomos: stocks and fluxes without a spatial field. It keys by world identity, not by face/tile coordinates.
 2. **Conservation.** Total water inventory is derived from a declared planetary water-mass fraction; partition into ocean (+ice/gw lumped) and atmosphere is exact in the unit tests; not conjured per tile.
 3. **Downstream.** Climate consumes atmosphere water and promises precipitation; erosion and water-tile consume precipitation. The chain is visible in the flux web ( #form-flux-web ). Ocean stock is also the inventory poured into hypsometry for derived sea level ( #form-derived-sea-level ) — a separate edge from precip.
-4. **Generality.** The same declaration and key discipline that field nomoi use apply here — so "field-on-a-grid" is not the framework primitive (ARCHITECTURE domain-fixation guard as source; this is the measured instance).
+4. **Generality.** The same declaration and key discipline that field nomos use apply here — so "field-on-a-grid" is not the framework primitive (ARCHITECTURE domain-fixation guard as source; this is the measured instance).
 
 ## Epistemic Status
 

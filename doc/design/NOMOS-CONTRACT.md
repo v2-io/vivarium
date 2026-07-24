@@ -117,13 +117,11 @@ Each box gets one file at `doc/design/nomos-contract/`. **The failure mode of a 
 
 ---
 
-## The blocker, and it is mechanical
+## The blocker — RETIRED 2026-07-24
 
-**`NomosDecl` has nowhere to put any of this.** No field for assumed-geometry, semantics, preserved-structure, sacrificed-structure, bias-vs-noise, or the modified equation.
+**`NomosDecl` now holds all five boxes** (`nomotheke.rs`): ② `Assumes{assumption, delivered, note}` · ③ `Statistic` + `Exactness` on every promise and consume (with `Undeclared` carrying the open column fork; match instrument `audit::statistic_match_across_registry`) · ④ `StructureDecl` over the closed `STRUCTURES` vocabulary · ⑤ `UnphysicalTerm{parity, verdict}` (sign-definite ⇒ Bias by test) — plus `Family`, `ExecutionClass`, `Timescale{band, z}`. The live registry carries the 2026-07-13 findings as declarations. Claim trail: `#sketch-nomos-declaration-boxes` FE(3).
 
-> **The theory now demands declarations the data model cannot hold.**
-
-That gap is the next build. It is small, and it is the whole point: **`ARCHITECTURE.md` §9's "representation-agnostic interaction contract" has existed as a principle for months and has never been cashed out. The flux web is its first clause. These four are what 2026-07-13 paid for.**
+**What this did NOT retire:** the per-box earning procedures (the files below) — fields without procedures invite confident wrong content; and content conviction beyond structural shape (a wrong `Holds` still takes a probe).
 
 ---
 

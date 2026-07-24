@@ -24,7 +24,8 @@ World-law algorithms enter the store only through declared nomos. The registry i
    - consume/promise strings are closed over the flux vocabulary;
    - if a consumed quantity has a producer, that producer is in `deps` (else the complete key would omit its version);
    - a complete key built with `with_dep_versions` embeds each direct dep's name and version;
-   - every promise carries an explicit conservation stance;
+   - every promise carries an explicit conservation stance **and** a statistic + exactness ( #form-flux-web FE(6)); every consume names the statistic it needs; the statistic-match audit reports no Unsound edge and pins the Undeclared set exactly;
+   - structure-ledger entries come from the closed `STRUCTURES` vocabulary with disjoint preserve/sacrifice lists; sign-definite unphysical terms are declared Bias; every nomos declares family and a known timescale band;
    - derived physics/earth tiers are weakest-link folds over declared deps.
 4. **Flux and ladder join.** `consumes` / `promises` are the quantity half of coupling ( #form-flux-web ); ordinum `:kept-by` names keepers that must exist here ( #form-ordinum-governs-flux-web ). The registry is the common ground both audits read.
 5. **Undeclared law is unlawful.** An algorithm that shapes the world without a nomotheke entry has no sanctioned path into the world-law namespace — even if it is called from a demo or a view ( #norm-declaration-must-convict · #form-core-view-wall ).
@@ -37,9 +38,8 @@ World-law algorithms enter the store only through declared nomos. The registry i
 
 1. **Reverse ASSUMPTIONS coverage.** Ledger rows need not appear on any nomos; kernels can lean on ledger-listed constants without an `assumptions:` anchor (e.g. water frame hardcodes not fully listed on WATER).
 2. **Under-declaration of non-flux deps.** Example: uplift kernel uses fated noise with empty `deps` — not caught by consumed⇒in-deps.
-3. **Source-derived versions** and full NOMOS-CONTRACT boxes (geometry, structure, modified equation) are designed substrate, not mechanized ( #def-nomos epistemic limits).
-4. **Statistic/exactness on flux edges** designed, not built ( #form-flux-web ).
-5. Generic pull-query engine beyond hand-written per-nomos methods is unbuilt.
+3. **Source-derived versions** remain unmechanized; box *fields* are live ( #sketch-nomos-declaration-boxes FE(3)) but content conviction beyond structural tests is open ( #def-nomos epistemic limits).
+4. Generic pull-query engine beyond hand-written per-nomos methods is unbuilt.
 
 ## Discussion
 
@@ -49,4 +49,4 @@ World-law algorithms enter the store only through declared nomos. The registry i
 
 - **Promoted** from consolidation-wave draft (now `.super-archive/from-msc/consolidation-wave-2026-07-21/`).
 - **Dual homes demoted:** ARCHITECTURE §9 "adding a system" registry bullets; `nomotheke.rs` module header. Per-nomos epistemic status strings remain data, not re-prose.
-- Sibling gaps: ASSUMPTIONS generated ledger; geometric contract as second declare/match surface; NOMOS-CONTRACT boxes ②–④ fields on `NomosDecl`.
+- Sibling gaps: ASSUMPTIONS generated ledger; per-box earning procedures + content conviction ( #sketch-nomos-declaration-boxes Working Notes — the fields themselves landed 2026-07-24).

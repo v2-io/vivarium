@@ -15,12 +15,12 @@ depends:
 
 # Pull composition of world law
 
-World-law values are obtained by **pull evaluation** of declared nomoi at complete content-addressed keys: Hit returns matured bytes; Miss computes under pure keyed inputs, may **pull** other complete keys for dependencies, then Puts. Composition is recursive pull on the store bus — not a shared mutable world object and not a global dense finest-tick.
+World-law values are obtained by **pull evaluation** of declared nomos at complete content-addressed keys: Hit returns matured bytes; Miss computes under pure keyed inputs, may **pull** other complete keys for dependencies, then Puts. Composition is recursive pull on the store bus — not a shared mutable world object and not a global dense finest-tick.
 
 ## Formal Expression
 
 1. **Pull composition.** A world-law value is the evaluation of a declared nomos at a complete content-addressed key ( #form-complete-content-addressed-key , #def-nomos ). Store Hit returns matured bytes; Miss computes from pure keyed inputs ( #post-determinism-as-ontology ), may pull other complete keys as dependencies, then Puts ( #form-store-as-save ). There is no second channel of world truth outside that bus.
-2. **Dependencies are recursive pulls.** Nomoi couple by reading other nomoi’ memoized outputs (or flux objects named by key), not by sharing mutable runtime state. Composition depth is the dependency cone of the demanded key.
+2. **Dependencies are recursive pulls.** Nomos couple by reading other nomos' memoized outputs (or flux objects named by key), not by sharing mutable runtime state. Composition depth is the dependency cone of the demanded key.
 3. **Demand schedules; keys define.** *Which* keys are scheduled is demand (builder beacons, explorer spool, phase target). *What* a key’s bytes are is fixed by the complete key graph ( #form-depend-by-key-never-latest ). Conflating schedule with ontology is the failure mode.
 4. **Role split on who may compute.** Builder and other admitted materializers may Miss→compute under admission rules ( #form-builder-admission ). Explorers and views use observe-only pull: Hit preferred; lawful coarse or instant prior on Miss; no cold long-evolution on the view path.
 5. **Pattern, not engine.** This law is the **evaluation pattern**. A generic incremental query-graph engine (Salsa/Adapton lineage) is a permitted future mechanization of the same pattern — not required for the law to hold, and not claimed as present.

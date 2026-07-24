@@ -4,7 +4,7 @@
 //! `doc/design/DESIGN-REDUX.md` §13; architecture map: `doc/ARCHITECTURE.md` §5.
 //!
 //! **Domain-neutral by construction.** Keys and values here are opaque; the
-//! nomoi above (`query.rs`) give them meaning. Nothing in this module knows
+//! nomos above (`query.rs`) give them meaning. Nothing in this module knows
 //! about terrain, columns, or `CellId`s — a spatial field, a geochemical
 //! reservoir, a food-web state-vector, or an agent population all persist
 //! through this *same* interface. That neutrality is the framework's invariant

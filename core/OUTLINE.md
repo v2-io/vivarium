@@ -92,7 +92,7 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | formulation | Machine Critical | [#form-store-as-save](src/form-store-as-save.md) | The store is the save; memo store is portable vivium state | draft |
 | formulation | Machine Critical | [#form-builder-admission](src/form-builder-admission.md) | Builder admits only flux-allowed work; explorers observe-only pull | draft |
 | formulation | Machine Critical | [#form-depend-by-key-never-latest](src/form-depend-by-key-never-latest.md) | Depend on neighbours by complete key only; never “finest available” | draft |
-| formulation | Machine Critical | [#form-pull-query-composition](src/form-pull-query-composition.md) | World law composes by pull of keyed nomoi; pattern not generic engine | draft |
+| formulation | Machine Critical | [#form-pull-query-composition](src/form-pull-query-composition.md) | World law composes by pull of keyed nomos; pattern not generic engine | draft |
 | | | | *(#gap) Run-modes carve (thin: LEXICON open referents + root isolation; no fat enum)* | missing |
 | | | | *(#gap) Full builder daemon (beacon / demand spool)* | missing |
 | formulation | Machine Critical | [#form-three-scoped-runtime](src/form-three-scoped-runtime.md) | Spine / cones / edit-layer decomposition; time-in-key DAG; prefetch is pure optimization | draft |
@@ -124,7 +124,7 @@ The specification of what vivarium is and must do, written as **segments** in `c
 | detail | Math | [#detail-fvm-control-volume](src/detail-fvm-control-volume.md) | Cardiff FVM taxonomy: constructions, volume-exact reconstruction, null-space probe | draft |
 | worked-example | Model | [#worked-example-mfd-prime-question](src/worked-example-mfd-prime-question.md) | MFD as disguised geometric claim — Prime Question specimen | draft |
 | detail | Project | [#detail-phenomena-systems-map](src/detail-phenomena-systems-map.md) | Systems inventory, multirate bands, build-order judgment, fluvial ladder, approach ledger | draft |
-| | | | *(#gap) Hydrosphere, climate, erosion, water nomoi (beyond box + #form-derived-sea-level)* — residual: wire pour/freeboard keeper into nomotheke; full field nomos segments | missing |
+| | | | *(#gap) Hydrosphere, climate, erosion, water nomos (beyond box + #form-derived-sea-level)* — residual: wire pour/freeboard keeper into nomotheke; full field nomos segments | missing |
 
 ## VI. Process and contribution
 

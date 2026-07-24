@@ -11,13 +11,13 @@
 >
 > Until then it is authoritative for what it records, and the `include_str!` guard stays live.
 
-*The canonical accounting of every value the world runs on that is not yet principled — created 2026-07-10 at Joseph's direction: "there needs to be a standard canonical place where these things must be all accounted for, so that we know exactly what assumptions are still being filled in unprincipled ways and we don't end up with guesses and magic constants (even fated ones or steered) scattered through the nomoi making it unlawful and **undiscoverably unlawful**."*
+*The canonical accounting of every value the world runs on that is not yet principled — created 2026-07-10 at Joseph's direction: "there needs to be a standard canonical place where these things must be all accounted for, so that we know exactly what assumptions are still being filled in unprincipled ways and we don't end up with guesses and magic constants (even fated ones or steered) scattered through the nomos making it unlawful and **undiscoverably unlawful**."*
 
 **The rule.** No numeric constant enters a nomos without an entry here (or a doc-comment pointing here). An unprincipled value is not the sin — *an unaccounted one is*: declared placeholders are honest rungs (LEXICON §5's D-on-low-B made glaring instead of camouflaged); undeclared ones are latent unLawfulness that no probe will ever localize. This file is the prose bridge until the declared-vs-derived machinery (LEXICON §5) makes each nomos carry its own declaration as *data* — at which point this ledger becomes generated, not hand-kept.
 
 **Status vocabulary:** `earth-ref` (taken from measured Earth — principled *by reference*, jettisonable for non-Earth worlds) · `literature` (a published model/value used as intended) · `tuned` (chosen to look/behave right; documented reasoning, no process) · `arbitrary` (a placeholder someone had to pick) · `operational` (affects builds/views, never world-law — listed only when confusable).
 
-## World-law constants (in nomoi — these shape every world)
+## World-law constants (in nomos — these shape every world)
 
 | constant | value | lives at | status | principling path |
 |---|---|---|---|---|

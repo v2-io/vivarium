@@ -1,4 +1,4 @@
-//! The lazy pull-query + the first nomoi — the runtime as a demand-driven,
+//! The lazy pull-query + the first nomos — the runtime as a demand-driven,
 //! memoized query graph (`doc/design/DESIGN-REDUX.md` §11).
 //!
 //! Claim homes: store as durable state → `#form-store-as-save`; observe-only
@@ -11,7 +11,7 @@
 //! *cannot* diverge, because there is only one source (Joseph's question,
 //! 2026-07-10: "is it wise to rely on coders always putting the right seed in
 //! the KRNG?" — no; this struct is the structural answer). A `World` is built
-//! from a manifest (`spec.rs`) in one place; nomoi never see a bare seed.
+//! from a manifest (`spec.rs`) in one place; nomos never see a bare seed.
 //!
 //! A query is *coordinate-addressed*: it builds a complete [`Key`] from its
 //! (nomos, version, seed, region, resolution) inputs, checks the [`Store`], and
@@ -90,7 +90,7 @@ impl<'s> World<'s> {
     /// The hydrosphere nomos — the planet's conserved water budget (`crate::hydrosphere`).
     /// A **reservoir/box**, not a field: no face/level/tile, just global stocks, so
     /// its key carries only identity and its artifact is a handful of scalars. That
-    /// it pulls through the same store/memo path as the field nomoi is the proof the
+    /// it pulls through the same store/memo path as the field nomos is the proof the
     /// contract is representation-agnostic. (Currently seed-invariant — pure declared
     /// ante-mundane constants — but keyed by seed for uniformity and future variation.)
     pub fn hydrosphere(&self) -> (crate::hydrosphere::Hydrosphere, Source) {
@@ -259,7 +259,7 @@ impl<'s> World<'s> {
         if let Some(bytes) = self.store.get(&key) {
             return (decode_f32(&bytes), Source::Hit);
         }
-        // Dependencies, all pulled (memoized — recurse into their nomoi): the
+        // Dependencies, all pulled (memoized — recurse into their nomos): the
         // initial-topography surface it carves, the uplift field it carves against, and the
         // climate precipitation that drives its discharge.
         let (initial_topo, _) = self.initial_topography(face, level, oi, oj, nx);

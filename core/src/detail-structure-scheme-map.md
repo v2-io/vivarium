@@ -14,7 +14,7 @@ depends:
 
 # Structure → scheme map (per-phenomenon rows and conflicts)
 
-Extended support for #form-declared-structure-tradeoff : the per-structure menu of *what preserves it exactly*, *what breaks if you ignore it*, and *which vivarium nomoi are affected* — plus the conflicts the flat table hides. Present-best teaching rows; not a second declare-three-lists law, and not a settled NomosDecl schema.
+Extended support for #form-declared-structure-tradeoff : the per-structure menu of *what preserves it exactly*, *what breaks if you ignore it*, and *which vivarium nomos are affected* — plus the conflicts the flat table hides. Present-best teaching rows; not a second declare-three-lists law, and not a settled NomosDecl schema.
 
 ## Formal Expression
 

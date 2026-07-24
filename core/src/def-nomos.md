@@ -37,7 +37,7 @@ A **nomos** (pl. *nomos*, invariant — #lexicon/term/nomos; `DECISIONS[nomos-pl
 
 **Max attainable: exact** as a project definition. The headword and plural are Joseph-settled ( #lexicon/term/nomos `settled`; `DECISIONS[nomos-plural-invariant]`, `:by joseph`). The declaration surface is live code in `crates/vivarium-world/src/nomotheke.rs` and is already enforced on several paths (unique names, registered deps, assumption anchors, consumed⇒in-deps). Stage `draft`.
 
-**Not claimed here:** the fuller true-to-physics declaration boxes (geometry, semantics, structure, modified equation — design substrate in `doc/design/NOMOS-CONTRACT.md`) as already-mechanized law; the generic pull-query engine beyond hand-written per-nomos paths; or bit-perfect source-derived versioning. Those need their own segments.
+**Not claimed here:** the true-to-physics declaration boxes as *earned content* — their **fields** are mechanized on `NomosDecl` with structural tests ( #sketch-nomos-declaration-boxes FE(3), 2026-07-24), but per-box earning procedures and content conviction beyond shape remain open; the generic pull-query engine beyond hand-written per-nomos paths; bit-perfect source-derived versioning.
 
 ## Discussion
 

@@ -79,7 +79,7 @@ impl Coverage {
     /// finest built rung). Provisional roots still count as built (they are in
     /// the store); status is what labels them provisional.
     fn parse(roots: &[crate::store::RootEntry]) -> Coverage {
-        // Deepest level present among the surface nomoi.
+        // Deepest level present among the surface nomos.
         let level = roots
             .iter()
             .filter(|r| r.key.starts_with("initial-topography@") || r.key.starts_with("erosion-tile@"))

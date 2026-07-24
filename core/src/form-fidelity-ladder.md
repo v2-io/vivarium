@@ -20,7 +20,7 @@ Each aspect may occupy a **ladder of models** from crude to high-fidelity. Low r
 2. **Climb.** Stepwise emergence discovers behaviour; regime probes validate ( #norm-regime-probes , case C of #form-reductionist-fallback-cases ).
 3. **Descend.** Once patterns are characterized and probe-validated, **descend** to a tight procedural surrogate that reproduces the discovered statistics; keep the expensive rung as calibrator (re-run on nomos change).
 4. **Key identity.** Model identity and version are part of the content-addressed key ( #form-complete-content-addressed-key , #def-nomos ). Swapping a rung invalidates that nomos and its dependents only.
-5. **Execution class (frame).** Systems declare execution class (batch-deep / relaxation / procedural-tight) so coupling and cost are honest — field residual until nomotheke carries it ( #form-kernel-imperative-boundary debt).
+5. **Execution class.** Systems declare execution class (batch-deep / relaxation / procedural-tight) so coupling and cost are honest — carried as `NomosDecl::execution` since 2026-07-24 ( #form-kernel-imperative-boundary FE(5)).
 6. **Scaffolding has a demolition date.** Explicit state that parameterizes what a finer rung would emerge (armor field standing in for selective transport of real grain sizes; colmation for fines percolation) is declared as scaffolding: when the finer rung lands and the behaviour re-emerges, the explicit field retires. Keeping both is a fork.
 
 ## Epistemic Status

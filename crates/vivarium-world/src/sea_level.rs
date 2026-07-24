@@ -27,10 +27,10 @@ const SAMPLE_LEVEL: u8 = 8;
 /// Memoized per process: the pour is deterministic and seed-keyed.
 pub fn derived_sea_level_m(seed: u64) -> f64 {
     use std::sync::Mutex;
-    use std::collections::HashMap;
-    static CACHE: Mutex<Option<HashMap<u64, f64>>> = Mutex::new(None);
+    use std::collections::BTreeMap;
+    static CACHE: Mutex<Option<BTreeMap<u64, f64>>> = Mutex::new(None);
     let mut guard = CACHE.lock().unwrap_or_else(|e| e.into_inner());
-    let map = guard.get_or_insert_with(HashMap::new);
+    let map = guard.get_or_insert_with(BTreeMap::new);
     if let Some(&s) = map.get(&seed) {
         return s;
     }

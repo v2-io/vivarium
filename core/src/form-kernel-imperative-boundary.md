@@ -19,7 +19,7 @@ For each nomos, the **kernel** (the numerical procedure) is the sole intended im
 2. **Direction of progress.** “More declarative is better” means **moving** contracts from opaque kernel bodies into declared fields so the multiscale web interlocks and audits before Rust runs. It does **not** mean encoding stream-power arithmetic in udon (a worse language for the same imperative work).
 3. **Audits fall out of data.** Graph queries over declarations (requisite chain, vocabulary closure, conservation flags, weakest-link fold, and — when declared — statistic match, timescale band, execution class) are the pre-run picture of honesty. Kernels run after the graph is sound or after honesty is reported ( #form-flux-web , #form-nomotheke-registry ).
 4. **Relation to convictability.** #norm-declaration-must-convict is the negative law (a declaration that cannot fail is a wish). This segment is the positive boundary: *what belongs outside the kernel so that convictable declarations can exist.*
-5. **Compliance debt is named, not denied.** Fields still only in kernel bodies or design prose (execution-class, timescale-band, stage lifecycle, phase binding; source-derived versions) are residual debt under this law. Absence from crates does not revoke the boundary.
+5. **Compliance debt is named, not denied.** Execution-class, timescale-band/$z$, geometry assumptions, structure ledger, and unphysical-term declarations moved out of kernel bodies into `NomosDecl` fields (2026-07-24). Still only in kernels or prose: stage lifecycle, phase binding, and source-derived versions — residual debt under this law. Absence from crates does not revoke the boundary.
 
 ## Epistemic Status
 

@@ -15,7 +15,7 @@
 //!   Today: `name`.
 //! - **demand** *(future)* — target phase, beacons, watchpoints: changes what
 //!   gets built *first*, provably never what gets built (order-independence
-//!   holds because nomoi depend on artifacts by key, never "latest available").
+//!   holds because nomos depend on artifacts by key, never "latest available").
 //!
 //! Format: a minimal `key = value` TOML subset, hand-parsed to keep this crate
 //! dependency-free. Graduates to real TOML when the CLI crate exists — the file

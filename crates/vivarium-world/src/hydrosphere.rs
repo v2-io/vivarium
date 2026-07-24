@@ -16,7 +16,7 @@
 //! (ARCHITECTURE §0's four representation kinds; the domain-fixation-guard
 //! generality probe). It has no spatial grid: it produces global stocks (a few
 //! scalars), keyed by (seed, version) alone. That it plugs into the same
-//! store / nomotheke / flux-web machinery as the field nomoi is the point — the
+//! store / nomotheke / flux-web machinery as the field nomos is the point — the
 //! contract is representation-agnostic, and this proves it.
 //!
 //! v0 is crude and honest: earth-referenced fractions (see `ASSUMPTIONS.md`

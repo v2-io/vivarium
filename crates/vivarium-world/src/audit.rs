@@ -19,7 +19,7 @@
 //! - **"Is X conserved end-to-end?"** → each producer's promise carries its
 //!   conservation stance; the chain reads them off.
 //!
-//! **Scope (honest).** This audits the *registry* alone — the declared nomoi and
+//! **Scope (honest).** This audits the *registry* alone — the declared nomos and
 //! their flux interface. It is deliberately *not* the full world-conformance
 //! audit: it takes no `regula`/`ordinum` and no store census, because the
 //! world-level profile's shape is still Joseph's open call (regula-keep, per
@@ -74,7 +74,7 @@ pub fn requisites(nomos: &NomosDecl) -> Vec<Requisite> {
     nomos
         .consumes
         .iter()
-        .map(|&quantity| Requisite { quantity, supply: match producer_of(quantity) {
+        .map(|c| Requisite { quantity: c.quantity, supply: match producer_of(c.quantity) {
             Some(p) => Supply::Met(p),
             None => Supply::Unmet,
         } })
@@ -87,9 +87,56 @@ pub fn requisites(nomos: &NomosDecl) -> Vec<Requisite> {
 pub fn unmet_across_registry() -> Vec<(&'static NomosDecl, &'static str)> {
     let mut out = Vec::new();
     for n in NOMOTHEKE {
-        for &q in n.consumes {
-            if producer_of(q).is_none() {
-                out.push((*n, q));
+        for c in n.consumes {
+            if producer_of(c.quantity).is_none() {
+                out.push((*n, c.quantity));
+            }
+        }
+    }
+    out
+}
+
+/// Box-③ soundness of one met edge (`#form-flux-web` FE(6)): quantity names
+/// match, but does the producer's guaranteed *statistic* satisfy what the
+/// consumer *needs*?
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum StatMatch {
+    /// Producer guarantees exactly the statistic the consumer needs.
+    Sound,
+    /// One side (or both) is `Statistic::Undeclared` — the open column-semantics
+    /// fork, surfaced as named debt rather than silence.
+    Undeclared,
+    /// Both sides declared, and they disagree — the silent-macro-corruption
+    /// class, now loud.
+    Unsound,
+}
+
+/// The statistic-match audit over every met edge in the registry
+/// (`#form-flux-web` FE(6)'s intended instrument, now built): for each
+/// consumer × consumed quantity with a producer, report whether the statistic
+/// contract holds. Unmet edges are not listed here — they are
+/// [`unmet_across_registry`]'s finding, a different defect class.
+pub fn statistic_match_across_registry(
+) -> Vec<(&'static NomosDecl, &'static str, &'static NomosDecl, StatMatch)> {
+    use crate::nomotheke::Statistic;
+    let mut out = Vec::new();
+    for n in NOMOTHEKE {
+        for c in n.consumes {
+            if let Some(p) = producer_of(c.quantity) {
+                let guaranteed = p
+                    .promises
+                    .iter()
+                    .find(|pr| pr.quantity == c.quantity)
+                    .map(|pr| pr.statistic)
+                    .unwrap_or(Statistic::Undeclared);
+                let verdict = if guaranteed == Statistic::Undeclared || c.needs == Statistic::Undeclared {
+                    StatMatch::Undeclared
+                } else if guaranteed == c.needs {
+                    StatMatch::Sound
+                } else {
+                    StatMatch::Unsound
+                };
+                out.push((*n, c.quantity, p, verdict));
             }
         }
     }
@@ -118,7 +165,8 @@ pub fn requisite_chain(nomos: &NomosDecl) -> Vec<ChainLine> {
 }
 
 fn walk(nomos: &NomosDecl, depth: usize, lines: &mut Vec<ChainLine>, seen: &mut Vec<&'static str>) {
-    for &quantity in nomos.consumes {
+    for c in nomos.consumes {
+        let quantity = c.quantity;
         let supply = match producer_of(quantity) {
             Some(p) => Supply::Met(p),
             None => Supply::Unmet,
@@ -192,13 +240,13 @@ mod tests {
 
     #[test]
     fn producers_are_unique() {
-        // No two nomoi may promise the same quantity — else `producer_of` is
+        // No two nomos may promise the same quantity — else `producer_of` is
         // ambiguous and the coupling graph is ill-defined. (A future "two rungs
         // fill the same slot" case is a slot/occupant choice at the world layer,
         // not two producers of one quantity in one registry.)
         for q in flux::VOCABULARY {
             let producers = NOMOTHEKE.iter().filter(|n| n.promises.iter().any(|p| p.quantity == *q)).count();
-            assert!(producers <= 1, "quantity {q:?} is produced by {producers} nomoi — ambiguous");
+            assert!(producers <= 1, "quantity {q:?} is produced by {producers} nomos — ambiguous");
         }
     }
 

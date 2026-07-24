@@ -43,7 +43,7 @@ Hilbert order (`CellId`) makes any region a contiguous id range — *storage/str
 
 ## 3. Access profiles = process boundaries *(design; answers taxonomy Sc-9)*
 
-The BDD stress-test's sharpest gap — exo-by-governance splits into *access-rich* (source-holder) vs *plain participant* — is naturally **enforced** by this architecture: a builder process holds nomoi + write-capable store access; an explorer process holds a phenomenal-grade query API. The OS process boundary mechanically instantiates the access-profile split the ontology wants. Profiles attach at the **query front-end** (plan-Phase-4), not in the store. Note for the run-modes carve: the moment two processes share a store, the Phase-0 "convention-only" canon-root guard is worth revisiting (the tripwire may fire earlier than "first graduation").
+The BDD stress-test's sharpest gap — exo-by-governance splits into *access-rich* (source-holder) vs *plain participant* — is naturally **enforced** by this architecture: a builder process holds nomos + write-capable store access; an explorer process holds a phenomenal-grade query API. The OS process boundary mechanically instantiates the access-profile split the ontology wants. Profiles attach at the **query front-end** (plan-Phase-4), not in the store. Note for the run-modes carve: the moment two processes share a store, the Phase-0 "convention-only" canon-root guard is worth revisiting (the tripwire may fire earlier than "first graduation").
 
 ## 4. The temporal ladder *(design; recovered from the context-exhausted 2026-07-10 session)*
 

@@ -1,7 +1,7 @@
 # Framework-to-status-quo — the honest gap, and the drainage-shaped dependency design
 
 > [!note]
-> **Terminology (2026-07-10):** “recipe” throughout this dated document = **nomos** (pl. *nomoi*) — the term settled after this was written (LEXICON §2). Kept verbatim as history.
+> **Terminology (2026-07-10):** “recipe” throughout this dated document = **nomos** (pl. *nomos*) — the term settled after this was written (LEXICON §2). Kept verbatim as history.
 
 > **Claim homes for seam / fidelity law restated in §3:** fluxes as sufficient statistics at tile edges → `#form-seam-flux-exchange`; fidelity pull threshold → `#form-fidelity-invariant`; store as save (build shape A) → `#form-store-as-save`. This file remains a **dated status-quo + dependency design trail**, not claim canon.
 

@@ -1,6 +1,6 @@
-//! The flux-quantity vocabulary — the alphabet the nomoi couple through.
+//! The flux-quantity vocabulary — the alphabet the nomos couple through.
 //!
-//! A multiscale, heterogeneous world is assembled from nomoi that never share
+//! A multiscale, heterogeneous world is assembled from nomos that never share
 //! mutable state: one hands another a **fluxed quantity** and nothing else
 //! (`.super-archive/from-theory/multiscale-seams.md (#detail-seam-precedents for primary-read support)`; the coupling contract of ARCHITECTURE §9).
 //! The contract is exactly one string-match: a nomos `produces` a quantity, a
@@ -27,13 +27,13 @@
 //! here is what turns "rain without a sky" from an unwritten assumption into a
 //! mechanical audit finding (`crate::audit`; `doc/plan/regula-conformance-design.md` §3).
 //!
-//! **Not yet declared here (honest):** the *statistic + exactness contract* a
-//! consumer needs from a producer (`… needs mean at-least L19`,
-//! `VIVARIA-DECLARATIVE-FRONTIER.md`, spike 2). That is a proposal, not a
-//! decision; when the seam actually needs cross-scale statistic-matching, the
-//! consume entries grow from bare strings into `{quantity, statistic, level}`
-//! — the vocabulary term stays the same, so this module is forward-compatible
-//! with that extension by construction.
+//! **The statistic + exactness contract is now declared** (`#form-flux-web`
+//! FE(6)): promises carry `{statistic, exactness}` and consumes carry
+//! `{quantity, needs}` (`crate::nomotheke::{Statistic, Exactness, Consume}`),
+//! with `crate::audit::statistic_match_across_registry` as the match
+//! instrument. `Statistic::Undeclared` is the honest value for the open
+//! column-semantics fork — a *level* component (`at-least L19`) remains
+//! unbuilt, deferred until a cross-scale consumer exists.
 
 /// **Seeded crustal asymmetry** (dimensionless) — the fated heterogeneity the world is
 /// divided by. Produced by the `noise` nomos (the KRNG: a pure function of (seed, key)),
@@ -78,9 +78,9 @@ pub const STANDING_WATER_DEPTH: &str = "standing water depth field (m)";
 pub const ATMOSPHERE_WATER: &str = "atmosphere water (m w.e.)";
 
 /// Precipitation reaching the surface (m/yr). **Consumed** by erosion and water;
-/// **produced by no nomos yet** — the live "rain without a sky" specimen the
-/// requisite audit surfaces (its principled producer is the future atmosphere
-/// reservoir → water-cycle chain, `TODO.md` §"The water system, decomposed").
+/// **produced by the climate nomos** (the conserved reservoir's throughput) —
+/// formerly the live "rain without a sky" specimen, closed when climate landed
+/// (the registry test `precipitation_is_now_produced_by_climate` pins it).
 pub const PRECIPITATION: &str = "precipitation (m/yr)";
 
 /// Every fluxed quantity a nomos may name. A `produces`/`consumes` string not in
