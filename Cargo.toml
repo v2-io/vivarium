@@ -6,13 +6,14 @@
 # something has gone wrong.
 [workspace]
 resolver = "2"
-# vivarium-world (frame) + vivarium-core (legacy) + views. Live exploration views:
-# spikes/{globe,worldview,slabs}. Superseded engine spikes: archive/ — see
+# vivarium-world (frame) + vivarium-core (legacy port source) + views.
+# Views: spikes/{globe,worldview} — both SPIKES, both awaiting the principled
+# explorer that replaces them. Superseded views and engine spikes: archive/ — see
 # spikes/FINDINGS.md. Claim outline: core/OUTLINE.md.
-members = ["crates/vivarium-core", "crates/vivarium-world", "crates/vivarium-app", "spikes/slabs", "spikes/worldview", "spikes/globe"]
+members = ["crates/vivarium-core", "crates/vivarium-world", "spikes/worldview", "spikes/globe"]
 # Everything under archive/ is out of the build. (Excluded so cargo never tries to
 # resolve their `workspace = true` inheritances.)
-exclude = ["archive/godot-voxel", "archive/iso-tiles", "archive/vivarium-godot", "archive/bevy-voxel", "archive/bevy-iso", "archive/iso-voxels", "archive/topdown", "archive/tilemap"]
+exclude = ["archive/slabs", "archive/vivarium-app", "archive/godot-voxel", "archive/iso-tiles", "archive/vivarium-godot", "archive/bevy-voxel", "archive/bevy-iso", "archive/iso-voxels", "archive/topdown", "archive/tilemap"]
 
 [workspace.package]
 edition = "2021"
