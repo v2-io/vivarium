@@ -18,7 +18,7 @@
 //! Run: `cargo run --release -p vivarium-world --example mantle_cooling_probe`
 
 use vivarium_world::lithosphere::MANTLE_TP_C;
-use vivarium_world::mantle_thermal::{abyssal_epochs, potential_temp_c, present_abyssal};
+use vivarium_world::mantle_thermal::{cooling_stages, potential_temp_c, present_abyssal};
 use vivarium_world::sea_level::{
     emerged_land_record_at_tp, emerged_land_timing_verdict_for, emerged_land_verdict,
     EMERGED_LAND_FRACTION_BAND,
@@ -32,7 +32,7 @@ fn main() {
     println!("mantle-thermal emergence probe — level {LEVEL}, band [{:.1}%, {:.0}%]", lo * 100.0, hi * 100.0);
     println!("present-Abyssal anchor: T_p = {MANTLE_TP_C} C (must match the seed-only live world)\n");
 
-    let epochs = abyssal_epochs();
+    let epochs = cooling_stages();
     let present = present_abyssal();
 
     let mut all_monotone = true;

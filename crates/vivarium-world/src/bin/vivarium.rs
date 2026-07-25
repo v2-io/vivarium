@@ -34,7 +34,7 @@ use std::path::{Path, PathBuf};
 
 use vivarium_world::audit;
 use vivarium_world::lithosphere::MANTLE_TP_C;
-use vivarium_world::mantle_thermal::{abyssal_epochs, potential_temp_c};
+use vivarium_world::mantle_thermal::{self, potential_temp_c};
 use vivarium_world::nomotheke;
 use vivarium_world::ordinum;
 use vivarium_world::query::{Source, World};
@@ -51,17 +51,25 @@ fn main() {
         Some("build") => cmd_build(&args[1..]),
         Some("status") => cmd_status(&args[1..]),
         Some("info") => cmd_info(&args[1..]),
+        Some("watch") => cmd_watch(&args[1..]),
         Some("attach") => cmd_attach(&args[1..]),
         _ => {
-            eprintln!("usage: vivarium <new|build|status|attach> [world-dir] [options]");
+            eprintln!("usage: vivarium <new|build|watch|status|info|attach> [world-dir] [options]");
             eprintln!("  (world-dir optional: defaults to $VIVARIUM_WORLD, else ~/.cache/vivarium/globe-world");
             eprintln!("   — the same world vivarium-globe opens, so status/build/globe agree by default)");
             eprintln!("  new [dir] [name]                    individuate a world (manifest + seed)");
-            eprintln!("  build [dir] [--level L] [--epochs E] [--allow-unmet]");
+            eprintln!("  build [dir] [--level L] [--epochs E] [--frames N] [--allow-unmet]");
             eprintln!("                                       builder v0: whole-world sweep at L (default 7)");
             eprintln!("                                       then erosion at E epochs (default 40; 0 = skip)");
+            eprintln!("                                       --frames N: deep-time cooling stages to materialize");
+            eprintln!("                                         (default 6; rounds UP to a nested count — see below)");
             eprintln!("                                       refuses erosion/water while flux needs are unmet");
             eprintln!("                                       unless --allow-unmet (provisional; still logs the waiver)");
+            eprintln!("  watch [dir] [--replay] [--speed MS] [--frames N] [--width W] [--lon0 DEG]");
+            eprintln!("                                       the build reader: globe repainted as roots land.");
+            eprintln!("                                       live by default (follows a running builder);");
+            eprintln!("                                       --replay walks the store's landing history instead.");
+            eprintln!("                                       ONE mechanism — replay is the same reader, done landing.");
             eprintln!("  status [dir]                        fidelity pyramid + flux/requisite audit");
             eprintln!("  info [dir] [--width W] [--lon0 DEG] [--color|--no-color]");
             eprintln!("                                       whole-sphere Hammer-oval globe, coloured by build-state");
@@ -77,7 +85,9 @@ fn main() {
 /// are not values of a preceding flag remain positionals — so
 /// `build --epochs 0 /path` resolves to `/path`, not `0`.
 fn positionals(rest: &[String]) -> Vec<&str> {
-    let flag_takes_value = |a: &str| a == "--level" || a == "--epochs" || a == "--width" || a == "--lon0";
+    let flag_takes_value = |a: &str| {
+        matches!(a, "--level" | "--epochs" | "--width" | "--lon0" | "--frames" | "--speed")
+    };
     let mut out = Vec::new();
     let mut i = 0;
     while i < rest.len() {
@@ -236,6 +246,7 @@ fn cmd_build(rest: &[String]) -> i32 {
     let dir = world_dir(rest);
     let level = flag(rest, "--level").unwrap_or(7).min(20) as u8;
     let epochs = flag(rest, "--epochs").unwrap_or(40);
+    let frames = flag(rest, "--frames").unwrap_or(6);
     let allow_unmet = rest.iter().any(|a| a == "--allow-unmet");
 
     let spec = match WorldSpec::load_or_create(&dir, "unnamed") {
@@ -359,31 +370,46 @@ fn cmd_build(rest: &[String]) -> i32 {
         world.set_provisional_writes(false);
         computed = 0;
     }
-    // Epoch-ladder reductions — the cost belongs here, at build time. Materialize
-    // each epoch's global scalars (derived sea + rock-mass-ledger integrals) as
+    // Cooling-stage reductions — the cost belongs here, at build time. Materialize
+    // each stage's global scalars (derived sea + rock-mass-ledger integrals) as
     // store citizens under complete keys, so a fresh globe/explorer process HITS
-    // them and never runs a cold ~393k-cell pour to warm an epoch
+    // them and never runs a cold ~393k-cell pour to warm a stage
     // (`#form-store-as-save` FE(6), decided: memoized ≡ store object; closes
-    // `#form-builder-admission` FE(4)/#5 store-side half). Present epoch first (the
+    // `#form-builder-admission` FE(4)/#5 store-side half). Present stage first (the
     // live world), then the abyssal cooling chain. Always lawful (the isostasy
     // chain has no unmet flux), so these write non-provisional roots.
+    //
+    // `--frames N` sets how densely the chain is sampled — the one knob that
+    // makes deep-time playback watchable at more than six frames. It refines by
+    // BISECTION, so every coarser chain is a subset and every reduction already
+    // in the store still hits ( #form-time-indexed-stage-chains FE(7)); asking
+    // for a non-nested count rounds up, and the log says so rather than quietly
+    // giving you a different number than you asked for.
     world.set_provisional_writes(false);
     {
+        let refine = mantle_thermal::refinements_for(frames as usize);
+        let stages = mantle_thermal::cooling_stages_refined(refine);
+        if (frames as usize) != stages.len() {
+            out.line(&format!(
+                "--frames {frames} is not a nested count; using {} cooling stages (refinement {refine}) so existing reductions still hit",
+                stages.len()
+            ));
+        }
         let mut tps: Vec<f64> = vec![MANTLE_TP_C];
-        tps.extend(abyssal_epochs().iter().map(|&t| potential_temp_c(t)));
+        tps.extend(stages.iter().map(|&t| potential_temp_c(t)));
         let t0 = std::time::Instant::now();
         let mut seen = std::collections::BTreeSet::new();
         let mut computed = 0usize;
         for tp in tps {
             if !seen.insert(tp.to_bits()) {
-                continue; // present may coincide exactly with an epoch T_p
+                continue; // present may coincide exactly with a stage T_p
             }
             if world.epoch_reduction(tp).1 == Source::Computed {
                 computed += 1;
             }
         }
         out.line(&format!(
-            "epoch reductions: {} materialized ({computed} computed, {} were hits) in {:.1?} — fresh processes warm every epoch from the store, no cold pour",
+            "cooling stages: {} materialized ({computed} computed, {} were hits) in {:.1?} — fresh processes warm every stage from the store, no cold pour",
             seen.len(),
             seen.len() - computed,
             t0.elapsed()
@@ -590,6 +616,166 @@ fn cmd_info(rest: &[String]) -> i32 {
     let world = World::new(&store, seed);
     print!("\n{}", vivarium_world::globe::render(&world, &roots, width, lon0, color));
     0
+}
+
+/// `vivarium watch` — the build reader: the globe, repainted as roots land.
+///
+/// Live and `--replay` are deliberately the **same** code below the frame
+/// source: both build a `Vec<RootEntry>` census and hand it to `globe::render`,
+/// so what you see building is pixel-identical to what you see replaying
+/// ( #form-time-indexed-stage-chains FE(5) — one mechanism, and this is where it
+/// is either honoured or quietly broken). The only difference is where the next
+/// census comes from: the filesystem, or the landing history already on disk.
+///
+/// It never blocks the builder and never writes: no lock is taken, and the
+/// process is a reader of the store bus like any other explorer
+/// ( #form-builder-admission , #form-core-view-wall ).
+fn cmd_watch(rest: &[String]) -> i32 {
+    let dir = world_dir(rest);
+    let replay = rest.iter().any(|a| a == "--replay");
+    let width = flag(rest, "--width").unwrap_or(100).clamp(16, 240) as usize;
+    let speed_ms = flag(rest, "--speed").unwrap_or(if replay { 250 } else { 500 }) as u64;
+    let max_frames = flag(rest, "--frames").unwrap_or(60) as usize;
+    let lon0 = rest
+        .iter()
+        .position(|a| a == "--lon0")
+        .and_then(|i| rest.get(i + 1))
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(0.0);
+    let color = !rest.iter().any(|a| a == "--no-color")
+        && (rest.iter().any(|a| a == "--color") || vivarium_world::globe::color_auto());
+
+    let seed = match WorldSpec::load(&dir) {
+        Ok(Some(spec)) => spec.seed,
+        Ok(None) => {
+            println!("(no manifest — not yet a vivium; `vivarium new {}` then `build`)", dir.display());
+            return 0;
+        }
+        Err(e) => {
+            eprintln!("manifest error: {e}");
+            return 1;
+        }
+    };
+    let store = match Store::open(&dir) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("store error: {e}");
+            return 1;
+        }
+    };
+    let world = World::new(&store, seed);
+
+    if replay {
+        let landings = match vivarium_world::watch::landings(&dir) {
+            Ok(l) => l,
+            Err(e) => {
+                eprintln!("replay error: {e}");
+                return 1;
+            }
+        };
+        if landings.is_empty() {
+            println!("(nothing in the store to replay — `vivarium build {}` first)", dir.display());
+            return 0;
+        }
+        let bounds = vivarium_world::watch::frame_bounds(&landings, max_frames);
+        for (n, &end) in bounds.iter().enumerate() {
+            let census: Vec<_> = landings[..end].iter().map(|l| l.root.clone()).collect();
+            paint(
+                &world,
+                &census,
+                width,
+                lon0,
+                color,
+                &format!(
+                    "replay  frame {}/{}  ·  {end} of {} roots landed  ·  ordering: BUILD history (root landing time), not world-time",
+                    n + 1,
+                    bounds.len(),
+                    landings.len()
+                ),
+            );
+            if n + 1 < bounds.len() {
+                std::thread::sleep(std::time::Duration::from_millis(speed_ms));
+            }
+        }
+        println!(
+            "\nreplayed {} roots in {} frames. What this ordering IS: the order the builder wrote them.\n\
+             What it is NOT: world-time. The interior column above is how much world-time interior exists to replay\n\
+             at all — a nomos with one distinct time-index has only endpoints ( #form-time-indexed-stage-chains FE(2) ).",
+            landings.len(),
+            bounds.len()
+        );
+        return 0;
+    }
+
+    // Live: poll the roots census; repaint only when it changes, so a quiet
+    // builder does not strobe the terminal.
+    let mut last = 0usize;
+    let mut ever_saw_builder = false;
+    loop {
+        let roots = store.roots().unwrap_or_default();
+        let builder = builder_status(&dir);
+        let live = builder.is_some();
+        ever_saw_builder |= live;
+        if roots.len() != last {
+            let head = match &builder {
+                Some(s) => format!("live  ·  {s}  ·  {} roots", roots.len()),
+                None => format!("live  ·  no builder running  ·  {} roots (static census)", roots.len()),
+            };
+            paint(&world, &roots, width, lon0, color, &head);
+            last = roots.len();
+        }
+        if ever_saw_builder && !live {
+            println!("\n(builder finished — {} roots. `vivarium watch --replay` to watch it again.)", last);
+            return 0;
+        }
+        if !ever_saw_builder && last > 0 {
+            println!(
+                "\n(no builder running; this is the store as it stands. Start one with `vivarium build {}`,\n\
+                 or `vivarium watch --replay` to watch how it got here.)",
+                dir.display()
+            );
+            return 0;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(speed_ms));
+    }
+}
+
+/// One frame: clear, globe, header, and the declared-but-unseen honesty block.
+fn paint(world: &World, roots: &[vivarium_world::store::RootEntry], w: usize, lon0: f64, color: bool, head: &str) {
+    print!("\x1b[H\x1b[2J"); // home + clear; the poller owns the screen
+    println!("{head}\n");
+    print!("{}", vivarium_world::globe::render(world, roots, w, lon0, color));
+    println!("\n{}", vivarium_world::watch::honesty_block(roots).trim_end());
+    let _ = std::io::stdout().flush();
+}
+
+/// The builder's own `status.json`, condensed to one line — `None` when no live
+/// builder holds the lock.
+fn builder_status(dir: &Path) -> Option<String> {
+    let alive = std::fs::read_to_string(dir.join("builder.lock"))
+        .ok()
+        .and_then(|t| t.trim().parse::<i32>().ok())
+        .is_some_and(pid_alive);
+    if !alive {
+        return None;
+    }
+    let text = std::fs::read_to_string(dir.join("status.json")).ok()?;
+    let get = |k: &str| -> Option<String> {
+        text.split(&format!("\"{k}\""))
+            .nth(1)?
+            .split(',')
+            .next()?
+            .trim_start_matches([':', ' ', '"'])
+            .trim_end_matches(['"', ' ', '\n', '}'])
+            .to_string()
+            .into()
+    };
+    Some(format!(
+        "{} {}/{}",
+        get("phase").unwrap_or_else(|| "?".into()),
+        get("done").unwrap_or_else(|| "?".into()),
+        get("total").unwrap_or_else(|| "?".into())
+    ))
 }
 
 fn cmd_attach(rest: &[String]) -> i32 {

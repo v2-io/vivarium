@@ -45,3 +45,4 @@ pub mod nomotheke;
 pub mod audit;
 pub mod ordinum;
 pub mod globe;
+pub mod watch;

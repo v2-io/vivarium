@@ -21,7 +21,7 @@
 use std::time::Instant;
 
 use vivarium_world::lithosphere::MANTLE_TP_C;
-use vivarium_world::mantle_thermal::{abyssal_epochs, potential_temp_c};
+use vivarium_world::mantle_thermal::{cooling_stages, potential_temp_c};
 use vivarium_world::query::World;
 use vivarium_world::store::Store;
 
@@ -41,7 +41,7 @@ fn main() {
     // Present epoch first, then the abyssal cooling chain (the same ladder the
     // builder materializes and the globe warmer walks).
     let mut tps: Vec<f64> = vec![MANTLE_TP_C];
-    tps.extend(abyssal_epochs().iter().map(|&t| potential_temp_c(t)));
+    tps.extend(cooling_stages().iter().map(|&t| potential_temp_c(t)));
 
     let t0 = Instant::now();
     let (mut hit, mut computed) = (0usize, 0usize);

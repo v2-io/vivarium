@@ -73,7 +73,7 @@ pub fn present_abyssal() -> Time {
 /// ages), passing through `MANTLE_TP_C` at [`present_abyssal`] and decaying
 /// toward `TP_MODERN_C` as `t → 0` (Holocene). Clamped to `[TP_MODERN_C,
 /// TP_HOT_MAX_C]` — the curve is only *asserted* over the Abyssal window
-/// ([`abyssal_epochs`]); the clamp keeps the closed form bounded outside it.
+/// ([`cooling_stages`]); the clamp keeps the closed form bounded outside it.
 ///
 /// `T_p(t) = TP_MODERN + (MANTLE_TP_C − TP_MODERN)·exp((age(t) − PRESENT)/TAU)`,
 /// with `age(t)` in Ga before the origin. Pure function of `t` — fated.
@@ -84,13 +84,78 @@ pub fn potential_temp_c(t: Time) -> f64 {
     tp.clamp(TP_MODERN_C, TP_HOT_MAX_C)
 }
 
-/// The canonical Abyssal cooling chain: an ordered sequence of epochs from the
-/// hot early-Abyssal (near a water-world) through the present-Abyssal anchor to
-/// the cooling late-Abyssal — the epochs the probe and the emergence view walk.
-/// Ordered by *time* (increasing t = cooling), so land fraction along it is the
-/// emergence trajectory. Deliberately a short, legible chain, not a fine grid.
-pub fn abyssal_epochs() -> Vec<Time> {
-    [3.6, 3.4, PRESENT_ABYSSAL_GA, 3.0, 2.8, 2.6].iter().map(|&ga| time_at_ga(ga)).collect()
+// --- The cooling stage chain -------------------------------------------------
+//
+// Vocabulary note, load-bearing: these are **stages**, not "epochs". `LEXICON`
+// reserves `epoch` *exclusively* for the erosion solver's step unit, and this
+// chain is a stage chain in the sense of `#form-time-indexed-stage-chains` FE(8)
+// — keyed memos carrying a time-index. The two senses shared the word until
+// 2026-07-24 and the collision cost a confused exchange ("I asked for 60 epochs
+// and got 6 frames", `msc/build-parameterization-findings-2026-07-24.md` §2).
+// The CLI's `--epochs` is the erosion sense and keeps the word.
+
+/// Canonical chain endpoints and spacing, in **micro-Ga integers** so that every
+/// refinement below is exact. Floating-point construction would be the obvious
+/// way to write this and would silently break memo reuse: each stage's `T_p` is
+/// folded into its store key ( #form-complete-content-addressed-key ), so a
+/// densified chain whose "same" stage differs by one ULP invalidates every
+/// existing epoch-reduction memo instead of hitting it.
+const HOT_END_UGA: i64 = 3_600_000;
+const COOL_END_UGA: i64 = 2_600_000;
+const CANONICAL_STEP_UGA: i64 = 200_000;
+
+/// The canonical Abyssal cooling chain: an ordered sequence of **stages** from
+/// the hot early-Abyssal (near a water-world) through the present-Abyssal anchor
+/// to the cooling late-Abyssal — the stages the probe and the emergence view
+/// walk. Ordered by *time* (increasing t = cooling), so land fraction along it is
+/// the emergence trajectory. Deliberately a short, legible chain, not a fine grid;
+/// [`cooling_stages_refined`] densifies it when a viewer wants more frames.
+pub fn cooling_stages() -> Vec<Time> {
+    cooling_stages_refined(0)
+}
+
+/// The cooling chain refined `refinements` times by **bisection**: each level
+/// halves the spacing, so level $k$ has $5\cdot2^k + 1$ stages at
+/// $0.2/2^k$ Ga apart.
+///
+/// **Every refinement is a superset of every coarser one, exactly.** That is the
+/// property the whole thing turns on ( #form-time-indexed-stage-chains FE(7) and
+/// its Working Note "densification must nest"; the power-of-two subset argument
+/// is Gear–Wells', #detail-seam-precedents FE(5)). Because each stage's `T_p`
+/// rides in its store key, a *non*-nested densification would not refine the
+/// chain — it would silently orphan every memo on it and recompute the world.
+/// The integer grid above makes the nesting bit-exact rather than approximate:
+/// stage $i$ of level $k$ and stage $2i$ of level $k+1$ are the same `f64`.
+pub fn cooling_stages_refined(refinements: u32) -> Vec<Time> {
+    let step = CANONICAL_STEP_UGA >> refinements.min(MAX_REFINEMENTS);
+    let mut out = Vec::new();
+    let mut uga = HOT_END_UGA;
+    while uga >= COOL_END_UGA {
+        out.push(time_at_ga(uga as f64 / 1.0e6));
+        uga -= step;
+    }
+    out
+}
+
+/// Bisection levels before the micro-Ga grid stops dividing evenly (200 000 →
+/// 1 at level 17). Far past any legible frame count; it exists so the shift
+/// above cannot silently produce a zero step.
+const MAX_REFINEMENTS: u32 = 17;
+
+/// How many stages a refinement level yields: $5\cdot2^k + 1$.
+pub fn stage_count(refinements: u32) -> usize {
+    5 * (1usize << refinements.min(MAX_REFINEMENTS)) + 1
+}
+
+/// The cheapest refinement level yielding **at least** `wanted` stages.
+///
+/// Requested counts that are not nested counts round *up* — the caller asking
+/// for 60 frames gets 81, and the CLI says so. Refusing the request or
+/// interpolating to exactly 60 would both cost the nesting property, and the
+/// nesting property is worth more than the round number: it is the difference
+/// between densifying a chain and recomputing the world.
+pub fn refinements_for(wanted: usize) -> u32 {
+    (0..=MAX_REFINEMENTS).find(|&k| stage_count(k) >= wanted).unwrap_or(MAX_REFINEMENTS)
 }
 
 #[cfg(test)]
@@ -112,9 +177,9 @@ mod tests {
         // The trajectory's defining structure (declared `monotonicity`): as the
         // world ages (t increases toward the Holocene), the mantle cools. A
         // failable statement of the curve's shape, over and beyond the window.
-        let epochs = abyssal_epochs();
-        for pair in epochs.windows(2) {
-            assert!(pair[0] < pair[1], "abyssal_epochs must be time-ordered");
+        let stages = cooling_stages();
+        for pair in stages.windows(2) {
+            assert!(pair[0] < pair[1], "cooling_stages must be time-ordered");
             let (hot, cool) = (potential_temp_c(pair[0]), potential_temp_c(pair[1]));
             assert!(cool <= hot, "T_p must not rise as time advances ({hot} → {cool})");
         }
@@ -125,7 +190,7 @@ mod tests {
         // The early-Abyssal end is hotter than the present anchor (thick, light
         // oceanic crust ⇒ shallow basins ⇒ flooding) and never exceeds the
         // declared Hadean ceiling where the oceanic ramp saturates.
-        let hot = potential_temp_c(*abyssal_epochs().first().unwrap());
+        let hot = potential_temp_c(*cooling_stages().first().unwrap());
         assert!(hot > MANTLE_TP_C, "early-Abyssal must be hotter than present ({hot} vs {MANTLE_TP_C})");
         assert!(hot <= TP_HOT_MAX_C, "and not exceed the declared ceiling {TP_HOT_MAX_C}");
     }
@@ -145,5 +210,75 @@ mod tests {
     fn deterministic() {
         let t = time_at_ga(3.1);
         assert_eq!(potential_temp_c(t), potential_temp_c(t));
+    }
+
+    #[test]
+    fn canonical_chain_is_bit_identical_to_the_authored_literals() {
+        // The migration guard. Before 2026-07-24 this chain was written as the
+        // f64 literal array below; every epoch-reduction memo in every existing
+        // store is keyed on `T_p.to_bits()` derived from it. The integer grid
+        // must reproduce those doubles EXACTLY or the rename quietly orphans
+        // every one of them — a cache miss storm that would look like a
+        // performance regression, not like the key change it actually is.
+        let authored: Vec<Time> =
+            [3.6, 3.4, PRESENT_ABYSSAL_GA, 3.0, 2.8, 2.6].iter().map(|&ga| time_at_ga(ga)).collect();
+        let built = cooling_stages();
+        assert_eq!(built.len(), authored.len(), "canonical chain is still six stages");
+        for (b, a) in built.iter().zip(&authored) {
+            assert_eq!(
+                potential_temp_c(*b).to_bits(),
+                potential_temp_c(*a).to_bits(),
+                "T_p bits must match the authored literal — they are in the store key"
+            );
+        }
+    }
+
+    #[test]
+    fn every_refinement_contains_every_coarser_one_exactly() {
+        // The nesting law ( #form-time-indexed-stage-chains FE(7)). Not "close
+        // to": the coarse stages must appear in the fine chain as the SAME f64,
+        // because approximate agreement is a key miss and a key miss is a
+        // recompute of the whole chain.
+        for k in 0..5u32 {
+            let coarse = cooling_stages_refined(k);
+            let fine = cooling_stages_refined(k + 1);
+            assert_eq!(fine.len(), stage_count(k + 1));
+            assert_eq!(coarse.len(), stage_count(k));
+            for (i, c) in coarse.iter().enumerate() {
+                assert_eq!(
+                    potential_temp_c(fine[i * 2]).to_bits(),
+                    potential_temp_c(*c).to_bits(),
+                    "level {k} stage {i} must survive bisection bit-exactly"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn refinement_rounds_a_requested_frame_count_up_never_down() {
+        // "60 frames" is not a nested count; the caller gets 81 and is told.
+        // Rounding DOWN would silently under-deliver the request, which is the
+        // failure the honest-count line in the CLI exists to prevent.
+        assert_eq!(stage_count(0), 6);
+        assert_eq!(stage_count(4), 81);
+        assert_eq!(refinements_for(60), 4, "60 rounds up to the 81-stage level");
+        assert_eq!(refinements_for(6), 0, "an exact nested count refines no further");
+        assert_eq!(refinements_for(1), 0, "below the canonical chain stays canonical");
+        for wanted in [2usize, 6, 7, 11, 12, 40, 81, 82] {
+            assert!(stage_count(refinements_for(wanted)) >= wanted.max(6), "never fewer than asked");
+        }
+    }
+
+    #[test]
+    fn the_present_anchor_survives_every_refinement() {
+        // The anchor is what makes the seed-only world *be* a stage on the
+        // chain; a densification that moved it would fork "present" in two.
+        let present = potential_temp_c(present_abyssal()).to_bits();
+        for k in 0..6u32 {
+            assert!(
+                cooling_stages_refined(k).iter().any(|&t| potential_temp_c(t).to_bits() == present),
+                "present-Abyssal anchor missing from refinement level {k}"
+            );
+        }
     }
 }

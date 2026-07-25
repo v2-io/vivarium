@@ -742,7 +742,7 @@ mod tests {
     }
 
     fn epoch_tps() -> Vec<f64> {
-        crate::mantle_thermal::abyssal_epochs()
+        crate::mantle_thermal::cooling_stages()
             .iter()
             .map(|&t| crate::mantle_thermal::potential_temp_c(t))
             .collect()

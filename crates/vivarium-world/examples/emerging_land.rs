@@ -2,7 +2,7 @@
 //! cooling chain rendered as a from-space ASCII globe sequence.
 //!
 //! Same orthographic projection as `globe_ascii`, but walked across the Abyssal
-//! cooling epochs (`mantle_thermal::abyssal_epochs`). Each frame re-pours the
+//! cooling epochs (`mantle_thermal::cooling_stages`). Each frame re-pours the
 //! ocean against the freeboard the epoch's mantle temperature earns, so you see
 //! the ordinum ladder run: hot water-world → transient stands → growing
 //! cratons. Land is a height ramp; sea is `~`. This is a *view* (core/view
@@ -13,7 +13,7 @@
 //!
 //! Run: `cargo run --release -p vivarium-world --example emerging_land`
 
-use vivarium_world::mantle_thermal::{abyssal_epochs, potential_temp_c, present_abyssal};
+use vivarium_world::mantle_thermal::{cooling_stages, potential_temp_c, present_abyssal};
 use vivarium_world::sea_level::{derived_sea_level_at_tp, tectonic_surface_at_tp};
 use vivarium_world::sphere::CubeCoord;
 
@@ -47,7 +47,7 @@ fn main() {
     );
 
     const RAMP: &[u8] = b".:-=+*#%@";
-    for t in abyssal_epochs() {
+    for t in cooling_stages() {
         let tp = potential_temp_c(t);
         let age_ga = -t.years() / 1.0e9;
         let sea = derived_sea_level_at_tp(seed, tp);

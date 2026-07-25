@@ -459,7 +459,7 @@ pub fn emerged_land_verdict(rec: EmergedLandRecord) -> EmergedLandVerdict {
 //
 // The clauses the static Record named `NotPredicable` because "per cycle"
 // collapsed to per-seed — there was no time axis. The mantle-thermal cooling
-// trajectory (`mantle_thermal::abyssal_epochs`, `#form-isostasy-column` FE(2)/(7))
+// trajectory (`mantle_thermal::cooling_stages`, `#form-isostasy-column` FE(2)/(7))
 // now IS a real time axis, so a *sequence* of Records (hot → cool) can convict
 // the temporal shape of emergence. What it can and cannot earn is set by the
 // honesty tier of the rate law, which is declared **crude (physics Low)**:
@@ -552,13 +552,13 @@ pub fn emerged_land_timing_verdict(records: &[EmergedLandRecord]) -> EmergedLand
     }
 }
 
-/// Build the cooling sequence for `seed` along `mantle_thermal::abyssal_epochs`
+/// Build the cooling sequence for `seed` along `mantle_thermal::cooling_stages`
 /// (reading the live post-ledger chain) and adjudicate its temporal clauses.
 /// Records are recomputed from the (store-backed) epoch surfaces — this verdict
 /// is an instrument, not world-state, so it memoizes nothing itself
 /// (`#form-store-as-save` FE(6): recompute is its representation).
 pub fn emerged_land_timing_verdict_for(seed: u64, level: u8) -> EmergedLandTimingVerdict {
-    let records: Vec<EmergedLandRecord> = mantle_thermal::abyssal_epochs()
+    let records: Vec<EmergedLandRecord> = mantle_thermal::cooling_stages()
         .into_iter()
         .map(|t| emerged_land_record_at_tp(seed, level, mantle_thermal::potential_temp_c(t)))
         .collect();
@@ -738,10 +738,10 @@ mod tests {
         // it starts a near-water-world at the hot early-Abyssal end, and the
         // present-Abyssal epoch equals the live seed-only world exactly. Coarse
         // (level 5) here for speed; the finding is the probe's (level 7).
-        use crate::mantle_thermal::{abyssal_epochs, potential_temp_c, present_abyssal};
+        use crate::mantle_thermal::{cooling_stages, potential_temp_c, present_abyssal};
         const LVL: u8 = 5;
         for seed in [0u64, 1, 7] {
-            let epochs = abyssal_epochs();
+            let epochs = cooling_stages();
             let mut prev = -1.0f64;
             for &t in &epochs {
                 let tp = potential_temp_c(t);

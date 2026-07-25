@@ -32,7 +32,7 @@
 //! **Deep-time playback** (`DECISIONS[craton-nucleation-and-deep-time-playback-
 //! ruled-in-scope]`; the store IS the time machine — `#form-store-as-save` FE(4)):
 //! press **T** to watch the planet age along the mantle-thermal cooling ladder
-//! (`mantle_thermal::abyssal_epochs`) — hot near-water-world → cooling basins →
+//! (`mantle_thermal::cooling_stages`) — hot near-water-world → cooling basins →
 //! emerged cratons. The epoch axis is the LAW's ladder; the view only *selects*
 //! which materialized epoch to observe (`#form-core-view-wall` FE(4): observe-
 //! only, no authored evolution). Each epoch's heavy law values are warmed on a
@@ -75,7 +75,7 @@ use vivarium_world::erosion;
 use vivarium_world::gen;
 use vivarium_world::hydrosphere::Hydrosphere;
 use vivarium_world::lithosphere::MANTLE_TP_C;
-use vivarium_world::mantle_thermal::{abyssal_epochs, potential_temp_c, present_abyssal};
+use vivarium_world::mantle_thermal::{cooling_stages, potential_temp_c, present_abyssal};
 use vivarium_world::sea_level;
 use vivarium_world::planet::Planet;
 use vivarium_world::query::{RegionCensus, World};
@@ -165,7 +165,7 @@ struct BuildReq {
 }
 
 /// A deep-time epoch build request. The epoch axis is the LAW's cooling ladder
-/// (`mantle_thermal::abyssal_epochs`), never a view-invented time — the view
+/// (`mantle_thermal::cooling_stages`), never a view-invented time — the view
 /// only *selects which materialized epoch to observe* (`#form-core-view-wall`
 /// FE(4): observe-only, no authored evolution). `tp` and `sea_m` are the epoch's
 /// warmed law values, passed in so the worker never runs a cold pour on the
@@ -863,7 +863,7 @@ impl Default for GlobeState {
 }
 
 /// Deep-time playback state — the epoch axis is the LAW's cooling ladder
-/// (`mantle_thermal::abyssal_epochs`), so the view only *selects* which
+/// (`mantle_thermal::cooling_stages`), so the view only *selects* which
 /// materialized epoch to observe (`#form-core-view-wall` FE(4): observe-only, no
 /// authored evolution). Each epoch's heavy law values (`derived_sea_level_at_tp`
 /// and the ledger integrals it warms) are computed on a background thread; the
@@ -872,7 +872,7 @@ impl Default for GlobeState {
 #[derive(Resource)]
 struct DeepTime {
     /// Ages (Ga before Holocene origin), one per epoch, hot → cool along the
-    /// emergence direction (`abyssal_epochs` is time-ordered: increasing t).
+    /// emergence direction (`cooling_stages` is time-ordered: increasing t).
     ages_ga: Vec<f32>,
     /// Mantle potential temperature (°C) per epoch — the pure law read.
     tps: Vec<f64>,
@@ -993,7 +993,7 @@ fn main() {
 /// into playback lands instantly on the world we know), then hot → cool so the
 /// emergence sequence's opening is ready first.
 fn build_deep_time(world_dir: PathBuf, seed: u64) -> DeepTime {
-    let epochs: Vec<WorldTime> = abyssal_epochs();
+    let epochs: Vec<WorldTime> = cooling_stages();
     let present = present_abyssal();
     let ages_ga: Vec<f32> = epochs.iter().map(|t| (-t.years() / 1.0e9) as f32).collect();
     let tps: Vec<f64> = epochs.iter().map(|&t| potential_temp_c(t)).collect();
@@ -1622,7 +1622,7 @@ fn hud_update(
                 dt.ages_ga[idx], dt.tps[idx],
             )
         };
-        let honesty = "epoch surface = pure isostatic tectonic surface at this mantle T_p (no fluvial tiles -- present-only); discrete LAW epochs (mantle_thermal::abyssal_epochs), no cosmetic interpolation";
+        let honesty = "epoch surface = pure isostatic tectonic surface at this mantle T_p (no fluvial tiles -- present-only); discrete LAW epochs (mantle_thermal::cooling_stages), no cosmetic interpolation";
         let timeline = format!(
             "epoch {}/{}  warmed {}/{}   {}   Ga <- earlier | later ->",
             idx + 1,
