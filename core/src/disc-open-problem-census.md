@@ -13,6 +13,10 @@ depends:
   - obs-coarse-only-closure-nogo
   - obs-routing-curl-spiral
   - form-builder-admission
+  - form-time-indexed-stage-chains
+  - form-complete-content-addressed-key
+  - form-core-view-wall
+  - obs-cube-locked-kernel-bias
 ---
 
 # Open-problem census (derived from core)
@@ -30,6 +34,7 @@ A present-tense list of **named open work** derived from `core/OUTLINE.md` gaps 
    - Full Terrestris phase-content segments; kingdoms/orders/ordinum segment homes  
    - **Run-modes carve** (thin)  
    - Full builder daemon (beacon / demand spool)  
+   - **The operated instrument** — §III is titled "Runtime, machine, and CLI" and owns no CLI/observability row: build parameterization sits on the global command rather than the manifest ( #form-core-view-wall FE(4)), `watchpoint` has no LEXICON entry, and "legible, steerable time regimes" (in-world clock vs wall clock, sim rate vs framerate) has no home  
    - Hydrosphere / climate / erosion / water field nomos segments beyond box + sea-level  
 
 3. **Owned open research / compliance (segments already name them).**
@@ -40,13 +45,14 @@ A present-tense list of **named open work** derived from `core/OUTLINE.md` gaps 
    - **Nomos box earning procedures** — fields live on `NomosDecl` and structurally tested; per-box content-earning procedures beyond shape remain open ( #sketch-nomos-declaration-boxes )  
    - **Leaf-only vs independent coarse tier** — named tension face-flux / three-scoped  
    - **Grid reopening conditions** — stand watch on #form-grid-equiangular-staggered  
-   - **Builder daemon: never-block residual** — view-side first-light fix landed (coarse provisional sea, self-poking refine); the **store-side half is still owed** — memoizing the derived L8 sea at `vivarium build` time so no per-launch pour is needed ( #form-builder-admission Known-incomplete (5))  
+   - **Recorded convergence-$\varepsilon$, and criterion-gated kernels** — #form-time-indexed-stage-chains has the claim home; nothing in the tree records the residual a stage reached, and no kernel runs to a declared tolerance rather than an authored count. Three `ASSUMPTIONS.md` rows sit **arbitrary** naming this as their cure. First step named there: water, which carries the most arbitrary constant and dominates build cost  
+   - **Source-digest granularity: closed as a measured no-go, listed so it is not re-opened blind** — per-nomos attribution under-keys on present code structure, and even the compiler-safe form buys 0% on the most-edited files ( #form-complete-content-addressed-key Known-incomplete (3)). The live constraint is module **separation**, not attribution derivability  
 
 4. **Not ranked.** No "the one open problem." No import of pre-core BREAK lists as current census.
 
 ## Epistemic Status
 
-**Max attainable: discussion-grade** as a maintained index. **Currently `discussion-grade`.** Stage `draft`. Derives only from OUTLINE + segment open language at write time (2026-07-24, post the mantle-thermal / rock-mass-ledger / mean-pin-retirement / router-pricing session); re-run the derivation after major peels.
+**Max attainable: discussion-grade** as a maintained index. **Currently `discussion-grade`.** Stage `draft`. Derives only from OUTLINE + segment open language at write time (2026-07-24, post the mantle-thermal / rock-mass-ledger / mean-pin-retirement / router-pricing session); re-run the derivation after major peels. Refreshed 2026-07-24 (evening) after the harness reconciliation: the never-block store-side row closed, the operated-instrument gap and the recorded-$\varepsilon$ work added, source-digest granularity moved from open to measured no-go.
 
 ## Discussion
 

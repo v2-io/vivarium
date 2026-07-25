@@ -34,7 +34,7 @@ Convergence under a finite window is not decidable to zero residual. Realized fr
 
 **Currently `robust-qualitative`:** Realized ⟂ Lawful deconflation is Joseph-settled (2026-07-06 participation ontology; LEXICON realized-kingdom / lawful-kingdom carve). The *formal* "convergence is undecidable ⇒ structural unLawfulness" packaging is agent-derived corroboration — do not invent a Joseph decision slug that does not exist. Full lifecycle pipeline and sibling BREAKs: #detail-vivium-lifecycle . Stage `draft`.
 
-**Not claimed:** a specific $\varepsilon$ schema in the store (component E / stage-chains still unbuilt); that Lawful certification is *logically* impossible in every possible future method — only that *finite freeze-and-tag under current architecture* cannot deliver zero residual as a clean event.
+**Not claimed:** a specific $\varepsilon$ schema in the store — the mechanism that would make FE(3)'s budget *data* rather than doctrine now has a claim home at #form-time-indexed-stage-chains (a stage records the residual it reached), but nothing in the tree records one yet; that Lawful certification is *logically* impossible in every possible future method — only that *finite freeze-and-tag under current architecture* cannot deliver zero residual as a clean event.
 
 ## Discussion
 
