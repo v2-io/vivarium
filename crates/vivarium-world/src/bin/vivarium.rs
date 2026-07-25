@@ -13,11 +13,13 @@
 //! on a world the caller never named; the announce line is what stops "optional"
 //! from meaning "unknowable."
 //!
-//! **Demand comes from the manifest** ( #form-manifest-prescribes-vivium FE(2) ):
+//! **Demand lives in the manifest** ( #form-manifest-prescribes-vivium FE(2) ):
 //! `order`, `target_phase`, `level`, `frames`, `erosion_epochs`, `water_steps`.
-//! Flags override it for a single run and every override is named in the build
-//! log. Demand is not folded into any key — it changes what gets built and in
-//! what order, never what a built artifact contains.
+//! Build flags SET it and it sticks, and `vivarium demand` shows or sets it
+//! without building. There is no override layer: an earlier design let flags win
+//! for one run, which meant `--frames 60` materialized sixty stages while the
+//! views -- which read the manifest -- went on showing six. Persisting is free
+//! because demand is in no key: writing it invalidates not one memo.
 //!
 //! - `vivarium new [dir] [name]` — individuate a world: write its manifest
 //!   (fresh seed unless the dir already has one — identity is never re-minted).
@@ -64,38 +66,94 @@ const TILE_NX: usize = 64;
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    // `-h` anywhere prints usage and stops — including after a subcommand, so
+    // `vivarium build -h` answers rather than building a world.
+    if args.iter().any(|a| a == "-h" || a == "--help") || args.is_empty() {
+        print!("{}", usage());
+        std::process::exit(if args.is_empty() { 2 } else { 0 });
+    }
     let code = match args.first().map(String::as_str) {
         Some("new") => cmd_new(&args[1..]),
         Some("build") => cmd_build(&args[1..]),
         Some("status") => cmd_status(&args[1..]),
         Some("info") => cmd_info(&args[1..]),
         Some("watch") => cmd_watch(&args[1..]),
+        Some("demand") => cmd_demand(&args[1..]),
         Some("attach") => cmd_attach(&args[1..]),
         _ => {
-            eprintln!("usage: vivarium <new|build|watch|status|info|attach> [world-dir] [options]");
-            eprintln!("  (world-dir optional: defaults to $VIVARIUM_WORLD, else ~/.cache/vivarium/globe-world");
-            eprintln!("   — the same world vivarium-globe opens, so status/build/globe agree by default)");
-            eprintln!("  new [dir] [name]                    individuate a world (manifest + seed)");
-            eprintln!("  build [dir] [--level L] [--epochs E] [--frames N] [--allow-unmet]");
-            eprintln!("                                       builder v0: whole-world sweep at L (default 7)");
-            eprintln!("                                       then erosion at E epochs (default 40; 0 = skip)");
-            eprintln!("                                       --frames N: deep-time cooling stages to materialize");
-            eprintln!("                                         (default 6; rounds UP to a nested count — see below)");
-            eprintln!("                                       refuses erosion/water while flux needs are unmet");
-            eprintln!("                                       unless --allow-unmet (provisional; still logs the waiver)");
-            eprintln!("  watch [dir] [--replay] [--speed MS] [--frames N] [--width W] [--lon0 DEG]");
-            eprintln!("                                       the build reader: globe repainted as roots land.");
-            eprintln!("                                       live by default (follows a running builder);");
-            eprintln!("                                       --replay walks the store's landing history instead.");
-            eprintln!("                                       ONE mechanism — replay is the same reader, done landing.");
-            eprintln!("  status [dir]                        fidelity pyramid + flux/requisite audit");
-            eprintln!("  info [dir] [--width W] [--lon0 DEG] [--color|--no-color]");
-            eprintln!("                                       whole-sphere Hammer-oval globe, coloured by build-state");
-            eprintln!("  attach [dir]                        follow a running build's log");
+            eprint!("{}", usage());
             2
         }
     };
     std::process::exit(code);
+}
+
+/// Usage, written to be read start-to-finish once: what a world *is* here, how
+/// one is chosen, where the settings live, and only then the subcommands.
+fn usage() -> String {
+    "\
+vivarium — build a world, watch it happen, watch it again.
+
+  WHICH WORLD?  Every command takes an optional [dir] and otherwise falls back to
+                $VIVARIUM_WORLD, then to ~/.cache/vivarium/globe-world — the same
+                world vivarium-globe and vivarium-worldview open. Every command
+                prints which one it resolved and why, so \"optional\" never means
+                \"unknowable\".
+
+  WHAT IS IT BUILDING?  The manifest holds this vivium's DEMAND (level, frames,
+                erosion_epochs, …). Build flags SET it and it sticks — every view
+                reads the same manifest, so what you type is what the globe shows.
+                `vivarium demand` shows it, and sets it without building.
+
+  TWO KINDS OF SETTING.  Identity (seed, format) is in every memo key: changing it
+                forks a different world, so no command here edits it. Demand is in
+                no key at all: change it freely, mid-build, invalidating nothing.
+
+COMMANDS
+
+  new [dir] [name]              individuate a world — write its manifest + mint a
+                                seed (never re-minted if one exists)
+
+  demand [dir] [k=v …]          show this vivium's prescription, or set it:
+                                  vivarium demand
+                                  vivarium demand frames=60 level=9
+                                fields: order target_phase level frames
+                                        erosion_epochs water_steps
+
+  build [dir] [--level L] [--epochs E] [--frames N] [--allow-unmet]
+                                sweep all six cube faces at L through initial
+                                topography, then erode and settle those tiles
+                                (--epochs 0 skips both), then materialize the
+                                deep-time cooling stages. Flags SET the manifest
+                                and stick; demand is in no key, so nothing is
+                                invalidated and every view sees the change.
+                                Refuses erosion/water while flux needs are unmet,
+                                unless --allow-unmet (writes provisional roots,
+                                logs the waiver, and status marks them).
+                                Re-running attaches to a live builder.
+
+  watch [dir] [--replay] [--speed MS] [--frames N] [--width W] [--lon0 DEG]
+                                the build reader — the globe repainted as roots
+                                land. Live follows a running builder; --replay
+                                walks the store's landing history instead. One
+                                mechanism: replay is the same reader, done landing.
+                                Replay orders by root LANDING time — build history,
+                                not world-time.
+
+  status [dir]                  demand + fidelity pyramid + water budget + flux
+                                audit + ordinum maturity
+  info [dir] [--width W] [--lon0 DEG] [--color|--no-color]
+                                one-shot whole-sphere globe, coloured by build state
+  attach [dir]                  follow a running build's log (Ctrl-C detaches;
+                                the builder is unaffected)
+
+EXAMPLE
+
+  vivarium build --level 9 --frames 60   # flags stick; the globe sees them
+  vivarium watch                      # in another — see it happen
+  vivarium watch --replay             # afterwards — see it again
+"
+    .to_string()
 }
 
 /// Non-flag tokens in order (world dir, optional name, …), skipping values that
@@ -118,10 +176,25 @@ fn positionals(rest: &[String]) -> Vec<&str> {
             i += 1; // bare switch (--allow-unmet, --color, …)
             continue;
         }
-        out.push(a);
+        // `frames=60` is an assignment for `demand`, not a world directory.
+        // Without this, the first assignment is taken as the path and the command
+        // reports "no manifest" on a directory that does not exist. Matched
+        // narrowly (a lowercase identifier before the `=`) so a real path
+        // containing `=` is still a path.
+        if !is_assignment(a) {
+            out.push(a);
+        }
         i += 1;
     }
     out
+}
+
+/// `key=value`, where key is a bare lowercase identifier.
+fn is_assignment(tok: &str) -> bool {
+    match tok.split_once('=') {
+        Some((k, _)) => !k.is_empty() && k.chars().all(|c| c.is_ascii_lowercase() || c == '_'),
+        None => false,
+    }
 }
 
 /// Resolve which world to act on, matching the globe's convention so
@@ -291,25 +364,41 @@ fn cmd_build(rest: &[String]) -> i32 {
         }
     };
 
-    // The manifest prescribes this vivium ( #form-manifest-prescribes-vivium
-    // FE(2) ); a flag is a one-run OVERRIDE of that prescription, not the source
-    // of truth. So demand is read from the manifest first and flags are layered
-    // on top — and every override is named in the build log, because a build that
-    // silently differs from what the world says it is is exactly the confusion
-    // the manifest exists to prevent.
-    let d = &spec.demand;
-    let level = flag(rest, "--level").map(|l| l.min(20) as u8).unwrap_or(d.level);
-    let epochs = flag(rest, "--epochs").unwrap_or(d.erosion_epochs);
-    let frames = flag(rest, "--frames").unwrap_or(d.frames);
-    let overrides: Vec<String> = [
-        ("level", level as u32, d.level as u32),
-        ("erosion_epochs", epochs, d.erosion_epochs),
-        ("frames", frames, d.frames),
+    // The manifest holds this vivium's demand ( #form-manifest-prescribes-vivium
+    // FE(2) ); a flag SETS it. There is no override layer, deliberately: an
+    // earlier build here read the manifest and let flags win for one run only,
+    // which meant `--frames 60` materialized sixty stages while the views — which
+    // read the manifest — went on showing six. A setting the user typed and the
+    // viewer ignores is worse than no setting. Persisting costs nothing, because
+    // demand is in no key: writing it invalidates not one memo (FE(5)).
+    let mut spec = spec;
+    let before = spec.demand.clone();
+    if let Some(l) = flag(rest, "--level") {
+        spec.demand.level = l.min(20) as u8;
+    }
+    if let Some(e) = flag(rest, "--epochs") {
+        spec.demand.erosion_epochs = e;
+    }
+    if let Some(f) = flag(rest, "--frames") {
+        spec.demand.frames = f;
+    }
+    let changed: Vec<String> = [
+        ("level", spec.demand.level as u32, before.level as u32),
+        ("erosion_epochs", spec.demand.erosion_epochs, before.erosion_epochs),
+        ("frames", spec.demand.frames, before.frames),
     ]
     .iter()
-    .filter(|(_, got, want)| got != want)
-    .map(|(n, got, want)| format!("{n} {want}→{got}"))
+    .filter(|(_, now, was)| now != was)
+    .map(|(n, now, was)| format!("{n} {was}→{now}"))
     .collect();
+    if !changed.is_empty() {
+        if let Err(e) = spec.save(&dir) {
+            eprintln!("error writing manifest: {e}");
+            return 1;
+        }
+    }
+    let (level, epochs, frames) =
+        (spec.demand.level, spec.demand.erosion_epochs, spec.demand.frames);
 
     // Single-builder discipline: hold builder.lock; if a LIVE builder holds it,
     // attach instead of failing (Joseph's preferred UX). A stale lock (dead pid)
@@ -361,13 +450,8 @@ fn cmd_build(rest: &[String]) -> i32 {
         TILE_NX,
         if allow_unmet { " (--allow-unmet)" } else { "" }
     ));
-    if overrides.is_empty() {
-        out.line("demand read from the manifest; no flag overrides in effect");
-    } else {
-        out.line(&format!(
-            "FLAG OVERRIDES this run (manifest unchanged — edit `manifest` to make them stick): {}",
-            overrides.join(", ")
-        ));
+    if !changed.is_empty() {
+        out.line(&format!("manifest updated: {} — the globe and every view see this too", changed.join(", ")));
     }
 
     // The whole-world degenerate beacon: every face, tiled at TILE_NX.
@@ -853,6 +937,90 @@ fn builder_status(dir: &Path) -> Option<String> {
         get("done").unwrap_or_else(|| "?".into()),
         get("total").unwrap_or_else(|| "?".into())
     ))
+}
+
+/// `vivarium demand [key=value …]` — show this vivium's prescription, or change it.
+///
+/// This exists because the manifest gained a read path before it gained a write
+/// one: `build --frames 60` used to override for a single run and leave the
+/// manifest alone, so the *viewer* — which reads the manifest — kept showing six
+/// frames no matter what was typed at the builder, and the only way to change it
+/// was to hand-edit a file nobody had been told about. Build flags now persist,
+/// so this command is for reading the prescription, or changing it without
+/// starting a build.
+fn cmd_demand(rest: &[String]) -> i32 {
+    let dir = announce_world(rest);
+    let mut spec = match WorldSpec::load(&dir) {
+        Ok(Some(s)) => s,
+        Ok(None) => {
+            println!("(no manifest — not yet a vivium; `vivarium new` first)");
+            return 0;
+        }
+        Err(e) => {
+            eprintln!("manifest error: {e}");
+            return 1;
+        }
+    };
+    // Read assignments from the raw args, NOT from `positionals` — that helper
+    // now filters `k=v` out precisely so it is never mistaken for a world dir.
+    let assignments: Vec<&str> =
+        rest.iter().map(String::as_str).filter(|a| is_assignment(a)).collect();
+
+    for a in &assignments {
+        let (k, v) = a.split_once('=').expect("filtered on '='");
+        let d = &mut spec.demand;
+        let num = |v: &str| v.parse::<u32>();
+        let ok = match k {
+            "order" => {
+                d.order = v.to_string();
+                true
+            }
+            "target_phase" => num(v).map(|n| d.target_phase = n).is_ok(),
+            "level" => num(v).map(|n| d.level = n.min(20) as u8).is_ok(),
+            "frames" => num(v).map(|n| d.frames = n).is_ok(),
+            "erosion_epochs" => num(v).map(|n| d.erosion_epochs = n).is_ok(),
+            "water_steps" => num(v).map(|n| d.water_steps = n).is_ok(),
+            other => {
+                eprintln!(
+                    "error: `{other}` is not a demand field.\n  \
+                     fields: order target_phase level frames erosion_epochs water_steps\n  \
+                     (identity — seed, format — is deliberately NOT settable: changing it would fork a different world)"
+                );
+                return 2;
+            }
+        };
+        if !ok {
+            eprintln!("error: `{v}` is not a number for `{k}`");
+            return 2;
+        }
+    }
+
+    if !assignments.is_empty() {
+        if let Err(e) = spec.save(&dir) {
+            eprintln!("error writing manifest: {e}");
+            return 1;
+        }
+    }
+
+    let d = &spec.demand;
+    println!("vivium \"{}\" — seed {}", spec.name, spec.seed);
+    println!("\ndemand — what THIS vivium asks for (never keyed; changing it invalidates no memo):");
+    println!("  order           {}", d.order);
+    println!("  target_phase    {}", d.target_phase);
+    println!("  level           {}   cube-face subdivision the builder sweeps", d.level);
+    println!(
+        "  frames          {}   deep-time cooling stages ({} after rounding up to a nested count)",
+        d.frames,
+        mantle_thermal::stage_count(mantle_thermal::refinements_for(d.frames as usize))
+    );
+    println!("  erosion_epochs  {}   arbitrary — see ASSUMPTIONS.md 'erosion run length'", d.erosion_epochs);
+    println!("  water_steps     {}   arbitrary — see ASSUMPTIONS.md 'water fill steps'", d.water_steps);
+    if assignments.is_empty() {
+        println!("\nset any of them:  vivarium demand frames=60 level=9");
+    } else {
+        println!("\nsaved. `vivarium build` now uses these; the globe's T-key playback reads `frames`.");
+    }
+    0
 }
 
 fn cmd_attach(rest: &[String]) -> i32 {
