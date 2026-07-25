@@ -52,6 +52,7 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | scope | Project Critical | [#scope-asf-reading-gates](src/scope-asf-reading-gates.md) | ASF familiarity gates A/B/C; Level C hard-gates agent-seam work | draft |
 | postulate | Project Critical | [#post-determinism-as-ontology](src/post-determinism-as-ontology.md) | Determinism as ontology; fated noise | draft |
 | formulation | Project Critical | [#form-core-view-wall](src/form-core-view-wall.md) | Core / view wall; views observe only | draft |
+| normative | Project Critical | [#norm-no-depiction-without-referent](src/norm-no-depiction-without-referent.md) | Nothing depicted without a world referent; the viewer's eye is an instrument to keep calibrated | draft |
 | postulate | Project Critical | [#post-represent-by-consequence](src/post-represent-by-consequence.md) | Represent by consequence | draft |
 | formulation | Project Critical | [#form-fidelity-invariant](src/form-fidelity-invariant.md) | Fidelity is lazy; materializations prove the macro with bounded deficiencies | draft |
 | formulation | Model | [#form-reductionist-fallback-cases](src/form-reductionist-fallback-cases.md) | Three reasons to leave pure reductionism; case C needs regime probes first | draft |
