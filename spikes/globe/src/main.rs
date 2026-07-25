@@ -75,7 +75,7 @@ use vivarium_world::erosion;
 use vivarium_world::gen;
 use vivarium_world::hydrosphere::Hydrosphere;
 use vivarium_world::lithosphere::MANTLE_TP_C;
-use vivarium_world::mantle_thermal::{cooling_stages, potential_temp_c, present_abyssal};
+use vivarium_world::mantle_thermal::{self, potential_temp_c, present_abyssal};
 use vivarium_world::sea_level;
 use vivarium_world::planet::Planet;
 use vivarium_world::query::{RegionCensus, World};
@@ -993,7 +993,20 @@ fn main() {
 /// into playback lands instantly on the world we know), then hot → cool so the
 /// emergence sequence's opening is ready first.
 fn build_deep_time(world_dir: PathBuf, seed: u64) -> DeepTime {
-    let epochs: Vec<WorldTime> = cooling_stages();
+    // Playback density is this vivium's DEMAND, read from the manifest
+    // ( #form-manifest-prescribes-vivium FE(2) ) — the same `frames` the builder
+    // materialized, so the viewer walks the chain that is actually in the store
+    // rather than a canonical six it happens to share. Refinement nests, so a
+    // world built at a coarser density still plays back every stage it has
+    // ( #form-time-indexed-stage-chains FE(8) ); stages beyond what the builder
+    // materialized simply warm on demand like any other cold epoch.
+    let frames = WorldSpec::load(&world_dir)
+        .ok()
+        .flatten()
+        .map(|s| s.demand.frames)
+        .unwrap_or(6);
+    let epochs: Vec<WorldTime> =
+        mantle_thermal::cooling_stages_refined(mantle_thermal::refinements_for(frames as usize));
     let present = present_abyssal();
     let ages_ga: Vec<f32> = epochs.iter().map(|t| (-t.years() / 1.0e9) as f32).collect();
     let tps: Vec<f64> = epochs.iter().map(|&t| potential_temp_c(t)).collect();
