@@ -109,8 +109,8 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | detail | Project | [#detail-vivium-lifecycle](src/detail-vivium-lifecycle.md) | Pipeline stages, capability ladder, BREAK-1/3/4/5 + doctrine | draft |
 | | | | *(#gap) Run-modes carve (thin: LEXICON open referents + root isolation; no fat enum)* | missing |
 | | | | *(#gap) Builder daemon **implementation** (design owned above; not shipped)* | missing |
-| formulation | Machine Critical | [#form-time-indexed-stage-chains](src/form-time-indexed-stage-chains.md) | A settle sequence is addressable memos carrying a time-index, each recording its convergence-$\varepsilon$; replay and live-watching are one mechanism | draft |
-| | | | *(#gap) **The operated instrument** — this section is titled "Runtime, machine, and CLI" and owns no CLI/observability row. Build parameterization lives on the global command instead of the manifest ( #form-core-view-wall FE(4)); `vivarium status` / `info` legibility, watchpoints (no LEXICON entry), and "legible, steerable time regimes" (in-world clock vs wall clock, sim rate vs framerate — Joseph 2026-07-02) have no home* | missing |
+| formulation | Machine Critical | [#form-time-indexed-stage-chains](src/form-time-indexed-stage-chains.md) | A settle sequence is addressable memos carrying a time-index, each recording its convergence-$\varepsilon$; replay and live-watching are one mechanism (poller and interior census built) | draft |
+| | | | *(#gap) **The operated instrument**, narrowed — the reader half is built (`vivarium watch`, live + replay, owned by #form-time-indexed-stage-chains FE(5)). Still homeless: per-nomos convergence params living on the global command instead of the NomosDecl+manifest ( #form-core-view-wall FE(4); `msc/build-parameterization-findings-2026-07-24.md` items 2/4), watchpoints (no LEXICON entry), and "legible, steerable time regimes" (in-world clock vs wall clock, sim rate vs framerate — Joseph 2026-07-02)* | missing |
 
 ---
 

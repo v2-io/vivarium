@@ -119,7 +119,7 @@ pub fn cooling_stages() -> Vec<Time> {
 /// $0.2/2^k$ Ga apart.
 ///
 /// **Every refinement is a superset of every coarser one, exactly.** That is the
-/// property the whole thing turns on ( #form-time-indexed-stage-chains FE(7) and
+/// property the whole thing turns on ( #form-time-indexed-stage-chains FE(8) and
 /// its Working Note "densification must nest"; the power-of-two subset argument
 /// is Gear–Wells', #detail-seam-precedents FE(5)). Because each stage's `T_p`
 /// rides in its store key, a *non*-nested densification would not refine the
@@ -235,7 +235,7 @@ mod tests {
 
     #[test]
     fn every_refinement_contains_every_coarser_one_exactly() {
-        // The nesting law ( #form-time-indexed-stage-chains FE(7)). Not "close
+        // The nesting law ( #form-time-indexed-stage-chains FE(8)). Not "close
         // to": the coarse stages must appear in the fine chain as the SAME f64,
         // because approximate agreement is a key miss and a key miss is a
         // recompute of the whole chain.

@@ -382,7 +382,7 @@ fn cmd_build(rest: &[String]) -> i32 {
     // `--frames N` sets how densely the chain is sampled — the one knob that
     // makes deep-time playback watchable at more than six frames. It refines by
     // BISECTION, so every coarser chain is a subset and every reduction already
-    // in the store still hits ( #form-time-indexed-stage-chains FE(7)); asking
+    // in the store still hits ( #form-time-indexed-stage-chains FE(8)); asking
     // for a non-nested count rounds up, and the log says so rather than quietly
     // giving you a different number than you asked for.
     world.set_provisional_writes(false);
