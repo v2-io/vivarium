@@ -6,20 +6,17 @@
 # something has gone wrong.
 [workspace]
 resolver = "2"
-# vivarium-world (frame) + vivarium-core (legacy port source) + views.
-# Views: spikes/{globe,worldview} — both SPIKES, both awaiting the principled
-# explorer that replaces them. Superseded views and engine spikes: archive/ — see
-# spikes/FINDINGS.md. Claim outline: core/OUTLINE.md.
-members = [
-    "crates/vivarium-core",
-    "crates/vivarium-world",
-    "crates/vivarium-explore",
-    "spikes/worldview",
-    "spikes/globe",
-]
+# vivarium-world (frame) + vivarium-core (legacy port source) + the view.
+# The view is now ONE crate, `vivarium-explore` — the principled explorer the two
+# view spikes were awaiting. Both were retired to archive/ on 2026-07-24
+# (`globe-spike`, `worldview-spike`); their meshing, epoch playback and honesty
+# HUD are mined into the explorer, their wall violations are not. Superseded
+# views and engine spikes: archive/ — see spikes/FINDINGS.md.
+# Claim outline: core/OUTLINE.md.
+members = ["crates/vivarium-core", "crates/vivarium-world", "crates/vivarium-explore"]
 # Everything under archive/ is out of the build. (Excluded so cargo never tries to
 # resolve their `workspace = true` inheritances.)
-exclude = ["archive/slabs", "archive/vivarium-app", "archive/godot-voxel", "archive/iso-tiles", "archive/vivarium-godot", "archive/bevy-voxel", "archive/bevy-iso", "archive/iso-voxels", "archive/topdown", "archive/tilemap"]
+exclude = ["archive/globe-spike", "archive/worldview-spike", "archive/slabs", "archive/vivarium-app", "archive/godot-voxel", "archive/iso-tiles", "archive/vivarium-godot", "archive/bevy-voxel", "archive/bevy-iso", "archive/iso-voxels", "archive/topdown", "archive/tilemap"]
 
 [workspace.package]
 edition = "2021"

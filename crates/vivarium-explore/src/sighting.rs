@@ -86,12 +86,17 @@ pub struct StagePosition {
 
 /// Write a sighting. Returns the markdown path (the screenshot lands beside it,
 /// same stem, `.png`), or an error string fit to show on the HUD.
-pub fn write(frame: &Frame, v: &Vantage, unmodelled: &[String]) -> Result<PathBuf, String> {
+pub fn write(
+    frame: &Frame,
+    v: &Vantage,
+    unmodelled: &[String],
+    depiction: &[String],
+) -> Result<PathBuf, String> {
     let dir = sightings_dir(&v.world_dir);
     std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     let stamp = stamp();
     let path = dir.join(format!("sighting-{stamp}.md"));
-    std::fs::write(&path, body(frame, v, unmodelled, &stamp))
+    std::fs::write(&path, body(frame, v, unmodelled, depiction, &stamp))
         .map_err(|e| format!("{}: {e}", path.display()))?;
     Ok(path)
 }
@@ -114,7 +119,13 @@ fn stamp() -> String {
     format!("{s}")
 }
 
-fn body(frame: &Frame, v: &Vantage, unmodelled: &[String], stamp: &str) -> String {
+fn body(
+    frame: &Frame,
+    v: &Vantage,
+    unmodelled: &[String],
+    depiction: &[String],
+    stamp: &str,
+) -> String {
     use std::fmt::Write as _;
     let f = &frame.facts;
     let mut s = String::new();
@@ -264,6 +275,20 @@ fn body(frame: &Frame, v: &Vantage, unmodelled: &[String], stamp: &str) -> Strin
     let _ = writeln!(s, "## Not modelled at all (so the eye is not chasing an absence)");
     let _ = writeln!(s);
     for line in unmodelled {
+        let _ = writeln!(s, "- {line}");
+    }
+    let _ = writeln!(s);
+
+    let _ = writeln!(s, "## On screen without a world referent");
+    let _ = writeln!(s);
+    let _ = writeln!(
+        s,
+        "Every declared unreal affordance in the frame ( #norm-no-depiction-without-referent ). \
+         Read this before trusting a shape: if what your eye objected to is on this list, the \
+         objection is to the view, not to the world."
+    );
+    let _ = writeln!(s);
+    for line in depiction {
         let _ = writeln!(s, "- {line}");
     }
     let _ = writeln!(s);

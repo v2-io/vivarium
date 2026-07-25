@@ -85,7 +85,7 @@ impl CubeCoord {
     /// `tan(π/4) = 0.99999…`), so the winner differs per approach direction.
     /// Consumers must never sample *on* an edge — sample at **cell centers**
     /// (which are never on edges) and use ghost/halo cells across the boundary
-    /// (the idiom documented in `spikes/globe`'s `cell_value`).
+    /// (the idiom documented in `vivarium-explore`'s `mesh::cell_value`).
     pub fn from_unit(d: [f64; 3]) -> Self {
         let [x, y, z] = d;
         let (ax, ay, az) = (x.abs(), y.abs(), z.abs());

@@ -23,17 +23,19 @@ Big-picture residual / ice vs segment intuition (not law): [`CONSOLIDATION-STATU
 
 ## Run (instruments, not canon)
 
+**`vivarium explore` is the instrument to reach for first.** It is not a display of results: it exists so that a trained eye can catch physics that is missing or behaving unnaturally, which is one of this project's fastest detectors ( #norm-no-depiction-without-referent FE(2) ). It says on screen what made each landform, at what fidelity, whether it is provisional, and — in a block nothing else carries — what this world does **not** model, so the eye is not chasing an absence. Press `C` on anything that looks wrong and it writes a *sighting*: everything true at that instant plus a screenshot, which is what turns "that looked wrong" into something a probe can be written against.
+
 **Install once — then they are just commands, from any directory:**
 
 ```bash
-bin/install          # vivarium, vivarium-globe, vivarium-worldview → ~/.cargo/bin
+bin/install          # vivarium + vivarium-explore → ~/.cargo/bin
                      # (bin/install vivarium for just the CLI — no bevy, seconds)
 ```
 
 ```bash
 vivarium build &                 # build in the background
-vivarium-globe                   # store-backed planet (observe-only); T = deep-time playback
-vivarium-worldview               # first-person store surface (observe-only)
+vivarium explore                 # the 3D explorer — TAB paint · T deep time · V replay · C sighting
+vivarium watch                   # the same instrument in the terminal, as it builds
 vivarium status                  # what exists, at what fidelity
 vivarium -h                      # everything else
 ```
@@ -44,9 +46,9 @@ Re-run `bin/install` after changing the code. Working *on* the CLI, `bin/vivariu
 cargo test -p vivarium-world --lib
 ```
 
-**Which world?** Every command prints the world directory it resolved and *why* — an explicit argument, `$VIVARIUM_WORLD`, or the shared default `~/.cache/vivarium/globe-world` (the same world the globe and worldview open). The directory argument is optional everywhere; the announce line is what keeps "optional" from meaning "unknowable."
+**Which world?** Every command prints the world directory it resolved and *why* — an explicit argument, `$VIVARIUM_WORLD`, or the shared default `~/.cache/vivarium/globe-world` (the same world the explorer opens). The directory argument is optional everywhere; the announce line is what keeps "optional" from meaning "unknowable."
 
-**What is it building?** The **manifest** carries this vivium's demand — `order`, `target_phase`, `level`, `frames`, `erosion_epochs`, `water_steps` ( #form-manifest-prescribes-vivium FE(2) ). `vivarium demand` shows it; `vivarium demand frames=60 level=9` sets it; build flags set it too and stick. Demand is never folded into a key, so changing it invalidates nothing and every view — the globe included — sees the same numbers.
+**What is it building?** The **manifest** carries this vivium's demand — `order`, `target_phase`, `level`, `frames`, `erosion_epochs`, `water_steps` ( #form-manifest-prescribes-vivium FE(2) ). `vivarium demand` shows it; `vivarium demand frames=60 level=9` sets it; build flags set it too and stick. Demand is never folded into a key, so changing it invalidates nothing and every view — the explorer included — sees the same numbers.
 
 **Build a world, and watch it happen:**
 
@@ -56,7 +58,7 @@ vivarium new "$VIVARIUM_WORLD" first-light
 # emerged-land flux is still unmet — waive for provisional materialization:
 vivarium build --level 6 --epochs 20 --allow-unmet
 vivarium status                   # pyramid + provisional column + this world's demand
-vivarium-globe                     # spin the built surface
+vivarium explore                  # spin the built surface, and see what made it
 ```
 
 **Watch it build, or watch it again** — one reader, two ends ( #form-time-indexed-stage-chains FE(5) ). Run the build in one terminal and this in another:

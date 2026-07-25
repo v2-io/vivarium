@@ -11,6 +11,29 @@ preceded and informed the engine decision. Each carries its own README/SPEC;
 `spikes/worldview` (and `spikes/globe`); kept as reference for the rendering
 lessons recorded inside them.
 
+## `globe-spike/` + `worldview-spike/` (retired 2026-07-24)
+
+The two Bevy view spikes over `vivarium-world`, retired when
+`crates/vivarium-explore` replaced them. Kept because `globe-spike` in
+particular is a good reference and several of its comments record bugs that cost
+a live sighting to find — the inverted winding probe (the globe rendered as its
+own far shell, seen from inside), the drag-sign history behind it, and the
+half-cell ghost sampling that avoids the `from_unit` edge tie. Those comments
+travelled into `crates/vivarium-explore/src/mesh.rs` verbatim; the code did not.
+
+What did **not** travel, deliberately:
+
+- `globe-spike`'s deep-time warmer called `World::epoch_reduction`, which on a
+  miss computes **and puts** — a view authoring store citizens
+  ( #form-core-view-wall ). The explorer opens the store read-only and counts
+  its refused writes on the HUD.
+- `worldview-spike`'s `VIVARIUM_ALLOW_VIEW_EVOLUTION=1` path let the view own
+  epoch counts and run erosion/water workers itself — the FE(4) compliance debt
+  that segment records. The explorer has no such path and no such flag.
+
+Both still build if re-added to the workspace `members`, against whatever
+`vivarium-world` looks like at that point.
+
 ## `godot-voxel/` + `vivarium-godot/`
 
 The Godot half of the engine spike (2026-06-22). A full, working voxel view over

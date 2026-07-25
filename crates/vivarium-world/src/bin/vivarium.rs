@@ -103,7 +103,7 @@ vivarium — build a world, watch it happen, watch it again.
 
   WHICH WORLD?  Every command takes an optional [dir] and otherwise falls back to
                 $VIVARIUM_WORLD, then to ~/.cache/vivarium/globe-world — the same
-                world vivarium-globe and vivarium-worldview open. Every command
+                world `vivarium explore` opens. Every command
                 prints which one it resolved and why, so \"optional\" never means
                 \"unknowable\".
 
@@ -215,7 +215,7 @@ fn is_assignment(tok: &str) -> bool {
 }
 
 /// Resolve which world to act on, matching the globe's convention so
-/// `vivarium status` and `vivarium-globe` look at the SAME world by default:
+/// `vivarium status` and `vivarium explore` look at the SAME world by default:
 /// the first non-flag positional wins (not merely `rest[0]` — flags may lead),
 /// else `$VIVARIUM_WORLD`, else the shared default
 /// `${XDG_CACHE_HOME:-~/.cache}/vivarium/globe-world`.
@@ -238,7 +238,7 @@ fn world_dir_resolved(rest: &[String]) -> (PathBuf, String) {
     });
     (
         cache.join("vivarium").join("globe-world"),
-        "default — no dir given and $VIVARIUM_WORLD unset; the same world the globe opens".into(),
+        "default — no dir given and $VIVARIUM_WORLD unset; the same world the explorer opens".into(),
     )
 }
 

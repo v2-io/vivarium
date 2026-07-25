@@ -284,6 +284,20 @@ pub fn honesty(roots: &[RootEntry]) -> String {
     watch::honesty_block(roots)
 }
 
+/// The declared-affordance block: what on screen has no world referent.
+///
+/// #norm-no-depiction-without-referent owns this. It is generated from the
+/// running view's state rather than maintained as prose, because the norm's own
+/// Working Notes record that nothing enumerates these and an unmaintained list
+/// would be the same gap with more words.
+pub fn depiction(frame: &Frame, headlight: bool) -> Vec<String> {
+    crate::paint::declared_affordances(
+        frame.req.exag,
+        headlight,
+        frame.seam.cross_max > 0.0,
+    )
+}
+
 /// Craton facts as a one-liner for the deep-time header.
 pub fn craton_line(f: &FrameFacts) -> String {
     format!(

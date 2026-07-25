@@ -1,6 +1,6 @@
 //! Cube-sphere face meshing — geometry only, no store access.
 //!
-//! Mined from `spikes/globe`, whose mesh work is genuinely good and whose
+//! Mined from the globe spike (now `archive/globe-spike`), whose mesh work is genuinely good and whose
 //! hard-won comments are kept verbatim where they record a bug that cost a live
 //! sighting to find. What is *not* inherited is where the heights come from: the
 //! spike's worker could author store citizens, and this one reads a tile handed

@@ -4881,24 +4881,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "vivarium-globe"
-version = "0.0.0"
-dependencies = [
- "bevy",
- "vivarium-world",
-]
-
-[[package]]
 name = "vivarium-world"
 version = "0.0.0"
-
-[[package]]
-name = "vivarium-worldview"
-version = "0.0.0"
-dependencies = [
- "bevy",
- "vivarium-world",
-]
 
 [[package]]
 name = "walkdir"

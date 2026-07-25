@@ -147,7 +147,7 @@ impl Store {
     /// **author a store citizen**, because a citizen is durable world state and
     /// authoring one makes the view a second builder.
     ///
-    /// The concrete violation this closes: `spikes/globe`'s deep-time warmer
+    /// The concrete violation this closes: the globe spike's deep-time warmer (now `archive/globe-spike`)
     /// called `World::epoch_reduction`, which on a miss computes *and puts*. A
     /// view left running on an unbuilt world was silently materializing the
     /// cooling ladder — so `vivarium build` became optional magic and the store

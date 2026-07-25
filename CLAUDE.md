@@ -27,6 +27,7 @@ A deterministic constructed-world laboratory (and sim game) in the RimWorld / DF
 | **Agent seam (Level C hard gate)** | `#scope-asf-reading-gates` Level C · then `#scope-agent-seam-constraints` · `ETHICS.md` |
 | **ASF-side twin / router only** | `asf/doc/vivarium.md` · [`ASF.md`](ASF.md) (non-authoritative historical redirect — **not** claim canon) |
 | **Executable law / probes** | `crates/vivarium-world/` · examples · `vivarium status` · `bin/check` (tests + determinism clippy) |
+| **Seeing a world** | `vivarium explore` (`crates/vivarium-explore/`) — the 3D instrument; `vivarium watch` is the same reader in the terminal. Both bound by `#norm-no-depiction-without-referent` as well as `#form-core-view-wall`: the wall owns *authority*, that norm owns *depiction*, and a view can satisfy one and violate the other |
 | **Pending audits** | [`audits/`](audits/) — integrate per `#ops-audit-integration`; `.integrated/` only when done |
 | **Consolidation intuition** | [`CONSOLIDATION-STATUS.md`](CONSOLIDATION-STATUS.md) — big-picture residual estimate (**not** claim canon; core wins on conflict) |
 | **Residual mine** | [`.archive/`](.archive/) residual ledger only; live `doc/` is essentially **PROCESS.udon** (+ empty design/theory/plan dirs). Claim meat lives in `core/` |

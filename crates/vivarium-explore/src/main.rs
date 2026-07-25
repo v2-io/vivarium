@@ -946,6 +946,12 @@ fn hud_update(
             s.push_str(&wrap(line, HUD_COLS, "    "));
             s.push('\n');
         }
+        s.push_str("\nDEPICTION -- what is on screen without a world referent ( #norm-no-depiction-without-referent ):\n");
+        for line in hud::depiction(frame, sun.headlight) {
+            s.push_str("  - ");
+            s.push_str(&wrap(&line, HUD_COLS, "    "));
+            s.push('\n');
+        }
         s.push('\n');
         s.push_str(&hud::keys(frame.req.paint));
     } else {
@@ -1036,7 +1042,8 @@ fn capture_sighting(
         headlight: sun.headlight,
     };
     let unmodelled = hud::unmodelled(frame, &ladder.0, &cov.0);
-    let (notice, shot) = match sighting::write(frame, &vantage, &unmodelled) {
+    let depiction = hud::depiction(frame, sun.headlight);
+    let (notice, shot) = match sighting::write(frame, &vantage, &unmodelled, &depiction) {
         Ok(path) => {
             println!("[explore] sighting written: {}", path.display());
             (
