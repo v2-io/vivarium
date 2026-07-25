@@ -92,6 +92,20 @@ static PRE_LEDGER_SEA_CACHE: std::sync::Mutex<Option<std::collections::BTreeMap<
 /// has read the value from the store (or another authority) and wants the pour
 /// short-circuited for this process. Idempotent; a later compute would produce
 /// the identical f64 (pure function of the keyed inputs).
+/// Empty the pre-ledger L1 memo. **Test affordance only**, and it exists for a
+/// specific reason worth stating: the round-trip probe
+/// (`query::tests::epoch_ladder_is_order_independent`) compares build legs
+/// against each other, and this cache is process-global — so a cache keyed too
+/// coarsely corrupts *every* leg identically and the comparison goes blind to it.
+/// That insensitivity was demonstrated, not theorised (2026-07-24: an
+/// under-keyed variant passed the probe). Clearing between legs is what makes
+/// them independent samples rather than one sample counted three times.
+#[cfg(test)]
+pub(crate) fn clear_pre_ledger_cache_for_test() {
+    let mut guard = PRE_LEDGER_SEA_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    *guard = None;
+}
+
 pub fn prime_derived_sea_pre_ledger(seed: u64, tp_c: f64, sea_m: f64) {
     let mut guard = PRE_LEDGER_SEA_CACHE.lock().unwrap_or_else(|e| e.into_inner());
     guard.get_or_insert_with(std::collections::BTreeMap::new).insert((seed, tp_c.to_bits()), sea_m);

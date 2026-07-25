@@ -134,6 +134,16 @@ static LEDGER_CACHE: std::sync::Mutex<Option<std::collections::BTreeMap<(u64, u6
 
 /// Stage a known ledger `(deposit_m, post_reference)` for `(seed, tp_c)` — used
 /// when the values arrived from a store Hit, so the two global passes are skipped.
+/// Empty both ledger-stage L1 memos. **Test affordance only** — companion to
+/// `sea_level::clear_pre_ledger_cache_for_test`, and for the same reason: these
+/// caches are process-global, so a comparison of build legs run in one process
+/// cannot see a corruption that hits every leg alike. See that function's note.
+#[cfg(test)]
+pub(crate) fn clear_caches_for_test() {
+    *LEDGER_CACHE.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    *POST_SEA_CACHE.lock().unwrap_or_else(|e| e.into_inner()) = None;
+}
+
 pub fn prime_ledger(seed: u64, tp_c: f64, deposit_m: f64, post_reference: f64) {
     let mut guard = LEDGER_CACHE.lock().unwrap_or_else(|e| e.into_inner());
     guard

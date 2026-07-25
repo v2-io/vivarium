@@ -699,6 +699,184 @@ mod tests {
         d
     }
 
+    // ---- The round-trip probe -------------------------------------------------
+    //
+    // `#form-depend-by-key-never-latest` FE(1) states BUILD-ORDER INDEPENDENCE as
+    // law: two builds of the same vivium advanced along *different demand orders*
+    // converge to byte-identical state wherever both have materialized. It has sat
+    // at `status: exact` with no instrument — which `#norm-probes-before-claims`
+    // forbids for a behaviour claim. The archive named this probe as owed
+    // ("checkpoint round-trip probe — resume vs run-through must agree; promote the
+    // two-leg cache test from anecdote to instrument",
+    // `.super-archive/from-archive/architecture-migration-2026-07-03.md`) and it was
+    // never carried. This is it.
+    //
+    // SENSITIVITY (`#norm-probe-sensitivity`). Against pure functions of a complete
+    // key these tests would pass vacuously, and a vacuous green here would be worse
+    // than nothing — it would retire an honest open question. The surface that can
+    // actually break the law is the three process-global caches `epoch_reduction`
+    // primes on every Hit (`PRE_LEDGER_SEA_CACHE`, `LEDGER_CACHE`, `POST_SEA_CACHE`).
+    // All three are keyed `(seed, tp_bits)` today; one keyed by `seed` alone would
+    // make epoch N's value depend on whether epoch M ran first. The legs below
+    // therefore share ONE process on purpose, so those caches stay hot across them —
+    // the adversarial condition, not the convenient one — and the third test proves
+    // the compared bytes really do flow through that surface.
+
+    /// The three round-trip tests all mutate process-global L1 memos — two clear
+    /// them, one deliberately poisons one. `cargo test` runs them on separate
+    /// threads in one process, so without serialising, a clear can land between
+    /// the poison and the read and the known-bad goes flaky. Flakiness in the
+    /// instrument that certifies a law is worse than no instrument: it trains
+    /// people to re-run until green.
+    static CACHE_TESTS: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn reduction_bits(r: &EpochReduction) -> [u64; 4] {
+        // Bit patterns, not float comparison: the claim is *byte-identical*, and an
+        // epsilon here would be a tolerance sized to hide the defect.
+        [
+            r.pre_ledger_sea_m.to_bits(),
+            r.deposit_m.to_bits(),
+            r.post_reference_m.to_bits(),
+            r.derived_sea_m.to_bits(),
+        ]
+    }
+
+    fn epoch_tps() -> Vec<f64> {
+        crate::mantle_thermal::abyssal_epochs()
+            .iter()
+            .map(|&t| crate::mantle_thermal::potential_temp_c(t))
+            .collect()
+    }
+
+    #[test]
+    fn epoch_ladder_is_order_independent() {
+        let _guard = CACHE_TESTS.lock().unwrap_or_else(|e| e.into_inner());
+        let tps = epoch_tps();
+        let seed = 20_260_724;
+        let n = tps.len();
+
+        let run = |tag: &str, order: Vec<usize>| -> Vec<[u64; 4]> {
+            // Independent samples, not one sample counted three times. Without
+            // this the legs share the process-global L1 memos, and a cache keyed
+            // too coarsely corrupts all three identically — the comparison then
+            // passes while the law is broken. That is not hypothetical: an
+            // under-keyed variant was injected on 2026-07-24 and the leg-vs-leg
+            // form of this test passed it.
+            crate::sea_level::clear_pre_ledger_cache_for_test();
+            crate::erosion_return::clear_caches_for_test();
+
+            let dir = tmpdir(tag);
+            let s = Store::open(&dir).unwrap();
+            let w = World::new(&s, seed);
+            let mut out = vec![[0u64; 4]; n];
+            for i in order {
+                out[i] = reduction_bits(&w.epoch_reduction(tps[i]).0);
+            }
+            out
+        };
+
+        let forward = run("roundtrip-fwd", (0..n).collect());
+        let reverse = run("roundtrip-rev", (0..n).rev().collect());
+        let interleaved =
+            run("roundtrip-int", (0..n).step_by(2).chain((1..n).step_by(2)).collect());
+
+        assert_eq!(forward, reverse, "reverse demand order must agree bit-for-bit");
+        assert_eq!(forward, interleaved, "interleaved demand order must agree bit-for-bit");
+
+        // Second, independent discriminator: the cooling trajectory gives every
+        // epoch a distinct waterline (measured 5211 → 5012 m across the ladder,
+        // strictly monotone). A cache that collapses epochs onto one value would
+        // still be *consistent* across legs — invisible above — but shows here.
+        // `#norm-probe-sensitivity` FE(4): a statistic identical across samples
+        // that should differ is a defect signature, not a measurement.
+        let seas: Vec<u64> = forward.iter().map(|b| b[0]).collect();
+        let distinct: std::collections::BTreeSet<_> = seas.iter().collect();
+        assert_eq!(
+            distinct.len(),
+            n,
+            "each epoch must carry its own pre-ledger waterline; {} distinct of {n} \
+             means the ladder collapsed onto a shared cache entry",
+            distinct.len()
+        );
+    }
+
+    #[test]
+    fn resume_equals_run_through() {
+        let _guard = CACHE_TESTS.lock().unwrap_or_else(|e| e.into_inner());
+        let tps = epoch_tps();
+        let seed = 20_260_725;
+        let split = tps.len() / 2;
+
+        let dir_a = tmpdir("roundtrip-through");
+        let s_a = Store::open(&dir_a).unwrap();
+        let through: Vec<_> = {
+            let w = World::new(&s_a, seed);
+            tps.iter().map(|&tp| reduction_bits(&w.epoch_reduction(tp).0)).collect()
+        };
+
+        // Leg two: materialize a prefix, then CLOSE the store and reopen it with a
+        // fresh `World` before finishing — the "stop the builder, come back later"
+        // case the archive's wording was about.
+        let dir_b = tmpdir("roundtrip-resume");
+        {
+            let s = Store::open(&dir_b).unwrap();
+            let w = World::new(&s, seed);
+            for &tp in &tps[..split] {
+                let _ = w.epoch_reduction(tp);
+            }
+        }
+        let s_b = Store::open(&dir_b).unwrap();
+        let w_b = World::new(&s_b, seed);
+        let resumed: Vec<_> = tps
+            .iter()
+            .map(|&tp| {
+                let (r, src) = w_b.epoch_reduction(tp);
+                (reduction_bits(&r), src)
+            })
+            .collect();
+
+        // The resume is real: the prefix comes back from the store, not recomputed.
+        for (i, (_, src)) in resumed.iter().enumerate().take(split) {
+            assert_ne!(*src, Source::Computed, "epoch {i} should resume from the store");
+        }
+
+        let resumed_bits: Vec<_> = resumed.into_iter().map(|(b, _)| b).collect();
+        assert_eq!(through, resumed_bits, "resume must equal run-through, bit for bit");
+    }
+
+    #[test]
+    fn a_poisoned_cache_is_visible_to_the_round_trip_comparison() {
+        let _guard = CACHE_TESTS.lock().unwrap_or_else(|e| e.into_inner());
+        // The known-bad the two tests above need to mean anything: if a wrong value
+        // injected into the priming cache did NOT change the compared bytes, then
+        // those legs are comparing something that does not flow through the cache
+        // surface, and their agreement would prove nothing.
+        //
+        // Contained by construction: the caches are keyed `(seed, tp_bits)`, and
+        // this seed and `tp` are used by no other test, so the poison cannot leak
+        // into a sibling running in the same process.
+        let seed = 424_242;
+        let tp = 1_600.5_f64;
+
+        let dir = tmpdir("roundtrip-clean");
+        let s = Store::open(&dir).unwrap();
+        let clean = World::new(&s, seed).epoch_reduction(tp).0;
+
+        crate::sea_level::prime_derived_sea_pre_ledger(seed, tp, clean.pre_ledger_sea_m + 1_000.0);
+
+        let dir_p = tmpdir("roundtrip-poisoned");
+        let s_p = Store::open(&dir_p).unwrap();
+        let poisoned = World::new(&s_p, seed).epoch_reduction(tp).0;
+
+        assert_ne!(
+            reduction_bits(&clean),
+            reduction_bits(&poisoned),
+            "a poisoned pre-ledger cache must move the reduction; if it cannot, the \
+             order-independence legs are not exercising the surface that could break \
+             the law and their green is vacuous"
+        );
+    }
+
     #[test]
     fn initial_topography_computes_then_memoizes() {
         let dir = tmpdir("initial-topography");
