@@ -86,8 +86,14 @@ Two independent accounts converged, and they are compatible rather than competin
 
 ## 7. Open
 
-- Second opinion in flight on §5.2 — whether per-nomos source attribution is derivable well enough to beat core's stated bar, or whether the `#detail-vivium-lifecycle` BREAK-1 route (phases as memoization boundaries) is the honest path.
-- Second opinion in flight on §6's ontology hypothesis — whether the dropped types caused the thinning, and whether a cheaper intervention than schema change would have caught this class.
+Both second opinions have since landed, and **both went against the coordinating agent's position.** Recorded here rather than left as open questions, since this document was the thing that raised them:
+
+- **§5.2 — per-nomos source attribution is a measured no-go.** Refuted with an executed counterexample: `MANTLE_THERMAL.deps` is empty while `query::epoch_reduction_key` mints from it over a computation spanning five other modules, so declaration-derived scoping would have served a wrong sea level silently. Root cause is `#form-nomotheke-registry` Known-incomplete (2), open. Even the compiler-safe form (module graph, no map) spares zero of 39 sampled commits and saves 0 % on the four most-edited files. The surviving contribution is a better sentence than the one core carried: the constraint is module **separation**, not attribution **derivability**. Landed in `#form-complete-content-addressed-key` KI(3).
+- **§6 — the ontology hypothesis does not survive.** Nine of nineteen `FORMAT.md` types are unused while 31 of 85 segments crowd into `formulation`; most of the retired `contract`/`mode`/`mechanism` rows survived the peel, and the strongest survivor in it was a `mechanism` row. What actually sorted survivors from losses is whether a thing had a **convictor** — shown by a controlled comparison (execution classes: the built half survived, the unbuilt scheduling half thinned, with type, subject and wave held constant). The peel was *obeying* `#norm-declaration-must-convict`, compressing wishes and preserving convicted law.
+
+That second result is the one worth carrying forward: **findability and convictability are one axis**, so the way to keep this class is to give it probes, not new types.
+
+Still open, and Joseph's rather than a session's: whether `DECISIONS` gets an owner and on what cadence.
 - Whether `DECISIONS` gets an owner, and on what cadence, is Joseph's call.
 
 ## 8. What the coordinator takes from this — marked as one read, not a finding
