@@ -54,6 +54,19 @@ pub enum BuildState {
     Watered,
 }
 
+/// What a tile's roots are, beyond how deep they go.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct TileFlags {
+    /// At least one root here was written under waived flux admission
+    /// ( #form-builder-admission FE(3) ) — matured bytes that are not lawful
+    /// evidence.
+    pub provisional: bool,
+    /// At least one root here was computed under a **different source tree**
+    /// (`src=` mismatch). Its bytes exist and no reader at this source hash can
+    /// use them, so the surface silently falls back to the prior there.
+    pub stale: bool,
+}
+
 impl BuildState {
     /// Short label for a legend or HUD.
     pub fn label(self) -> &'static str {
@@ -90,6 +103,11 @@ pub struct Coverage {
     /// reading `eepochs` as water's clock is the near-miss `time_index_field`
     /// guards against, so both are kept and named separately).
     pub watered: BTreeMap<(u8, u32, u32), (u32, u32)>,
+    /// Origins with at least one root written under **waived** flux admission.
+    pub provisional: BTreeSet<(u8, u32, u32)>,
+    /// Origins with at least one root from a **different source tree**. These
+    /// are counted but NOT laddered: see [`Coverage::parse`].
+    pub stale: BTreeSet<(u8, u32, u32)>,
 }
 
 /// Pull one `key=value` field out of a canonical complete-key string.
@@ -100,8 +118,20 @@ fn key_field<'a>(key: &'a str, name: &str) -> Option<&'a str> {
 impl Coverage {
     /// Parse a raw root census. Only tiles at the deepest built level count
     /// toward coverage — a mixed-level store shows its finest built rung.
-    /// Provisional roots count as built (they *are* in the store); it is the
-    /// provisional flag, not absence from this census, that marks them unlawful.
+    ///
+    /// **The ladder counts only roots readable at the CURRENT source hash.** Any
+    /// nomos key folds the whole-crate source digest, so a root written under a
+    /// different source tree cannot be pulled by this binary: no reader can use
+    /// its bytes, and every surface assembled here falls back to the prior where
+    /// it lies. A census that laddered it anyway would report "watered" over
+    /// terrain the renderer is drawing from the uncarved prior — the instrument
+    /// contradicting itself in two adjacent lines, which is worse than either
+    /// answer alone. Stale origins are recorded in [`Coverage::stale`] and shown
+    /// as their own state, because "there is a tile here that I cannot read" is
+    /// a different and more actionable fact than "there is nothing here".
+    ///
+    /// Provisional roots, by contrast, DO ladder: their bytes are readable and
+    /// will be drawn. It is the flag, not absence, that marks them unlawful.
     pub fn parse(roots: &[RootEntry]) -> Coverage {
         let level = roots
             .iter()
@@ -117,6 +147,8 @@ impl Coverage {
             initial_topo: Default::default(),
             erosion: Default::default(),
             watered: Default::default(),
+            provisional: Default::default(),
+            stale: Default::default(),
         };
         for r in roots {
             let k = r.key.as_str();
@@ -135,6 +167,13 @@ impl Coverage {
             };
             if let Some(nx) = key_field(k, "nx").and_then(|v| v.parse::<usize>().ok()) {
                 cov.nx = nx;
+            }
+            if r.provisional {
+                cov.provisional.insert((face, oi, oj));
+            }
+            if key_field(k, "src") != Some(crate::nomotheke::SRC_HASH) {
+                cov.stale.insert((face, oi, oj));
+                continue; // exists, unreadable here — counted, never laddered
             }
             let num = |name: &str| key_field(k, name).and_then(|v| v.parse::<u32>().ok());
             match nomos {
@@ -161,6 +200,17 @@ impl Coverage {
     pub fn state_at_cell(&self, face: u8, ci: u32, cj: u32) -> BuildState {
         let n = self.nx as u32;
         self.state(face, (ci / n) * n, (cj / n) * n)
+    }
+
+    /// Flags for the tile containing cell `(ci, cj)`. `stale` is set only when
+    /// there is nothing readable at that origin — see [`Self::stale_only_tiles`].
+    pub fn flags_at_cell(&self, face: u8, ci: u32, cj: u32) -> TileFlags {
+        let n = self.nx as u32;
+        let o = (face, (ci / n) * n, (cj / n) * n);
+        TileFlags {
+            provisional: self.provisional.contains(&o),
+            stale: self.stale.contains(&o) && self.state(o.0, o.1, o.2) == BuildState::Unbuilt,
+        }
     }
 
     /// The deepest nomos materialized for the tile at origin `(oi, oj)`.
@@ -191,7 +241,20 @@ impl Coverage {
         t
     }
 
-    /// How many tiles have any root at the display level.
+    /// Origins whose ONLY roots are from another source tree — built, and
+    /// unreadable here.
+    ///
+    /// Deliberately not `self.stale.len()`. A store accumulates roots across
+    /// rebuilds, so after any source edit and rebuild almost every origin has
+    /// both stale and current roots; counting the raw set reported "384 readable
+    /// tiles" and "384 stale tiles" on the same screen, which is an instrument
+    /// contradicting itself. What is actionable is the origin that has *nothing*
+    /// readable.
+    pub fn stale_only_tiles(&self) -> usize {
+        self.stale.iter().filter(|&&(f, oi, oj)| self.state(f, oi, oj) == BuildState::Unbuilt).count()
+    }
+
+    /// How many tiles have any READABLE root at the display level.
     pub fn built_tiles(&self) -> usize {
         let mut origins: BTreeSet<(u8, u32, u32)> = self.initial_topo.iter().copied().collect();
         origins.extend(self.erosion.keys().copied());
@@ -386,12 +449,13 @@ mod tests {
 
     #[test]
     fn coverage_ladders_by_deepest_nomos() {
+        let src = crate::nomotheke::SRC_HASH;
         let roots = vec![
-            root("initial-topography@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64"),
-            root("erosion-tile@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64|epochs=20"),
-            root("water-tile@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64|eepochs=20|steps=200"),
+            root(&format!("initial-topography@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64|src={src}")),
+            root(&format!("erosion-tile@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64|epochs=20|src={src}")),
+            root(&format!("water-tile@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64|eepochs=20|steps=200|src={src}")),
             // a second face with only initial-topography reached
-            root("initial-topography@v|seed=0|face=1|level=6|oi=0|oj=0|nx=64"),
+            root(&format!("initial-topography@v|seed=0|face=1|level=6|oi=0|oj=0|nx=64|src={src}")),
         ];
         let cov = Coverage::parse(&roots);
         assert_eq!(cov.level, 6);
@@ -404,11 +468,50 @@ mod tests {
     }
 
     #[test]
+    fn a_root_from_another_source_tree_is_counted_but_never_laddered() {
+        // The instrument-contradicts-itself guard. A root whose `src=` differs
+        // cannot be pulled by this binary, so every surface assembled here falls
+        // back to the prior where it lies. Laddering it would paint "watered"
+        // over terrain the renderer is drawing from the uncarved prior.
+        let cur = crate::nomotheke::SRC_HASH;
+        let roots = vec![
+            root(&format!("erosion-tile@v|face=0|level=6|oi=0|oj=0|nx=64|epochs=40|src={cur}")),
+            root("erosion-tile@v|face=1|level=6|oi=0|oj=0|nx=64|epochs=40|src=deadbeef"),
+        ];
+        let cov = Coverage::parse(&roots);
+        assert_eq!(cov.state(0, 0, 0), BuildState::Eroded, "current source ladders");
+        assert_eq!(cov.state(1, 0, 0), BuildState::Unbuilt, "stale source does not");
+        assert!(cov.flags_at_cell(1, 0, 0).stale, "and it is flagged, not merely absent");
+        assert_eq!(cov.stale_only_tiles(), 1);
+        assert_eq!(cov.built_tiles(), 1, "only the readable origin counts as built");
+    }
+
+    #[test]
+    fn an_origin_rebuilt_under_a_new_source_is_not_reported_stale() {
+        // A store accumulates roots across rebuilds, so after any source edit and
+        // rebuild almost every origin carries BOTH a stale and a current root.
+        // Counting the raw stale set reported "384 readable tiles" and "384 stale
+        // tiles" on one screen — the defect this pins.
+        let cur = crate::nomotheke::SRC_HASH;
+        let roots = vec![
+            root("erosion-tile@v|face=0|level=6|oi=0|oj=0|nx=64|epochs=40|src=oldhash"),
+            root(&format!("erosion-tile@v|face=0|level=6|oi=0|oj=0|nx=64|epochs=40|src={cur}")),
+        ];
+        let cov = Coverage::parse(&roots);
+        assert_eq!(cov.state(0, 0, 0), BuildState::Eroded);
+        assert_eq!(cov.stale_only_tiles(), 0, "it was rebuilt; nothing is owed here");
+        assert!(!cov.flags_at_cell(0, 0, 0).stale);
+    }
+
+    #[test]
     fn coverage_maps_a_cell_to_its_tile() {
         // The explorer paints per CELL, not per tile origin; the mapping has to
         // be in the shared census or each renderer re-derives it slightly
         // differently at the tile boundary.
-        let roots = vec![root("erosion-tile@v|seed=0|face=3|level=9|oi=128|oj=64|nx=64|epochs=40")];
+        let roots = vec![root(&format!(
+            "erosion-tile@v|seed=0|face=3|level=9|oi=128|oj=64|nx=64|epochs=40|src={}",
+            crate::nomotheke::SRC_HASH
+        ))];
         let cov = Coverage::parse(&roots);
         assert_eq!(cov.state_at_cell(3, 128, 64), BuildState::Eroded, "origin cell");
         assert_eq!(cov.state_at_cell(3, 191, 127), BuildState::Eroded, "last cell in the tile");

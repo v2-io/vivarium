@@ -67,7 +67,13 @@ const TILE_NX: usize = 64;
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     // `-h` anywhere prints usage and stops — including after a subcommand, so
-    // `vivarium build -h` answers rather than building a world.
+    // `vivarium build -h` answers rather than building a world. The one
+    // exception is `explore`, which is a dispatch: swallowing its `--help` would
+    // print this file's usage for a binary that has its own, and the caller
+    // would have no way to reach the real one.
+    if args.first().map(String::as_str) == Some("explore") {
+        std::process::exit(cmd_explore(&args[1..]));
+    }
     if args.iter().any(|a| a == "-h" || a == "--help") || args.is_empty() {
         print!("{}", usage());
         std::process::exit(if args.is_empty() { 2 } else { 0 });
@@ -80,6 +86,7 @@ fn main() {
         Some("watch") => cmd_watch(&args[1..]),
         Some("demand") => cmd_demand(&args[1..]),
         Some("attach") => cmd_attach(&args[1..]),
+        Some("explore") => cmd_explore(&args[1..]),
         _ => {
             eprint!("{}", usage());
             2
@@ -146,6 +153,16 @@ COMMANDS
                                 one-shot whole-sphere globe, coloured by build state
   attach [dir]                  follow a running build's log (Ctrl-C detaches;
                                 the builder is unaffected)
+
+  explore [dir] [--replay] [--level L] [--frames N] [--paint MODE]
+                                the 3D explorer -- `watch` at a different fidelity
+                                of attention. Same store, same reader, same
+                                live-vs-replay semantics, same epistemic overlay;
+                                it differs only in how it draws. Paint modes:
+                                surface | provenance | water | seam. Press C on
+                                anything that looks wrong and it writes a sighting.
+                                (Runs as a separate binary, `vivarium-explore`, so
+                                this CLI never links a renderer -- see below.)
 
 EXAMPLE
 
@@ -1066,5 +1083,38 @@ fn tail_log(dir: &Path, follow: bool) -> i32 {
             return 0;
         }
         std::thread::sleep(std::time::Duration::from_millis(400));
+    }
+}
+
+/// `vivarium explore` -- dispatch to the 3D explorer.
+///
+/// **Exec, not a subcommand.** A true in-process subcommand would link Bevy into
+/// this binary, which is the core/view wall violated at the most basic level:
+/// the world frame's own CLI would depend on a renderer, and `vivarium status`
+/// would pay for a GPU stack to print a census. Dispatching by exec is how git
+/// reaches `git-lfs`, and it buys the ergonomics without the coupling.
+///
+/// The lookup order is deliberate: a sibling of THIS executable first, so a
+/// `cargo run` from the repo or a `target/release` pair works without anything
+/// installed, then PATH.
+fn cmd_explore(rest: &[String]) -> i32 {
+    let exe = "vivarium-explore";
+    let sibling = std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join(exe)));
+    let program = match &sibling {
+        Some(p) if p.is_file() => p.clone(),
+        _ => PathBuf::from(exe),
+    };
+    match std::process::Command::new(&program).args(rest).status() {
+        Ok(st) => st.code().unwrap_or(0),
+        Err(e) => {
+            eprintln!(
+                "error: cannot run `{}`: {e}\n  \
+                 The explorer is a separate binary so this CLI never links a renderer\n  \
+                 ( #form-core-view-wall ). Install it with:  bin/install vivarium-explore\n  \
+                 or run it directly:  cargo run --release -p vivarium-explore",
+                program.display()
+            );
+            127
+        }
     }
 }

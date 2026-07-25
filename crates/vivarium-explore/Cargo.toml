@@ -1,0 +1,22 @@
+# vivarium-explore — the principled 3D explorer: the instrument for checking
+# whether a vivium's systems are behaving the way its law says they should.
+#
+# It is `vivarium watch` at a different fidelity of attention, not a different
+# program: same store, same reader (`vivarium_world::watch`), same live-vs-replay
+# semantics, same epistemic overlay — it differs only in how it draws.
+#
+# The core/view wall ( #form-core-view-wall ) is enforced twice over here:
+# structurally, because the dependency runs THIS WAY ONLY and `vivarium-world`
+# has no idea Bevy exists; and operationally, because this binary opens the store
+# through `Store::open_read_only`, so it cannot author a world citizen even by
+# accident. The HUD displays its own refused-write count, so the wall is a number
+# on screen rather than a promise in a comment.
+[package]
+name = "vivarium-explore"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+bevy = "0.18"
+vivarium-world = { path = "../vivarium-world" }

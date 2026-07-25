@@ -453,7 +453,17 @@ impl<'s> World<'s> {
         self.load_eroded_regions_where(|key| key_field(key, "src") == Some(cur))
     }
 
-    fn load_eroded_regions_where(&self, keep: impl Fn(&str) -> bool) -> Vec<ErodedRegion> {
+    /// Load exactly the `erosion-tile` roots whose complete key `keep` accepts.
+    ///
+    /// Public because **replay needs it**: replaying a build in any renderer
+    /// means assembling the surface from the roots that had landed by frame *n*,
+    /// which is a key-set predicate and nothing more
+    /// ( #form-time-indexed-stage-chains FE(5) — the live path and the replay
+    /// path must be the same mechanism, and they are only the same mechanism if
+    /// replay assembles through this function rather than through a private
+    /// second loader). Callers that want the ordinary honest surface should use
+    /// [`Self::load_current_eroded_regions`].
+    pub fn load_eroded_regions_where(&self, keep: impl Fn(&str) -> bool) -> Vec<ErodedRegion> {
         let Ok(roots) = self.store.roots() else {
             return Vec::new();
         };
@@ -603,6 +613,34 @@ impl<'s> World<'s> {
         let depth = sim.depth.clone();
         self.put_memo(&key, &encode_f32(&depth));
         (depth, Source::Computed)
+    }
+
+    /// The **store-only** half of [`Self::water_tile`]: `Some` iff this exact
+    /// water tile is already settled in the store. Never runs the fill kernel.
+    ///
+    /// A view must have this. `water_tile` on a miss runs `steps` iterations of
+    /// the shallow-water kernel and, over a whole-globe census, that is minutes
+    /// of cold evolution on whatever thread asked — exactly the
+    /// `#form-builder-admission` FE(4) never-block clause, and it fires on the
+    /// completely ordinary occasion of a source edit having moved every key's
+    /// source hash. The honest view behaviour is to find no current water,
+    /// display none, and say the tiles are stale; the dishonest one is to spend
+    /// four minutes silently re-settling the planet so the picture looks the
+    /// same as yesterday.
+    #[allow(clippy::too_many_arguments)]
+    pub fn water_tile_hit(
+        &self,
+        face: Face,
+        level: u8,
+        oi: u32,
+        oj: u32,
+        nx: usize,
+        erosion_epochs: u32,
+        steps: u32,
+    ) -> Option<(Vec<f32>, Source)> {
+        let key = self.water_key(face, level, oi, oj, nx, erosion_epochs, steps);
+        let bytes = self.store.get(&key)?;
+        Some((decode_f32(&bytes), self.hit_source(&key)))
     }
 
     /// The complete key for an epoch reduction at mantle temperature `tp_c`.

@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
-# Put `vivarium`, `vivarium-globe` and `vivarium-worldview` on your PATH as real
-# commands, so a session is `vivarium build &` and `vivarium-globe` rather than a
-# cargo incantation typed from the repo root.
+# Put `vivarium`, `vivarium-explore` and the remaining view spikes on your PATH as
+# real commands, so a session is `vivarium build &` and `vivarium explore` rather
+# than a cargo incantation typed from the repo root.
+#
+# `vivarium explore` dispatches by exec to `vivarium-explore`, so the two want to
+# be installed together (the CLI looks for a sibling of itself first, then PATH).
 #
 # Installs to ~/.cargo/bin (already on PATH here — it is where fmt-md lives).
 # Re-run after changing any of them; cargo rebuilds only what moved.
 #
-#   bin/install            # all three
-#   bin/install vivarium   # just the CLI (fast — no bevy)
+#   bin/install                    # everything
+#   bin/install vivarium           # just the CLI (fast — no bevy)
+#   bin/install vivarium vivarium-explore   # the pair you actually use
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -16,6 +20,10 @@ want() { [ $# -eq 0 ] || printf '%s\n' "$@" | grep -qx "$1"; }
 if want vivarium "$@"; then
   echo "== vivarium (CLI) =="
   cargo install --path crates/vivarium-world --bin vivarium --locked
+fi
+if want vivarium-explore "$@"; then
+  echo "== vivarium-explore (the 3D explorer; bevy -- slow first build) =="
+  cargo install --path crates/vivarium-explore --locked
 fi
 if want vivarium-globe "$@"; then
   echo "== vivarium-globe (bevy — slow first build) =="
@@ -28,6 +36,6 @@ fi
 
 echo
 echo "installed:"
-for b in vivarium vivarium-globe vivarium-worldview; do
+for b in vivarium vivarium-explore vivarium-globe vivarium-worldview; do
   printf '  %-22s %s\n' "$b" "$(command -v "$b" || echo '(not on PATH)')"
 done
