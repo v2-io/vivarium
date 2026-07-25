@@ -614,7 +614,8 @@ fn cmd_status(rest: &[String]) -> i32 {
     if let Ok(s) = std::fs::read_to_string(dir.join("status.json")) {
         println!("builder: {}", s.lines().collect::<Vec<_>>().join(" ").replace("  ", ""));
     }
-    let store = match Store::open(&dir) {
+    // `status` reports; it does not author. (It pulls `hydrosphere`, which memoizes.)
+    let store = match Store::open_read_only(&dir) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("store error: {e}");
@@ -744,7 +745,13 @@ fn cmd_info(rest: &[String]) -> i32 {
             return 1;
         }
     };
-    let store = match Store::open(&dir) {
+    // A VIEW's handle: reads served, writes refused and counted
+    // ( #form-core-view-wall FE(2) ). `globe::render` pulls `erosion_tile` /
+    // `initial_topography` for the deepest materialized field, and those pulls
+    // compute-and-put on a miss — so an instrument pointed at a partially built
+    // world was a latent second builder. It still renders (the pull computes);
+    // it just cannot author.
+    let store = match Store::open_read_only(&dir) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("store error: {e}");
@@ -817,7 +824,11 @@ fn cmd_watch(rest: &[String]) -> i32 {
             return 1;
         }
     };
-    let store = match Store::open(&dir) {
+    // The reader is a view: it takes no lock, and now it structurally cannot
+    // write either — `globe::render`'s field pulls compute on a miss but the put
+    // is refused ( #form-core-view-wall FE(2), #form-builder-admission FE(1) ).
+    // Watching a build can no longer add to the build.
+    let store = match Store::open_read_only(&dir) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("store error: {e}");

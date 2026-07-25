@@ -30,6 +30,7 @@
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// 64-bit FNV-1a. MVP-grade content hash (see the module note on collisions).
 fn fnv1a(bytes: &[u8]) -> u64 {
@@ -112,17 +113,70 @@ pub struct RootEntry {
 pub struct Store {
     objects: PathBuf,
     roots: PathBuf,
+    /// Opened by a **view**: every put is refused and counted, never written.
+    /// See [`Store::open_read_only`].
+    read_only: bool,
+    /// Puts refused because this handle is read-only — the wall as a *number*
+    /// rather than a discipline. A view that displays this displays its own
+    /// compliance.
+    refused: AtomicUsize,
 }
 
 impl Store {
-    /// Open (creating if needed) a store rooted at `dir`.
+    /// Open (creating if needed) a store rooted at `dir`. This is the
+    /// **builder's** handle: it may write.
     pub fn open(dir: impl AsRef<Path>) -> io::Result<Self> {
         let dir = dir.as_ref();
         let objects = dir.join("objects");
         let roots = dir.join("roots");
         fs::create_dir_all(&objects)?;
         fs::create_dir_all(&roots)?;
-        Ok(Store { objects, roots })
+        Ok(Store { objects, roots, read_only: false, refused: AtomicUsize::new(0) })
+    }
+
+    /// Open a store **as a view does**: reads served normally, every [`put_with`]
+    /// refused with `PermissionDenied` and counted in [`Self::refused_writes`].
+    ///
+    /// This is `#form-core-view-wall` FE(2) ("views obtain world state only
+    /// through the sanctioned query path… may not own authoritative world state")
+    /// and `#form-builder-admission` FE(1) ("explorers query the store and never
+    /// author world-evolution") **enforced by construction instead of by reading
+    /// the segment carefully**. The distinction it draws is the operative one: a
+    /// view may *compute* a pure function of the world's identity — that is a
+    /// query, and it is how a cold world still renders — but it may not
+    /// **author a store citizen**, because a citizen is durable world state and
+    /// authoring one makes the view a second builder.
+    ///
+    /// The concrete violation this closes: `spikes/globe`'s deep-time warmer
+    /// called `World::epoch_reduction`, which on a miss computes *and puts*. A
+    /// view left running on an unbuilt world was silently materializing the
+    /// cooling ladder — so `vivarium build` became optional magic and the store
+    /// gained roots nobody's builder wrote. The same latent path exists in
+    /// `vivarium watch` / `info` through `globe::render`'s `erosion_tile` pulls.
+    ///
+    /// Deliberately does **not** create the directories: a read-only handle on a
+    /// world that does not exist yet reports an empty census rather than
+    /// conjuring the shape of a vivium (`roots()` yields nothing).
+    pub fn open_read_only(dir: impl AsRef<Path>) -> io::Result<Self> {
+        let dir = dir.as_ref();
+        Ok(Store {
+            objects: dir.join("objects"),
+            roots: dir.join("roots"),
+            read_only: true,
+            refused: AtomicUsize::new(0),
+        })
+    }
+
+    /// Whether this handle refuses writes (a view's handle).
+    pub fn is_read_only(&self) -> bool {
+        self.read_only
+    }
+
+    /// How many puts this handle has refused. `0` on a view is the wall holding;
+    /// any other number names exactly how many world citizens the view tried to
+    /// author, which is a finding, not a nuisance.
+    pub fn refused_writes(&self) -> usize {
+        self.refused.load(Ordering::Relaxed)
     }
 
     /// Fetch the value a complete key resolves to, or `None` on a miss.
@@ -168,6 +222,16 @@ impl Store {
     /// Line 2 makes the store *enumerable by meaning*. Line 3 is the honesty
     /// bit for waived admission ( #form-builder-admission residual A/B ).
     pub fn put_with(&self, key: &Key, value: &[u8], opts: PutOpts) -> io::Result<()> {
+        if self.read_only {
+            // Refuse loudly in the return value and countably in the handle. The
+            // caller's own `Source::Computed` already tells the truth downstream:
+            // the value came from this process, not from the store.
+            self.refused.fetch_add(1, Ordering::Relaxed);
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                format!("read-only store (view handle): refused to author `{}`", key.as_str()),
+            ));
+        }
         let obj_name = hex(fnv1a(value));
         let obj_path = self.objects.join(&obj_name);
         if !obj_path.exists() {
@@ -186,6 +250,12 @@ impl Store {
     /// attributable. Missing third line ⇒ not provisional.
     pub fn roots(&self) -> io::Result<Vec<RootEntry>> {
         let mut out = Vec::new();
+        if !self.roots.is_dir() {
+            // A read-only handle on a world that was never built: no roots, not an
+            // error. The empty census is the honest answer and every instrument
+            // downstream already renders it as "nothing built yet".
+            return Ok(out);
+        }
         for entry in fs::read_dir(&self.roots)? {
             let path = entry?.path();
             if path.extension().is_some_and(|e| e == "tmp") {
@@ -252,6 +322,44 @@ mod tests {
         s.put(&k, b"hello-world").unwrap();
         assert_eq!(s.get(&k).as_deref(), Some(&b"hello-world"[..]));
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_view_handle_cannot_author_a_citizen() {
+        // The core/view wall as a test rather than as a paragraph
+        // ( #form-core-view-wall FE(2), #form-builder-admission FE(1) ). A view
+        // reads everything the builder wrote and adds nothing to the world.
+        let dir = tmpdir("readonly");
+        let k = Key::new("initial-topography", "v0").field("tile", 7);
+        {
+            let builder = Store::open(&dir).unwrap();
+            builder.put(&k, b"built").unwrap();
+        }
+        let view = Store::open_read_only(&dir).unwrap();
+        assert_eq!(view.get(&k).as_deref(), Some(&b"built"[..]), "a view reads normally");
+
+        let fresh = Key::new("erosion-tile", "v0").field("tile", 8);
+        let err = view.put(&fresh, b"view-authored").unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::PermissionDenied);
+        assert_eq!(view.refused_writes(), 1, "the refusal is counted, not merely returned");
+        assert!(view.get(&fresh).is_none(), "nothing landed");
+        assert_eq!(
+            Store::open(&dir).unwrap().roots().unwrap().len(),
+            1,
+            "the world has exactly the citizens its BUILDER wrote"
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_view_on_an_unbuilt_world_reports_an_empty_census_rather_than_creating_one() {
+        // Opening a view must not conjure the shape of a vivium. `vivarium
+        // explore` on a path with nothing in it shows "nothing built", and the
+        // directory is still untouched afterwards.
+        let dir = tmpdir("readonly-absent");
+        let view = Store::open_read_only(&dir).unwrap();
+        assert!(view.roots().unwrap().is_empty());
+        assert!(!dir.exists(), "a read-only open created directories");
     }
 
     #[test]

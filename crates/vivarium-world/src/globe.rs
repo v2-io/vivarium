@@ -35,113 +35,18 @@
 //! phase state exists yet (the ordinum's phases are world-global). The legend
 //! says so out loud.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use crate::gen::{self, SEA_LEVEL_M};
 use crate::planet::Planet;
 use crate::query::World;
 use crate::sphere::{CubeCoord, Geo};
 
-/// How far a tile has been carried in the build — the colour channel.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-enum State {
-    /// No tile for this region in the store — rendered from the raw prior, dim.
-    Unbuilt,
-    /// Only the initial_topo (`initial-topography`) tile exists.
-    InitialTopography,
-    /// The fluvial-erosion tile exists (carved, no water settled yet).
-    Eroded,
-    /// The surface-water tile exists (water settled on the eroded bed).
-    Watered,
-}
-
-/// The store census, parsed into per-tile build-state at one display level.
-struct Coverage {
-    level: u8,
-    nx: usize,
-    /// `(face, oi, oj)` origins that have a initial_topo tile.
-    initial_topo: BTreeSet<(u8, u32, u32)>,
-    /// `(face, oi, oj)` → erosion `epochs` (needed to re-pull the eroded field).
-    erosion: BTreeMap<(u8, u32, u32), u32>,
-    /// `(face, oi, oj)` origins that have a settled water tile.
-    watered: BTreeSet<(u8, u32, u32)>,
-}
-
-/// Pull one `key=value` field out of a canonical store-key string.
-fn field<'a>(key: &'a str, name: &str) -> Option<&'a str> {
-    key.split('|').find_map(|f| f.strip_prefix(name).and_then(|r| r.strip_prefix('=')))
-}
-
-impl Coverage {
-    /// Parse the raw census (`store.roots()` entries).
-    /// The display level is the deepest level any surface tile reached; only
-    /// tiles at that level count toward coverage (a mixed-level store shows its
-    /// finest built rung). Provisional roots still count as built (they are in
-    /// the store); status is what labels them provisional.
-    fn parse(roots: &[crate::store::RootEntry]) -> Coverage {
-        // Deepest level present among the surface nomos.
-        let level = roots
-            .iter()
-            .filter(|r| r.key.starts_with("initial-topography@") || r.key.starts_with("erosion-tile@"))
-            .filter_map(|r| field(&r.key, "level").and_then(|v| v.parse::<u8>().ok()))
-            .max()
-            .unwrap_or(6);
-        let mut cov = Coverage {
-            level,
-            nx: 64,
-            initial_topo: Default::default(),
-            erosion: Default::default(),
-            watered: Default::default(),
-        };
-        for r in roots {
-            let k = r.key.as_str();
-            let nomos = k.split('@').next().unwrap_or("");
-            let l = match field(k, "level").and_then(|v| v.parse::<u8>().ok()) {
-                Some(l) if l == level => l,
-                _ => continue,
-            };
-            let _ = l;
-            let (face, oi, oj) = match (
-                field(k, "face").and_then(|v| v.parse::<u8>().ok()),
-                field(k, "oi").and_then(|v| v.parse::<u32>().ok()),
-                field(k, "oj").and_then(|v| v.parse::<u32>().ok()),
-            ) {
-                (Some(f), Some(oi), Some(oj)) => (f, oi, oj),
-                _ => continue,
-            };
-            if let Some(nx) = field(k, "nx").and_then(|v| v.parse::<usize>().ok()) {
-                cov.nx = nx;
-            }
-            match nomos {
-                "initial-topography" => {
-                    cov.initial_topo.insert((face, oi, oj));
-                }
-                "erosion-tile" => {
-                    let epochs = field(k, "epochs").and_then(|v| v.parse::<u32>().ok()).unwrap_or(0);
-                    cov.erosion.insert((face, oi, oj), epochs);
-                }
-                "water-tile" => {
-                    cov.watered.insert((face, oi, oj));
-                }
-                _ => {}
-            }
-        }
-        cov
-    }
-
-    fn state(&self, face: u8, oi: u32, oj: u32) -> State {
-        let t = (face, oi, oj);
-        if self.watered.contains(&t) {
-            State::Watered
-        } else if self.erosion.contains_key(&t) {
-            State::Eroded
-        } else if self.initial_topo.contains(&t) {
-            State::InitialTopography
-        } else {
-            State::Unbuilt
-        }
-    }
-}
+// Build-state coverage is the SHARED reader ( `watch::Coverage` ) — the same
+// census the 3D explorer paints from. It used to live here as a private twin;
+// two renderers each parsing the root census is two answers to "what is built",
+// and they disagree the first time one of them learns something.
+use crate::watch::{BuildState, Coverage};
 
 /// Auto colour decision: on when stdout is a TTY and `NO_COLOR` is unset.
 pub fn color_auto() -> bool {
@@ -202,9 +107,6 @@ pub fn render(
     let mut spine_cache: BTreeMap<(u8, u32, u32), Vec<f32>> = BTreeMap::new();
     let mut eroded_cache: BTreeMap<(u8, u32, u32), Vec<f32>> = BTreeMap::new();
 
-    // Coverage tallies for the footer (tiles per state → % of the census).
-    let mut tally = [0usize; 4];
-
     let mut out = String::new();
     // Reset any stray colour at the start of every row; track the active code so
     // we only emit an escape when it changes.
@@ -238,7 +140,7 @@ pub fn render(
             // Elevation from the deepest materialised surface field for this
             // tile (eroded → initial_topo), else the raw prior for an unbuilt region.
             let elev = match st {
-                State::Watered | State::Eroded => {
+                BuildState::Watered | BuildState::Eroded => {
                     let epochs = *cov.erosion.get(&(f, oi, oj)).unwrap_or(&0);
                     let tile = eroded_cache
                         .entry((f, oi, oj))
@@ -246,14 +148,14 @@ pub fn render(
                     let (di, dj) = ((ci - oi) as usize, (cj - oj) as usize);
                     tile.get(dj * nx + di).copied().unwrap_or(sea as f32) as f64
                 }
-                State::InitialTopography => {
+                BuildState::InitialTopography => {
                     let tile = spine_cache
                         .entry((f, oi, oj))
                         .or_insert_with(|| world.initial_topography(face, level, oi, oj, nx).0);
                     let (di, dj) = ((ci - oi) as usize, (cj - oj) as usize);
                     tile.get(dj * nx + di).copied().unwrap_or(sea as f32) as f64
                 }
-                State::Unbuilt => gen::initial_topography_m(world.seed(), cell, level),
+                BuildState::Unbuilt => gen::initial_topography_m(world.seed(), cell, level),
             };
 
             let ocean = elev < sea;
@@ -270,10 +172,10 @@ pub fn render(
                 '~'
             } else {
                 match st {
-                    State::Unbuilt => '`',
-                    State::InitialTopography => ':',
-                    State::Eroded => '+',
-                    State::Watered => '#',
+                    BuildState::Unbuilt => '`',
+                    BuildState::InitialTopography => ':',
+                    BuildState::Eroded => '+',
+                    BuildState::Watered => '#',
                 }
             };
 
@@ -283,10 +185,10 @@ pub fn render(
                 } else {
                     let t = ((elev - sea) / relief).clamp(0.0, 1.0);
                     match st {
-                        State::Unbuilt => pick(GREY, t),
-                        State::InitialTopography => pick(TAN, t),
-                        State::Eroded => pick(OLIVE, t),
-                        State::Watered => pick(GREEN, t),
+                        BuildState::Unbuilt => pick(GREY, t),
+                        BuildState::InitialTopography => pick(TAN, t),
+                        BuildState::Eroded => pick(OLIVE, t),
+                        BuildState::Watered => pick(GREEN, t),
                     }
                 };
                 if code as i32 != cur {
@@ -307,16 +209,11 @@ pub fn render(
     // Footer: what the whole census reached (tiles per state), and the legend.
     // Union every built origin — erosion/water without a matching initial-topo
     // root still count (legacy `spine-tile` keys, partial rebuilds, version churn).
-    let mut origins: BTreeSet<(u8, u32, u32)> = cov.initial_topo.iter().copied().collect();
-    origins.extend(cov.erosion.keys().copied());
-    origins.extend(cov.watered.iter().copied());
-    for &(f, oi, oj) in &origins {
-        tally[cov.state(f, oi, oj) as usize] += 1;
-    }
-    // Unbuilt tiles are, by definition, not in the census — report the built
-    // ladder only (honest: we can't count what was never materialised).
-    let built = origins.len();
-    let (n_spine_only, n_eroded, n_watered) = (tally[State::InitialTopography as usize], tally[State::Eroded as usize], tally[State::Watered as usize]);
+    // Unbuilt tiles are, by definition, not in the census: what was never
+    // materialised cannot be counted.
+    let tally = cov.tally();
+    let built = cov.built_tiles();
+    let (n_spine_only, n_eroded, n_watered) = (tally[BuildState::InitialTopography as usize], tally[BuildState::Eroded as usize], tally[BuildState::Watered as usize]);
     let cell_km = crate::sample::cell_size_m(level, Planet::EARTH.radius_m) / 1000.0;
     out.push_str(&format!(
         "\nprojection  Hammer equal-area oval (WHOLE sphere, area-honest; central meridian {:.0}°)\n",
@@ -339,51 +236,6 @@ pub fn render(
     out
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn field_extracts_values() {
-        let k = "erosion-tile@erosion-v|seed=7|face=2|level=6|oi=0|oj=64|nx=64|epochs=20";
-        assert_eq!(field(k, "face"), Some("2"));
-        assert_eq!(field(k, "level"), Some("6"));
-        assert_eq!(field(k, "oj"), Some("64"));
-        assert_eq!(field(k, "epochs"), Some("20"));
-        assert_eq!(field(k, "nope"), None);
-    }
-
-    #[test]
-    fn coverage_ladders_by_deepest_nomos() {
-        use crate::store::RootEntry;
-        let roots = vec![
-            RootEntry {
-                key: "initial-topography@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64".into(),
-                object: "a".into(),
-                provisional: false,
-            },
-            RootEntry {
-                key: "erosion-tile@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64|epochs=20".into(),
-                object: "b".into(),
-                provisional: false,
-            },
-            RootEntry {
-                key: "water-tile@v|seed=0|face=0|level=6|oi=0|oj=0|nx=64|eepochs=20|steps=200".into(),
-                object: "c".into(),
-                provisional: false,
-            },
-            // a second face with only initial_topo reached
-            RootEntry {
-                key: "initial-topography@v|seed=0|face=1|level=6|oi=0|oj=0|nx=64".into(),
-                object: "d".into(),
-                provisional: false,
-            },
-        ];
-        let cov = Coverage::parse(&roots);
-        assert_eq!(cov.level, 6);
-        assert_eq!(cov.nx, 64);
-        assert_eq!(cov.state(0, 0, 0), State::Watered, "deepest nomos wins");
-        assert_eq!(cov.state(1, 0, 0), State::InitialTopography, "initial-topography-only face");
-        assert_eq!(cov.state(5, 0, 0), State::Unbuilt, "untouched face");
-    }
-}
+// The build-state census tests live with the census — `watch::tests`
+// (key-field parsing, the deepest-nomos ladder). Keeping a copy here would be
+// the same fork this module just stopped maintaining.

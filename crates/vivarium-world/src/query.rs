@@ -642,6 +642,27 @@ impl<'s> World<'s> {
     /// A Hit is byte-identical to a fresh compute (the reductions are pure f64
     /// functions of the keyed inputs) — the staleness/purity conviction the probe
     /// carries.
+    /// The **store-only** half of [`Self::epoch_reduction`]: `Some` iff the
+    /// builder has already materialized this epoch, `None` otherwise. Never
+    /// computes and never writes.
+    ///
+    /// This is what lets an explorer answer *"is this stage built, or am I
+    /// looking at something this process just worked out?"* — the difference an
+    /// instrument for checking the world's systems has to be able to state, and
+    /// that `epoch_reduction`'s `(value, Source)` pair can only report *after*
+    /// paying for the miss. A view calls this first, shows the honest unbuilt
+    /// state, and only then decides whether to compute a labeled view-side
+    /// estimate off the frame path.
+    pub fn epoch_reduction_hit(&self, tp_c: f64) -> Option<(EpochReduction, Source)> {
+        let key = self.epoch_reduction_key(tp_c);
+        let bytes = self.store.get(&key)?;
+        let r = EpochReduction::from_bytes(&bytes)?;
+        sea_level::prime_derived_sea_pre_ledger(self.seed, tp_c, r.pre_ledger_sea_m);
+        erosion_return::prime_ledger(self.seed, tp_c, r.deposit_m, r.post_reference_m);
+        erosion_return::prime_derived_sea_after_erosion(self.seed, tp_c, r.derived_sea_m);
+        Some((r, self.hit_source(&key)))
+    }
+
     pub fn epoch_reduction(&self, tp_c: f64) -> (EpochReduction, Source) {
         let key = self.epoch_reduction_key(tp_c);
         if let Some(bytes) = self.store.get(&key) {
