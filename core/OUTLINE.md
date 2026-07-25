@@ -185,6 +185,7 @@ Live floor data: [`tabularium/terrestris.ordinum.udon`](../tabularium/terrestris
 | detail | Model | [#detail-erosion-composition](src/detail-erosion-composition.md) | Live crude fluvial rung: epoch pipeline, flux edges, measured residuals | draft |
 | observation | Model Critical | [#obs-cube-locked-kernel-bias](src/obs-cube-locked-kernel-bias.md) | MFD fan + uniform cell-area $A$ are cube-locked biases that do not converge | draft |
 | observation | Model Critical | [#obs-routing-curl-spiral](src/obs-routing-curl-spiral.md) | Routing violates contour-orthogonality: ~2% flux spirals, level-independent | draft |
+| observation | Model Critical | [#obs-erosion-residual-is-driver-bound](src/obs-erosion-residual-is-driver-bound.md) | Uplift pins erosion's residual (no stationarity to gate on); most tiles are subaerially empty and do no fluvial work | draft |
 
 **Hydrosphere & atmosphere** (water · hydrology · climate · ocean · coastal …)
 
