@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# The world-lifecycle CLI, without the cargo incantation.
+#
+#   bin/vivarium build --level 7 --frames 60
+#   bin/vivarium watch
+#   bin/vivarium watch --replay
+#
+# The world directory is optional everywhere: it defaults to $VIVARIUM_WORLD,
+# else ~/.cache/vivarium/globe-world — the same world the globe and worldview
+# views open, so every command agrees about which vivium it is talking about
+# without anyone typing a path.
+#
+# Release by default: `watch` repaints a globe on a poll loop and the debug
+# build is slow enough at that to be misleading about the builder's pace. Set
+# VIVARIUM_DEBUG=1 for a debug build (faster to compile, honest for backtraces).
+set -euo pipefail
+cd "$(dirname "$0")/.."
+if [ "${VIVARIUM_DEBUG:-}" = "1" ]; then
+  exec cargo run --quiet -p vivarium-world --bin vivarium -- "$@"
+fi
+exec cargo run --quiet --release -p vivarium-world --bin vivarium -- "$@"

@@ -23,28 +23,41 @@ Big-picture residual / ice vs segment intuition (not law): [`CONSOLIDATION-STATU
 
 ## Run (instruments, not canon)
 
+`bin/vivarium` is the CLI without the cargo incantation (release build; `VIVARIUM_DEBUG=1` for debug). The long form still works and is what older notes use.
+
 ```bash
 cargo test -p vivarium-world --lib
-cargo run -p vivarium-world --bin vivarium -- status
-cargo run -p vivarium-world --bin vivarium -- info --width 80
+bin/vivarium status                   # = cargo run -p vivarium-world --bin vivarium -- status
+bin/vivarium info --width 80
 cargo run --release -p vivarium-globe      # store-backed planet (observe-only)
 cargo run --release -p vivarium-worldview  # first-person store surface (observe-only)
 ```
 
-**See a built world (builder + views share one store):**
+**Which world?** Every command prints the world directory it resolved and *why* — an explicit argument, `$VIVARIUM_WORLD`, or the shared default `~/.cache/vivarium/globe-world` (the same world the globe and worldview open). The directory argument is optional everywhere; the announce line is what keeps "optional" from meaning "unknowable."
+
+**What is it building?** The **manifest** carries this vivium's demand — `order`, `target_phase`, `level`, `frames`, `erosion_epochs`, `water_steps` ( #form-manifest-prescribes-vivium FE(2) ). Flags override it for one run and the build log names every override. Demand is never folded into a key: editing it changes what gets built and in what order, never what a built artifact contains, so it is safe to edit mid-build.
+
+**Build a world, and watch it happen:**
 
 ```bash
 export VIVARIUM_WORLD="${VIVARIUM_WORLD:-$HOME/.cache/vivarium/globe-world}"
-cargo run -p vivarium-world --bin vivarium -- new "$VIVARIUM_WORLD" first-light
+bin/vivarium new "$VIVARIUM_WORLD" first-light
 # emerged-land flux is still unmet — waive for provisional materialization:
-cargo run -p vivarium-world --bin vivarium -- build "$VIVARIUM_WORLD" --level 6 --epochs 20 --allow-unmet
-cargo run -p vivarium-world --bin vivarium -- status "$VIVARIUM_WORLD"   # pyramid + provisional column
-cargo run --release -p vivarium-globe                                    # spin the built surface
-# optional: first-person over the same store (no VIVARIUM_ALLOW_VIEW_EVOLUTION)
-cargo run --release -p vivarium-worldview
+bin/vivarium build --level 6 --epochs 20 --allow-unmet
+bin/vivarium status                   # pyramid + provisional column + this world's demand
+cargo run --release -p vivarium-globe # spin the built surface
 ```
 
-Default world dir: `$VIVARIUM_WORLD` or `~/.cache/vivarium/globe-world`. Views load builder `erosion-tile` roots via store census — they do not cold-run fluvial evolution.
+**Watch it build, or watch it again** — one reader, two ends ( #form-time-indexed-stage-chains FE(5) ). Run the build in one terminal and this in another:
+
+```bash
+bin/vivarium watch            # follows a running builder; globe repaints as roots land
+bin/vivarium watch --replay   # walks the store's landing history instead
+```
+
+Replay orders by root **landing** time — build history, not world-time, because root files carry no world-time. The reader says so every run, and its interior column counts how much world-time interior exists to replay at all.
+
+Views load builder `erosion-tile` roots via store census — they do not cold-run fluvial evolution.
 
 ## Standing law
 

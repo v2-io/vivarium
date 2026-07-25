@@ -5,25 +5,43 @@
 //! number of read-only explorers watch through the store (the store is the bus
 //! — no IPC). Subcommands:
 //!
-//! - `vivarium new <dir> [name]` — individuate a world: write its manifest
+//! Run it as `bin/vivarium <cmd>` (a wrapper over the cargo invocation).
+//!
+//! **The world directory is optional everywhere and every command announces
+//! which one it resolved, and why** — explicit argument, `$VIVARIUM_WORLD`, or
+//! the shared default. Two silent fallbacks mean the commonest invocation acts
+//! on a world the caller never named; the announce line is what stops "optional"
+//! from meaning "unknowable."
+//!
+//! **Demand comes from the manifest** ( #form-manifest-prescribes-vivium FE(2) ):
+//! `order`, `target_phase`, `level`, `frames`, `erosion_epochs`, `water_steps`.
+//! Flags override it for a single run and every override is named in the build
+//! log. Demand is not folded into any key — it changes what gets built and in
+//! what order, never what a built artifact contains.
+//!
+//! - `vivarium new [dir] [name]` — individuate a world: write its manifest
 //!   (fresh seed unless the dir already has one — identity is never re-minted).
-//! - `vivarium build <dir> [--level L] [--epochs E]` — builder v0: sweep all six
-//!   cube faces at level `L` through the initial-topography nomos (the breadth-first,
-//!   whole-world degenerate beacon — "all of the world to the end of Phase 2"),
-//!   then erode the same tiles (`--epochs 0` skips erosion). Appends `build.log`,
-//!   maintains `status.json`, holds `builder.lock`; a second invocation on a
-//!   LIVE build **attaches** (tails the log) instead of failing.
-//! - `vivarium status <dir>` — the **fidelity pyramid**: a census of the store's
-//!   roots by nomos × level (what exists, at what fidelity — readable while a
-//!   build runs).
-//! - `vivarium attach <dir>` — follow a running build's log (Ctrl-C detaches;
+//! - `vivarium build [dir] [--level L] [--epochs E] [--frames N]` — builder v0:
+//!   sweep all six cube faces at level `L` through the initial-topography nomos
+//!   (the breadth-first, whole-world degenerate beacon), then erode and settle
+//!   the same tiles (`--epochs 0` skips both), then materialize the deep-time
+//!   cooling stages. Appends `build.log`, maintains `status.json`, holds
+//!   `builder.lock`; a second invocation on a LIVE build **attaches** instead of
+//!   failing.
+//! - `vivarium watch [dir] [--replay]` — the build reader: the globe repainted as
+//!   roots land. Live follows a running builder; `--replay` walks the landing
+//!   history. One mechanism, two ends ( #form-time-indexed-stage-chains FE(5) ).
+//! - `vivarium status [dir]` — this world's demand, the **fidelity pyramid** (a
+//!   census of roots by nomos × level), the flux audit, and the ordinum maturity.
+//! - `vivarium info [dir]` — a one-shot from-space globe coloured by build-state.
+//! - `vivarium attach [dir]` — follow a running build's log (Ctrl-C detaches;
 //!   the builder is unaffected).
 //!
 //! Builder v0 is deliberately thin: no demand spool yet (explorers file demand
 //! in the next increment), no beacon parsing from the manifest (the sweep IS
 //! the whole-world beacon). It exists to make the decoupling REAL: run `build`,
-//! walk away, run `status`/`attach` from other terminals, run the globe on the
-//! same dir — nothing coordinates except the store.
+//! walk away, run `status`/`watch`/`attach` from other terminals, run the globe
+//! on the same dir — nothing coordinates except the store.
 //!
 //! Lives as a bin inside `vivarium-world` (not its own crate) to keep the
 //! workspace Cargo.toml untouched while a parallel agent owns edits to it;
@@ -111,17 +129,36 @@ fn positionals(rest: &[String]) -> Vec<&str> {
 /// the first non-flag positional wins (not merely `rest[0]` — flags may lead),
 /// else `$VIVARIUM_WORLD`, else the shared default
 /// `${XDG_CACHE_HOME:-~/.cache}/vivarium/globe-world`.
-fn world_dir(rest: &[String]) -> PathBuf {
+/// The world directory **and how it was chosen**.
+///
+/// The provenance is not decoration. Every command here takes an optional dir
+/// and silently falls back twice, so the most common invocation — no path at all
+/// — acts on a world the caller never named and cannot see from the command they
+/// typed. Printing which world, and why that one, is the difference between an
+/// instrument and a guess about what just happened.
+fn world_dir_resolved(rest: &[String]) -> (PathBuf, String) {
     if let Some(p) = positionals(rest).first() {
-        return PathBuf::from(p);
+        return (PathBuf::from(p), "given on the command line".into());
     }
     if let Ok(p) = std::env::var("VIVARIUM_WORLD") {
-        return PathBuf::from(p);
+        return (PathBuf::from(p), "$VIVARIUM_WORLD".into());
     }
     let cache = std::env::var("XDG_CACHE_HOME").map(PathBuf::from).unwrap_or_else(|_| {
         PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".into())).join(".cache")
     });
-    cache.join("vivarium").join("globe-world")
+    (
+        cache.join("vivarium").join("globe-world"),
+        "default — no dir given and $VIVARIUM_WORLD unset; the same world the globe opens".into(),
+    )
+}
+
+/// One line naming the world every command is about to act on. Printed before
+/// anything else, including before failures, so a command that errors still says
+/// what it was pointed at.
+fn announce_world(rest: &[String]) -> PathBuf {
+    let (dir, why) = world_dir_resolved(rest);
+    println!("world  {}\n       ({why})", dir.display());
+    dir
 }
 
 /// True when an explicit world dir appears as a non-flag positional.
@@ -134,7 +171,7 @@ fn flag(rest: &[String], name: &str) -> Option<u32> {
 }
 
 fn cmd_new(rest: &[String]) -> i32 {
-    let dir = world_dir(rest);
+    let dir = announce_world(rest);
     // Name is the second non-flag positional when dir is explicit; else default.
     let pos = positionals(rest);
     let name = if dir_is_explicit(rest) {
@@ -243,10 +280,7 @@ fn maybe_forced_unmet(phase: &str, mut real: Vec<&'static str>) -> Vec<&'static 
 }
 
 fn cmd_build(rest: &[String]) -> i32 {
-    let dir = world_dir(rest);
-    let level = flag(rest, "--level").unwrap_or(7).min(20) as u8;
-    let epochs = flag(rest, "--epochs").unwrap_or(40);
-    let frames = flag(rest, "--frames").unwrap_or(6);
+    let dir = announce_world(rest);
     let allow_unmet = rest.iter().any(|a| a == "--allow-unmet");
 
     let spec = match WorldSpec::load_or_create(&dir, "unnamed") {
@@ -256,6 +290,26 @@ fn cmd_build(rest: &[String]) -> i32 {
             return 1;
         }
     };
+
+    // The manifest prescribes this vivium ( #form-manifest-prescribes-vivium
+    // FE(2) ); a flag is a one-run OVERRIDE of that prescription, not the source
+    // of truth. So demand is read from the manifest first and flags are layered
+    // on top — and every override is named in the build log, because a build that
+    // silently differs from what the world says it is is exactly the confusion
+    // the manifest exists to prevent.
+    let d = &spec.demand;
+    let level = flag(rest, "--level").map(|l| l.min(20) as u8).unwrap_or(d.level);
+    let epochs = flag(rest, "--epochs").unwrap_or(d.erosion_epochs);
+    let frames = flag(rest, "--frames").unwrap_or(d.frames);
+    let overrides: Vec<String> = [
+        ("level", level as u32, d.level as u32),
+        ("erosion_epochs", epochs, d.erosion_epochs),
+        ("frames", frames, d.frames),
+    ]
+    .iter()
+    .filter(|(_, got, want)| got != want)
+    .map(|(n, got, want)| format!("{n} {want}→{got}"))
+    .collect();
 
     // Single-builder discipline: hold builder.lock; if a LIVE builder holds it,
     // attach instead of failing (Joseph's preferred UX). A stale lock (dead pid)
@@ -298,13 +352,23 @@ fn cmd_build(rest: &[String]) -> i32 {
     let mut out = BuilderLog { log: log_file, status_path: dir.join("status.json") };
 
     out.line(&format!(
-        "builder v0 on vivium \"{}\" (seed {}) — initial-topography sweep L{level}, {}x{} tiles/face-row, erosion {epochs} epochs{}",
+        "builder v0 on vivium \"{}\" (seed {}, order {}, target phase {}) — initial-topography sweep L{level}, {}x{} tiles/face-row, erosion {epochs} epochs, {frames} frames{}",
         spec.name,
         spec.seed,
+        spec.demand.order,
+        spec.demand.target_phase,
         TILE_NX,
         TILE_NX,
         if allow_unmet { " (--allow-unmet)" } else { "" }
     ));
+    if overrides.is_empty() {
+        out.line("demand read from the manifest; no flag overrides in effect");
+    } else {
+        out.line(&format!(
+            "FLAG OVERRIDES this run (manifest unchanged — edit `manifest` to make them stick): {}",
+            overrides.join(", ")
+        ));
+    }
 
     // The whole-world degenerate beacon: every face, tiled at TILE_NX.
     let per_face = ((1u64 << level) as usize).div_ceil(TILE_NX);
@@ -353,7 +417,14 @@ fn cmd_build(rest: &[String]) -> i32 {
                     let src = match phase {
                         "initial-topography" => world.initial_topography(face, level, oi, oj, TILE_NX).1,
                         "erosion" => world.erosion_tile(face, level, oi, oj, TILE_NX, epochs).1,
-                        _ => world.water_tile(face, level, oi, oj, TILE_NX, epochs, 200).1,
+                        // Water's step count was a bare `200` literal here — the
+                        // same class of misplacement as erosion's flag, failing
+                        // quietly instead of loudly (findings item 4). It is
+                        // still an arbitrary number ( #obs-water-fill-never-settles
+                        // measured that no criterion can replace it yet), but it
+                        // is now an arbitrary number this WORLD asked for, in the
+                        // file that records what this world asked for.
+                        _ => world.water_tile(face, level, oi, oj, TILE_NX, epochs, spec.demand.water_steps).1,
                     };
                     done += 1;
                     if src == Source::Computed {
@@ -435,10 +506,16 @@ extern "C" {
 // ---- instruments ------------------------------------------------------------
 
 fn cmd_status(rest: &[String]) -> i32 {
-    let dir = world_dir(rest);
+    let dir = announce_world(rest);
     let seed = match WorldSpec::load(&dir) {
         Ok(Some(spec)) => {
             println!("vivium \"{}\" — seed {}", spec.name, spec.seed);
+            let d = &spec.demand;
+            println!(
+                "demand (manifest — what THIS vivium asked for; never keyed, edit any time):\n  \
+                 order {} · target phase {} · level {} · frames {} · erosion_epochs {} · water_steps {}",
+                d.order, d.target_phase, d.level, d.frames, d.erosion_epochs, d.water_steps
+            );
             spec.seed
         }
         Ok(None) => {
@@ -568,7 +645,7 @@ fn cmd_status(rest: &[String]) -> i32 {
 /// fuller register-separated, unit-bearing `info` report is separate future
 /// work; this call renders the globe + a minimal frame and nothing more.
 fn cmd_info(rest: &[String]) -> i32 {
-    let dir = world_dir(rest);
+    let dir = announce_world(rest);
     let seed = match WorldSpec::load(&dir) {
         Ok(Some(spec)) => {
             println!("vivium \"{}\" — seed {}   (from-space globe · build-state at a glance)", spec.name, spec.seed);
@@ -631,7 +708,7 @@ fn cmd_info(rest: &[String]) -> i32 {
 /// process is a reader of the store bus like any other explorer
 /// ( #form-builder-admission , #form-core-view-wall ).
 fn cmd_watch(rest: &[String]) -> i32 {
-    let dir = world_dir(rest);
+    let dir = announce_world(rest);
     let replay = rest.iter().any(|a| a == "--replay");
     let width = flag(rest, "--width").unwrap_or(100).clamp(16, 240) as usize;
     let speed_ms = flag(rest, "--speed").unwrap_or(if replay { 250 } else { 500 }) as u64;
@@ -779,7 +856,7 @@ fn builder_status(dir: &Path) -> Option<String> {
 }
 
 fn cmd_attach(rest: &[String]) -> i32 {
-    let dir = world_dir(rest);
+    let dir = announce_world(rest);
     tail_log(&dir, true)
 }
 
