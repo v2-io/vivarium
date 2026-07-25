@@ -193,6 +193,7 @@ Live floor data: [`tabularium/terrestris.ordinum.udon`](../tabularium/terrestris
 | observation | Physics | [#obs-hydrosphere-box-nomos](src/obs-hydrosphere-box-nomos.md) | Box nomos proves representation-agnostic contract | draft |
 | formulation | Physics Critical | [#form-derived-sea-level](src/form-derived-sea-level.md) | Sea level = pour ocean into solid hypsometry; freeboard earns emerged land | draft |
 | detail | Machine | [#detail-water-parallelism](src/detail-water-parallelism.md) | Gather-not-scatter; CPU reference; GPU as keyed rung | draft |
+| observation | Physics Critical | [#obs-water-fill-never-settles](src/obs-water-fill-never-settles.md) | The tile fill is 40 s of world time and its residual grows; the `stable_dt` clamp binds at kilometre cells | draft |
 | | | | *(#gap) Water-kernel and climate nomos segments (beyond box + sea-level + measured envelopes on the NomosDecl)* | missing |
 
 **Materials & substrate**
