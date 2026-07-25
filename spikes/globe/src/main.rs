@@ -560,6 +560,49 @@ fn epoch_surface_tile(world: &World, face: Face, level: u8, nx: usize, tp: f64) 
     tile
 }
 
+/// Playback surfaces already built, keyed by `(face, level, T_p bits)`.
+///
+/// Playback advances only when the next epoch's surface lands, so this
+/// evaluation *is* the frame rate — measured at 113 ms per whole-globe frame at
+/// L8, 9.2 s for an 81-stage lap (`examples/epoch_surface_timing`). And playback
+/// **loops**, so without a cache every lap re-pays the whole thing to redraw
+/// surfaces it has already drawn. The ladder is a fixed, finite, fated set: the
+/// same `(face, level, T_p)` is bit-identical every time it is asked for, which
+/// is exactly the condition under which caching is free of consequence.
+///
+/// This is a **view-side working set, not a durability tier** — the same
+/// distinction `#form-store-as-save` FE(6) draws for the reduction caches. It
+/// holds nothing the store could not regenerate, and dropping it costs only
+/// recomputation.
+#[derive(Default)]
+struct EpochSurfaceCache {
+    tiles: std::sync::Mutex<std::collections::HashMap<(u8, u8, u64), Vec<f32>>>,
+}
+
+impl EpochSurfaceCache {
+    /// Memory ceiling. A lap at L8 is 6 faces × 65 536 cells × 4 B × 81 stages ≈
+    /// 127 MB — enough to matter on a laptop also running a renderer, so the
+    /// cache is bounded and clears wholesale rather than growing without limit.
+    /// Clearing wholesale (instead of evicting one entry) keeps a lap coherent:
+    /// a half-evicted ladder would stutter unpredictably mid-sweep, which reads
+    /// as a worse bug than a uniformly slower one.
+    const MAX_CELLS: usize = 48 * 1024 * 1024 / 4;
+
+    fn get_or_build(&self, world: &World, face: Face, level: u8, nx: usize, tp: f64) -> Vec<f32> {
+        let key = (face.index(), level, tp.to_bits());
+        if let Some(hit) = self.tiles.lock().unwrap().get(&key) {
+            return hit.clone();
+        }
+        let tile = epoch_surface_tile(world, face, level, nx, tp);
+        let mut map = self.tiles.lock().unwrap();
+        if map.len() * nx * nx > Self::MAX_CELLS {
+            map.clear();
+        }
+        map.insert(key, tile.clone());
+        tile
+    }
+}
+
 /// The worker: owns the World (store + seed), serves build requests one at a
 /// time, latest result wins on the ECS side. Faces build in parallel (they share
 /// only the Store, which is safe: worst case two threads compute the same object
@@ -632,6 +675,9 @@ fn spawn_worker(
         // Default is now the HONEST current-source surface; VIVARIUM_INCLUDE_STALE=1
         // restores the old silent-blend behaviour for side-by-side diagnosis.
         let include_stale = std::env::var("VIVARIUM_INCLUDE_STALE").map(|v| v == "1").unwrap_or(false);
+        // Lives across requests — that is the whole point, since consecutive
+        // requests during playback walk the same looping ladder.
+        let epoch_cache = EpochSurfaceCache::default();
         while let Ok(req) = rx.recv() {
             let t0 = std::time::Instant::now();
             *last_req.lock().unwrap() = Some(req);
@@ -665,17 +711,28 @@ fn spawn_worker(
             let faces: Vec<FaceMesh> = std::thread::scope(|s| {
                 let world = &world;
                 let regions = &regions;
+                let epoch_cache = &epoch_cache;
                 let handles: Vec<_> = (0u8..6)
                     .map(|f| {
                         s.spawn(move || {
                             let face = Face::from_index(f);
                             // Present: observe-only eroded assembly (builder's 64×64
-                            // tiles + prior). Epoch: the pure epoch tectonic surface.
-                            // Neither cold-runs long evolution (`#form-builder-admission`
-                            // FE(4)).
+                            // tiles + prior). Epoch: the pure epoch tectonic surface,
+                            // through the cache — a replayed lap must not re-evaluate
+                            // surfaces it has already drawn. Neither cold-runs long
+                            // evolution (`#form-builder-admission` FE(4)).
                             let (tile, eroded) = match epoch_tp {
                                 None => world.assemble_surface_tile(face, level, 0, 0, nx, regions),
-                                Some(tp) => (epoch_surface_tile(world, face, level, nx, tp), false),
+                                Some(tp) => {
+                                    // The lock is held only across the probe and the
+                                    // insert, never across the build — the six threads
+                                    // hold six DISTINCT faces, so their keys cannot
+                                    // collide and there is no duplicate work to
+                                    // prevent. Building inside the lock would
+                                    // serialize a cold lap for no benefit, turning a
+                                    // ~19 ms parallel frame into a ~113 ms one.
+                                    (epoch_cache.get_or_build(world, face, level, nx, tp), false)
+                                }
                             };
                             let land = tile.iter().filter(|&&h| h > sea_m).count();
                             // Per-cell coverage: cells with no covering region are
