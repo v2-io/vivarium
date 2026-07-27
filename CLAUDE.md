@@ -52,6 +52,18 @@ Candidate inventory (unratified scan, not canon): [`core-segment-candidates-2026
 7. **Code rank for claim adjudication.** Live code is often the **least principled** surface right now (provisional, incomplete, dual-home, debt-ridden). For promotion work: **segments / design / theory / DECISIONS / measured probes** establish what is true as law or observation; code is **compliance debt**, **instrument**, or **miniature illustration** — not the adjudicator of architecture. "Not in code" does **not** falsify a formulation; "in code" does **not** mint a claim. Probes that can *fail* still convict behavior claims (`#norm-probes-before-claims`). When briefing agents: do not invite "verify against live code" as co-equal with design truth.
 7. **Memory holds procedure only.** Research results belong in the repo where probes can convict them.
 
+### The verify loop, and why it is longer than it looks
+
+**Any edit under `crates/vivarium-world/` changes `SRC_HASH`, which is folded into every nomos key — so it invalidates the entire store.** The loop to see a change in a world is therefore:
+
+```
+edit → bin/install (rebuild binaries) → vivarium build (rebuild the world) → look
+```
+
+Skipping the rebuild does not show you a stale picture; it shows you a *recomputing* one, which reads as a performance problem rather than a cache miss. That has now cost two separate sessions real time — one agent burned three verification cycles discovering it, and a replay was misdiagnosed as slow when it was recomputing the planet under changed keys.
+
+Note the sharp edge: the digest currently covers `src/bin/`, so **editing the CLI's help text invalidates a world**. Whether to exclude `src/bin/*.rs` (it cannot under-key — they are separate crates the lib cannot reference) is open and is Joseph's call; it touches `#form-complete-content-addressed-key`.
+
 ### Claim ↔ code order (and the allowed inversion)
 
 **Ideal flow:** claim segment (or honest OUTLINE `#gap`) → ordinum / nomotheke when law is ladder-shaped → code and probes that can convict.
