@@ -46,6 +46,64 @@ mod tests {
     use super::*;
     use crate::sphere::Face;
 
+    /// A view coarser than the build level draws the UNCARVED PRIOR, silently.
+    ///
+    /// `grid_pos` refuses any cell whose level is below the region's own
+    /// (`level < self.level`), so `surface_at` falls through to
+    /// `gen::initial_topography_m` — the prior — for every cell. The store can be
+    /// full of carved tiles and the picture shows none of them, with nothing in
+    /// the return value distinguishing "no tile here" from "tile here, wrong
+    /// level to ask." Claim home: #obs-coarse-view-draws-the-uncarved-prior .
+    ///
+    /// Convicts both halves: at the region's own level the carved surface is
+    /// returned (so the region is genuinely covering), and one level coarser the
+    /// prior comes back instead.
+    #[test]
+    fn a_view_coarser_than_the_build_level_silently_draws_the_prior() {
+        let (seed, level, nx) = (7u64, 9u8, 8usize);
+        let (face, oi, oj) = (Face::ZPos, 64u32, 64u32);
+        // A region whose heights are unmistakably NOT the prior: a constant far
+        // from any plausible terrain, so "did we get the carved value" is
+        // decidable by inspection rather than by tolerance.
+        let carved = -12_345.0f32;
+        let region = ErodedRegion {
+            seed,
+            face,
+            level,
+            oi,
+            oj,
+            nx,
+            h: vec![carved; nx * nx],
+        };
+        let regions = [region];
+
+        // At the build level: covered, and the carved value comes back. The
+        // detail term is prior(level) − prior(self.level) = 0 here, so the value
+        // is exactly the carved constant.
+        let at_build = CellId::from_face_ij(face, oi + 2, oj + 2, level);
+        let got = surface_at(seed, at_build, &regions);
+        assert!((got - carved as f64).abs() < 1e-6, "at the build level the carved surface must be returned, got {got}");
+        assert_eq!(tier_at(at_build, &regions), Some(level), "and the region must report as covering");
+
+        // One level coarser — the same place on the sphere, asked at L8.
+        let coarser = CellId::from_face_ij(face, (oi + 2) / 2, (oj + 2) / 2, level - 1);
+        let got_coarse = surface_at(seed, coarser, &regions);
+        let prior = gen::initial_topography_m(seed, coarser, level - 1);
+        assert_eq!(
+            tier_at(coarser, &regions),
+            None,
+            "the defect: a coarser query is not covered at all, though the tile exists"
+        );
+        assert!(
+            (got_coarse - prior).abs() < 1e-9,
+            "and the value returned is the UNCARVED prior ({prior}), not the carved surface — got {got_coarse}"
+        );
+        assert!(
+            (got_coarse - carved as f64).abs() > 1000.0,
+            "the two must be far apart, else this test would pass on a coincidence"
+        );
+    }
+
     // origin far from 0 so the halo (origin-1 …) is in-range and `fill` populates it.
     fn patch(w: usize) -> Patch<f32> {
         Patch::new(Face::ZPos, 12, 100, 100, w, 1)

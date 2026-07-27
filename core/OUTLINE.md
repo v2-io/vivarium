@@ -105,6 +105,7 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | formulation | Machine Critical | [#form-depend-by-key-never-latest](src/form-depend-by-key-never-latest.md) | Depend on neighbours by complete key only; never “finest available” | draft |
 | formulation | Machine Critical | [#form-pull-query-composition](src/form-pull-query-composition.md) | World law composes by pull of keyed nomos; pattern not generic engine | draft |
 | formulation | Machine Critical | [#form-three-scoped-runtime](src/form-three-scoped-runtime.md) | Spine / cones / edit-layer decomposition; time-in-key DAG; prefetch is pure optimization | draft |
+| observation | Machine Critical | [#obs-coarse-view-draws-the-uncarved-prior](src/obs-coarse-view-draws-the-uncarved-prior.md) | A read coarser than the build level falls through to the fated prior and reports nothing | draft |
 | formulation | Machine | [#form-engine-bevy](src/form-engine-bevy.md) | Bevy is the view/runtime engine (project decision + spike) | draft |
 | detail | Machine | [#detail-builder-daemon](src/detail-builder-daemon.md) | Unbuilt builder/explorer daemon design: store-as-bus, beacons, demand spool | draft |
 | detail | Project | [#detail-vivium-lifecycle](src/detail-vivium-lifecycle.md) | Pipeline stages, capability ladder, BREAK-1/3/4/5 + doctrine | draft |
