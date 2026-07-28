@@ -126,7 +126,10 @@ COMMANDS
                                   vivarium demand frames=60 level=9
                                 fields: order target_phase level frames
                                         erosion_epochs erosion_stage_stride
-                                        water_steps
+                                        water_steps beacon
+                                a beacon is a standing regional build priority:
+                                  vivarium demand 'beacon=face=1 level=13
+                                    oi=640 oj=5376 tiles=4 epochs=300 stride=10'
 
   build [dir] [--level L] [--epochs E] [--frames N] [--allow-unmet]
                                 sweep all six cube faces at L through initial
@@ -595,6 +598,50 @@ fn cmd_build(rest: &[String]) -> i32 {
         ));
     }
 
+    // The beacon, if this vivium set one (LEXICON `beacon`; the first live
+    // instance of the demand-posture half of #form-manifest-prescribes-vivium
+    // FE(2)): one region at its own level, with its own response-time-derived
+    // erosion demand, swept AFTER the whole-world floor. Erosion-only for now —
+    // settling water at fine levels is blocked on the step-size question
+    // ( #obs-water-fill-never-settles ), and an honest absence beats a wrong
+    // pour. Same admission gate as the global erosion phase.
+    if let Some(b) = &spec.demand.beacon {
+        let unmet = phase_unmet_quantities("erosion");
+        if !unmet.is_empty() && !allow_unmet {
+            out.line(&format!("beacon: REFUSED — unmet flux needs: {}", unmet.join("; ")));
+        } else {
+            world.set_provisional_writes(!unmet.is_empty());
+            let t0 = std::time::Instant::now();
+            let (mut bdone, mut bcomputed) = (0usize, 0usize);
+            let btotal = (b.tiles * b.tiles) as usize;
+            out.line(&format!(
+                "beacon: f{} L{} ({},{}) {}x{} tiles — erosion {} epochs, stage every {}",
+                b.face, b.level, b.oi, b.oj, b.tiles, b.tiles, b.epochs, b.stride
+            ));
+            let face = Face::from_index(b.face);
+            for tj in 0..b.tiles {
+                for ti in 0..b.tiles {
+                    let (oi, oj) = (b.oi + ti * TILE_NX as u32, b.oj + tj * TILE_NX as u32);
+                    let src = world
+                        .erosion_tile_staged(face, b.level, oi, oj, TILE_NX, b.epochs, b.stride)
+                        .1;
+                    bdone += 1;
+                    if src == Source::Computed {
+                        bcomputed += 1;
+                    }
+                    out.status("beacon", bdone, btotal);
+                }
+            }
+            out.line(&format!(
+                "beacon: swept {btotal} tiles at L{} in {:.1?} ({bcomputed} computed, {} were hits)",
+                b.level,
+                t0.elapsed(),
+                btotal - bcomputed
+            ));
+            world.set_provisional_writes(false);
+        }
+    }
+
     out.status("idle", done, total);
     out.line("build complete — the store is the save; explorers see everything already.");
     0
@@ -1016,10 +1063,27 @@ fn cmd_demand(rest: &[String]) -> i32 {
             "erosion_epochs" => num(v).map(|n| d.erosion_epochs = n).is_ok(),
             "erosion_stage_stride" => num(v).map(|n| d.erosion_stage_stride = n).is_ok(),
             "water_steps" => num(v).map(|n| d.water_steps = n).is_ok(),
+            "beacon" => {
+                if v == "none" {
+                    d.beacon = None;
+                    true
+                } else {
+                    match vivarium_world::spec::Beacon::parse(v.trim_matches('"')) {
+                        Ok(b) => {
+                            d.beacon = Some(b);
+                            true
+                        }
+                        Err(e) => {
+                            eprintln!("error: {e}\n  e.g. vivarium demand 'beacon=face=1 level=13 oi=640 oj=5376 tiles=4 epochs=300 stride=10'   (or beacon=none)");
+                            return 2;
+                        }
+                    }
+                }
+            }
             other => {
                 eprintln!(
                     "error: `{other}` is not a demand field.\n  \
-                     fields: order target_phase level frames erosion_epochs erosion_stage_stride water_steps\n  \
+                     fields: order target_phase level frames erosion_epochs erosion_stage_stride water_steps beacon\n  \
                      (identity — seed, format — is deliberately NOT settable: changing it would fork a different world)"
                 );
                 return 2;
@@ -1055,6 +1119,13 @@ fn cmd_demand(rest: &[String]) -> i32 {
         d.erosion_stage_stride
     );
     println!("  water_steps     {}   arbitrary — see ASSUMPTIONS.md 'water fill steps'", d.water_steps);
+    match &d.beacon {
+        Some(b) => println!(
+            "  beacon          f{} L{} ({},{}) {}x{} tiles, {} epochs, stage every {}   standing regional build priority (beacon=none clears)",
+            b.face, b.level, b.oi, b.oj, b.tiles, b.tiles, b.epochs, b.stride
+        ),
+        None => println!("  beacon          (none)   standing regional build priority — e.g. 'beacon=face=1 level=13 oi=640 oj=5376 tiles=4 epochs=300 stride=10'"),
+    }
     if assignments.is_empty() {
         println!("\nset any of them:  vivarium demand frames=60 level=9");
     } else {

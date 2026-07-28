@@ -52,6 +52,65 @@ pub const MANIFEST_FILE: &str = "manifest";
 /// true; a `NomosDecl` field would assert them as part of the declared law,
 /// which is false. Moving an unjustified number into the law layer would make it
 /// look principled without making it convictable.
+/// The first live **beacon** (LEXICON `beacon`, settled 2026-07-10): a
+/// standing, spec-persisted build priority — one region at one level that the
+/// builder sweeps in addition to the whole-world floor. Demand, not identity:
+/// it changes what gets built (first), provably never what a built artifact
+/// contains, so it is freely editable mid-build and folded into no key.
+///
+/// `epochs`/`stride` are the region's *own* erosion demand — a fine patch
+/// wants its own response-time-derived count ( `Fluvial::response_census` ),
+/// not the whole-world default. What is NOT here yet: per-beacon policy
+/// (depth-first vs breadth-first, `#detail-builder-daemon`), multiple beacons,
+/// and any phase beyond erosion.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Beacon {
+    pub face: u8,
+    pub level: u8,
+    pub oi: u32,
+    pub oj: u32,
+    /// Region size in builder tiles per axis (each 64×64 cells today).
+    pub tiles: u32,
+    pub epochs: u32,
+    pub stride: u32,
+}
+
+impl Beacon {
+    /// Parse the manifest value: `"face=1 level=13 oi=640 oj=5376 tiles=4 epochs=300 stride=10"`.
+    /// Every field required — a beacon with a guessed field aims the builder at
+    /// the wrong terrain silently.
+    pub fn parse(v: &str) -> Result<Beacon, String> {
+        let mut b = Beacon { face: 0, level: 0, oi: 0, oj: 0, tiles: 1, epochs: 0, stride: 0 };
+        let mut seen = [false; 7];
+        for part in v.split_whitespace() {
+            let (k, val) = part.split_once('=').ok_or_else(|| format!("beacon field `{part}`: expected k=v"))?;
+            let n: u32 = val.parse().map_err(|e| format!("beacon {k}: {e}"))?;
+            match k {
+                "face" => (b.face, seen[0]) = (n.min(5) as u8, true),
+                "level" => (b.level, seen[1]) = (n.min(20) as u8, true),
+                "oi" => (b.oi, seen[2]) = (n, true),
+                "oj" => (b.oj, seen[3]) = (n, true),
+                "tiles" => (b.tiles, seen[4]) = (n.clamp(1, 64), true),
+                "epochs" => (b.epochs, seen[5]) = (n, true),
+                "stride" => (b.stride, seen[6]) = (n, true),
+                other => return Err(format!("beacon: unknown field `{other}`")),
+            }
+        }
+        if seen.iter().all(|&s| s) {
+            Ok(b)
+        } else {
+            Err("beacon needs all of: face level oi oj tiles epochs stride".into())
+        }
+    }
+
+    pub fn to_value(&self) -> String {
+        format!(
+            "face={} level={} oi={} oj={} tiles={} epochs={} stride={}",
+            self.face, self.level, self.oi, self.oj, self.tiles, self.epochs, self.stride
+        )
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Demand {
     /// Which ordinum (world-kind floor) this vivium is built against.
@@ -75,6 +134,8 @@ pub struct Demand {
     pub erosion_stage_stride: u32,
     /// Surface-water relaxation steps per tile. Arbitrary; see the type note.
     pub water_steps: u32,
+    /// A standing regional build priority, if one is set. See [`Beacon`].
+    pub beacon: Option<Beacon>,
 }
 
 impl Default for Demand {
@@ -90,6 +151,7 @@ impl Default for Demand {
             erosion_epochs: 40,
             erosion_stage_stride: 5,
             water_steps: 200,
+            beacon: None,
         }
     }
 }
@@ -151,6 +213,9 @@ impl WorldSpec {
         let _ = writeln!(s, "erosion_epochs = {}", d.erosion_epochs);
         let _ = writeln!(s, "erosion_stage_stride = {}", d.erosion_stage_stride);
         let _ = writeln!(s, "water_steps = {}", d.water_steps);
+        if let Some(b) = &d.beacon {
+            let _ = writeln!(s, "beacon = \"{}\"", b.to_value());
+        }
         s
     }
 
@@ -189,6 +254,7 @@ impl WorldSpec {
                 "erosion_epochs" => d.erosion_epochs = num("erosion_epochs", v)?,
                 "erosion_stage_stride" => d.erosion_stage_stride = num("erosion_stage_stride", v)?,
                 "water_steps" => d.water_steps = num("water_steps", v)?,
+                "beacon" => d.beacon = Some(Beacon::parse(v.trim_matches('"'))?),
                 other => return Err(format!("manifest line {}: unknown key `{other}`", n + 1)),
             }
         }
@@ -284,6 +350,20 @@ mod tests {
         // world. It clamps to the same ceiling the CLI applies.
         let spec = WorldSpec::parse("format = 1\nname = \"x\"\nseed = 1\nlevel = 99\n").unwrap();
         assert_eq!(spec.demand.level, 20);
+    }
+
+    #[test]
+    fn beacon_roundtrips_and_requires_all_fields() {
+        let mut a = WorldSpec::new("demo", 7);
+        a.demand.beacon =
+            Some(Beacon::parse("face=1 level=13 oi=640 oj=5376 tiles=4 epochs=300 stride=10").unwrap());
+        let b = WorldSpec::parse(&a.to_string()).unwrap();
+        assert_eq!(a, b, "a beacon survives the manifest round-trip");
+        // A beacon with a guessed field aims the builder at the wrong terrain
+        // silently — partial beacons are refused, not defaulted.
+        assert!(Beacon::parse("face=1 level=13").is_err());
+        // No beacon line at all is simply no beacon (every pre-beacon manifest).
+        assert_eq!(WorldSpec::parse(&WorldSpec::new("x", 1).to_string()).unwrap().demand.beacon, None);
     }
 
     #[test]

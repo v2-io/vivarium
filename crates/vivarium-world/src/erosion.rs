@@ -261,6 +261,20 @@ pub struct Fluvial {
 const NEIGHBORS: [(i32, i32); 8] =
     [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)];
 
+/// See [`Fluvial::response_census`]. All figures over the current surface;
+/// response percentiles are over **channelized** cells only (drainage above
+/// the stated threshold), Courant over all subaerial non-outlet cells.
+#[derive(Debug, Clone, Copy)]
+pub struct ResponseCensus {
+    pub subaerial: usize,
+    pub channel_cells: usize,
+    pub courant_p50: f32,
+    pub courant_max: f32,
+    pub response_epochs_p50: f32,
+    pub response_epochs_p90: f32,
+    pub response_epochs_max: f32,
+}
+
 impl Fluvial {
     /// Seed from the band-limited prior over `nx × nx` cells of `face` at `level`
     /// starting at `(oi, oj)` — the honest initial condition (no imposed shapes).
@@ -707,6 +721,98 @@ impl Fluvial {
                     }
                 }
             }
+        }
+    }
+
+    /// **Instrument, not law**: the kinematic-wave numbers for this tile's
+    /// *current* surface — the two quantities the stream-power literature says
+    /// govern whether an epoch count and an epoch size mean anything.
+    ///
+    /// At $n=1$ an erosional signal climbs the network at celerity $v = K A^m$,
+    /// independent of slope (Whipple & Tucker 1999 Eq. 25). Per epoch our lump
+    /// is `k_dt` $= K\,\Delta t$, so:
+    ///
+    /// - **Courant number** per cell: $C = k_{dt}\,A^m / d$ with $d$ the true
+    ///   great-circle step to the D8 receiver — how many cells the wave tries
+    ///   to cross per epoch. $C \gg 1$ means the transient (exactly what a
+    ///   stage chain materializes) is beyond the scheme's accuracy claim
+    ///   (Braun & Willett 2013 §7.2); the *endpoint* remains stable regardless.
+    /// - **Response epochs** per cell: the cumulative traversal
+    ///   $\sum d_i/(k_{dt}A_i^m)$ down the flow path to base level — the
+    ///   discrete form of the analytical response time $T_A$ (Gasparini et
+    ///   al. 2024 Eq. 9–11), the a-priori answer to "how many epochs does this
+    ///   terrain need" that replaces a runtime convergence gate (which is a
+    ///   measured no-go here, `#obs-erosion-residual-is-driver-bound`).
+    ///
+    /// Computed on the surface as it stands (one fill + network derivation,
+    /// heights restored — `&mut` only for scratch): the network is treated as
+    /// quasi-static, the same assumption the analytic $T_A$ makes, and the
+    /// literature's own caveat applies — network rearrangement is what breaks
+    /// it (Gasparini et al. 2024). Headwater cells have tiny $A$ and hence huge
+    /// nominal traversal, but they are creep-governed, not stream-power-
+    /// governed; the channel-restricted figures use `channel_min_cells` × the
+    /// tile's median cell area as the channelization threshold (an instrument
+    /// choice, stated, not a physics claim).
+    pub fn response_census(&mut self, p: &FluvialParams, channel_min_cells: f32) -> ResponseCensus {
+        let saved_h = self.h.clone();
+        let outlets = self.outlets();
+        self.fill_depressions(&outlets);
+        let recv = self.receivers(&outlets);
+        let order = self.elevation_order();
+        self.accumulate_drainage(&order);
+
+        let n = self.nx * self.nx;
+        let sea = sea_level::derived_sea_level_m(self.seed) as f32;
+        let median_area = {
+            let mut a = self.cell_area.clone();
+            a.sort_by(f32::total_cmp);
+            a[a.len() / 2]
+        };
+        let channel_area = channel_min_cells * median_area;
+
+        // Ascending elevation ⇒ receiver visited before donor, so one pass
+        // accumulates path totals: epochs_to_base[i] = epochs_to_base[recv[i]] + own leg.
+        let mut courant = vec![0.0f32; n];
+        let mut epochs_to_base = vec![0.0f32; n];
+        for &i in &order {
+            if outlets[i] || recv[i] == i {
+                continue;
+            }
+            let d = self.dist_m(i, recv[i]);
+            let v = p.k_dt * self.drainage[i].powf(p.m); // metres per epoch
+            courant[i] = v / d;
+            epochs_to_base[i] = epochs_to_base[recv[i]] + if v > 0.0 { d / v } else { f32::INFINITY };
+        }
+
+        let mut c_sub: Vec<f32> = Vec::new();
+        let mut resp_channel: Vec<f32> = Vec::new();
+        let mut subaerial = 0usize;
+        for i in 0..n {
+            if self.h[i] <= sea || outlets[i] {
+                continue;
+            }
+            subaerial += 1;
+            c_sub.push(courant[i]);
+            if self.drainage[i] >= channel_area {
+                resp_channel.push(epochs_to_base[i]);
+            }
+        }
+        self.h = saved_h; // restore — the census must not advance the world
+        let pct = |v: &mut Vec<f32>, q: f64| -> f32 {
+            if v.is_empty() {
+                return 0.0;
+            }
+            v.sort_by(f32::total_cmp);
+            v[((v.len() - 1) as f64 * q) as usize]
+        };
+        ResponseCensus {
+            subaerial,
+            channel_cells: resp_channel.len(),
+            courant_p50: pct(&mut c_sub, 0.5),
+            courant_max: pct(&mut c_sub, 1.0),
+            response_epochs_p50: pct(&mut resp_channel, 0.5),
+            response_epochs_p90: pct(&mut resp_channel, 0.9),
+            response_epochs_max: pct(&mut resp_channel, 1.0),
         }
     }
 
