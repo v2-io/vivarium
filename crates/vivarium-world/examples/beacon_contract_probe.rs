@@ -10,7 +10,8 @@
 //! — `Fluvial::outlets` inferred the contract from geometry, and only a whole
 //! cube face inferred its way out of the sink branch.
 //!
-//! `#obs-fill-writes-itself-into-the-bed` measured the L9 planet build and found
+//! The L9 planet build's grain sweep
+//! (`#obs-lakes-are-routed-over-not-carved-away` FE(7)) found
 //! the grain barely matters there: a tile spans 1251 km against a basin that
 //! wants 279 km, so the edges are never reached. The beacon is the opposite
 //! regime — 78 km tiles, 313 km of footprint, 300 epochs — and it is the regime

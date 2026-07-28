@@ -225,10 +225,11 @@ impl Default for FluvialParams {
 /// can choose one, and not before.
 ///
 /// Making it selectable is what lets a sub-face window be carved under the
-/// contract it does not have, which is the experiment
-/// `#obs-fill-writes-itself-into-the-bed` could not run: nothing measured the
-/// beacon regime against its own alternative, because there was no way to ask
-/// for it.
+/// contract it does not have, which is the experiment the L9 grain sweep could
+/// not run: nothing measured the beacon regime against its own alternative,
+/// because there was no way to ask for it
+/// (`#obs-lakes-are-routed-over-not-carved-away` FE(7),
+/// `#obs-tile-outlets-grade-away-the-basins` FE(5)).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EdgeContract {
     /// **Every perimeter cell is a base-level sink.** The tile grades to its own
