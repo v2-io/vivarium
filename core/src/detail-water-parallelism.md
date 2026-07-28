@@ -40,3 +40,4 @@ Determinism-as-ontology is not negotiable; GPUs are bit-reproducible per device,
 ## Working Notes
 
 - Supersedes water-parallelism plan as home.
+- **Sweep breadcrumb (self-destructs).** `msc/spike-water-structures/` — the water-structures spike. Likely primary absorbing segment: this one; the mapping is asserted from session memory, not verified — at the msc graduation sweep, *verify* the residue is fully absorbed here (or land what is missing, or re-point this note if the mapping is wrong), then graduate the residue to `.super-archive/` and **delete this note** (integration-is-replacement: the note's disappearance is the done-signal).
