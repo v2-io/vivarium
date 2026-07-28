@@ -11,6 +11,8 @@ Dated, **frozen** entries for the end-user perspective: what the world can show 
 
 An agent's *interpretation* of a render can still be off — the entry doesn't replace probes, it complements them at the altitude where Joseph's eye is the calibrated instrument. What it guarantees is weaker and load-bearing: the ball either visibly reached the end of the row, or the remaining distance is named.
 
+**An unwritable entry has two diagnoses, and they queue differently:** the work didn't reach the surface (queue the work), or *no instrument can render this scale or layer yet* (queue the instrument). The second is a real and distinct finding — the L13 beacon patch existed for hours before the region window could show it, and during that gap the missing thing was the exploration tool, not the physics. An entry that says "built, currently invisible, because no view reaches X" is a valid entry and a direct instrument requisition.
+
 **The rules, few and load-bearing:**
 
 - **Every shot has a referent** ( `#norm-no-depiction-without-referent` extends to documents): an ASCII render, screenshot, or number names its **seed, source cohort (`src=`), and the command that produced it** — so any reader can re-derive it, and no image is a mock-up.
