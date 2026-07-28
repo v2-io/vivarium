@@ -1252,40 +1252,48 @@ mod tests {
         // chains FE(8) ): a stage at epochs=k holds the same bytes whether built
         // as a chain rung or as a one-shot run. If this test ever breaks, the
         // stride has leaked into artifact content and MUST move into the key.
-        let (dir_a, dir_b) = (tmpdir("stage-oneshot"), tmpdir("stage-chain"));
-        let face = Face::from_index(2);
-        let (level, nx, epochs, stride) = (6u8, 16usize, 7u32, 3u32);
+        // Two cadences, deliberately adversarial: equal legs with an unequal
+        // tail (7,3 → 3+3+1) and a stride coprime to the count with a long
+        // remainder (11,4 → 4+4+3). A single cadence convicts only the seams it
+        // happens to cut (the odd/even-restart lesson from Earth-system-model
+        // test suites — a chain test at one cadence passed for years while
+        // other offsets diverged).
+        for (epochs, stride, interior) in [(7u32, 3u32, vec![3u32, 6]), (11, 4, vec![4, 8])] {
+            let (dir_a, dir_b) = (tmpdir("stage-oneshot"), tmpdir("stage-chain"));
+            let face = Face::from_index(2);
+            let (level, nx) = (6u8, 16usize);
 
-        let sa = Store::open(&dir_a).unwrap();
-        let wa = World::new(&sa, 7);
-        let (one_shot, src_a) = wa.erosion_tile(face, level, 0, 0, nx, epochs);
-        assert_eq!(src_a, Source::Computed);
+            let sa = Store::open(&dir_a).unwrap();
+            let wa = World::new(&sa, 7);
+            let (one_shot, src_a) = wa.erosion_tile(face, level, 0, 0, nx, epochs);
+            assert_eq!(src_a, Source::Computed);
 
-        let sb = Store::open(&dir_b).unwrap();
-        let wb = World::new(&sb, 7);
-        let (staged, src_b) = wb.erosion_tile_staged(face, level, 0, 0, nx, epochs, stride);
-        assert_eq!(src_b, Source::Computed);
+            let sb = Store::open(&dir_b).unwrap();
+            let wb = World::new(&sb, 7);
+            let (staged, src_b) = wb.erosion_tile_staged(face, level, 0, 0, nx, epochs, stride);
+            assert_eq!(src_b, Source::Computed);
 
-        assert!(
-            one_shot.iter().zip(staged.iter()).all(|(a, b)| a.to_bits() == b.to_bits()),
-            "chained settle history must be BIT-identical to the one-shot run"
-        );
-        // The interior is addressable: every ladder rung is a store citizen.
-        for k in [3u32, 6] {
-            let (_h, _src, eroded) = wb.surface_prefer_eroded(face, level, 0, 0, nx, k);
-            assert!(eroded, "interior stage epochs={k} must be a keyed citizen");
-            let r = wb.erosion_stage_residual(face, level, 0, 0, nx, k);
             assert!(
-                r.is_some_and(f32::is_finite),
-                "computed stage epochs={k} must carry its measured residual"
+                one_shot.iter().zip(staged.iter()).all(|(a, b)| a.to_bits() == b.to_bits()),
+                "chained settle history must be BIT-identical to the one-shot run (epochs={epochs}, stride={stride})"
             );
-        }
-        // ...and the one-shot world has none — endpoint only, no interior.
-        let (_h, _src, eroded) = wa.surface_prefer_eroded(face, level, 0, 0, nx, 3);
-        assert!(!eroded, "a one-shot build has no interior to show");
+            // The interior is addressable: every ladder rung is a store citizen.
+            for &k in &interior {
+                let (_h, _src, eroded) = wb.surface_prefer_eroded(face, level, 0, 0, nx, k);
+                assert!(eroded, "interior stage epochs={k} must be a keyed citizen");
+                let r = wb.erosion_stage_residual(face, level, 0, 0, nx, k);
+                assert!(
+                    r.is_some_and(f32::is_finite),
+                    "computed stage epochs={k} must carry its measured residual"
+                );
+            }
+            // ...and the one-shot world has none — endpoint only, no interior.
+            let (_h, _src, eroded) = wa.surface_prefer_eroded(face, level, 0, 0, nx, interior[0]);
+            assert!(!eroded, "a one-shot build has no interior to show");
 
-        let _ = fs::remove_dir_all(&dir_a);
-        let _ = fs::remove_dir_all(&dir_b);
+            let _ = fs::remove_dir_all(&dir_a);
+            let _ = fs::remove_dir_all(&dir_b);
+        }
     }
 
     #[test]
