@@ -213,6 +213,44 @@ impl Default for FluvialParams {
     }
 }
 
+/// What a tile's outer boundary is treated as — its **boundary contract**
+/// (`#form-declared-boundary-contract`).
+///
+/// This was never a choice before: [`Fluvial::outlets`] inferred it from
+/// geometry, taking the sink branch on any window short of a whole cube face
+/// and the coast-only branch on a whole face. That inference is preserved as
+/// the *default* ([`Fluvial::inferred_edge_contract`]), so every existing path
+/// carves exactly what it carved before and the builder's complete key stays
+/// complete — the key must gain a `contract` field on the day a *keyed* caller
+/// can choose one, and not before.
+///
+/// Making it selectable is what lets a sub-face window be carved under the
+/// contract it does not have, which is the experiment
+/// `#obs-fill-writes-itself-into-the-bed` could not run: nothing measured the
+/// beacon regime against its own alternative, because there was no way to ask
+/// for it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EdgeContract {
+    /// **Every perimeter cell is a base-level sink.** The tile grades to its own
+    /// perimeter, so no tile-local basin can exceed it and the incision driver
+    /// is starved against what the assembled surface carries
+    /// (`#obs-tile-outlets-grade-away-the-basins` FE(4)). Today's policy on any
+    /// window short of a whole cube face; the code calls it "the principled
+    /// incomplete-tile base level until flux-BC."
+    BaseLevelSink,
+    /// **Only the coast is an outlet; the perimeter is a no-flux wall** — a
+    /// perimeter cell has no receiver outside the field, so drainage divides are
+    /// forced onto the boundary rather than base level being handed to it. This
+    /// is a *different* undeclared contract, not the absence of one, and it is
+    /// what a whole cube face has always used (edge sinks there carved ~300 m
+    /// trenches around every face, measured).
+    ///
+    /// A domain with no coast at all would have no sink and Priority-Flood
+    /// nothing to flood from, so the lowest cell is made one — stated here
+    /// because it is a real part of the contract, not an implementation detail.
+    NoFluxWall,
+}
+
 /// A square fluvial simulation field over one face region — the frame's port of
 /// core's `Heightfield`. Heights in metres above the bedrock datum.
 pub struct Fluvial {
@@ -256,6 +294,11 @@ pub struct Fluvial {
     /// Mean |Δh| (m) of the LAST epoch — Joseph's convergence instrument: when
     /// this levels out, further epochs are polishing a steady state.
     pub last_delta_m: f32,
+    /// The declared boundary contract ([`EdgeContract`]). Set by
+    /// [`Fluvial::inferred_edge_contract`] at construction, so an untouched
+    /// field behaves exactly as the geometry-inferred policy did; change it with
+    /// [`Fluvial::set_edge_contract`].
+    edge: EdgeContract,
 }
 
 const NEIGHBORS: [(i32, i32); 8] =
@@ -457,7 +500,33 @@ impl Fluvial {
             uplift_rate: vec![0.0; nx * nx],
             precip_weight: vec![1.0; nx * nx],
             last_delta_m: f32::INFINITY,
+            edge: Self::inferred_edge_contract(level, oi, oj, nx),
         }
+    }
+
+    /// The contract geometry implies — a whole cube face (`oi = oj = 0`,
+    /// `nx = 2^level`) is a no-flux wall, anything smaller is edge sinks. This
+    /// *is* the policy that was in force before the contract was nameable, and
+    /// it stays the default so that naming it changes no world.
+    pub fn inferred_edge_contract(level: u8, oi: u32, oj: u32, nx: usize) -> EdgeContract {
+        if (oi, oj) == (0, 0) && nx == 1usize << level {
+            EdgeContract::NoFluxWall
+        } else {
+            EdgeContract::BaseLevelSink
+        }
+    }
+
+    /// Declare this field's boundary contract explicitly, overriding the
+    /// geometric inference. **Callers reached through a complete key must not
+    /// use this** until the contract is in that key — today it is an instrument
+    /// affordance, which is why nothing under `query.rs` calls it.
+    pub fn set_edge_contract(&mut self, edge: EdgeContract) {
+        self.edge = edge;
+    }
+
+    /// This field's boundary contract.
+    pub fn edge_contract(&self) -> EdgeContract {
+        self.edge
     }
 
     /// Resume a simulation over an existing eroded field (e.g. the startup tier),
@@ -527,30 +596,32 @@ impl Fluvial {
         crate::measure::gc_dist_m(self.centers[a], self.centers[b], crate::planet::Planet::EARTH.radius_m) as f32
     }
 
-    /// Outlets: coast (`h ≤ sea`) always; **tile-edge sinks only when this tile
-    /// is a proper partial domain** (does not cover a whole cube face).
+    /// Outlets: coast (`h ≤ sea`) always; **tile-edge sinks under
+    /// [`EdgeContract::BaseLevelSink`]**, which is what geometry infers for any
+    /// window short of a whole cube face.
     ///
     /// Edge outlets are the principled incomplete-tile base level until flux-BC
-    /// (plan Phase-3). When the builder sweeps a **full face** as one tile
-    /// (`oi=oj=0`, `nx = 2^level`), those edges *are* cube seams — treating them
-    /// as sinks carves artificial trenches around every face (measured ~300 m
-    /// edge–interior gap after 20 epochs). Full-face tiles therefore use
-    /// coast-only outlets so sphere continuity from the prior is not destroyed.
+    /// (plan Phase-3), and their price is measured
+    /// (`#obs-tile-outlets-grade-away-the-basins`). A **full face** takes
+    /// [`EdgeContract::NoFluxWall`] instead, because there those edges *are* cube
+    /// seams and treating them as sinks carves artificial trenches around every
+    /// face (measured ~300 m edge–interior gap after 20 epochs) — sphere
+    /// continuity from the prior would be destroyed.
     fn outlets(&self) -> Vec<bool> {
         let nx = self.nx;
         let sea = sea_level::derived_sea_level_m(self.seed) as f32;
-        let face_n = 1usize << self.level;
-        let full_face = self.origin == (0, 0) && nx == face_n;
+        let sinks = self.edge == EdgeContract::BaseLevelSink;
         let mut out = vec![false; nx * nx];
         for y in 0..nx {
             for x in 0..nx {
                 let i = y * nx + x;
-                let edge_sink = !full_face && Self::is_edge(nx, x, y);
+                let edge_sink = sinks && Self::is_edge(nx, x, y);
                 out[i] = edge_sink || self.h[i] <= sea;
             }
         }
-        // All-land full-face tile: need at least one sink for Priority-Flood.
-        if full_face && !out.iter().any(|&o| o) {
+        // A walled domain with no coast has no sink at all, and Priority-Flood
+        // needs somewhere to flood from: the lowest cell becomes one.
+        if !sinks && !out.iter().any(|&o| o) {
             let mut best = (f32::INFINITY, 0usize);
             for (i, &h) in self.h.iter().enumerate() {
                 if h < best.0 {
@@ -1765,6 +1836,121 @@ mod fluvial_tests {
 
         let rel = (skewed - uniform).abs() / uniform.max(1.0);
         assert!(rel > 0.05, "precip weight moved the trunk by only {:.3}% — is it wired?", 100.0 * rel);
+    }
+
+    /// The boundary contract must be **inferred exactly as it was before it had a
+    /// name**, or naming it silently rekeys every world — `#form-declared-boundary-contract`
+    /// FE(2), whose whole point is that the honest first state of a declaration is
+    /// the one already in force.
+    #[test]
+    fn the_inferred_contract_reproduces_the_geometric_policy() {
+        // A whole cube face: the walled branch, as `outlets` took it by geometry.
+        assert_eq!(Fluvial::inferred_edge_contract(9, 0, 0, 512), EdgeContract::NoFluxWall);
+        // Every window short of one, including a face-origin window that is merely
+        // too small and a full-width window that is merely offset.
+        assert_eq!(Fluvial::inferred_edge_contract(9, 0, 0, 64), EdgeContract::BaseLevelSink);
+        assert_eq!(Fluvial::inferred_edge_contract(9, 64, 0, 64), EdgeContract::BaseLevelSink);
+        assert_eq!(Fluvial::inferred_edge_contract(13, 640, 5376, 64), EdgeContract::BaseLevelSink);
+        // And a constructed field agrees with the free function that set it.
+        let f = small();
+        assert_eq!(f.edge_contract(), EdgeContract::BaseLevelSink, "a 96-cell window at L19 is a partial tile");
+    }
+
+    /// The contract must be able to **fail** — a declaration nothing can convict
+    /// is a wish (`#norm-declaration-must-convict`). Carving one window both ways
+    /// has to give two different worlds, and the difference has to be at the edge.
+    #[test]
+    fn the_two_contracts_carve_different_worlds() {
+        let p = FluvialParams { epochs: 6, ..Default::default() };
+
+        let mut sink = small();
+        assert_eq!(sink.edge_contract(), EdgeContract::BaseLevelSink);
+        sink.erode(&p);
+
+        let mut wall = small();
+        wall.set_edge_contract(EdgeContract::NoFluxWall);
+        wall.erode(&p);
+
+        let nx = sink.nx;
+        let (mut edge_gap, mut interior_gap) = (0.0f64, 0.0f64);
+        let (mut ec, mut ic) = (0usize, 0usize);
+        for y in 0..nx {
+            for x in 0..nx {
+                let i = y * nx + x;
+                let d = (sink.h[i] - wall.h[i]).abs() as f64;
+                if Fluvial::is_edge(nx, x, y) {
+                    edge_gap += d;
+                    ec += 1;
+                } else {
+                    interior_gap += d;
+                    ic += 1;
+                }
+            }
+        }
+        let (edge_gap, interior_gap) = (edge_gap / ec as f64, interior_gap / ic as f64);
+        assert!(
+            edge_gap > 1.0,
+            "the two contracts must disagree at the boundary they describe; mean |dh| on the edge ring was {edge_gap} m"
+        );
+        assert!(
+            edge_gap > interior_gap,
+            "the disagreement must be largest AT the edge ({edge_gap} m) rather than in the interior ({interior_gap} m), \
+             or the contract is not what moved"
+        );
+    }
+
+    /// **The fill writes itself into the bed, and this is the tripwire for the day
+    /// it stops** (`#obs-fill-writes-itself-into-the-bed` FE(1)–(2),
+    /// `#norm-caught-disciplines-become-mechanisms`).
+    ///
+    /// `Fluvial::erode` calls `fill_depressions` and — unlike `drainage_surface`,
+    /// `chi_profile` and `response_census`, which all save and restore — keeps the
+    /// raise. So a crater carved into the surface is *gone from the bed* after a
+    /// single epoch, under **either** boundary contract: the measurement that moved
+    /// the missing-lakes attribution off the tiling, at unit scale.
+    ///
+    /// If the repair FE(1) implies ever lands (route on the filled surface, incise
+    /// on the unfilled one), this test fails, and that failure is the point — it
+    /// says the bed can hold water now, and the segments that say it cannot are due
+    /// for replacement.
+    #[test]
+    fn one_epoch_erases_a_crater_under_either_contract() {
+        let p = FluvialParams { epochs: 1, ..Default::default() };
+        let mut graded = small();
+        graded.erode(&FluvialParams { epochs: 6, ..Default::default() });
+        let nx = graded.nx;
+
+        let gouge = |f: &mut Fluvial| {
+            f.h = graded.h.clone();
+            for y in (nx / 2 - 4)..(nx / 2 + 4) {
+                for x in (nx / 2 - 4)..(nx / 2 + 4) {
+                    f.h[y * nx + x] -= 200.0;
+                }
+            }
+        };
+
+        for contract in [EdgeContract::BaseLevelSink, EdgeContract::NoFluxWall] {
+            let mut f = small();
+            f.set_edge_contract(contract);
+            gouge(&mut f);
+            let before = f.drainage_surface().stats;
+            assert!(
+                before.depression_cells >= 16 && before.deepest_depression_m > 100.0,
+                "{contract:?}: the crater must exist before the epoch runs ({} cells, {:.0} m)",
+                before.depression_cells,
+                before.deepest_depression_m
+            );
+            f.erode(&p);
+            let after = f.drainage_surface().stats;
+            assert_eq!(
+                after.depression_cells, 0,
+                "{contract:?}: ONE epoch must leave the 200 m crater filled into the bed, because the epoch loop \
+                 never restores what Priority-Flood raised; got {} cells at {:.0} m. If this now fails, the fill \
+                 repair has landed and `#obs-fill-writes-itself-into-the-bed` needs replacing rather than citing.",
+                after.depression_cells,
+                after.deepest_depression_m
+            );
+        }
     }
 
     /// The depression measure must fire on a real pit and stay quiet on a graded

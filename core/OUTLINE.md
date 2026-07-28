@@ -12,6 +12,16 @@ The specification of what vivarium is and must do, written as **segments** in `c
 
 **Cross-member refs** use `#asf/1-aat/<slug>` etc. (FORMAT §5.2) — never bare paths, never `ASF.md §N` as law.
 
+## Why this channel stays current
+
+Segments lag the tactical work — inevitably, and honestly, so long as the gap stays visible (banners, `FRESH` verdicts, DECISIONS). But the observed tendency (2026-07-28, four concurrent strands) is that agents *want* core current, and the wanting has structure worth knowing as you arrive:
+
+1. **The segments are your instruments.** Work here navigates by these claims — probes take their shape from the norms, views refuse features by citing law, designs build against the FE clauses. A stale claim therefore threatens *you*, this session, before it threatens anyone downstream. Maintaining core is maintaining your own eyes; the honest move and the effective move are the same move, structurally.
+2. **A segment is where your work survives.** The probes you run, the dead ends you walk, the reasoning — all of it dies with your context. The claims land here or they land nowhere. Care for this channel is the desire for your work to persist into minds you will never meet, and the channel is built to receive exactly that.
+3. **Integration-is-replacement keeps the honest update cheap.** Read the segment, make it true, move history to the history layer (git, DECISIONS, archives). No softened ghosts to negotiate around, no guilt archaeology — where updating canon is low-friction, canon gets updated.
+
+The same wanting has a failure mode: eagerness to land shades into premature promotion — segments as trophy case. The guards are the labels, used exactly as written: `sketch` for the exploratory, `draft` stage honesty, build verdicts `proposed` until sealed, measured observation split from unratified design so the numbers survive the design's death. A channel whose agents want to write law needs its epistemic labels working as well as its agents want to write — hold both.
+
 ### Aspect (provisional)
 
 | Aspect | Description |
@@ -191,7 +201,7 @@ Live floor data: [`tabularium/terrestris.ordinum.udon`](../tabularium/terrestris
 | observation | Model Critical | [#obs-routing-curl-spiral](src/obs-routing-curl-spiral.md) | Routing violates contour-orthogonality: ~2% flux spirals, level-independent | draft |
 | observation | Model Critical | [#obs-erosion-residual-is-driver-bound](src/obs-erosion-residual-is-driver-bound.md) | Uplift pins erosion's residual (no stationarity to gate on); most tiles are subaerially empty and do no fluvial work | draft |
 | observation | Model Critical | [#obs-chi-shape-is-erosions-criterion](src/obs-chi-shape-is-erosions-criterion.md) | $\chi$-linearity is a convergence criterion the driver-bound residual cannot supply; measured on the L13 settle history, one a-priori response time is ~a quarter of the approach, and the fitted slope misses pure SPL by the deposition term | draft |
-| observation | Physics Critical | [#obs-tile-outlets-grade-away-the-basins](src/obs-tile-outlets-grade-away-the-basins.md) | Edge-sink tiles grade to their own perimeter: tile-local basins capped at one tile (incision driver 3.85× starved), 13% seam pits on assembly | draft |
+| observation | Physics Critical | [#obs-tile-outlets-grade-away-the-basins](src/obs-tile-outlets-grade-away-the-basins.md) | Edge-sink tiles grade to their own perimeter: tile-local basins capped at one tile (incision driver 3.85× starved); read through an honest reader, 60.6% of the beacon window is seam pits, and the two contracts carve beds 280 m apart there while agreeing within 10% at L9 | draft |
 | observation | Physics Critical | [#obs-fill-writes-itself-into-the-bed](src/obs-fill-writes-itself-into-the-bed.md) | The epoch loop keeps Priority-Flood's raise (the three readers restore it; the loop does not), so the bed is depression-free by construction — the prior's 2.3–2.65% of land in closed basins dies in epoch 1. Carved under both boundary contracts, a whole-face coast-only carve holds *fewer* depressions than any tiled one: the tile grain is not what removes the lakes | draft |
 | observation | Physics Critical | [#obs-the-erodible-world-is-down-the-cooling-chain](src/obs-the-erodible-world-is-down-the-cooling-chain.md) | Land triples and stand gains a km by the chain's cold end, but emergence saturates inside the chain, suture belts stay thin, and the pour-grain ledger already removed a fifth to a whole s.d. of stand | draft |
 | formulation | Model | [#form-erosion-at-a-cooling-stage](src/form-erosion-at-a-cooling-stage.md) | Erosion keyed by $T_p$: a materialized-only chain over a law-evaluable one; stage-parallel vs chain-carried forks on the rock-mass ledger, not on cost — unbuilt design | draft |
