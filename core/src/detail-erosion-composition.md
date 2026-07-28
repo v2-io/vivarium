@@ -24,7 +24,9 @@ What the shipped `erosion-tile` nomos **is** today: one composed crude rung (upl
 
 1. **Article.** Live nomos name `erosion-tile` ( #form-flux-web / nomotheke). It **consumes** solid surface / emerged-land geometry, rock-uplift rate, and precipitation; **promises** an eroded bed later phases and views may stand on. Uniform hardness in this increment; per-material erodibility is the next hook on #form-material-property-interface , not claimed built.
 
-2. **Per-epoch composition (order is load-bearing).** For each fluvial epoch on a face tile (`Fluvial::erode`):
+2. **The settle history is a materialized stage chain.** A tile's epochs land as keyed interior stages every `erosion_stage_stride` epochs (manifest demand — #form-manifest-prescribes-vivium FE(5)), each seeded from its predecessor stage by complete key and recording its final-epoch mean $|\Delta h|$ as a stage-residual sibling ( #form-time-indexed-stage-chains FE(8): the chain is **materialized-only** — its density is what was built, and asking for more is a build request). Chained ≡ one-shot bit-exactly (`query::tests::staged_chain_is_bit_identical_to_one_shot`), so the stride never touches artifact identity, and a world built endpoint-only gains its interior for the cost of one settle history. The per-epoch step itself is untouched by staging — a rung is exactly `erode(k - k_{prev})` on the predecessor's heights.
+
+3. **Per-epoch composition (order is load-bearing).** For each fluvial epoch on a face tile (`Fluvial::erode`):
    1. **Apply rock uplift** on non-outlet cells from the uplift field erosion consumes (not an internal conjured driver).
    2. **Priority-Flood** depression fill with an $\varepsilon$-gradient (Barnes–Lehman–Mulla lineage; deterministic tie-breaks).
    3. **D8** steepest-descent receivers — the tree the implicit solve needs.
@@ -34,11 +36,11 @@ What the shipped `erosion-tile` nomos **is** today: one composed crude rung (upl
    7. **Talus** relaxation (repose slope).
    8. **Hillslope creep** — one explicit 5-point Laplacian step per epoch (diffusivity $\kappa$ in m²/epoch; diffusion-number clamp $k\le 0.24$ at fine levels).
 
-3. **Geometry inputs (present tense).** Drainage **seed area** and deposit volume use **true spherical cell area** per cell (`measure::cell_area_m2`); D8 slope, MFD slope-weights, incision length and talus all use **true great-circle neighbour distances** between cell centres (`measure::gc_dist_m` / `Fluvial::dist_m`), not uniform `cell_m` / diagonal $\mathrm{cell}_m\sqrt{2}$. Creep still uses `cell_m²` as its diffusion length² (a face-mean stand-in, not the fan path). Honest metrics do **not** cure the directional fan ( #obs-cube-locked-kernel-bias FE(1)). Outlets use derived / declared sea as coast, not only tile edge.
+4. **Geometry inputs (present tense).** Drainage **seed area** and deposit volume use **true spherical cell area** per cell (`measure::cell_area_m2`); D8 slope, MFD slope-weights, incision length and talus all use **true great-circle neighbour distances** between cell centres (`measure::gc_dist_m` / `Fluvial::dist_m`), not uniform `cell_m` / diagonal $\mathrm{cell}_m\sqrt{2}$. Creep still uses `cell_m²` as its diffusion length² (a face-mean stand-in, not the fan path). Honest metrics do **not** cure the directional fan ( #obs-cube-locked-kernel-bias FE(1)). Outlets use derived / declared sea as coast, not only tile edge.
 
-4. **What this rung is for.** Crude-rung dendritic dissection of a land surface under precipitation and differential uplift — Cordonnier/Braun-family CG terrain method family ( #detail-phenomena-systems-map ). Enough for early-Abyssal *look* and for probes that convict scheme defects. **Not:** grain-size split, bank mechanics, meandering, debris flows, rock-mass return to a lithosphere column, or a correct router on the equiangular cube-sphere.
+5. **What this rung is for.** Crude-rung dendritic dissection of a land surface under precipitation and differential uplift — Cordonnier/Braun-family CG terrain method family ( #detail-phenomena-systems-map ). Enough for early-Abyssal *look* and for probes that convict scheme defects. **Not:** grain-size split, bank mechanics, meandering, debris flows, rock-mass return to a lithosphere column, or a correct router on the equiangular cube-sphere.
 
-5. **Measured / declared residuals (homes elsewhere; do not re-derive).**
+6. **Measured / declared residuals (homes elsewhere; do not re-derive).**
    | Residual | Class | Home |
    |---|---|---|
    | MFD as sheared 8-node fan; diagonals as phantom faces | directional bias | #obs-cube-locked-kernel-bias , #disc-algorithms-disguise-physics |
@@ -52,9 +54,9 @@ What the shipped `erosion-tile` nomos **is** today: one composed crude rung (upl
    | Fine-grain tile export without column debit | **pour-grain ledger built + adopted as the live default surface** ( #form-isostasy-column FE(9): debit + Airy rebound + submarine-sediment credit, closed-box conserved, LITHO_COLUMN Conserved); the fluvial *tile* pipeline here still exports carved rock without debiting its column — bridging the two grains is a later rung | #form-isostasy-column FE(9); `erosion_return.rs` |
    | Uplift **rate** field strictly positive | diagnostic carving driver only — freeboard is isostasy's job | #form-isostasy-column ; live `uplift.rs` |
 
-6. **Open successor (not adopted).** Kill diagonals → real edge fluxes → Coatléven-style vector reconstruction for magnitude+direction from one object; separate non-orthogonality fix for face gradients ( #obs-routing-curl-spiral remedy stack). Until then, cube-face attractors can still manufacture geography — cube control remains mandatory for any "emergent plates" claim.
+7. **Open successor (not adopted).** Kill diagonals → real edge fluxes → Coatléven-style vector reconstruction for magnitude+direction from one object; separate non-orthogonality fix for face gradients ( #obs-routing-curl-spiral remedy stack). Until then, cube-face attractors can still manufacture geography — cube control remains mandatory for any "emergent plates" claim.
 
-7. **Out of bounds for this segment.** Replacing the composition with a new scheme; promoting inventory fluvial next-rungs ( #detail-phenomena-systems-map ) as live; claiming `erosion-substrate` **Kept** without a predicate probe that the eroded bed is the one later phases stand on.
+8. **Out of bounds for this segment.** Replacing the composition with a new scheme; promoting inventory fluvial next-rungs ( #detail-phenomena-systems-map ) as live; claiming `erosion-substrate` **Kept** without a predicate probe that the eroded bed is the one later phases stand on.
 
 ## Epistemic Status
 

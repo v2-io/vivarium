@@ -125,7 +125,8 @@ COMMANDS
                                   vivarium demand
                                   vivarium demand frames=60 level=9
                                 fields: order target_phase level frames
-                                        erosion_epochs water_steps
+                                        erosion_epochs erosion_stage_stride
+                                        water_steps
 
   build [dir] [--level L] [--epochs E] [--frames N] [--allow-unmet]
                                 sweep all six cube faces at L through initial
@@ -458,13 +459,14 @@ fn cmd_build(rest: &[String]) -> i32 {
     let mut out = BuilderLog { log: log_file, status_path: dir.join("status.json") };
 
     out.line(&format!(
-        "builder v0 on vivium \"{}\" (seed {}, order {}, target phase {}) — initial-topography sweep L{level}, {}x{} tiles/face-row, erosion {epochs} epochs, {frames} frames{}",
+        "builder v0 on vivium \"{}\" (seed {}, order {}, target phase {}) — initial-topography sweep L{level}, {}x{} tiles/face-row, erosion {epochs} epochs (stage every {}), {frames} frames{}",
         spec.name,
         spec.seed,
         spec.demand.order,
         spec.demand.target_phase,
         TILE_NX,
         TILE_NX,
+        spec.demand.erosion_stage_stride,
         if allow_unmet { " (--allow-unmet)" } else { "" }
     ));
     if !changed.is_empty() {
@@ -517,7 +519,12 @@ fn cmd_build(rest: &[String]) -> i32 {
                     let (oi, oj) = ((ti * TILE_NX) as u32, (tj * TILE_NX) as u32);
                     let src = match phase {
                         "initial-topography" => world.initial_topography(face, level, oi, oj, TILE_NX).1,
-                        "erosion" => world.erosion_tile(face, level, oi, oj, TILE_NX, epochs).1,
+                        // Staged: interior epochs land as store citizens at the
+                        // manifest's stride, so the settle history is addressable
+                        // and watchable ( #form-time-indexed-stage-chains FE(2) ).
+                        "erosion" => world
+                            .erosion_tile_staged(face, level, oi, oj, TILE_NX, epochs, spec.demand.erosion_stage_stride)
+                            .1,
                         // Water's step count was a bare `200` literal here — the
                         // same class of misplacement as erosion's flag, failing
                         // quietly instead of loudly (findings item 4). It is
@@ -614,8 +621,8 @@ fn cmd_status(rest: &[String]) -> i32 {
             let d = &spec.demand;
             println!(
                 "demand (manifest — what THIS vivium asked for; never keyed, edit any time):\n  \
-                 order {} · target phase {} · level {} · frames {} · erosion_epochs {} · water_steps {}",
-                d.order, d.target_phase, d.level, d.frames, d.erosion_epochs, d.water_steps
+                 order {} · target phase {} · level {} · frames {} · erosion_epochs {} · stage stride {} · water_steps {}",
+                d.order, d.target_phase, d.level, d.frames, d.erosion_epochs, d.erosion_stage_stride, d.water_steps
             );
             spec.seed
         }
@@ -1007,11 +1014,12 @@ fn cmd_demand(rest: &[String]) -> i32 {
             "level" => num(v).map(|n| d.level = n.min(20) as u8).is_ok(),
             "frames" => num(v).map(|n| d.frames = n).is_ok(),
             "erosion_epochs" => num(v).map(|n| d.erosion_epochs = n).is_ok(),
+            "erosion_stage_stride" => num(v).map(|n| d.erosion_stage_stride = n).is_ok(),
             "water_steps" => num(v).map(|n| d.water_steps = n).is_ok(),
             other => {
                 eprintln!(
                     "error: `{other}` is not a demand field.\n  \
-                     fields: order target_phase level frames erosion_epochs water_steps\n  \
+                     fields: order target_phase level frames erosion_epochs erosion_stage_stride water_steps\n  \
                      (identity — seed, format — is deliberately NOT settable: changing it would fork a different world)"
                 );
                 return 2;
@@ -1042,6 +1050,10 @@ fn cmd_demand(rest: &[String]) -> i32 {
         mantle_thermal::stage_count(mantle_thermal::refinements_for(d.frames as usize))
     );
     println!("  erosion_epochs  {}   arbitrary — see ASSUMPTIONS.md 'erosion run length'", d.erosion_epochs);
+    println!(
+        "  erosion_stage_stride  {}   interior stage every N epochs (0 = endpoint only) — build request, not identity",
+        d.erosion_stage_stride
+    );
     println!("  water_steps     {}   arbitrary — see ASSUMPTIONS.md 'water fill steps'", d.water_steps);
     if assignments.is_empty() {
         println!("\nset any of them:  vivarium demand frames=60 level=9");

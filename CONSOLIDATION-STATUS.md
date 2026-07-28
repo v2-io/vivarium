@@ -1,10 +1,10 @@
 # Consolidation status — big-picture intuition
 
-*Body replaced 2026-07-24 (late), on its own protocol: replace when the picture changes a lot. It did — the frontier moved from the claim channel to the instrument, and back. **Not claim canon.** When this file disagrees with `core/`, core wins.*
+*Body updated 2026-07-28: open-work item 1 closed. **Not claim canon.** When this file disagrees with `core/`, core wins.*
 
 ## The picture, in one paragraph
 
-The claim channel is **88 segments** and in good order. What changed is that vivarium now has a **working instrument**: `vivarium explore`, a 3D view of the live world that reports its own epistemic state, replacing three view spikes with one crate. The frontier moved twice in one day — from claims-without-anything-to-see, to an instrument-without-claims, and the second gap is now closed too. The next frontier is **what the instrument can see that the world does not yet do**.
+The claim channel is **88 segments** and in good order, and vivarium has a **working instrument**: `vivarium explore` / `watch`, views of the live world that report their own epistemic state. The 2026-07-24 frontier — *the instrument can see, but erosion has nothing to show* — is closed: the erosion settle history is now a materialized stage chain (interior epochs as store citizens at the manifest's stride, `#form-time-indexed-stage-chains` FE(8)), so the system Joseph most wants to watch has an addressable, replayable interior. The next frontier is **showing that interior in world-time**: replay still orders by build history (landing time), and the first honest world-time scrub — epoch-ordered erosion playback — is unblocked and unbuilt.
 
 ## What is true now, and measured
 
@@ -16,7 +16,7 @@ The claim channel is **88 segments** and in good order. What changed is that viv
 
 ## Open work, in rough order of what unblocks what
 
-1. **Erosion has no time-interior** — `watch::interior` reports exactly one distinct time-index. This is now the *binding* constraint on the project's fastest instrument: a trained eye detects missing physics from **visual evolution**, and erosion has no evolution to show. Builder work, not view work. Not blocked by the convergence no-go, which is about criteria, not addressability.
+1. **Epoch-ordered erosion playback** — the stage chain landed (8 stages/tile on `first-light`, `watch::interior` 8 distinct vs 1), but replay orders by *landing* time and the builder is tile-major, so a replayed sweep is a carving wave, not the world evolving in step. Erosion stages carry their epoch in-key, so an epoch-ordered reader is the cheap path; stage-major build scheduling is the builder-side alternative. This is what turns the interior into the visual evolution the eye instrument actually watches for.
 2. **The step-size question** (physics, Joseph's or a spike's) — whether `stable_dt`'s ceiling should scale with cell size. Blocks water's ε rung.
 3. **The demand spool** — beacons → cones → work queue. Untouched. Regime G is the floor: "no demand" means spine-only, not idle.
 4. **Store-backed navigation** — an explorer that upgrades continuously as memos land, rather than reading a census at open.
@@ -28,4 +28,4 @@ Claim or named gap in core → convict where possible → strengthen before soft
 
 Two lessons from 2026-07-24 worth keeping in the rhythm. **The artifacts record what was decided; the transcripts record why.** And: **when the ask is for something visible, the visible thing is the deliverable** — a day of defensible layer-beneath work summed to a day where nothing on screen changed, and the telos ("session success is a truthful segment") governs what gets written down, not permission to leave the surface untouched.
 
-*Last intuition pass: 2026-07-24 (late).*
+*Last intuition pass: 2026-07-28.*

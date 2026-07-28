@@ -181,7 +181,16 @@ impl Coverage {
                     cov.initial_topo.insert((face, oi, oj));
                 }
                 "erosion-tile" => {
-                    cov.erosion.insert((face, oi, oj), num("epochs").unwrap_or(0));
+                    // A staged build leaves MANY roots per tile (the settle
+                    // history); coverage is "how far has this tile been carved",
+                    // which is the latest stage, not whichever root iterated
+                    // last. Residual siblings (`aspect=`) are metadata, skipped.
+                    if key_field(k, "aspect").is_some() {
+                        continue;
+                    }
+                    let e = num("epochs").unwrap_or(0);
+                    let slot = cov.erosion.entry((face, oi, oj)).or_insert(0);
+                    *slot = (*slot).max(e);
                 }
                 "water-tile" => {
                     cov.watered.insert(

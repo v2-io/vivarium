@@ -65,6 +65,14 @@ pub struct Demand {
     pub frames: u32,
     /// Fluvial epochs per tile. Arbitrary; see the type note above.
     pub erosion_epochs: u32,
+    /// Materialize an interior erosion stage every this-many epochs (`0` =
+    /// endpoint only). The erosion chain is **materialized-only**
+    /// ( #form-time-indexed-stage-chains FE(8) ): its stage density is exactly
+    /// what was built, so density is a *build request* and lives here — demand,
+    /// never key. A stage's bytes are identical at any stride (chained ≡
+    /// one-shot, convicted in `query::tests`), which is precisely why this
+    /// number is not identity.
+    pub erosion_stage_stride: u32,
     /// Surface-water relaxation steps per tile. Arbitrary; see the type note.
     pub water_steps: u32,
 }
@@ -80,6 +88,7 @@ impl Default for Demand {
             level: 7,
             frames: 6,
             erosion_epochs: 40,
+            erosion_stage_stride: 5,
             water_steps: 200,
         }
     }
@@ -140,6 +149,7 @@ impl WorldSpec {
         let _ = writeln!(s, "level = {}", d.level);
         let _ = writeln!(s, "frames = {}", d.frames);
         let _ = writeln!(s, "erosion_epochs = {}", d.erosion_epochs);
+        let _ = writeln!(s, "erosion_stage_stride = {}", d.erosion_stage_stride);
         let _ = writeln!(s, "water_steps = {}", d.water_steps);
         s
     }
@@ -177,6 +187,7 @@ impl WorldSpec {
                 "level" => d.level = num("level", v)?.min(20) as u8,
                 "frames" => d.frames = num("frames", v)?,
                 "erosion_epochs" => d.erosion_epochs = num("erosion_epochs", v)?,
+                "erosion_stage_stride" => d.erosion_stage_stride = num("erosion_stage_stride", v)?,
                 "water_steps" => d.water_steps = num("water_steps", v)?,
                 other => return Err(format!("manifest line {}: unknown key `{other}`", n + 1)),
             }
@@ -257,6 +268,7 @@ mod tests {
         a.demand.level = 9;
         a.demand.frames = 60;
         a.demand.erosion_epochs = 12;
+        a.demand.erosion_stage_stride = 3;
         let b = WorldSpec::parse(&a.to_string()).unwrap();
         assert_eq!(a, b);
         // The load-bearing property: editing demand does not fork the world.

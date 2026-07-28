@@ -372,6 +372,160 @@ impl<'s> World<'s> {
         (eroded, Source::Computed)
     }
 
+    /// The sibling key for one stage's measured residual — the mean $|\Delta h|$
+    /// (m) of the stage's final epoch, recorded so the honesty travels with the
+    /// stage instead of living in a process's transient `last_delta_m`
+    /// ( #form-time-indexed-stage-chains FE(3): an ε never recorded is an
+    /// unLawfulness budget asserted to be zero).
+    ///
+    /// `aspect` distinguishes these one-scalar roots from the height field itself
+    /// (the `epoch-reduction` precedent). **This is a measured residual, not a
+    /// convergence criterion** — erosion has no earnable criterion yet
+    /// ( #obs-erosion-residual-is-driver-bound : sustained uplift pins the
+    /// residual at the driver's rate), so this records what the kernel *did*,
+    /// never certifies what it reached. Schema provisional: one f32.
+    fn erosion_stage_residual_key(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize, epochs: u32) -> Key {
+        EROSION
+            .key()
+            .field("seed", self.seed)
+            .field("face", face.index())
+            .field("level", level)
+            .field("oi", oi)
+            .field("oj", oj)
+            .field("nx", nx)
+            .field("epochs", epochs)
+            .field("aspect", "stage-residual")
+            .with_dep_versions(&EROSION)
+    }
+
+    /// Read one stage's recorded residual — the mean $|\Delta h|$ (m) of its
+    /// final epoch — if that stage was computed since residuals were recorded.
+    /// `None` for pre-chain stages (endpoint-only worlds carry no residual for
+    /// their endpoint; the record is made at compute time, never backfilled) and
+    /// for stages that were never built. Store-only: never computes, never
+    /// writes.
+    pub fn erosion_stage_residual(
+        &self,
+        face: Face,
+        level: u8,
+        oi: u32,
+        oj: u32,
+        nx: usize,
+        epochs: u32,
+    ) -> Option<f32> {
+        let key = self.erosion_stage_residual_key(face, level, oi, oj, nx, epochs);
+        let bytes = self.store.get(&key)?;
+        decode_f32(&bytes).first().copied()
+    }
+
+    /// [`Self::erosion_tile`] with a **time-interior**: materialize the settle
+    /// history as a chain of keyed stages, every `stage_stride` epochs, each
+    /// seeded from its predecessor's stored heights
+    /// ( #form-time-indexed-stage-chains FE(1)–(2): stage $n{+}1$ depends on
+    /// stage $n$ by complete key, and "the start of the third stage" becomes a
+    /// key rather than a description).
+    ///
+    /// **Stage stride is demand, not identity** ( #form-manifest-prescribes-vivium
+    /// FE(5)): a stage at `epochs=k` holds byte-identical heights whether it was
+    /// built as a chain rung or as a one-shot run to `k` — the per-epoch step is
+    /// a pure function of the height field plus keyed inputs, so chaining is
+    /// exactly the one-shot computation with intermediate states persisted. The
+    /// test `staged_chain_is_bit_identical_to_one_shot` convicts this; if it ever
+    /// breaks, the stride has become identity and MUST move into the key.
+    ///
+    /// The walk is over the fixed ladder `stride, 2·stride, …, epochs` (the
+    /// ladder is a function of the arguments, never of store contents —
+    /// #form-depend-by-key-never-latest ); rungs already in the store seed the
+    /// next rung without recompute, so a world built endpoint-only gains its
+    /// interior for exactly the cost of one settle history, and a world built
+    /// with this chain resumes any tail for free. Each computed rung also
+    /// records its measured final-epoch residual (see
+    /// [`Self::erosion_stage_residual_key`]).
+    ///
+    /// `stage_stride == 0` (or ≥ `epochs`) is endpoint-only, i.e. plain
+    /// [`Self::erosion_tile`].
+    pub fn erosion_tile_staged(
+        &self,
+        face: Face,
+        level: u8,
+        oi: u32,
+        oj: u32,
+        nx: usize,
+        epochs: u32,
+        stage_stride: u32,
+    ) -> (Vec<f32>, Source) {
+        if stage_stride == 0 || stage_stride >= epochs {
+            return self.erosion_tile(face, level, oi, oj, nx, epochs);
+        }
+        let mut ladder: Vec<u32> = (1..).map(|i| i * stage_stride).take_while(|k| *k < epochs).collect();
+        ladder.push(epochs);
+
+        // Deps and the seeded kernel are built lazily, on the first rung the
+        // store is missing — an all-hit walk pulls nothing and computes nothing.
+        let mut kernel: Option<Fluvial> = None;
+        let mut heights: Option<Vec<f32>> = None; // state at `reached` epochs
+        let mut reached = 0u32;
+        let mut computed_any = false;
+        for &k in &ladder {
+            let key = self.erosion_key(face, level, oi, oj, nx, k);
+            if let Some(bytes) = self.store.get(&key) {
+                heights = Some(decode_f32(&bytes));
+                reached = k;
+                continue;
+            }
+            let mut f = match (kernel.take(), heights.take()) {
+                // Later rung: seed from the predecessor stage's stored heights.
+                (Some(f), Some(h)) => f.with_heights(h),
+                (None, h) => {
+                    let (initial_topo, _) = self.initial_topography(face, level, oi, oj, nx);
+                    let (uplift, _) = self.uplift_tile(face, level, oi, oj, nx);
+                    let (precip, _) = self.climate_tile(face, level, oi, oj, nx);
+                    let mean = precip.iter().sum::<f32>() / precip.len().max(1) as f32;
+                    let precip_weight: Vec<f32> = if mean > 0.0 {
+                        precip.iter().map(|p| p / mean).collect()
+                    } else {
+                        vec![1.0; precip.len()]
+                    };
+                    let surf = |cell: CellId| -> f64 {
+                        let (cf, ci, cj, _) = cell.to_face_ij();
+                        if cf.index() == face.index() && ci >= oi && cj >= oj {
+                            let (di, dj) = ((ci - oi) as usize, (cj - oj) as usize);
+                            if di < nx && dj < nx {
+                                return initial_topo[dj * nx + di] as f64;
+                            }
+                        }
+                        gen::initial_topography_m(self.seed, cell, level)
+                    };
+                    let mut f = Fluvial::from_surface(self.seed, face, level, oi, oj, nx, surf);
+                    f.set_uplift_rate(uplift);
+                    f.set_precip_weight(precip_weight);
+                    // A mid-ladder cold start (prior rungs were hits): resume
+                    // from the last stored stage, not from the initial surface.
+                    if let Some(h) = h {
+                        f = f.with_heights(h);
+                    }
+                    f
+                }
+                (Some(_), None) => unreachable!("a built kernel always has state"),
+            };
+            f.erode(&FluvialParams { epochs: k - reached, ..Default::default() });
+            self.put_memo(&key, &encode_f32(&f.h));
+            let rkey = self.erosion_stage_residual_key(face, level, oi, oj, nx, k);
+            self.put_memo(&rkey, &encode_f32(&[f.last_delta_m]));
+            reached = k;
+            computed_any = true;
+            heights = Some(f.h.clone());
+            kernel = Some(f);
+        }
+        let h = heights.expect("ladder is never empty");
+        if computed_any {
+            (h, Source::Computed)
+        } else {
+            let last = self.erosion_key(face, level, oi, oj, nx, epochs);
+            (h, self.hit_source(&last))
+        }
+    }
+
     /// View-facing surface pull: **prefer a store-hit eroded tile**, else fall
     /// back to initial topography. Never triggers a cold erosion compute —
     /// views must not invent work the builder has not done; they only *show*
@@ -419,6 +573,9 @@ impl<'s> World<'s> {
             if !r.key.starts_with("erosion-tile@") {
                 continue;
             }
+            if key_field(&r.key, "aspect").is_some() {
+                continue; // stage-residual siblings are metadata, not surfaces
+            }
             c.total += 1;
             if key_field(&r.key, "src") == Some(crate::nomotheke::SRC_HASH) {
                 c.fresh += 1;
@@ -463,13 +620,30 @@ impl<'s> World<'s> {
     /// replay assembles through this function rather than through a private
     /// second loader). Callers that want the ordinary honest surface should use
     /// [`Self::load_current_eroded_regions`].
+    ///
+    /// **One region per tile, the latest stage among accepted roots.** A staged
+    /// build ([`Self::erosion_tile_staged`]) leaves *many* roots per tile — the
+    /// settle history — and a surface is one moment, not a blend of moments:
+    /// assembling two stages of the same tile would layer two datums whose
+    /// difference is time, the same fault class as the stale-`src` ribbon. So
+    /// per `(face, level, oi, oj, nx)` the highest-`epochs` accepted root wins.
+    /// Replay composes correctly through this: "roots landed by frame *n*"
+    /// yields the latest stage *as of that frame*, which is what the world
+    /// looked like then. Stage-residual siblings (`aspect=` roots) are metadata,
+    /// not surfaces, and are skipped.
     pub fn load_eroded_regions_where(&self, keep: impl Fn(&str) -> bool) -> Vec<ErodedRegion> {
         let Ok(roots) = self.store.roots() else {
             return Vec::new();
         };
-        let mut out = Vec::new();
+        // Tile identity → (stage epochs, its region); BTree for deterministic order.
+        type TileAt = (u8, u8, u32, u32, usize); // (face, level, oi, oj, nx)
+        let mut latest: std::collections::BTreeMap<TileAt, (u32, ErodedRegion)> =
+            std::collections::BTreeMap::new();
         for r in roots {
             if !r.key.starts_with("erosion-tile@") {
+                continue;
+            }
+            if key_field(&r.key, "aspect").is_some() {
                 continue;
             }
             if !keep(&r.key) {
@@ -490,6 +664,13 @@ impl<'s> World<'s> {
             let Some(nx) = key_field(&r.key, "nx").and_then(|v| v.parse::<usize>().ok()) else {
                 continue;
             };
+            let epochs = key_field(&r.key, "epochs").and_then(|v| v.parse::<u32>().ok()).unwrap_or(0);
+            let at = (face_i, level, oi, oj, nx);
+            if let Some((have, _)) = latest.get(&at) {
+                if *have >= epochs {
+                    continue; // an equal-or-later stage of this tile already loaded
+                }
+            }
             let Some(bytes) = self.store.object_bytes(&r.object) else {
                 continue;
             };
@@ -497,7 +678,7 @@ impl<'s> World<'s> {
             if h.len() != nx * nx {
                 continue;
             }
-            out.push(ErodedRegion {
+            let region = ErodedRegion {
                 face: Face::from_index(face_i),
                 level,
                 oi,
@@ -505,9 +686,12 @@ impl<'s> World<'s> {
                 nx,
                 h,
                 seed: self.seed,
-            });
+            };
+            latest.insert(at, (epochs, region));
         }
-        out.sort_by_key(|r| r.level);
+        // BTreeMap order is (face, level, …); assembly requires coarse → fine.
+        let mut out: Vec<ErodedRegion> = latest.into_values().map(|(_, r)| r).collect();
+        out.sort_by_key(|r| (r.level, r.face.index(), r.oi, r.oj));
         out
     }
 
@@ -1057,6 +1241,95 @@ mod tests {
         let current = w.load_current_eroded_regions();
         assert_eq!(current.len(), 1, "current-only loader drops the stale tile");
         assert!(current.iter().all(|r| !(r.oi == 128 && r.h.iter().all(|&h| h == 1234.0))), "stale bytes excluded");
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn staged_chain_is_bit_identical_to_one_shot() {
+        // THE property that makes stage stride demand rather than identity
+        // ( #form-manifest-prescribes-vivium FE(5); #form-time-indexed-stage-
+        // chains FE(8) ): a stage at epochs=k holds the same bytes whether built
+        // as a chain rung or as a one-shot run. If this test ever breaks, the
+        // stride has leaked into artifact content and MUST move into the key.
+        let (dir_a, dir_b) = (tmpdir("stage-oneshot"), tmpdir("stage-chain"));
+        let face = Face::from_index(2);
+        let (level, nx, epochs, stride) = (6u8, 16usize, 7u32, 3u32);
+
+        let sa = Store::open(&dir_a).unwrap();
+        let wa = World::new(&sa, 7);
+        let (one_shot, src_a) = wa.erosion_tile(face, level, 0, 0, nx, epochs);
+        assert_eq!(src_a, Source::Computed);
+
+        let sb = Store::open(&dir_b).unwrap();
+        let wb = World::new(&sb, 7);
+        let (staged, src_b) = wb.erosion_tile_staged(face, level, 0, 0, nx, epochs, stride);
+        assert_eq!(src_b, Source::Computed);
+
+        assert!(
+            one_shot.iter().zip(staged.iter()).all(|(a, b)| a.to_bits() == b.to_bits()),
+            "chained settle history must be BIT-identical to the one-shot run"
+        );
+        // The interior is addressable: every ladder rung is a store citizen.
+        for k in [3u32, 6] {
+            let (_h, _src, eroded) = wb.surface_prefer_eroded(face, level, 0, 0, nx, k);
+            assert!(eroded, "interior stage epochs={k} must be a keyed citizen");
+            let r = wb.erosion_stage_residual(face, level, 0, 0, nx, k);
+            assert!(
+                r.is_some_and(f32::is_finite),
+                "computed stage epochs={k} must carry its measured residual"
+            );
+        }
+        // ...and the one-shot world has none — endpoint only, no interior.
+        let (_h, _src, eroded) = wa.surface_prefer_eroded(face, level, 0, 0, nx, 3);
+        assert!(!eroded, "a one-shot build has no interior to show");
+
+        let _ = fs::remove_dir_all(&dir_a);
+        let _ = fs::remove_dir_all(&dir_b);
+    }
+
+    #[test]
+    fn endpoint_only_world_gains_its_interior_and_readers_see_one_surface() {
+        // The migration path for every world built before stages existed: the
+        // endpoint citizen stays valid (same key shape), the staged walk fills
+        // in the missing history, and surface readers still see exactly one
+        // region per tile — the latest stage — never a blend of moments.
+        let dir = tmpdir("stage-migrate");
+        let face = Face::from_index(2);
+        let (level, nx, epochs, stride) = (6u8, 16usize, 7u32, 3u32);
+        let s = Store::open(&dir).unwrap();
+        let w = World::new(&s, 7);
+
+        // An old world: endpoint only.
+        let (endpoint, src) = w.erosion_tile(face, level, 0, 0, nx, epochs);
+        assert_eq!(src, Source::Computed);
+
+        // The staged walk computes the interior (rungs 3, 6) without disturbing
+        // the endpoint, and lands on the same bytes.
+        let (staged, src) = w.erosion_tile_staged(face, level, 0, 0, nx, epochs, stride);
+        assert_eq!(src, Source::Computed, "interior rungs were missing and got built");
+        assert!(
+            endpoint.iter().zip(staged.iter()).all(|(a, b)| a.to_bits() == b.to_bits()),
+            "the endpoint reached through the chain is the endpoint that was already there"
+        );
+
+        // A second staged walk is all hits — the chain is a store citizen now.
+        let (_h, src) = w.erosion_tile_staged(face, level, 0, 0, nx, epochs, stride);
+        assert_eq!(src, Source::Hit, "a fully materialized chain walks for free");
+
+        // Readers: three stage roots, ONE region, and it is the latest stage.
+        let regions = w.load_eroded_regions();
+        assert_eq!(regions.len(), 1, "one region per tile — a surface is one moment");
+        assert!(
+            regions[0].h.iter().zip(endpoint.iter()).all(|(a, b)| a.to_bits() == b.to_bits()),
+            "the region is the latest stage"
+        );
+
+        // The interior census sees the chain: 3 distinct time-indices.
+        let roots = s.roots().unwrap();
+        let reports = crate::watch::interior(&roots);
+        let er = reports.iter().find(|r| r.nomos == "erosion-tile").expect("erosion-tile in census");
+        assert_eq!(er.distinct, 3, "epochs 3, 6, 7 — the settle history is addressable");
 
         let _ = fs::remove_dir_all(&dir);
     }

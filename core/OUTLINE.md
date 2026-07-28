@@ -111,8 +111,8 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | detail | Project | [#detail-vivium-lifecycle](src/detail-vivium-lifecycle.md) | Pipeline stages, capability ladder, BREAK-1/3/4/5 + doctrine | draft |
 | | | | *(#gap) Run-modes carve (thin: LEXICON open referents + root isolation; no fat enum)* | missing |
 | | | | *(#gap) Builder daemon **implementation** (design owned above; not shipped)* | missing |
-| formulation | Machine Critical | [#form-time-indexed-stage-chains](src/form-time-indexed-stage-chains.md) | A settle sequence is addressable memos carrying a time-index, each recording its convergence-$\varepsilon$; replay and live-watching are one mechanism (poller and interior census built) | draft |
-| | | | *(#gap) **The operated instrument**, narrowed — the reader half is built (`vivarium watch`, live + replay, owned by #form-time-indexed-stage-chains FE(5)). Still homeless: per-nomos convergence params living on the global command instead of the NomosDecl+manifest ( #form-core-view-wall FE(4); `msc/build-parameterization-findings-2026-07-24.md` items 2/4), watchpoints (no LEXICON entry), and "legible, steerable time regimes" (in-world clock vs wall clock, sim rate vs framerate — Joseph 2026-07-02)* | missing |
+| formulation | Machine Critical | [#form-time-indexed-stage-chains](src/form-time-indexed-stage-chains.md) | A settle sequence is addressable memos carrying a time-index, each recording its convergence-$\varepsilon$; replay and live-watching are one mechanism (poller, census, and the erosion chain — the first materialized-only interior — built) | draft |
+| | | | *(#gap) **The operated instrument**, narrowed — the reader half is built (`vivarium watch`, live + replay, owned by #form-time-indexed-stage-chains FE(5)). Still homeless: **epoch-ordered erosion playback** (the first honest world-time scrub, unblocked by the stage chain but unbuilt — replay still orders by landing time), watchpoints (no LEXICON entry), and "legible, steerable time regimes" (in-world clock vs wall clock, sim rate vs framerate — Joseph 2026-07-02)* | missing |
 
 ---
 
@@ -184,7 +184,7 @@ Live floor data: [`tabularium/terrestris.ordinum.udon`](../tabularium/terrestris
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
 | formulation | Physics Critical | [#form-isostasy-column](src/form-isostasy-column.md) | Lithosphere column + Airy read live; mantle-thermal cooling nomos drives emergence in time (water-world → in-band present → cooling); rock-mass ledger (erosion mass-return + isostatic rebound) adopted as the live default surface, trims the amber over-stand toward the band (LITHO_COLUMN Conserved); emerged-land Claimed by isostasy (not Kept) | draft |
-| detail | Model | [#detail-erosion-composition](src/detail-erosion-composition.md) | Live crude fluvial rung: epoch pipeline, flux edges, measured residuals | draft |
+| detail | Model | [#detail-erosion-composition](src/detail-erosion-composition.md) | Live crude fluvial rung: staged epoch pipeline, flux edges, measured residuals | draft |
 | observation | Model Critical | [#obs-cube-locked-kernel-bias](src/obs-cube-locked-kernel-bias.md) | MFD fan + uniform cell-area $A$ are cube-locked biases that do not converge | draft |
 | observation | Model Critical | [#obs-routing-curl-spiral](src/obs-routing-curl-spiral.md) | Routing violates contour-orthogonality: ~2% flux spirals, level-independent | draft |
 | observation | Model Critical | [#obs-erosion-residual-is-driver-bound](src/obs-erosion-residual-is-driver-bound.md) | Uplift pins erosion's residual (no stationarity to gate on); most tiles are subaerially empty and do no fluvial work | draft |

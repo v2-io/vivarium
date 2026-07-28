@@ -313,7 +313,7 @@ impl Fluvial {
     }
 
     /// Replace heights after [`from_surface`] scaffolding (used by [`from_region`]).
-    fn with_heights(mut self, h: Vec<f32>) -> Self {
+    pub(crate) fn with_heights(mut self, h: Vec<f32>) -> Self {
         debug_assert_eq!(h.len(), self.nx * self.nx);
         self.h = h;
         self
