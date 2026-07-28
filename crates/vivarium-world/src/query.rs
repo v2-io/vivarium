@@ -586,25 +586,26 @@ impl<'s> World<'s> {
         c
     }
 
-    /// Materialize every `erosion-tile` root as an [`ErodedRegion`] for observe-
-    /// only sampling. Never runs the fluvial kernel — pure store census.
-    /// Order is coarse → fine by level (required by [`erosion::surface_at`]).
+    /// Materialize one **cohort's** `erosion-tile` roots as [`ErodedRegion`]s —
+    /// the tiles carved under exactly the source tree `src`. Observe-only, pure
+    /// store census; order is coarse → fine by level (required by
+    /// [`erosion::surface_at`]).
     ///
-    /// **Staleness caveat:** this loads *every* `erosion-tile@` root, INCLUDING
-    /// tiles carved under a stale source tree (different `src=`). Assembling
-    /// those alongside current-source prior fallback mixes two datums and paints
-    /// coverage-boundary ribbons on the globe. A view that must show only the
-    /// *current* world should use [`Self::load_current_eroded_regions`] and
-    /// report [`Self::eroded_region_census`] so the drop is loud, not silent.
-    pub fn load_eroded_regions(&self) -> Vec<ErodedRegion> {
-        self.load_eroded_regions_where(|_| true)
+    /// This is the cohort-safe convenient path ( `#norm-caught-disciplines-`
+    /// `become-mechanisms` FE(2)(a)): a store holds beds carved under many
+    /// source trees, and a reader that merges cohorts censuses a terrain nobody
+    /// built — a fault class three independent readers hit on 2026-07-28 before
+    /// the merging default was removed. Choosing the cohort is now part of the
+    /// read. `watch::erosion_cohorts` enumerates what a store holds.
+    pub fn load_eroded_regions_cohort(&self, src: &str) -> Vec<ErodedRegion> {
+        self.load_eroded_regions_where(|key| key_field(key, "src") == Some(src))
     }
 
-    /// Like [`Self::load_eroded_regions`] but only tiles whose `src=` matches the
-    /// current binary's [`crate::nomotheke::SRC_HASH`] — the observe-only honest
-    /// surface: a tile counts as *this* world's eroded state only if it was
-    /// carved under the source now running. Stale tiles are dropped (loudly, via
-    /// the census), never silently blended into the surface.
+    /// [`Self::load_eroded_regions_cohort`] at the current binary's
+    /// [`crate::nomotheke::SRC_HASH`] — the observe-only honest surface: a tile
+    /// counts as *this* world's eroded state only if it was carved under the
+    /// source now running. Stale tiles are dropped (loudly, via
+    /// [`Self::eroded_region_census`]), never silently blended into the surface.
     pub fn load_current_eroded_regions(&self) -> Vec<ErodedRegion> {
         let cur = crate::nomotheke::SRC_HASH;
         self.load_eroded_regions_where(|key| key_field(key, "src") == Some(cur))
@@ -620,6 +621,13 @@ impl<'s> World<'s> {
     /// replay assembles through this function rather than through a private
     /// second loader). Callers that want the ordinary honest surface should use
     /// [`Self::load_current_eroded_regions`].
+    ///
+    /// **This is the sharp path, and cohort honesty is the caller's burden
+    /// here**: a predicate that ignores `src=` merges beds carved under
+    /// different source trees into a terrain nobody built (the fault class the
+    /// removed no-filter loader made convenient — `#norm-caught-disciplines-`
+    /// `become-mechanisms` FE(2)(a)). Replay predicates should pin a cohort
+    /// alongside their landing cut, as the explorer's do.
     ///
     /// **One region per tile, the latest stage among accepted roots.** A staged
     /// build ([`Self::erosion_tile_staged`]) leaves *many* roots per tile — the
@@ -1178,7 +1186,7 @@ mod tests {
         let w = World::new(&s, 7);
         let (_h, src) = w.erosion_tile(face, level, 0, 0, nx, epochs);
         assert_eq!(src, Source::Computed);
-        let regions = w.load_eroded_regions();
+        let regions = w.load_current_eroded_regions();
         assert_eq!(regions.len(), 1);
         assert_eq!(regions[0].nx, nx);
         assert_eq!(regions[0].level, level);
@@ -1232,8 +1240,10 @@ mod tests {
             .field("nx", nx);
         s.put_with(&stale_key, &encode_f32(&vec![1234.0f32; nx * nx]), PutOpts::default()).unwrap();
 
-        // Silent-staleness convicted: the default loader takes BOTH.
-        assert_eq!(w.load_eroded_regions().len(), 2, "default loader silently includes the stale tile");
+        // The merging default is GONE (the mechanism): only an explicit
+        // predicate can still express a cross-cohort read, and it costs the
+        // predicate — which is the point.
+        assert_eq!(w.load_eroded_regions_where(|_| true).len(), 2, "the sharp path can merge, explicitly");
 
         // The instruments separate them.
         let c1 = w.eroded_region_census();
@@ -1326,7 +1336,7 @@ mod tests {
         assert_eq!(src, Source::Hit, "a fully materialized chain walks for free");
 
         // Readers: three stage roots, ONE region, and it is the latest stage.
-        let regions = w.load_eroded_regions();
+        let regions = w.load_current_eroded_regions();
         assert_eq!(regions.len(), 1, "one region per tile — a surface is one moment");
         assert!(
             regions[0].h.iter().zip(endpoint.iter()).all(|(a, b)| a.to_bits() == b.to_bits()),

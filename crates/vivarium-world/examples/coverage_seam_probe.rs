@@ -51,9 +51,12 @@ fn main() {
     }
     println!("[census] erosion-tile roots: {total} total | {fresh} fresh (src==current) | {stale} STALE (src!=current)");
 
-    let regions = world.load_eroded_regions();
+    // The ribbon-fault probe NEEDS the cross-cohort read it convicts — the
+    // sharp predicate path expresses it explicitly (the convenient merging
+    // loader is gone; #norm-caught-disciplines-become-mechanisms FE(2)(a)).
+    let regions = world.load_eroded_regions_where(|_| true);
     println!(
-        "[assemble] load_eroded_regions returned {} regions (NO src filter — stale included)",
+        "[assemble] cross-cohort predicate returned {} regions (NO src filter — stale included, deliberately)",
         regions.len()
     );
     eprintln!("[t {:?}] regions loaded", t0.elapsed());

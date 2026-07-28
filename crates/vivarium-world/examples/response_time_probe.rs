@@ -174,9 +174,17 @@ fn main() {
     {
         let (store, spec) = spec;
         let world = World::new(&store, spec.seed);
+        // Current cohort if present, else the first cohort found — never merged.
         let mut regions = world.load_current_eroded_regions();
         if regions.is_empty() {
-            regions = world.load_eroded_regions();
+            let roots = store.roots().unwrap_or_default();
+            if let Some(src) = roots.iter().find_map(|r| {
+                (r.key.starts_with("erosion-tile@"))
+                    .then(|| vivarium_world::watch::key_field(&r.key, "src"))
+                    .flatten()
+            }) {
+                regions = world.load_eroded_regions_cohort(src);
+            }
         }
         let sea = vivarium_world::sea_level::derived_sea_level_m(spec.seed) as f32;
         regions.sort_by_key(|r| std::cmp::Reverse(r.h.iter().filter(|&&h| h > sea).count()));
