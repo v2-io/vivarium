@@ -188,6 +188,7 @@ Live floor data: [`tabularium/terrestris.ordinum.udon`](../tabularium/terrestris
 | observation | Model Critical | [#obs-cube-locked-kernel-bias](src/obs-cube-locked-kernel-bias.md) | MFD fan + uniform cell-area $A$ are cube-locked biases that do not converge | draft |
 | observation | Model Critical | [#obs-routing-curl-spiral](src/obs-routing-curl-spiral.md) | Routing violates contour-orthogonality: ~2% flux spirals, level-independent | draft |
 | observation | Model Critical | [#obs-erosion-residual-is-driver-bound](src/obs-erosion-residual-is-driver-bound.md) | Uplift pins erosion's residual (no stationarity to gate on); most tiles are subaerially empty and do no fluvial work | draft |
+| observation | Model Critical | [#obs-chi-shape-is-erosions-criterion](src/obs-chi-shape-is-erosions-criterion.md) | $\chi$-linearity is a convergence criterion the driver-bound residual cannot supply; measured on the L13 settle history, one a-priori response time is ~a quarter of the approach, and the fitted slope misses pure SPL by the deposition term | draft |
 
 **Hydrosphere & atmosphere** (water · hydrology · climate · ocean · coastal …)
 
