@@ -64,6 +64,7 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | normative | Ops Critical | [#norm-regime-probes](src/norm-regime-probes.md) | Regime probes ship with every rung; known issues get the probe first | draft |
 | normative | Ops Critical | [#norm-declared-violation-is-not-license](src/norm-declared-violation-is-not-license.md) | Declared deficiency is disclosure, not permission; conservation ≠ fidelity rung | draft |
 | normative | Ops Critical | [#norm-decision-authority](src/norm-decision-authority.md) | Authority tags; evidence ≠ who decided; council-accepted | draft |
+| normative | Ops Critical | [#norm-caught-disciplines-become-mechanisms](src/norm-caught-disciplines-become-mechanisms.md) | A discipline caught failing becomes a mechanism (test/lint/refusing API); machine expedients live behind a named-fenced-retirable license | draft |
 | normative | Model Critical | [#norm-bias-vs-noise](src/norm-bias-vs-noise.md) | Bias versus noise is the decisive discretisation audit | draft |
 | discussion | Model Critical | [#disc-algorithms-disguise-physics](src/disc-algorithms-disguise-physics.md) | Port the physical claim, not the paper costume | draft |
 | discussion | Ops Critical | [#disc-check-the-ladder](src/disc-check-the-ladder.md) | Check the phase ladder before modern-Earth priors | draft |
@@ -91,6 +92,7 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | formulation | Project Critical | [#form-manifest-prescribes-vivium](src/form-manifest-prescribes-vivium.md) | Manifest = per-vivium prescription; ordinum = kind floor; no regula artifact for now | draft |
 | discussion | Model Critical | [#disc-prime-question](src/disc-prime-question.md) | Prime Question = modified-equation analysis | draft |
 | sketch | Project | [#sketch-nomos-declaration-boxes](src/sketch-nomos-declaration-boxes.md) | Nomos boxes ②–⑤ — schema live on NomosDecl; earning procedures open | draft |
+| formulation | Project Critical | [#form-declared-boundary-contract](src/form-declared-boundary-contract.md) | A promise holds under a declared boundary contract; an undeclared edge is an unlawful edge (the flux web's measured blind spot) | draft |
 
 ---
 
