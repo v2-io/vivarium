@@ -103,12 +103,31 @@ struct TileVerdict {
     slope_pred: f64,
     /// **Zero-parameter form**: departure from the steady profile the kernel's
     /// own update implies, normalized against the same total as the literature
-    /// form so the two columns are comparable rather than merely adjacent. It
-    /// consumes the per-cell $U$, so it assumes no spatially invariant driver.
+    /// form. It consumes the per-cell $U$, so it assumes no spatially invariant
+    /// driver — but it also carries the composition's steepening offset (FE(5)),
+    /// which the free-slope literature form absorbs. It is therefore *not* a
+    /// fair head-to-head against `unexplained`.
     zero_param: f64,
+    /// **Matched-parameter form** — the fair comparison, and the one that decides
+    /// whether FE(2) buys anything. Regress $z$ on `z_steady` with a free
+    /// intercept and scale instead of on $\chi$: two fitted parameters, exactly
+    /// as many as the literature form, with the scale absorbing the deposition
+    /// offset. Under a spatially invariant $U$ the predicted profile is an affine
+    /// function of $\chi$, so the two columns must come out **identical** — which
+    /// is also a check on the implementation. They can only diverge where $U$
+    /// varies along a channel, and there the per-cell form should win.
+    u_shape: f64,
     /// Fraction of fitted channel cells on non-positive uplift — where no driven
     /// steady state exists for incision to balance.
     subsiding: f64,
+    /// Median over fitted basins of $\max U / \min U$ **along that basin's own
+    /// channel cells**. This, and not the driver's global variability, is the
+    /// quantity that decides whether the literature and matched-parameter forms
+    /// can differ at all: a basin whose channel sees a constant $U$ makes the
+    /// predicted profile an affine function of $\chi$, and the two fits become
+    /// the same fit. At 1.00 the discrimination is unreachable, not merely
+    /// unobserved.
+    u_span: f64,
 }
 
 /// Everything the probe needs to reach the store, shared across cohorts.
@@ -183,7 +202,9 @@ impl Probe<'_> {
         }
         let channel_cells: usize = by_basin.values().map(Vec::len).sum();
         let (mut ss_res, mut ss_tot, mut ss_zero, mut n_fit) = (0.0f64, 0.0f64, 0.0f64, 0usize);
+        let mut ss_ushape = 0.0f64;
         let (mut slopes, mut preds) = (Vec::new(), Vec::new());
+        let mut spans: Vec<f64> = Vec::new();
         let mut subsiding = 0usize;
         for cells in by_basin.values().filter(|v| v.len() >= MIN_BASIN_CELLS) {
             let x: Vec<f64> = cells.iter().map(|&i| prof.chi[i] as f64).collect();
@@ -196,8 +217,17 @@ impl Probe<'_> {
                 .iter()
                 .map(|&i| ((prof.h[i] - prof.z_steady[i]) as f64).powi(2))
                 .sum::<f64>();
+            // The matched-parameter form: the same two fitted parameters, against
+            // the per-cell predicted profile instead of against χ.
+            let w: Vec<f64> = cells.iter().map(|&i| prof.z_steady[i] as f64).collect();
+            let (sw, cw) = ols(&w, &y);
+            ss_ushape += w.iter().zip(&y).map(|(a, b)| (b - (cw + sw * a)).powi(2)).sum::<f64>();
             n_fit += cells.len();
             subsiding += cells.iter().filter(|&&i| uplift[i] <= 0.0).count();
+            let (ulo, uhi) = cells.iter().fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), &i| {
+                (lo.min(uplift[i] as f64), hi.max(uplift[i] as f64))
+            });
+            spans.push(if ulo > 0.0 { uhi / ulo } else { f64::INFINITY });
             slopes.push(s);
             preds.push(
                 cells.iter().map(|&i| uplift[i] as f64).sum::<f64>() / cells.len() as f64
@@ -215,7 +245,9 @@ impl Probe<'_> {
             slope: median(&mut slopes),
             slope_pred: median(&mut preds),
             zero_param: (ss_zero / ss_tot.max(f64::MIN_POSITIVE)).sqrt(),
+            u_shape: (ss_ushape / ss_tot.max(f64::MIN_POSITIVE)).sqrt(),
             subsiding: subsiding as f64 / n_fit as f64,
+            u_span: median(&mut spans),
         })
     }
 
@@ -304,7 +336,7 @@ impl Probe<'_> {
 
         println!(
             "\n  {:>7} {:>8} {:>7} {:>9} {:>9} {:>9} {:>8} {:>9} {:>9} {:>8} {:>9}",
-            "stage", "channel", "basins", "1-R²(√)", "trunk", "0-param", "rms (m)", "dz/dχ", "U/kA^m", "ratio", "mean|Δh|"
+            "stage", "channel", "basins", "1-R²(√)", "U-shape", "trunk", "0-param", "dz/dχ", "U/kA^m", "ratio", "mean|Δh|"
         );
         let mut rows: Vec<(i64, TileVerdict, f64, f64)> = Vec::new();
         for (label, tiles) in std::iter::once((-1i64, stage0)).chain(ladder.iter().map(|&k| {
@@ -319,6 +351,7 @@ impl Probe<'_> {
             let (mut unexp, mut rms, mut slope, mut pred) =
                 (Vec::new(), Vec::new(), Vec::new(), Vec::new());
             let (mut zero, mut trunk, mut subs) = (Vec::new(), Vec::new(), Vec::new());
+            let (mut ush, mut spans): (Vec<f64>, Vec<f64>) = (Vec::new(), Vec::new());
             let (mut chan, mut basins, mut no_test) = (0usize, 0usize, 0usize);
             let mut deltas: Vec<f64> = Vec::new();
             for (at, object) in &tiles {
@@ -335,6 +368,8 @@ impl Probe<'_> {
                         slope.push(v.slope);
                         pred.push(v.slope_pred);
                         zero.push(v.zero_param);
+                        ush.push(v.u_shape);
+                        spans.push(v.u_span);
                         subs.push(v.subsiding);
                     }
                     None => no_test += 1,
@@ -363,19 +398,21 @@ impl Probe<'_> {
                 slope: median(&mut slope),
                 slope_pred: median(&mut pred),
                 zero_param: median(&mut zero),
+                u_shape: median(&mut ush),
                 subsiding: median(&mut subs),
+                u_span: median(&mut spans),
             };
             let d = if deltas.is_empty() { f64::NAN } else { median(&mut deltas) };
             let tr = if trunk.is_empty() { f64::NAN } else { median(&mut trunk) };
             println!(
-                "  {:>7} {:>8} {:>7} {:>9.4} {:>9.4} {:>9.4} {:>8.2} {:>9.4} {:>9.4} {:>8.2} {:>9.4}{}",
+                "  {:>7} {:>8} {:>7} {:>9.4} {:>9.4} {:>9.4} {:>9.4} {:>9.4} {:>9.4} {:>8.2} {:>9.4}{}",
                 if label < 0 { "prior".to_string() } else { label.to_string() },
                 v.channel_cells,
                 v.fitted_basins,
                 v.unexplained,
+                v.u_shape,
                 tr,
                 v.zero_param,
-                v.rms_m,
                 v.slope,
                 v.slope_pred,
                 v.slope / v.slope_pred,
@@ -394,23 +431,37 @@ impl Probe<'_> {
             .iter()
             .filter_map(|(at, s)| s.get(&last_stage).map(|o| (*at, o.clone())))
             .collect();
-        let (mut means, mut cv, mut neg) = (Vec::new(), Vec::new(), Vec::new());
+        // The premise statistic must be measured on the tiles that produce a
+        // test. Medianed over every tile in a mostly-ocean sweep it reports the
+        // seabed — 377 of 384 inert tiles drowning the seven that were fitted.
+        let (mut means, mut cv) = (Vec::new(), Vec::new());
+        let (mut all_means, mut fitted) = (Vec::new(), 0usize);
         for (at, object) in &last_tiles {
-            let Some(f) = self.seeded(src, level, *at, object) else { continue };
+            let Some(mut f) = self.seeded(src, level, *at, object) else { continue };
             let u: Vec<f64> = f.uplift_rate().iter().map(|&v| v as f64).collect();
             let mean = u.iter().sum::<f64>() / u.len() as f64;
+            all_means.push(mean);
+            if self.judge(&mut f, self.channel_min_cells).is_none() {
+                continue;
+            }
+            fitted += 1;
             let sd = (u.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / u.len() as f64).sqrt();
             cv.push(sd / mean.abs().max(1e-12));
-            neg.push(u.iter().filter(|v| **v <= 0.0).count() as f64 / u.len() as f64);
             means.push(mean);
         }
         println!("\n  == verdict ==");
         println!(
-            "  driver: tile means {:.4}…{:.4} m/epoch, within-tile σ/|mean| median {:.3}, cells with U ≤ 0 median {:.1}%",
+            "  driver over ALL {} tiles: means {:.4}…{:.4} m/epoch",
+            all_means.len(),
+            all_means.iter().cloned().fold(f64::INFINITY, f64::min),
+            all_means.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
+        );
+        println!(
+            "  driver over the {fitted} tiles that produce a TEST: means {:.4}…{:.4}, within-tile σ/|mean| median {:.3}; max/min U along a fitted channel, median {:.3}",
             means.iter().cloned().fold(f64::INFINITY, f64::min),
             means.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
             median(&mut cv),
-            100.0 * median(&mut neg),
+            last.1.u_span,
         );
         if let Some(pr) = rows.iter().find(|r| r.0 < 0) {
             println!(
@@ -419,12 +470,23 @@ impl Probe<'_> {
             );
         }
         println!(
-            "  stage {:<5}         1-R²(√) = {:.4}   0-param = {:.4}   mean|Δh| = {:.4} m/epoch",
-            first.0, first.1.unexplained, first.1.zero_param, first.2
+            "  stage {:<5}         1-R²(√) = {:.4}   U-shape = {:.4}   0-param = {:.4}   mean|Δh| = {:.4} m/epoch",
+            first.0, first.1.unexplained, first.1.u_shape, first.1.zero_param, first.2
         );
         println!(
-            "  stage {:<5}         1-R²(√) = {:.4}   0-param = {:.4}   mean|Δh| = {:.4} m/epoch",
-            last.0, last.1.unexplained, last.1.zero_param, last.2
+            "  stage {:<5}         1-R²(√) = {:.4}   U-shape = {:.4}   0-param = {:.4}   mean|Δh| = {:.4} m/epoch",
+            last.0, last.1.unexplained, last.1.u_shape, last.1.zero_param, last.2
+        );
+        // THE discrimination test. Under a spatially invariant U the two forms
+        // are the same fit and must agree; they can only part where U varies
+        // along a channel. A ratio at 1.000 is not a null result — it is the
+        // premise reporting that it was never stressed.
+        println!(
+            "  literature form ÷ matched-parameter U-form: {:.3} at stage {}, {:.3} at stage {} — 1.000 means U did not vary enough to tell them apart",
+            first.1.unexplained / first.1.u_shape,
+            first.0,
+            last.1.unexplained / last.1.u_shape,
+            last.0,
         );
         println!(
             "  literature form falls on {}/{} steps (end/start {:.3}); zero-parameter form on {}/{} ({:.3}); trunk-only {:.4} → {:.4}",
@@ -499,7 +561,7 @@ impl Probe<'_> {
             );
             println!(
                 "  {:>7} {:>9} {:>9} {:>9} {:>9} {:>8} {:>9}",
-                "epoch", "1-R²(√)", "trunk", "0-param", "dz/dχ", "ratio", "mean|Δh|"
+                "epoch", "1-R²(√)", "U-shape", "trunk", "0-param", "ratio", "mean|Δh|"
             );
             let step = ((extend - last_stage) / 12).max(1);
             let mut epoch = last_stage;
@@ -511,9 +573,9 @@ impl Probe<'_> {
                         "  {:>7} {:>9.4} {:>9.4} {:>9.4} {:>9.4} {:>8.2} {:>9}",
                         epoch,
                         v.unexplained,
+                        v.u_shape,
                         t.map(|t| t.unexplained).unwrap_or(f64::NAN),
                         v.zero_param,
-                        v.slope,
                         v.slope / v.slope_pred,
                         if f.last_delta_m.is_finite() {
                             format!("{:.4}", f.last_delta_m)
@@ -531,6 +593,130 @@ impl Probe<'_> {
             }
             self.known_bads(&format!("the same tile at {extend} epochs"), &mut f);
         }
+    }
+
+    /// **The discrimination test the tiling cannot provide.**
+    ///
+    /// FE(2) earns its place only if the per-cell form beats the literature form
+    /// somewhere, and it can only do that where $U$ varies **along a channel**.
+    /// Measured, it does not: the driver varies ~24% across an L9 tile, but a
+    /// fitted basin's channel samples ~1.5% of that, because every partial tile
+    /// makes its whole edge ring a base level and no basin can exceed one tile
+    /// ( #obs-tile-outlets-grade-away-the-basins ). Two facts compose into one
+    /// blind spot, and neither alone would cause it.
+    ///
+    /// So: remove the cause. A tile covering a **whole cube face** is the one
+    /// configuration `Fluvial::outlets` gives coast-only base levels, so its
+    /// basins can run continental distances and cross the driver's gradient.
+    /// This assembles one face from its stored tiles, runs the kernel on it as a
+    /// single field, and asks the same question of a network that can finally
+    /// answer it.
+    ///
+    /// **What this is and is not.** It is a controlled experiment about the
+    /// *criterion*, run in memory and never stored. It is **not** a claim about
+    /// the world: the builder never ran this network, and assembling stored tiles
+    /// is separately measured to manufacture basins at the seams. Read it as
+    /// "what would the two forms do given a channel that crosses a $U$ gradient",
+    /// nothing more.
+    fn whole_face_discrimination(&self, src: &str, level: u8, cohort: &Cohort, epochs: u32) {
+        let face_n = 1usize << level;
+        let per_side = face_n / 64;
+        let last = cohort.values().flat_map(|s| s.keys().copied()).max().unwrap_or(0);
+        // The face with the most tiles present at the last stage.
+        let mut by_face: BTreeMap<u8, Vec<(TileAt, String)>> = BTreeMap::new();
+        for (at, stages) in cohort {
+            if at.3 != 64 {
+                continue;
+            }
+            if let Some(o) = stages.get(&last) {
+                by_face.entry(at.0).or_default().push((*at, o.clone()));
+            }
+        }
+        // The landiest face, not merely the first complete one: fluvial form is a
+        // property of land, and an arbitrary tie-break here would put the whole
+        // experiment on whichever face sorted last.
+        let sea = vivarium_world::sea_level::derived_sea_level_m(self.seed) as f32;
+        let Some((face, tiles)) = by_face.into_iter().max_by_key(|(_, v)| {
+            v.iter()
+                .filter_map(|(_, o)| self.store.object_bytes(o))
+                .map(|b| decode_f32(&b).iter().filter(|&&x| x > sea).count())
+                .sum::<usize>()
+        }) else {
+            return;
+        };
+        if tiles.len() < per_side * per_side {
+            println!(
+                "\n\n=== whole-face discrimination: face {face} has {}/{} tiles at stage {last} — not assembling a partial face ===",
+                tiles.len(),
+                per_side * per_side
+            );
+            return;
+        }
+        println!(
+            "\n\n=== whole-face discrimination: face {face} at L{level} assembled from {} stored tiles, {face_n}² cells, coast-only base level ===",
+            tiles.len()
+        );
+        println!("    (computed in memory, never stored; a network the builder never ran — this is a test of the CRITERION, not a claim about the world)");
+
+        let n = face_n * face_n;
+        let (mut h, mut up, mut pr) = (vec![0.0f32; n], vec![0.0f32; n], vec![1.0f32; n]);
+        for (at, object) in &tiles {
+            let (_, oi, oj, nx) = *at;
+            let Some(th) = self.store.object_bytes(object).map(|b| decode_f32(&b)) else { continue };
+            let key = |k| (k, src.to_string(), level, *at);
+            let Some(tu) = self.inputs.get(&key("uplift-tile")).and_then(|o| self.store.object_bytes(o)).map(|b| decode_f32(&b)) else { continue };
+            let Some(tp) = self.inputs.get(&key("climate")).and_then(|o| self.store.object_bytes(o)).map(|b| decode_f32(&b)) else { continue };
+            if th.len() != nx * nx || tu.len() != nx * nx || tp.len() != nx * nx {
+                continue;
+            }
+            for y in 0..nx {
+                for x in 0..nx {
+                    let d = (oj as usize + y) * face_n + oi as usize + x;
+                    if d < n {
+                        h[d] = th[y * nx + x];
+                        up[d] = tu[y * nx + x];
+                        pr[d] = tp[y * nx + x];
+                    }
+                }
+            }
+        }
+        let mean = pr.iter().sum::<f32>() / pr.len() as f32;
+        let pw: Vec<f32> = if mean > 0.0 { pr.iter().map(|v| v / mean).collect() } else { vec![1.0; n] };
+        let mut f = Fluvial::from_surface(self.seed, Face::from_index(face), level, 0, 0, face_n, |_| 0.0);
+        f.h = h;
+        f.set_uplift_rate(up);
+        f.set_precip_weight(pw);
+
+        println!(
+            "\n  {:>7} {:>8} {:>7} {:>10} {:>9} {:>9} {:>11} {:>9}",
+            "epoch", "channel", "basins", "1-R²(√)", "U-shape", "lit÷U", "maxU/minU", "ratio"
+        );
+        let step = (epochs / 6).max(1);
+        let mut epoch = 0u32;
+        loop {
+            if let Some(v) = self.judge(&mut f, self.channel_min_cells) {
+                println!(
+                    "  {epoch:>7} {:>8} {:>7} {:>10.4} {:>9.4} {:>9.3} {:>11.3} {:>9.2}",
+                    v.channel_cells,
+                    v.fitted_basins,
+                    v.unexplained,
+                    v.u_shape,
+                    v.unexplained / v.u_shape,
+                    v.u_span,
+                    v.slope / v.slope_pred,
+                );
+            } else {
+                println!("  {epoch:>7}   no basin large enough — no test");
+            }
+            if epoch >= epochs {
+                break;
+            }
+            let take = step.min(epochs - epoch);
+            f.erode(&FluvialParams { epochs: take, ..self.p.clone() });
+            epoch += take;
+        }
+        println!("  lit÷U above 1 means the per-cell form (FE(2)) explains the profile better than χ does;");
+        println!("  it can only rise above 1 where maxU/minU along a channel does, which is the whole point of the column.");
     }
 
     /// Does the converged slope ratio track $1+G$? If it does, the composition
@@ -743,5 +929,17 @@ fn main() {
         });
         tiles.truncate(6);
         probe.deposition_sweep(&src, level, &tiles, extend.max(1500));
+    }
+
+    // The discrimination test, on the coarsest cohort available — a whole face
+    // is the only footprint whose basins can cross the driver's gradient.
+    if std::env::var("CHI_FACE").map(|v| v != "0").unwrap_or(true) {
+        let face_epochs: u32 =
+            std::env::var("CHI_FACE_EPOCHS").ok().and_then(|v| v.parse().ok()).unwrap_or(600);
+        if let Some((src, level)) =
+            selected.iter().min_by_key(|(_, l)| *l).cloned()
+        {
+            probe.whole_face_discrimination(&src, level, &cohorts[&(src.clone(), level)], face_epochs);
+        }
     }
 }
