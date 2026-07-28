@@ -4,6 +4,13 @@ Dated, **frozen** entries for the end-user perspective: what the world can show 
 
 **The entry bar:** the external perspective moved. New things visible in `vivarium explore` / `watch` / `info`, new commands or interactions, world behavior a user would notice. Internal commits that don't move the external view need no entry — that's fine and good, not a gap.
 
+**The entry is the acceptance check** (Joseph, 2026-07-28): all the physics and code in the world isn't useful if the rendered world still shows fBm circles passed off as rising land. So an entry is behavior-driven development's bottom line applied to a planet — *show the world doing the new thing, from the store, reproducibly*. Two practices make this a mechanism rather than a hope:
+
+1. **Declare the expected entry before building** (the pre-registration clause of `#norm-caught-disciplines-become-mechanisms` FE(4), at outcome altitude): one sentence of "when this lands, an entry can show X" — e.g. *"the fill repair's entry will show closed depressions persisting in the depression map where the previous cohort shows none."* If the work lands and that entry cannot be written, the distance is measured and queued, not waved past.
+2. **Entries are captured, not composed.** Standard captures, each self-labelling with seed/cohort/command: `vivarium info --width 100 --no-color` (whole-globe ASCII), `vivarium watch --frames 1` (interior census + coverage), `vivarium status` (demand + flux + maturity), explorer sighting capture (`C` — screenshot + full state beside the world). Hand-drawn or retouched renders are forbidden by the referent rule below; if the honest capture is unimpressive, the unimpressive capture is the entry.
+
+An agent's *interpretation* of a render can still be off — the entry doesn't replace probes, it complements them at the altitude where Joseph's eye is the calibrated instrument. What it guarantees is weaker and load-bearing: the ball either visibly reached the end of the row, or the remaining distance is named.
+
 **The rules, few and load-bearing:**
 
 - **Every shot has a referent** ( `#norm-no-depiction-without-referent` extends to documents): an ASCII render, screenshot, or number names its **seed, source cohort (`src=`), and the command that produced it** — so any reader can re-derive it, and no image is a mock-up.
