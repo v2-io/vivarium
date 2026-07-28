@@ -21,7 +21,7 @@ The claim channel is **88 segments** and in good order, and vivarium has a **wor
 3. **The step-size question** (physics, Joseph's or a spike's) — whether `stable_dt`'s ceiling should scale with cell size. Blocks water's ε rung.
 4. **The demand spool** — the first standing beacon now lives in the manifest and the builder sweeps it; the spool proper (beacons → cones → work queue, multiplicity, per-beacon policy) is untouched. Regime G is the floor: "no demand" means spine-only, not idle.
 5. **Store-backed navigation** — an explorer that upgrades continuously as memos land, rather than reading a census at open.
-6. Standing, unowned: the stale-`src` GC; `globe::render` unaudited against `#norm-no-depiction-without-referent`; the source digest covering `src/bin/` (editing help text invalidates a world — Joseph's call) — the sidebar adds that it also does not cover rustc/LLVM version or FMA contraction; zero inland standing water at L9, surfaced by the instrument and wanting a probe.
+6. Standing, unowned: the stale-`src` GC; `globe::render` unaudited against `#norm-no-depiction-without-referent`; the source digest covering `src/bin/` (editing help text invalidates a world — Joseph's call) — the sidebar adds that it also does not cover rustc/LLVM version or FMA contraction. *(Zero inland standing water at L9 is no longer standing: probed and homed at `#obs-tile-outlets-grade-away-the-basins` — the edge-sink outlet policy grades every tile to its own perimeter, so 0.02% of L9 land sits in a closed depression and there is nothing to pond in. What that opens instead: tile boundaries as the thing capping every basin, and the whole-face control that would sharpen the diagnosis.)*
 
 ## The rhythm this file protects
 
