@@ -62,12 +62,13 @@ fn census_at_seed(world: &World, seed: u64, face: Face, level: u8, oi: u32, oj: 
     let c = f.response_census(&p, CHANNEL_MIN_CELLS);
     let cell_km = cell_size_m(level, Planet::EARTH.radius_m) / 1000.0;
     println!(
-        "L{level:<2} f{} ({oi:>4},{oj:>4}) ~{cell_km:>6.2} km/cell  subaerial {:>4}/{}  channel {:>4}  \
+        "L{level:<2} f{} ({oi:>4},{oj:>4}) ~{cell_km:>6.2} km/cell  subaerial {:>4}/{}  channel {:>4}  maxcatch {:>7.0}  \
          Courant p50 {:>9.3e} max {:>9.3e}   response epochs p50 {:>8.1} p90 {:>8.1} max {:>8.1}",
         face.index(),
         c.subaerial,
         NX * NX,
         c.channel_cells,
+        c.max_catchment_cells,
         c.courant_p50,
         c.courant_max,
         c.response_epochs_p50,
@@ -101,40 +102,61 @@ fn main() {
                 );
                 println!("Courant ≫ 1 ⇒ the transient outruns the scheme's accuracy claim (endpoint unaffected).");
                 println!("response epochs = a-priori count for the wave to cross the channel network.\n");
-                let mut regions = world.load_current_eroded_regions();
-                if regions.is_empty() {
-                    // The whole-crate source digest changed since the build (the
-                    // verify loop: any src edit stales the store). A NETWORK
-                    // census reads terrain shape, not law — the stale bed is
-                    // honest data for it, said out loud:
-                    regions = world.load_eroded_regions();
-                    if !regions.is_empty() {
-                        println!("(store is stale-by-src for the running binary — census reads the stale bed, which is fine for network SHAPE and says so here)");
+                // COHORT-AWARE, never merged: a store can hold beds carved
+                // under several source trees (the verify loop stales the store
+                // on every src edit), and mixing them would census a terrain
+                // nobody built (the same fault class the explorer's cohort
+                // discipline forbids on the time axis). Each src cohort is
+                // reported under its own label; the current binary's cohort is
+                // marked. A stale cohort is honest data for network SHAPE.
+                let roots = store.roots().unwrap_or_default();
+                let mut srcs: Vec<String> = Vec::new();
+                for r in &roots {
+                    if r.key.starts_with("erosion-tile@")
+                        && vivarium_world::watch::key_field(&r.key, "aspect").is_none()
+                    {
+                        if let Some(s) = vivarium_world::watch::key_field(&r.key, "src") {
+                            if !srcs.iter().any(|x| x == s) {
+                                srcs.push(s.to_string());
+                            }
+                        }
                     }
                 }
+                let cur = vivarium_world::nomotheke::SRC_HASH;
+                srcs.sort_by_key(|s| s != cur); // current cohort first, if present
+                if let Ok(pick) = std::env::var("COHORT") {
+                    srcs.retain(|s| s.starts_with(&pick));
+                }
                 let sea = vivarium_world::sea_level::derived_sea_level_m(spec.seed) as f32;
-                // Landiest tiles first — the network census is about land.
-                regions.sort_by_key(|r| std::cmp::Reverse(r.h.iter().filter(|&&h| h > sea).count()));
-                for r in regions.iter().take(6) {
-                    let mut f = Fluvial::from_region(r);
-                    let c = f.response_census(&FluvialParams::default(), CHANNEL_MIN_CELLS);
-                    let cell_km = cell_size_m(r.level, Planet::EARTH.radius_m) / 1000.0;
-                    println!(
-                        "L{:<2} f{} ({:>4},{:>4}) ~{cell_km:>6.2} km/cell  subaerial {:>4}/{}  channel {:>4}  \
-                         Courant p50 {:>9.3e} max {:>9.3e}   response epochs p50 {:>8.1} p90 {:>8.1} max {:>8.1}",
-                        r.level,
-                        r.face.index(),
-                        r.oi,
-                        r.oj,
-                        c.subaerial,
-                        r.nx * r.nx,
-                        c.channel_cells,
-                        c.courant_p50,
-                        c.courant_max,
-                        c.response_epochs_p50,
-                        c.response_epochs_p90,
-                        c.response_epochs_max,
-                    );
+                for src in srcs.iter().take(3) {
+                    let tag = if src == cur { "CURRENT" } else { "stale-src" };
+                    let mut regions = world
+                        .load_eroded_regions_where(|k| vivarium_world::watch::key_field(k, "src") == Some(src));
+                    // Landiest tiles first — the network census is about land.
+                    regions.sort_by_key(|r| std::cmp::Reverse(r.h.iter().filter(|&&h| h > sea).count()));
+                    println!("cohort src={src} ({tag}):");
+                    for r in regions.iter().take(4) {
+                        let mut f = Fluvial::from_region(r);
+                        let c = f.response_census(&FluvialParams::default(), CHANNEL_MIN_CELLS);
+                        let cell_km = cell_size_m(r.level, Planet::EARTH.radius_m) / 1000.0;
+                        println!(
+                            "  L{:<2} f{} ({:>4},{:>4}) ~{cell_km:>6.2} km/cell  subaerial {:>4}/{}  channel {:>4}  maxcatch {:>7.0}  \
+                             Courant p50 {:>9.3e} max {:>9.3e}   response epochs p50 {:>8.1} p90 {:>8.1} max {:>8.1}",
+                            r.level,
+                            r.face.index(),
+                            r.oi,
+                            r.oj,
+                            c.subaerial,
+                            r.nx * r.nx,
+                            c.channel_cells,
+                            c.max_catchment_cells,
+                            c.courant_p50,
+                            c.courant_max,
+                            c.response_epochs_p50,
+                            c.response_epochs_p90,
+                            c.response_epochs_max,
+                        );
+                    }
                 }
             }
             _ => println!("(live world at {} has no manifest — skipping live census)", world_dir.display()),

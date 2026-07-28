@@ -235,6 +235,18 @@ pub fn craton_sites(seed: u64) -> std::sync::Arc<Vec<CratonSite>> {
 /// declared omission).
 pub const SUTURE_CRUST_M: f64 = 6_000.0;
 
+/// **Accretion zonation**: fractional crust-thickness decline from a craton's
+/// nucleus to its growing rim. Under nucleation-growth the core accreted first
+/// and thickest, the rim last and thinnest — real craton zonation (Archean
+/// cores, younger belts outboard) in the same fated-geometry register. The
+/// Airy read turns this into a coherent core→margin stand gradient at
+/// continent wavelength, which is what lets interior drainage integrate
+/// downslope instead of fragmenting on detail noise (the measured fault this
+/// addresses: max catchment ~34 cells at L9 on a zonation-free plateau).
+/// Declared crude (`ASSUMPTIONS.md` "craton zonation"); at 0.10 the full
+/// core→rim stand drop is ≈ `0.10 · CRATON_CRUST_M · (ρ_a−ρ_c)/ρ_a` ≈ 580 m.
+pub const CRATON_ZONATION: f64 = 0.10;
+
 /// Craton accretion-growth scalar `g(T_p)` — how far the fated cratons have
 /// grown from their nuclei at mantle temperature `T_p`. Zero at the Hadean-hot
 /// ceiling (`TP_HOT_MAX_C`: nuclei not yet accreted, a near-water-world),
@@ -264,27 +276,46 @@ pub fn craton_growth(tp_c: f64) -> f64 {
 /// fated, and T_p-dependent through the growth scalar (cratons accrete as the
 /// mantle cools).
 pub fn craton_weight_at_tp(seed: u64, cell: CellId, tp_c: f64) -> f64 {
-    craton_weights_top2_at_tp(seed, cell, tp_c).0
+    craton_field_at_tp(seed, cell, tp_c).w1
 }
 
-/// The two largest per-site cratonization weights at a cell — `(w1, w2)`,
-/// `w1 ≥ w2`. `w1` is the union field [`craton_weight_at_tp`] reads; `w2 > 0`
-/// only where a **second** grown craton also reaches this cell, i.e. where two
-/// accreting cratons overlap. That overlap is the **suture**: the fated-geometry
-/// stand-in for collisional orogeny ( `#form-isostasy-column` — the horizontal
+/// The full fated craton read at a cell — the union weight, the overlap
+/// (suture) weight, and the winning site's **radial accretion coordinate**.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CratonField {
+    /// Largest per-site weight — the union cratonization field.
+    pub w1: f64,
+    /// Second-largest — nonzero only where two grown cratons overlap (suture).
+    pub w2: f64,
+    /// θ/r_eff of the winning site ∈ [0, ~1] inside its cap: 0 at the nucleus,
+    /// →1 at the growing rim. The **accretion-age coordinate**: under
+    /// nucleation-growth the core accreted first, the rim last, so crust
+    /// thickness (and hence stand) declines core→rim ([`CRATON_ZONATION`]).
+    /// Meaningless (and unused) where `w1 = 0`.
+    pub radial: f64,
+}
+
+/// The fated craton read at a cell — union weight `w1`, overlap weight `w2`,
+/// and the winning site's radial accretion coordinate. `w2 > 0` only where a
+/// **second** grown craton also reaches this cell, i.e. where two accreting
+/// cratons overlap. That overlap is the **suture**: the fated-geometry stand-in
+/// for collisional orogeny ( `#form-isostasy-column` — the horizontal
 /// differentiation half stays fated geometry, not plate dynamics). Because each
 /// cap grows with cooling, `w2`'s support appears only once neighbouring
 /// cratons have grown into contact and then widens — orogeny arrives *in time*,
 /// after first emergence, matching the ladder's "compressional tectonics and
-/// orogeny add later relief" (FE(5) there).
-pub fn craton_weights_top2_at_tp(seed: u64, cell: CellId, tp_c: f64) -> (f64, f64) {
+/// orogeny add later relief" (FE(5) there). Measured (level-7 sphere scan,
+/// 2026-07-28): seeds 0/1 and the live default world have **zero** suture cells
+/// at the present anchor and 130–1125 by $T_p$ 1350–1450; seed 7 collides
+/// early (738 cells at present).
+pub fn craton_field_at_tp(seed: u64, cell: CellId, tp_c: f64) -> CratonField {
     let g = craton_growth(tp_c);
     if g <= 0.0 {
-        return (0.0, 0.0);
+        return CratonField { w1: 0.0, w2: 0.0, radial: 1.0 };
     }
     let p = cell.to_cube().to_unit();
     let sites = craton_sites(seed);
-    let (mut w1, mut w2) = (0.0f64, 0.0f64);
+    let (mut w1, mut w2, mut radial) = (0.0f64, 0.0f64, 1.0f64);
     for s in sites.iter() {
         let cosang = (p[0] * s.dir[0] + p[1] * s.dir[1] + p[2] * s.dir[2]).clamp(-1.0, 1.0);
         // Skip-far: the largest this cap can reach is base·g·(1+warp_amp)+margin.
@@ -312,11 +343,12 @@ pub fn craton_weights_top2_at_tp(seed: u64, cell: CellId, tp_c: f64) -> (f64, f6
         if wi > w1 {
             w2 = w1;
             w1 = wi;
+            radial = if r_eff > 0.0 { (theta / r_eff).min(1.0) } else { 1.0 };
         } else if wi > w2 {
             w2 = wi;
         }
     }
-    (w1, w2)
+    CratonField { w1, w2, radial }
 }
 
 /// Cratonization weight at the present-Abyssal anchor (`MANTLE_TP_C`) — the
@@ -388,16 +420,27 @@ pub fn oceanic_crust_rho(tp_c: f64) -> f64 {
 /// weight is itself `tp_c`-dependent (nucleation-growth: cratons accrete as the
 /// mantle cools), so a cooling epoch both deepens basins AND grows the cratons.
 pub fn column_at_tp(seed: u64, cell: CellId, tp_c: f64) -> Column {
-    let (w, suture) = craton_weights_top2_at_tp(seed, cell, tp_c);
+    let f = craton_field_at_tp(seed, cell, tp_c);
     let (h_oc, rho_oc) = (oceanic_crust_m(tp_c), oceanic_crust_rho(tp_c));
+    // Felsic thickness with accretion zonation: thickest at the nucleus,
+    // thinning toward the growing rim ([`CRATON_ZONATION`]). **Mean-preserving**
+    // about the area-weighted mean radial coordinate of a uniform cap (≈ 2/3),
+    // so zonation tilts the interior without shrinking the craton's mean crust
+    // — a v1 that subtracted `z·radial` outright cost ~10–20 % of the world's
+    // subaerial cells (measured, L9 cohort comparison 2026-07-28) by thinning
+    // every rim below the waterline: a land-area regression wearing a
+    // structure improvement's name. As the craton grows, a fixed cell's radial
+    // coordinate falls, so interiors still thicken along the cooling chain.
+    const RADIAL_AREA_MEAN: f64 = 2.0 / 3.0;
+    let felsic = CRATON_CRUST_M * (1.0 + CRATON_ZONATION * (RADIAL_AREA_MEAN - f.radial));
     Column {
         // Craton blend, plus collisional thickening where a SECOND grown craton
-        // overlaps (suture = w2 ≤ w1, so belts sit inside fully-cratonized
-        // ground and taper with the overlap; see [`SUTURE_CRUST_M`]).
-        crust_m: h_oc + w * (CRATON_CRUST_M - h_oc) + suture * SUTURE_CRUST_M,
+        // overlaps (suture = w2 ≤ w1, so belts sit inside cratonized ground and
+        // taper with the overlap; see [`SUTURE_CRUST_M`]).
+        crust_m: h_oc + f.w1 * (felsic - h_oc) + f.w2 * SUTURE_CRUST_M,
         // density blends toward felsic as cratonization completes
-        crust_rho: rho_oc + w * (RHO_CONTINENTAL - rho_oc),
-        keel_m: w * CRATON_KEEL_M,
+        crust_rho: rho_oc + f.w1 * (RHO_CONTINENTAL - rho_oc),
+        keel_m: f.w1 * CRATON_KEEL_M,
         sediment_m: 0.0, // fated pre-erosion column carries no redeposited sediment
     }
 }

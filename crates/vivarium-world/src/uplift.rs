@@ -11,45 +11,55 @@
 //! and the flux web shows the dependency. Swap this kernel — no-op, constant,
 //! or a real mantle-driven field later — and erosion recomputes by key.
 //!
-//! **Freeboard moved out (2026-07-24):** the zero-mean fBm freeboard stand-in
-//! this module carried is RETIRED, replaced by the mass-conserving isostasy
-//! read of the lithosphere column (`crate::lithosphere::freeboard_m` —
-//! `#form-isostasy-column`). What remains here is the RATE field only — and
-//! under that segment's law a height-rate is a *diagnostic/driver for erosion
-//! carving*, not the article that earns land. Strictly-positive range is this
-//! field's convicted limitation (`DECISIONS[uplift-is-structurally-
-//! incapable-of-keeping-its-promise]`) — acceptable for a carving driver,
-//! disqualifying for a freeboard keeper, which it no longer is.
+//! **v1 (2026-07-28): the rate is the column's own time-derivative.** The rate
+//! field is the finite difference of the isostasy read along the mantle-thermal
+//! cooling trajectory: `rate(cell) = freeboard(T_p − δ) − freeboard(T_p)` for a
+//! declared per-epoch cooling step δ ([`TP_COOLING_PER_EPOCH_C`]). This retires
+//! the v0 fBm stand-in (an arbitrary magnitude × fake geography) for a field
+//! whose **geography is real** — craton interiors thicken and rise as accretion
+//! advances, growing rims sweep outward, suture belts rise where cratons
+//! collide, and cooling ocean floor **subsides** — and whose one remaining
+//! arbitrary number is the epoch↔cooling scale, exactly the `epoch ↔ years`
+//! arbitrariness the tree already carries, now stated once.
 //!
-//! **What v0 is, honestly: ~30 lines of crude stand-in.** A single declared rate
-//! constant (`ASSUMPTIONS.md` "uplift rate") times a low-frequency fBm, so the
-//! land rises *differentially* — blocks lift at ~0.25×–1.75× the base rate and
-//! features tilt, as real landscapes do. This is **exactly the code that used to
-//! live *inside* the erosion kernel** (the old `uplift_w` weight × `uplift_m`
-//! scalar), lifted out into its own nomos — consolidation, not new physics. Its
-//! epistemic tag is honest: physics `None` (no mechanics — a placeholder curve,
-//! not mantle convection), a `#mech stand-in`. The real driver is the
-//! thermal-initial-topography / plume-upwelling work (`TODO.md`); this is the declared rung
-//! beneath it, and flipping the rate to 0 makes it a clean no-op.
+//! Three properties the v0 field could not have, each convictable:
+//! - **Signed.** Basins subside while land rises. The v0 strictly-positive
+//!   field raised the entire seafloor monotonically every epoch — surfaced
+//!   independently by the explorer's change paint (88–91 % of all cells
+//!   rising, the whole ocean shell up-drifting), and structurally incapable of
+//!   expressing subsidence (`DECISIONS[uplift-is-structurally-incapable-of-keeping-its-promise]`).
+//! - **Zero-mean, exactly, on the reference grid.** Freeboard is zero-mean at
+//!   every `T_p` (global mass balance), so the difference of two reads is
+//!   zero-mean: rise here IS subsidence there, now in the *driver*, not only
+//!   in the stock.
+//! - **Coherent at continent wavelength.** The v0 fBm varied at ~5 km — noise
+//!   erosion could not integrate drainage against. This field's structure is
+//!   the column's: margins, zonation gradients, sutures.
+//!
+//! Physics tier stays **Low** — a derivative of a declared crude chain is
+//! declared-crude too. It is a *diagnostic-grade driver* under
+//! `#form-isostasy-column` (a height-rate is never the article that earns
+//! land); what changed is that the diagnostic now reads the real chain instead
+//! of inventing a texture.
 
-use crate::noise;
+use crate::lithosphere;
 use crate::sphere::{CellId, Face};
 
-/// Base rock-uplift rate (m per erosion epoch), before the differential weight.
-/// Crude and uncalibrated — a declared placeholder (`ASSUMPTIONS.md` "uplift
-/// rate"), not a measured tectonic rate. Set to 0.0 for a no-op world.
-pub const UPLIFT_RATE_M_PER_EPOCH: f32 = 0.5;
+/// Declared mantle cooling per erosion epoch (°C) — the epoch↔world-time scale
+/// as one number (`ASSUMPTIONS.md` "cooling per erosion epoch"). Sized so the
+/// rate over land is of the same order as the retired v0 base rate
+/// (~0.5 m/epoch) — measured, not derived; see the ASSUMPTIONS row. Setting
+/// this to 0 makes uplift an exact no-op, structurally rather than by flag.
+pub const TP_COOLING_PER_EPOCH_C: f64 = 0.05;
 
-/// The rock-uplift rate at one cell (m/epoch): the base rate modulated by a
-/// low-frequency fBm so uplift is differential (`~0.25×–1.75×`). Pure function of
-/// (seed, cell) — fated noise, memoizable, replayable.
+/// The rock-uplift rate at one cell (m/epoch): the finite difference of the
+/// isostasy read across one epoch's declared cooling. Pure function of
+/// (seed, cell) — fated, memoizable, replayable. Signed; zero-mean on the
+/// reference sample (see module doc).
 pub fn uplift_rate_m_per_epoch(seed: u64, cell: CellId) -> f64 {
-    let c = cell.to_cube();
-    // Low-frequency fBm (λ ≈ 5 km domain, same parameters the erosion kernel used
-    // internally before this was lifted out) → a differential-uplift weight.
-    let f = noise::fbm(seed, 3, (c.u + 1.0) * 2000.0, (c.v + 1.0) * 2000.0, 3, 2.0, 0.5);
-    let weight = 0.25 + 1.5 * f; // ~0.25× .. 1.75×
-    UPLIFT_RATE_M_PER_EPOCH as f64 * weight
+    let tp = lithosphere::MANTLE_TP_C;
+    lithosphere::freeboard_m_at_tp(seed, cell, tp - TP_COOLING_PER_EPOCH_C)
+        - lithosphere::freeboard_m_at_tp(seed, cell, tp)
 }
 
 /// A tile of rock-uplift rates (m/epoch), row-major `nx × nx` over `face` cells
@@ -68,22 +78,47 @@ pub fn uplift_rate_tile(seed: u64, face: Face, level: u8, oi: u32, oj: u32, nx: 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sphere::CubeCoord;
 
+    /// The properties the module doc claims, on a whole-sphere sample.
     #[test]
-    fn rate_is_differential_and_bounded() {
-        // The weight is ~0.25×..1.75×, so rates stay within that band of the base.
-        let (lo, hi) = (0.25 * UPLIFT_RATE_M_PER_EPOCH, 1.75 * UPLIFT_RATE_M_PER_EPOCH);
-        let tile = uplift_rate_tile(0, Face::from_index(2), 19, 1000, 2000, 24);
-        assert!(tile.iter().all(|&r| r >= lo - 1e-3 && r <= hi + 1e-3), "rates within the differential band");
-        // Differential means the field is not flat (some spread across the tile).
-        let (mn, mx) = tile.iter().fold((f32::INFINITY, f32::NEG_INFINITY), |(a, b), &r| (a.min(r), b.max(r)));
-        assert!(mx - mn > 1e-4, "uplift is differential — the field varies across the tile");
+    fn rate_is_signed_and_near_zero_mean() {
+        let seed = 7;
+        let n = 48usize;
+        let (mut sum, mut count) = (0.0f64, 0usize);
+        let (mut pos, mut neg) = (0usize, 0usize);
+        for fi in 0..6u8 {
+            let face = Face::from_index(fi);
+            for j in 0..n {
+                for i in 0..n {
+                    let u = ((i as f64 + 0.5) / n as f64) * 2.0 - 1.0;
+                    let v = ((j as f64 + 0.5) / n as f64) * 2.0 - 1.0;
+                    let cell = CubeCoord { face, u, v }.cell(7);
+                    let r = uplift_rate_m_per_epoch(seed, cell);
+                    sum += r;
+                    count += 1;
+                    if r > 0.0 {
+                        pos += 1;
+                    } else if r < 0.0 {
+                        neg += 1;
+                    }
+                }
+            }
+        }
+        // Signed: both uplift and subsidence exist — the v0 field's convicted
+        // limitation (strictly positive everywhere) is structurally gone.
+        assert!(pos > 0 && neg > 0, "rate field must be signed: {pos} rising, {neg} subsiding");
+        // Near-zero mean on this (coarser-than-reference) sample: the exact
+        // zero-mean holds on the reference grid; a different sampling grain
+        // leaves a residual far below the field's own scale.
+        let mean = sum / count as f64;
+        assert!(mean.abs() < 0.05, "mean rate ≈ 0 (rise here is subsidence there): {mean}");
     }
 
     #[test]
     fn deterministic() {
-        let a = uplift_rate_tile(7, Face::from_index(1), 19, 500, 600, 16);
-        let b = uplift_rate_tile(7, Face::from_index(1), 19, 500, 600, 16);
-        assert_eq!(a, b, "fated noise: same (seed, coords) → same rates");
+        let a = uplift_rate_tile(7, Face::from_index(1), 9, 100, 200, 16);
+        let b = uplift_rate_tile(7, Face::from_index(1), 9, 100, 200, 16);
+        assert_eq!(a, b, "fated: same (seed, coords) → same rates");
     }
 }

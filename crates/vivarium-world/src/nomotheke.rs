@@ -537,26 +537,25 @@ pub static INITIAL_TOPOGRAPHY: NomosDecl = NomosDecl {
     timescale: Timescale { band: "timeless-analytic", z: None },
 };
 
-/// The tectonic driver — rock-uplift rate **and** Abyssal freeboard stand-in.
-/// Freeboard keeps `emerged land` (ordinum gate); full isostasy/lithosphere later.
+/// The tectonic driver — the rock-uplift rate erosion carves against.
 pub static UPLIFT: NomosDecl = NomosDecl {
     name: "uplift-tile",
-    version: "uplift-2026-07-23a-freeboard",
+    version: "uplift-2026-07-28a-column-derivative",
     system: "tectonic-uplift",
     approach: Approach::Analytic,
-    earth_fidelity: Tier::None, // no Earth tectonic history — freeboard is a stand-in
-    physics: Tier::None,        // no true isostasy yet; zero-mean freeboard + rate fBm
-    relation: "#mech stand-in: epoch uplift rate × low-freq fBm — the DRIVER erosion carves against, and per #form-isostasy-column a rate is a diagnostic-grade driver, never the article that earns land (its strictly-positive range is the convicted limitation). Freeboard moved to the lithosphere→isostasy chain 2026-07-24",
-    status: "v0 rate field only (uplift.rs); the fBm freeboard stand-in is RETIRED — emerged land is the isostasy nomos's read of the lithosphere column",
-    deps: &[&NOISE],
-    consumes: &[Consume { quantity: flux::SEEDED_ASYMMETRY, needs: Statistic::CenterSample }],
+    earth_fidelity: Tier::Low, // real chain geography (margins/zonation/sutures), no Earth history
+    physics: Tier::Low,        // finite difference of a declared-crude chain — crude, but the real chain
+    relation: "#mech v1: rate = the isostasy read's finite difference along the cooling trajectory (freeboard(Tp−δ) − freeboard(Tp), δ = declared cooling-per-epoch). SIGNED (basins subside — the v0 strictly-positive limitation is structurally gone) and zero-mean on the reference grid (rise here IS subsidence there, in the driver). Per #form-isostasy-column a rate is a diagnostic-grade driver, never the article that earns land",
+    status: "v1 column-derivative field (uplift.rs); v0 fBm-texture rate RETIRED. One arbitrary scalar remains: TP_COOLING_PER_EPOCH_C (the epoch↔cooling scale — ASSUMPTIONS 'cooling per erosion epoch')",
+    deps: &[&LITHOSPHERE, &ISOSTASY, &MANTLE_THERMAL],
+    consumes: &[Consume { quantity: flux::MANTLE_POTENTIAL_TEMP, needs: Statistic::GlobalScalar }],
     promises: &[Promise {
         quantity: flux::ROCK_UPLIFT_RATE,
         conservation: Conservation::NotTracked,
         statistic: Statistic::CenterSample, // pointwise fBm evaluation
         exactness: Exactness::Exact,
     }],
-    assumptions: &["uplift rate"],
+    assumptions: &["cooling per erosion epoch"],
     family: &[Family::PointwiseAnalytic],
     assumes_geometry: &[],
     structure: StructureDecl { preserves_exact: &[], preserves_approx: &[], sacrifices: &[] },
@@ -611,7 +610,7 @@ pub static MANTLE_THERMAL: NomosDecl = NomosDecl {
 /// physics. Claim home: `#form-isostasy-column`.
 pub static LITHOSPHERE: NomosDecl = NomosDecl {
     name: "lithosphere",
-    version: "lithosphere-2026-07-24d-craton-nucleation-growth",
+    version: "lithosphere-2026-07-28a-zonation-and-sutures",
     system: "lithosphere-column",
     approach: Approach::Analytic,
     earth_fidelity: Tier::Low, // era-plausible pins (Chowdhury lineage), not Earth's actual columns
@@ -638,7 +637,7 @@ pub static LITHOSPHERE: NomosDecl = NomosDecl {
         statistic: Statistic::CenterSample,
         exactness: Exactness::Exact,
     }],
-    assumptions: &["mantle potential temperature", "lithosphere densities", "craton geometry", "erosion maturity"],
+    assumptions: &["mantle potential temperature", "lithosphere densities", "craton geometry", "suture crustal thickening", "craton zonation", "erosion maturity"],
     family: &[Family::PointwiseAnalytic],
     assumes_geometry: &[],
     structure: StructureDecl { preserves_exact: &[], preserves_approx: &[], sacrifices: &[] },
