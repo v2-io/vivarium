@@ -16,11 +16,12 @@ The claim channel is **88 segments** and in good order, and vivarium has a **wor
 
 ## Open work, in rough order of what unblocks what
 
-1. **Epoch-ordered erosion playback** — the stage chain landed (8 stages/tile on `first-light`, `watch::interior` 8 distinct vs 1), but replay orders by *landing* time and the builder is tile-major, so a replayed sweep is a carving wave, not the world evolving in step. Erosion stages carry their epoch in-key, so an epoch-ordered reader is the cheap path; stage-major build scheduling is the builder-side alternative. This is what turns the interior into the visual evolution the eye instrument actually watches for.
-2. **The step-size question** (physics, Joseph's or a spike's) — whether `stable_dt`'s ceiling should scale with cell size. Blocks water's ε rung.
-3. **The demand spool** — beacons → cones → work queue. Untouched. Regime G is the floor: "no demand" means spine-only, not idle.
-4. **Store-backed navigation** — an explorer that upgrades continuously as memos land, rather than reading a census at open.
-5. Standing, unowned: the stale-`src` GC; `globe::render` unaudited against `#norm-no-depiction-without-referent`; the source digest covering `src/bin/` (editing help text invalidates a world — Joseph's call); zero inland standing water at L9, surfaced by the instrument and wanting a probe.
+1. **Show the L13 patch and its seam honestly** — the explorer's world-time scrub (`E`) and signed change-field paint exist for the L9 globe; the beacon patch (f1 L13, 30 stages/tile, 186 m mean carving — the first data at a scale where geomorphology is visible) still needs its finer-than-L9 render path, in flight on the explorer side. The patch/L9 seam is two datums and must be shown as one.
+2. **The χ-linearity criterion probe** — the candidate criterion form (shape test, immune to the driver-bound residual) from the literature sidebar; would retire the last open half of the erosion-count question.
+3. **The step-size question** (physics, Joseph's or a spike's) — whether `stable_dt`'s ceiling should scale with cell size. Blocks water's ε rung.
+4. **The demand spool** — the first standing beacon now lives in the manifest and the builder sweeps it; the spool proper (beacons → cones → work queue, multiplicity, per-beacon policy) is untouched. Regime G is the floor: "no demand" means spine-only, not idle.
+5. **Store-backed navigation** — an explorer that upgrades continuously as memos land, rather than reading a census at open.
+6. Standing, unowned: the stale-`src` GC; `globe::render` unaudited against `#norm-no-depiction-without-referent`; the source digest covering `src/bin/` (editing help text invalidates a world — Joseph's call) — the sidebar adds that it also does not cover rustc/LLVM version or FMA contraction; zero inland standing water at L9, surfaced by the instrument and wanting a probe.
 
 ## The rhythm this file protects
 
