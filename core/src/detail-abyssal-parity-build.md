@@ -27,7 +27,7 @@ Build sequence toward the first playable milestone: an ethereal explorer roaming
 
 1. **Milestone (lexicon-load-bearing).** Exploration not participation — ethereal observer, **no action-space**, observe-only ( #form-core-view-wall · #form-builder-admission ). Realized-not-Lawful early-Abyssal (geology/hydrology run; later Abyssal charges deferred) carrying unLawfulness budget ( #disc-unlawfulness-budget ). Global store/spine/flux-BC-tile/query frame — not one baked ~5 km patch.
 
-2. **Status-quo gap (code-verified).** `spikes/worldview` is a physics testbench: fixed patch; telescope re-seeds from raw prior on movement; fill-cache blob only; tiles non-composable (zero external discharge; hardcoded edge outlets). Kernels proven; **world-frame unbuilt.**
+2. **Status-quo gap (code-verified, restated 2026-07-27).** The testbench this row described — `spikes/worldview`, a fixed patch re-seeding from raw prior on movement — is archived, and the observer half of the milestone is met: `vivarium explore` is an ethereal, observe-only, whole-world view on a read-only store ( #form-core-view-wall FE(6)). What remains unbuilt is the **world frame** the milestone actually needs: tiles are still non-composable (zero external discharge, hardcoded edge outlets, `#detail-drainage-dependency-planning` FE(5)), and there is no demand spool. Kernels proven; composition unbuilt.
 
 3. **Conformance checklist the build is measured against.** Determinism/fated lifting; complete key; core/view wall; seam fluxes position×time; fidelity on both axes; epistemic axes honesty (first landmasses low-A/low-B); represent-by-consequence.
 

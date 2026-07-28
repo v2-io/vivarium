@@ -11,7 +11,7 @@ resolver = "2"
 # view spikes were awaiting. Both were retired to archive/ on 2026-07-24
 # (`globe-spike`, `worldview-spike`); their meshing, epoch playback and honesty
 # HUD are mined into the explorer, their wall violations are not. Superseded
-# views and engine spikes: archive/ — see spikes/FINDINGS.md.
+# views and engine spikes: archive/ — see archive/ENGINE-SPIKE-FINDINGS.md.
 # Claim outline: core/OUTLINE.md.
 members = ["crates/vivarium-core", "crates/vivarium-world", "crates/vivarium-explore"]
 # Everything under archive/ is out of the build. (Excluded so cargo never tries to

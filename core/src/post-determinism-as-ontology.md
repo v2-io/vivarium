@@ -23,7 +23,7 @@ The world is a pure function of identity: stochastic detail is fated by seed and
 
 **Known incomplete surfaces (not softens of the postulate):**
 1. **Agent-layer RNG** in older `vivarium-core` paths is not fully fated (stepped stream; parallel agents break it). Ethereal exploration does not require that fix; participation does.
-2. **`spikes/worldview`** paces some evolution by wall-clock and viewer motion (telescope re-anchor / settle cadence). Containment: writes under `~/.cache/vivarium/worldview`, not a canon store root — so it does not corrupt a citable vivium. Still past "camera feel only" for that spike's local field. View-wall face of the same code: `#form-core-view-wall`.
+2. **No live view paces evolution by wall-clock.** The surviving instance was `spikes/worldview` (telescope re-anchor / settle cadence, contained under its own cache dir); that crate is archived and the sole view crate, `crates/vivarium-explore`, holds a read-only store and cannot advance anything ( #form-core-view-wall FE(6)). Remaining exposure is the archived spikes, which are out of the build and are not a surface anything depends on.
 
 ## Discussion
 
