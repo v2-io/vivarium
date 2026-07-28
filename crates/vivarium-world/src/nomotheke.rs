@@ -683,7 +683,7 @@ pub static ISOSTASY: NomosDecl = NomosDecl {
 /// System #2 — fluvial erosion composed on the initial-topography.
 pub static EROSION: NomosDecl = NomosDecl {
     name: "erosion-tile",
-    version: "erosion-2026-07-24a-p1-true-cell-area", // spherical A; MFD p=1.0; split lengths still uniform
+    version: "erosion-2026-07-28a-route-filled-incise-bed", // spherical A; MFD p=1.0; the fill is a routing surface the loop restores, so the bed keeps its depressions
     system: "fluvial-erosion",
     approach: Approach::Procedural,
     earth_fidelity: Tier::Med, // stream-power/Davy–Lague are how real landscapes are modeled
@@ -751,10 +751,16 @@ pub static EROSION: NomosDecl = NomosDecl {
             note: "474 km plume drift on a cone; refining worsens it. (Outflow exponent p fixed to 1.0 — first-moment lattice bias retired; fan geometry residual remains.)",
         },
         UnphysicalTerm {
-            term: "Priority-Flood ε-fill (mass minted in depressions)",
+            term: "Priority-Flood ε-fill (directional flow orientation across flats)",
+            parity: Parity::Directional,
+            verdict: ErrVerdict::Bias,
+            note: "the mass half is RETIRED — the fill is a routing surface `erode` restores, so neither the spill fill nor the ε reaches the bed (`an_epoch_over_a_pitted_bed_adds_no_rock`). What remains is directional: the ε orients flow across flats into long straight runs, and that orientation still reaches the bed through where incision is applied ( #obs-tile-outlets-grade-away-the-basins FE(8))",
+        },
+        UnphysicalTerm {
+            term: "lake sediment trapping efficiency = 1",
             parity: Parity::SignDefinite,
             verdict: ErrVerdict::Bias,
-            note: "fill_depressions raises cells with no debit, every epoch — can only add; volume per epoch unprobed",
+            note: "a submerged cell takes ALL arriving sediment up to its remaining capacity, rather than a settling-velocity/residence-time fraction — so basins silt up as fast as supply allows and downstream reaches are starved by that much. Mass-conserving (the surplus spills); the error is in the RATE of infill, not the budget",
         },
         UnphysicalTerm {
             term: "creep diffusion-number clamp k ≤ 0.24",
@@ -918,7 +924,7 @@ mod tests {
     #[test]
     fn declarations_mint_the_keys() {
         assert!(INITIAL_TOPOGRAPHY.key().as_str().starts_with("initial-topography@initial-topography-2026-07-10b-sphere3d"));
-        assert!(EROSION.key().as_str().starts_with("erosion-tile@erosion-2026-07-24a-p1-true-cell-area"));
+        assert!(EROSION.key().as_str().starts_with("erosion-tile@erosion-2026-07-28a-route-filled-incise-bed"));
     }
 
     #[test]

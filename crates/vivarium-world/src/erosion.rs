@@ -636,7 +636,25 @@ impl Fluvial {
     /// Priority-Flood depression filling with an ε-gradient across flats.
     /// Deterministic: min-heap keyed (elevation, insertion seq) — ties break by
     /// integer seq, never float chance.
-    fn fill_depressions(&mut self, outlets: &[bool]) {
+    ///
+    /// Mutates `self.h` into the **routing surface**: every closed depression
+    /// raised to its spill point plus an ε-gradient that orients flow across the
+    /// resulting flat. Returns the **standing-water depth** each cell acquired —
+    /// the *true* spill level minus the original height, with the ε excluded.
+    ///
+    /// The two are different fields and the difference is load-bearing
+    /// (`#obs-lakes-are-routed-over-not-carved-away`). The ε is a numerical
+    /// device: it exists so that D8 has a receiver on a flat, and it is
+    /// sign-definite manufactured rock wherever it lands. The spill level is a
+    /// physical statement: *this is where water stands*. Returning them apart is
+    /// what lets `erode` route on the first and put back the second — and lets
+    /// the ε be dropped from the bed entirely rather than minted into it.
+    ///
+    /// The returned depth is exactly zero on any cell at or above its own spill
+    /// level, **including every cell of a perfectly flat area** (its spill level
+    /// is its own height), so a flat is not mistaken for a lake merely because
+    /// the ε had to raise it.
+    fn fill_depressions(&mut self, outlets: &[bool]) -> Vec<f32> {
         use std::cmp::Ordering;
         use std::collections::BinaryHeap;
         let nx = self.nx;
@@ -644,6 +662,12 @@ impl Fluvial {
 
         struct Cell {
             elev: f32,
+            /// The true spill level flow from this cell has had to climb over —
+            /// the running max of ORIGINAL heights along the flood path. Carried
+            /// beside `elev` and never used to order the heap, so pop order (and
+            /// therefore every routed quantity) is bit-identical to a fill that
+            /// does not track it.
+            spill: f32,
             seq: u64,
             i: usize,
         }
@@ -664,17 +688,19 @@ impl Fluvial {
             }
         }
 
+        let bed = self.h.clone();
+        let mut water = vec![0.0f32; nx * nx];
         let mut closed = vec![false; nx * nx];
         let mut heap = BinaryHeap::new();
         let mut seq = 0u64;
         for (i, &is_out) in outlets.iter().enumerate() {
             if is_out {
                 closed[i] = true;
-                heap.push(Cell { elev: self.h[i], seq, i });
+                heap.push(Cell { elev: self.h[i], spill: self.h[i], seq, i });
                 seq += 1;
             }
         }
-        while let Some(Cell { elev, i, .. }) = heap.pop() {
+        while let Some(Cell { elev, spill, i, .. }) = heap.pop() {
             let (x, y) = (i % nx, i / nx);
             for (dx, dy) in NEIGHBORS {
                 let (nxp, nyp) = (x as i32 + dx, y as i32 + dy);
@@ -686,11 +712,14 @@ impl Fluvial {
                     continue;
                 }
                 closed[j] = true;
+                let spill_j = bed[j].max(spill);
+                water[j] = spill_j - bed[j];
                 self.h[j] = self.h[j].max(elev + EPS);
-                heap.push(Cell { elev: self.h[j], seq, i: j });
+                heap.push(Cell { elev: self.h[j], spill: spill_j, seq, i: j });
                 seq += 1;
             }
         }
+        water
     }
 
     /// D8 steepest-descent receiver per cell; outlets drain to themselves.
@@ -777,10 +806,17 @@ impl Fluvial {
     /// Implicit stream-power incision (n = 1), low→high so each receiver is
     /// already solved: `h ← (h + f·h_r)/(1 + f)`, `f = K·dt·Aᵐ/dist`. Exact and
     /// unconditionally stable.
-    fn incise(&mut self, p: &FluvialParams, recv: &[usize], order: &[usize]) {
+    ///
+    /// **Submerged cells do not incise.** `water[i] > 0` means the routing
+    /// surface at `i` is a standing-water level, not ground: there is no channel
+    /// there, so `E = K A^m S^n` has no slope to act on and the bed beneath is
+    /// left alone. A subaerial cell *draining into* a lake keeps its term, and
+    /// its receiver's height is the lake surface — which is exactly the local
+    /// base level a river entering a lake sees.
+    fn incise(&mut self, p: &FluvialParams, recv: &[usize], order: &[usize], water: &[f32]) {
         for &i in order {
             let r = recv[i];
-            if r == i {
+            if r == i || water[i] > 0.0 {
                 continue;
             }
             let dist = self.dist_m(i, r);
@@ -791,7 +827,26 @@ impl Fluvial {
 
     /// Davy–Lague deposition: route this epoch's eroded volume down the D8 tree,
     /// laying down `G·Qs/A` per reach; what reaches an outlet is lost to the sea.
-    fn deposit(&mut self, p: &FluvialParams, recv: &[usize], order: &[usize], before: &[f32]) {
+    ///
+    /// **A lake is a sediment trap, and it fills from the bed up.** Where
+    /// `water[i] > 0` the Davy–Lague reach law does not apply — there is no
+    /// channel, only still water — so the cell takes *all* the sediment reaching
+    /// it, up to the volume that would raise its bed to the water surface, and
+    /// passes the surplus on down the same tree the water spills along. Both
+    /// `water` and `raise` are debited by what settles, so the deposit lands on
+    /// the bed and the lake gets shallower rather than the water level rising.
+    /// Trapping efficiency is therefore **1 until the lake is full**, which is
+    /// the standard treatment and the reason a basin in this world silts up
+    /// instead of persisting forever at its original depth.
+    fn deposit(
+        &mut self,
+        p: &FluvialParams,
+        recv: &[usize],
+        order: &[usize],
+        before: &[f32],
+        water: &mut [f32],
+        raise: &mut [f32],
+    ) {
         let n = self.nx * self.nx;
         let mut qs = vec![0.0f32; n];
         for i in 0..n {
@@ -802,11 +857,18 @@ impl Fluvial {
         }
         for &i in order.iter().rev() {
             let area = self.cell_area[i];
-            let a = self.drainage[i].max(area);
-            let deposit_h = p.deposition * qs[i] / a;
-            let deposit_vol = (deposit_h * area).min(qs[i]);
-            self.h[i] += deposit_vol / area;
-            qs[i] -= deposit_vol;
+            if water[i] > 0.0 {
+                let settled = qs[i].min(water[i] * area) / area;
+                water[i] -= settled;
+                raise[i] -= settled;
+                qs[i] -= settled * area;
+            } else {
+                let a = self.drainage[i].max(area);
+                let deposit_h = p.deposition * qs[i] / a;
+                let deposit_vol = (deposit_h * area).min(qs[i]);
+                self.h[i] += deposit_vol / area;
+                qs[i] -= deposit_vol;
+            }
             let r = recv[i];
             if r != i {
                 qs[r] += qs[i];
@@ -1369,6 +1431,14 @@ impl Fluvial {
     }
 
     /// Run the full pipeline for `p.epochs`, tracking the last epoch's mean |Δh|.
+    ///
+    /// **Routing happens on the filled surface; the bed keeps its holes.** Every
+    /// epoch fills depressions to derive a drainage network — flow must be able
+    /// to cross a lake and leave by its spill point to route at all — and then
+    /// puts the raise back before the epoch ends, so a closed basin survives in
+    /// the stored bed as a closed basin. What the water does inside it is the
+    /// water nomos's business; what erosion owes it is a hole to sit in
+    /// (`#obs-lakes-are-routed-over-not-carved-away`).
     pub fn erode(&mut self, p: &FluvialParams) {
         for e in 0..p.epochs {
             let track_before = if e + 1 == p.epochs { Some(self.h.clone()) } else { None };
@@ -1392,15 +1462,33 @@ impl Fluvial {
                     }
                 }
             }
-            self.fill_depressions(&outlets);
+            // The routing surface: the bed with every depression raised to its
+            // spill point and an ε across the flats. `bed` is what the store is
+            // owed back; `raise` is the whole difference (spill fill AND ε);
+            // `water` is the physical half of it.
+            let bed = self.h.clone();
+            let mut water = self.fill_depressions(&outlets);
+            let mut raise: Vec<f32> = self.h.iter().zip(bed.iter()).map(|(f, b)| f - b).collect();
             let recv = self.receivers(&outlets);
             let order = self.elevation_order();
             self.accumulate_drainage(&order);
             let before = if p.deposition > 0.0 { Some(self.h.clone()) } else { None };
-            self.incise(p, &recv, &order);
+            self.incise(p, &recv, &order, &water);
             if let Some(b) = before {
-                self.deposit(p, &recv, &order, &b);
+                self.deposit(p, &recv, &order, &b, &mut water, &mut raise);
             }
+            // Undo the fill. Incision and subaerial deposition have already been
+            // written into `self.h`; lake sedimentation was written into `raise`.
+            // What is left after this line is the real bed — depressions intact,
+            // and no ε-gradient rock minted into it.
+            for (h, r) in self.h.iter_mut().zip(raise.iter()) {
+                *h -= *r;
+            }
+            // Talus and creep move ROCK, so they run on the rock surface, not on
+            // a water level: an unfilled bed is what a slope failure and a soil
+            // flux see. (They are mass-conserving redistributions either way —
+            // running them on the filled surface would silently make the fill's
+            // manufactured rock real.)
             self.talus(p);
             self.creep(p);
             if let Some(tb) = track_before {
@@ -1899,22 +1987,25 @@ mod fluvial_tests {
         );
     }
 
-    /// **The fill writes itself into the bed, and this is the tripwire for the day
-    /// it stops** (`#obs-fill-writes-itself-into-the-bed` FE(1)–(2),
-    /// `#norm-caught-disciplines-become-mechanisms`).
+    /// **A basin survives the epoch that routes over it** — the tripwire for the
+    /// bed's capacity to hold water (`#obs-lakes-are-routed-over-not-carved-away`
+    /// FE(1)–(2), `#norm-caught-disciplines-become-mechanisms`).
     ///
-    /// `Fluvial::erode` calls `fill_depressions` and — unlike `drainage_surface`,
-    /// `chi_profile` and `response_census`, which all save and restore — keeps the
-    /// raise. So a crater carved into the surface is *gone from the bed* after a
-    /// single epoch, under **either** boundary contract: the measurement that moved
-    /// the missing-lakes attribution off the tiling, at unit scale.
+    /// `Fluvial::erode` fills depressions to derive its network and puts the raise
+    /// back before the epoch ends, so a crater gouged into the surface is still
+    /// there afterwards, under **either** boundary contract. It is allowed to get
+    /// shallower — talus, creep and lake sedimentation all act on it, and a basin
+    /// that could never silt up would be its own kind of lie — but it may not
+    /// vanish, and it may not vanish by being *raised to its spill point in one
+    /// step*, which is what an un-restored Priority-Flood does.
     ///
-    /// If the repair FE(1) implies ever lands (route on the filled surface, incise
-    /// on the unfilled one), this test fails, and that failure is the point — it
-    /// says the bed can hold water now, and the segments that say it cannot are due
-    /// for replacement.
+    /// Reverting the restore fails this test at `depression_cells == 0`. Losing
+    /// the incision mask does *not* fail it — the mask's own conviction is
+    /// `a_lake_floor_is_not_quietly_planed_by_the_epsilon_gradient`, and the two
+    /// are deliberately separate because the two halves of the repair fail in
+    /// different sizes.
     #[test]
-    fn one_epoch_erases_a_crater_under_either_contract() {
+    fn a_crater_survives_the_epoch_that_routes_over_it() {
         let p = FluvialParams { epochs: 1, ..Default::default() };
         let mut graded = small();
         graded.erode(&FluvialParams { epochs: 6, ..Default::default() });
@@ -1942,15 +2033,164 @@ mod fluvial_tests {
             );
             f.erode(&p);
             let after = f.drainage_surface().stats;
-            assert_eq!(
-                after.depression_cells, 0,
-                "{contract:?}: ONE epoch must leave the 200 m crater filled into the bed, because the epoch loop \
-                 never restores what Priority-Flood raised; got {} cells at {:.0} m. If this now fails, the fill \
-                 repair has landed and `#obs-fill-writes-itself-into-the-bed` needs replacing rather than citing.",
+            assert!(
+                after.depression_cells >= 16,
+                "{contract:?}: the bed must still hold the crater after an epoch — the fill is a routing device and \
+                 the loop restores it; got {} cells at {:.0} m",
                 after.depression_cells,
                 after.deepest_depression_m
             );
+            assert!(
+                after.deepest_depression_m > 0.5 * before.deepest_depression_m,
+                "{contract:?}: one epoch may silt and slump a basin, not erase it — {:.0} m of a {:.0} m crater left",
+                after.deepest_depression_m,
+                before.deepest_depression_m
+            );
         }
+    }
+
+    /// **The fill mints no rock into the bed.** Priority-Flood raises every closed
+    /// depression to its spill point and lays an ε-gradient across the flats; both
+    /// are sign-definite additions to the height field, and both used to be stored.
+    /// Under the repair they are a routing scratch surface that never reaches the
+    /// bed, so an epoch run on a pitted surface with the drivers off can only
+    /// *remove* rock (incision exports at the boundary) or move it (deposition,
+    /// talus, creep) — never add.
+    ///
+    /// The old composition fails this by roughly the crater's own volume, which is
+    /// the unit-scale form of the planet-scale mint that stood at
+    /// $\approx 2\times10^{13}\,\mathrm{m^3}$ per L9 face.
+    #[test]
+    fn an_epoch_over_a_pitted_bed_adds_no_rock() {
+        let mut graded = small();
+        graded.erode(&FluvialParams { epochs: 6, ..Default::default() });
+        let nx = graded.nx;
+
+        let mut f = small();
+        f.h = graded.h.clone();
+        for y in (nx / 2 - 6)..(nx / 2 + 6) {
+            for x in (nx / 2 - 6)..(nx / 2 + 6) {
+                f.h[y * nx + x] -= 300.0;
+            }
+        }
+        let volume = |f: &Fluvial| -> f64 {
+            f.h.iter().zip(f.cell_area.iter()).map(|(h, a)| *h as f64 * *a as f64).sum()
+        };
+        let v0 = volume(&f);
+        f.set_uniform_uplift(0.0);
+        f.erode(&FluvialParams { epochs: 1, ..Default::default() });
+        let v1 = volume(&f);
+        // Tolerance is f32 summation slop over ~9k cells of ~1e7 m² each, not a
+        // physics allowance: the mint this convicts is ~1e11 m³.
+        assert!(
+            v1 <= v0 + 1e6,
+            "an epoch with the drivers off must not add rock: {:.4e} m³ before, {:.4e} m³ after (+{:.3e})",
+            v0,
+            v1,
+            v1 - v0
+        );
+    }
+
+    /// **Nothing plane a lake floor.** The incision mask's own conviction, and it
+    /// has to be a *bit-exactness* claim rather than a magnitude one, because the
+    /// quantity it protects is small and would hide inside any tolerance.
+    ///
+    /// Under water, `E = K A^m S^n` has no slope to act on. What the routing
+    /// surface offers instead is the ε-gradient — a numerical device worth
+    /// $10^{-3}\,\mathrm{m}$ per cell — multiplied by the drainage area of
+    /// everything that drains *into* the lake, which is the largest $A$ anywhere
+    /// on the surface. Unmasked, the pit floor therefore erodes at roughly ε per
+    /// epoch: invisible in one epoch, a metre over a settle history, and
+    /// **oriented along the ε's own flood direction**, so it would write the fill's
+    /// measured directional artifact straight into every lake bed.
+    ///
+    /// With the drivers off and no sediment arriving, a masked floor is untouched
+    /// to the last bit. Removing `water[i] > 0.0` from `Fluvial::incise` fails
+    /// this immediately.
+    #[test]
+    fn a_lake_floor_is_not_quietly_planed_by_the_epsilon_gradient() {
+        // Drivers off: no deposition (so no siltation), no creep, repose slope
+        // high enough that talus cannot reach the floor. Only incision is live.
+        let quiet = FluvialParams {
+            epochs: 1,
+            deposition: 0.0,
+            diffusivity_m2: 0.0,
+            max_slope: 100.0,
+            ..Default::default()
+        };
+        let mut graded = small();
+        graded.erode(&FluvialParams { epochs: 6, ..Default::default() });
+        let nx = graded.nx;
+
+        let mut f = small();
+        f.set_uniform_uplift(0.0);
+        f.h = graded.h.clone();
+        for y in (nx / 2 - 6)..(nx / 2 + 6) {
+            for x in (nx / 2 - 6)..(nx / 2 + 6) {
+                f.h[y * nx + x] -= 300.0;
+            }
+        }
+        let floor: Vec<usize> = {
+            let s = f.drainage_surface();
+            (0..f.h.len()).filter(|&i| s.fill_depth[i] > 1.0).collect()
+        };
+        assert!(floor.len() >= 16, "the lake floor must exist to be tested ({} cells)", floor.len());
+        let before: Vec<f32> = floor.iter().map(|&i| f.h[i]).collect();
+        f.erode(&quiet);
+        let after: Vec<f32> = floor.iter().map(|&i| f.h[i]).collect();
+        let moved = before.iter().zip(after.iter()).filter(|(a, b)| a != b).count();
+        assert_eq!(
+            moved,
+            0,
+            "a submerged bed with no sediment arriving must be bit-identical after an epoch; {moved}/{} cells moved, \
+             max |Δh| {:.2e} m — that is the ε-gradient being mistaken for a channel slope",
+            floor.len(),
+            before
+                .iter()
+                .zip(after.iter())
+                .map(|(a, b)| (a - b).abs())
+                .fold(0.0f32, f32::max)
+        );
+    }
+
+    /// **A lake fills with sediment and then stops** — the deposition semantics the
+    /// repair had to choose (`#obs-lakes-are-routed-over-not-carved-away` FE(4)).
+    /// A basin fed by an incising catchment silts up monotonically, and its bed
+    /// never rises past the spill point that defines the water surface, because the
+    /// trap is capped by the remaining capacity and the surplus spills downstream.
+    #[test]
+    fn a_lake_silts_up_toward_its_spill_point_and_not_past_it() {
+        let mut graded = small();
+        graded.erode(&FluvialParams { epochs: 6, ..Default::default() });
+        let nx = graded.nx;
+        let mut f = small();
+        f.h = graded.h.clone();
+        for y in (nx / 2 - 6)..(nx / 2 + 6) {
+            for x in (nx / 2 - 6)..(nx / 2 + 6) {
+                f.h[y * nx + x] -= 300.0;
+            }
+        }
+        let spill = {
+            let s = f.drainage_surface();
+            let i = (0..f.h.len()).max_by(|&a, &b| s.fill_depth[a].total_cmp(&s.fill_depth[b])).unwrap();
+            (i, f.h[i] + s.fill_depth[i])
+        };
+        let (deepest, water_level) = spill;
+
+        let mut depths = Vec::new();
+        for _ in 0..8 {
+            f.erode(&FluvialParams { epochs: 5, ..Default::default() });
+            depths.push(f.drainage_surface().stats.deepest_depression_m);
+            assert!(
+                f.h[deepest] <= water_level + 1.0,
+                "lake sedimentation must stop at the water surface ({water_level:.0} m), not build a mound: bed at {:.0} m",
+                f.h[deepest]
+            );
+        }
+        assert!(
+            depths.last().unwrap() < depths.first().unwrap(),
+            "a basin under an incising catchment must silt up over 40 epochs: {depths:?}"
+        );
     }
 
     /// The depression measure must fire on a real pit and stay quiet on a graded
