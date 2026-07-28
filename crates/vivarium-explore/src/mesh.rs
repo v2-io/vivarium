@@ -73,27 +73,47 @@ pub type GhostFn<'a> = &'a (dyn Fn(Face, i64, i64, u8) -> f32 + Sync);
 /// through different float paths (a literal 1.0 vs tan(π/4) = 0.99999…), so the
 /// tie resolves differently per face and each samples a different edge cell —
 /// whole-edge elevation cliffs, found live as a 60 km-deep skirt canyon.
-fn cell_value(face: Face, level: u8, tile: &[f32], ci: i64, cj: i64, ghost: GhostFn) -> f32 {
-    let nx = 1usize << level;
+/// `ci, cj` are **patch-local**; the ghost is asked in **face-global** cells,
+/// because a ghost lies outside the patch and only the face grid can name it.
+/// For a whole-face patch (`oi = oj = 0`, `nx = 1 << level`) the two coincide and
+/// this is the original meaning; for a window into a face the distinction is what
+/// makes the ghost ring land on the neighbouring *cells* rather than the
+/// neighbouring *faces*.
+fn cell_value(
+    face: Face,
+    level: u8,
+    oi: u32,
+    oj: u32,
+    nx: usize,
+    tile: &[f32],
+    ci: i64,
+    cj: i64,
+    ghost: GhostFn,
+) -> f32 {
     let n = nx as i64;
     if ci >= 0 && ci < n && cj >= 0 && cj < n {
         tile[cj as usize * nx + ci as usize]
     } else {
-        ghost(face, ci, cj, level)
+        ghost(face, oi as i64 + ci, oj as i64 + cj, level)
     }
 }
 
-fn corner_heights(face: Face, level: u8, tile: &[f32], ghost: GhostFn) -> Vec<f32> {
-    let nx = 1usize << level;
+fn corner_heights(
+    face: Face,
+    level: u8,
+    oi: u32,
+    oj: u32,
+    nx: usize,
+    tile: &[f32],
+    ghost: GhostFn,
+) -> Vec<f32> {
     let gn = nx + 3;
     let mut h = vec![0.0f32; gn * gn];
     for gj in 0..gn {
         for gi in 0..gn {
             let (ki, kj) = (gi as i64 - 1, gj as i64 - 1);
-            let sum = cell_value(face, level, tile, ki - 1, kj - 1, ghost)
-                + cell_value(face, level, tile, ki, kj - 1, ghost)
-                + cell_value(face, level, tile, ki - 1, kj, ghost)
-                + cell_value(face, level, tile, ki, kj, ghost);
+            let v = |a, b| cell_value(face, level, oi, oj, nx, tile, a, b, ghost);
+            let sum = v(ki - 1, kj - 1) + v(ki, kj - 1) + v(ki - 1, kj) + v(ki, kj);
             h[gj * gn + gi] = sum * 0.25;
         }
     }
@@ -104,16 +124,34 @@ fn corner_heights(face: Face, level: u8, tile: &[f32], ghost: GhostFn) -> Vec<f3
 /// `(nx+1)²`: excess = cross step beyond 3× the *local* within step (plus a
 /// 100 m floor). Terrain that is merely steep is steep on both measures and
 /// stays dark; a genuine discontinuity is loud on cross alone and lights up.
-fn seam_stats(face: Face, level: u8, tile: &[f32], ghost: GhostFn) -> (SeamStats, Vec<f32>) {
-    let nx = 1usize << level;
+///
+/// **Only true face boundaries are measured.** A patch that is a window into a
+/// face has four edges, and up to all four of them are ordinary interior cell
+/// boundaries where no chart seam exists. Measuring those would report the
+/// world's own terrain steps as chart discontinuities — the instrument
+/// manufacturing its own signal, and painting magenta over good terrain while it
+/// did so. `st.n` counts only the edges actually measured, so `cross_mean` stays
+/// a mean over real seams rather than being diluted by edges that were skipped.
+#[allow(clippy::too_many_arguments)]
+fn seam_stats(
+    face: Face,
+    level: u8,
+    oi: u32,
+    oj: u32,
+    nx: usize,
+    tile: &[f32],
+    ghost: GhostFn,
+) -> (SeamStats, Vec<f32>) {
     let n1 = nx + 1;
     let n = nx as i64;
+    let face_n = 1u32 << level;
     let mut excess = vec![0.0f32; n1 * n1];
     let mut st = SeamStats::default();
     let mut edge = |ic: (i64, i64), gc: (i64, i64), wc: (i64, i64), ca: (usize, usize), cb: (usize, usize)| {
-        let h = cell_value(face, level, tile, ic.0, ic.1, ghost);
-        let d_cross = (h - cell_value(face, level, tile, gc.0, gc.1, ghost)).abs();
-        let d_within = (h - cell_value(face, level, tile, wc.0, wc.1, ghost)).abs();
+        let v = |a: i64, b: i64| cell_value(face, level, oi, oj, nx, tile, a, b, ghost);
+        let h = v(ic.0, ic.1);
+        let d_cross = (h - v(gc.0, gc.1)).abs();
+        let d_within = (h - v(wc.0, wc.1)).abs();
         st.cross_max = st.cross_max.max(d_cross);
         st.within_max = st.within_max.max(d_within);
         st.cross_sum += d_cross as f64;
@@ -124,21 +162,42 @@ fn seam_stats(face: Face, level: u8, tile: &[f32], ghost: GhostFn) -> (SeamStats
             excess[k] = excess[k].max(e);
         }
     };
+    // Which of the patch's four edges lie on the face's own boundary.
+    let (on_lo_j, on_hi_j) = (oj == 0, oj as usize + nx == face_n as usize);
+    let (on_lo_i, on_hi_i) = (oi == 0, oi as usize + nx == face_n as usize);
     for k in 0..nx {
         let ki = k as i64;
-        edge((ki, 0), (ki, -1), (ki, 1), (k, 0), (k + 1, 0));
-        edge((ki, n - 1), (ki, n), (ki, n - 2), (k, nx), (k + 1, nx));
-        edge((0, ki), (-1, ki), (1, ki), (0, k), (0, k + 1));
-        edge((n - 1, ki), (n, ki), (n - 2, ki), (nx, k), (nx, k + 1));
+        if on_lo_j {
+            edge((ki, 0), (ki, -1), (ki, 1), (k, 0), (k + 1, 0));
+        }
+        if on_hi_j {
+            edge((ki, n - 1), (ki, n), (ki, n - 2), (k, nx), (k + 1, nx));
+        }
+        if on_lo_i {
+            edge((0, ki), (-1, ki), (1, ki), (0, k), (0, k + 1));
+        }
+        if on_hi_i {
+            edge((n - 1, ki), (n, ki), (n - 2, ki), (nx, k), (nx, k + 1));
+        }
     }
-    st.n = 4 * nx;
+    st.n = nx * [on_lo_i, on_hi_i, on_lo_j, on_hi_j].iter().filter(|b| **b).count();
     (st, excess)
 }
 
-/// Everything the mesher needs about one face that is not geometry.
+/// Everything the mesher needs about one **patch** that is not geometry.
+///
+/// A patch is a window `nx × nx` into a face's cell grid at `(oi, oj)`. A whole
+/// face is the special case `oi = oj = 0, nx = 1 << level`, and it stays the
+/// same code path rather than a parallel one: a globe renderer and a
+/// zoomed-region renderer that share no meshing code will disagree about the
+/// world, and the disagreement will look like terrain.
 pub struct FaceInput<'a> {
     pub face: Face,
     pub level: u8,
+    /// Patch origin in face cells, and its width. `oi + nx <= 1 << level`.
+    pub oi: u32,
+    pub oj: u32,
+    pub nx: usize,
     pub tile: &'a [f32],
     pub exag: f32,
     pub sea_m: f32,
@@ -163,6 +222,9 @@ pub fn build_face(input: &FaceInput) -> (FaceMesh, SeamStats) {
     let FaceInput {
         face,
         level,
+        oi,
+        oj,
+        nx,
         tile,
         exag,
         sea_m,
@@ -174,19 +236,23 @@ pub fn build_face(input: &FaceInput) -> (FaceMesh, SeamStats) {
         change,
         change_scale_m,
     } = *input;
-    let nx = 1usize << level;
+    let face_n = 1usize << level;
     let n1 = nx + 1;
     let gn = nx + 3;
     let r_km = radius_km();
-    let h = corner_heights(face, level, tile, ghost);
-    let (seam, excess) = seam_stats(face, level, tile, ghost);
+    let h = corner_heights(face, level, oi, oj, nx, tile, ghost);
+    let (seam, excess) = seam_stats(face, level, oi, oj, nx, tile, ghost);
 
     let gidx = |i: usize, j: usize| j * gn + i;
     let mut gpos = vec![Vec3::ZERO; gn * gn];
     for gj in 0..gn {
         for gi in 0..gn {
-            let u = ((gi as f64 - 1.0) / nx as f64) * 2.0 - 1.0;
-            let v = ((gj as f64 - 1.0) / nx as f64) * 2.0 - 1.0;
+            // Cube-face (u, v) is a property of the FACE grid, not the patch, so
+            // the patch origin enters here and nowhere else in the geometry. Get
+            // this wrong and a patch renders as a whole globe made of the wrong
+            // cells — which still looks like a planet.
+            let u = ((oi as f64 + gi as f64 - 1.0) / face_n as f64) * 2.0 - 1.0;
+            let v = ((oj as f64 + gj as f64 - 1.0) / face_n as f64) * 2.0 - 1.0;
             let d = CubeCoord { face, u, v }.to_unit();
             let hm = h[gidx(gi, gj)];
             let r = (r_km + ((hm - sea_m).max(0.0) / 1000.0) * exag) as f64;

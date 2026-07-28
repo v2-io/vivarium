@@ -255,13 +255,21 @@ pub fn header(
     );
     let _ = writeln!(
         s,
-        "view L{} (~{cell_km:.0} km/cell) of an L{} build  |  relief x{:.0}  |  pull {:.2}s  |  land {:.1}%",
+        "view L{} (~{}) {}  |  relief x{:.0}  |  pull {:.2}s  |  land {:.1}%",
         frame.req.level,
-        cov.level,
+        if cell_km >= 1.0 { format!("{cell_km:.1} km/cell") } else { format!("{:.0} m/cell", cell_km * 1000.0) },
+        match frame.req.patch {
+            Some(p) => format!(
+                "REGION WINDOW {}x{} cells on face {} at ({}, {}) -- one window into one face, not the globe",
+                p.nx, p.nx, p.face, p.oi, p.oj
+            ),
+            None => format!("whole globe, over an L{} build", cov.level),
+        },
         frame.req.exag,
         f.pull_s,
         f.land_frac * 100.0
     );
+    let _ = writeln!(s, "{}", tier_line(frame));
     let _ = writeln!(
         s,
         "{}",
@@ -369,6 +377,63 @@ pub fn timeline(ladder: &Ladder, idx: usize, width: usize) -> String {
     )
 }
 
+/// **Which fidelity tier drew each cell** — the one line a fine view cannot do
+/// without.
+///
+/// The trap it closes is the exact mirror of #obs-coarse-view-draws-the-uncarved-prior,
+/// and it is worse because it is invisible rather than merely silent. A coarse
+/// view over a fine build draws the *uncarved prior* and looks unremarkable. A
+/// fine view over a coarse build draws something that looks *better*: an
+/// `ErodedRegion` answers any cell at its own level or finer, and its answer at
+/// a finer level is a bilinear read of the coarse carve **plus the fine prior's
+/// detail re-added** ( #form-fidelity-ladder ). So a view at L13 over an L9 carve
+/// is full of kilometre-scale relief, correctly derived, that no fluvial kernel
+/// ever computed — valleys with no drainage behind them. An eye trained on real
+/// landscapes will read them as fluvial, because that is what they look like.
+///
+/// Nothing about the picture says so. This line does.
+pub fn tier_line(frame: &Frame) -> String {
+    let f = &frame.facts;
+    let view = frame.req.level;
+    if f.tier_cells.is_empty() {
+        return format!(
+            "carve tiers: NONE -- every cell on screen is the uncarved prior at L{view} \
+             ({:.0}% of drawn cells)",
+            f.prior_fallback_frac * 100.0
+        );
+    }
+    let pct = |n: usize| n as f32 * 100.0 / f.cells.max(1) as f32;
+    let parts: Vec<String> = f
+        .tier_cells
+        .iter()
+        .map(|(&t, &n)| {
+            let how = match t.cmp(&view) {
+                std::cmp::Ordering::Equal => "at view level",
+                std::cmp::Ordering::Less => "COARSER than the view",
+                std::cmp::Ordering::Greater => "finer than the view",
+            };
+            format!("L{t} {:.0}% ({how})", pct(n))
+        })
+        .collect();
+    let coarse: usize = f.tier_cells.iter().filter(|(&t, _)| t < view).map(|(_, &n)| n).sum();
+    let warning = if pct(coarse) > 1.0 {
+        format!(
+            "  <<< {:.0}% of what you see is a COARSER carve sampled finely: bilinear over the carve, \
+             with the fine prior's detail re-added ( #form-fidelity-ladder ). The small-scale relief there \
+             is REAL law and was NOT produced by a fluvial run at this scale -- valleys with no drainage \
+             behind them. `vivarium build` a beacon at this level is what changes that",
+            pct(coarse)
+        )
+    } else {
+        String::new()
+    };
+    format!(
+        "carve tiers drawing this frame: {} | uncarved prior {:.0}%{warning}",
+        parts.join(" · "),
+        f.prior_fallback_frac * 100.0
+    )
+}
+
 /// The measured change field, in numbers, beside the colour that shows it.
 ///
 /// The fractions are the point. 88% rising and 5.6% falling is not a caption on
@@ -433,12 +498,43 @@ pub fn chain_timeline(chain: &crate::lens::Chain, idx: usize) -> String {
             c.tiles
         )
     };
+    let others = if chain.all.len() > 1 {
+        format!(
+            "  |  chain {}/{} (G cycles): {}",
+            chain.sel + 1,
+            chain.all.len(),
+            chain
+                .all
+                .iter()
+                .map(|o| format!(
+                    "L{} x{}{}",
+                    o.level,
+                    o.len(),
+                    if std::ptr::eq(o, c) { "*" } else { "" }
+                ))
+                .collect::<Vec<_>>()
+                .join(" ")
+        )
+    } else {
+        String::new()
+    };
+    let where_ = match (c.is_global(), c.centre()) {
+        (true, _) => "whole globe".to_string(),
+        (false, Some((face, i, j))) => format!(
+            "a {}-cell WINDOW at face {face} ({i}, {j}) -- press B to go there, or you will not find it",
+            c.span_cells()
+        ),
+        (false, None) => "extent unknown".to_string(),
+    };
     format!(
-        "epoch {} {bar} {}   {} materialized stages, stride {}{}\n  {residual}",
+        "epoch {} {bar} {}   {} materialized stages, stride {}, L{} over {}{}{}\n  {residual}",
         c.epochs.first().copied().unwrap_or(0),
         c.epochs.last().copied().unwrap_or(0),
         c.len(),
         c.epochs.get(1).zip(c.epochs.first()).map(|(b, a)| b - a).unwrap_or(0),
+        c.level,
+        where_,
+        others,
         ragged,
     )
 }
@@ -476,7 +572,8 @@ pub fn craton_line(f: &FrameFacts) -> String {
 
 /// The key map, kept last so it never pushes information off the top.
 pub fn keys(_paint: Paint) -> String {
-    "drag spin | wheel zoom | [ ] level | A auto-level | X relief | O pole | R reset\n\
+    "drag spin | wheel zoom (past L9 the globe becomes a REGION WINDOW) | [ ] level | A auto-level\n\
+     X relief | O pole | R reset | B GO TO THE SELECTED CHAIN'S REGION | G cycle chains\n\
      TAB paint (1 surface 2 provenance 3 water 4 seam 5 change) | Z change scale | P present\n\
      E EROSION SETTLE HISTORY (world-time) | T deep time (mantle cooling) | V replay (build history)\n\
      K play/pause | J/L step one stage | , . hour | N M day | Y headlight | C CAPTURE SIGHTING | Esc quit"

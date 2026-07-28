@@ -172,6 +172,8 @@ pub struct Chain {
     pub cohort: Option<watch::ErosionCohort>,
     /// Every cohort found, so the HUD can say what was passed over.
     pub all: Vec<watch::ErosionCohort>,
+    /// Which of `all` is selected.
+    pub sel: usize,
     /// Mean recorded residual per stage (m), index-parallel to the cohort's
     /// epochs; `None` where the stage recorded none (pre-chain endpoints never
     /// got one — the record is made at compute time and is never backfilled).
@@ -180,11 +182,15 @@ pub struct Chain {
 }
 
 impl Chain {
-    pub fn read(roots: &[RootEntry]) -> Chain {
+    /// Census every chain, and select one. `sel` wraps, so a viewer cycling
+    /// through them cannot land outside the list, and index 0 is the chain the
+    /// census ranked most useful to scrub.
+    pub fn read(roots: &[RootEntry], sel: usize) -> Chain {
         let all = watch::erosion_cohorts(roots);
-        let cohort = all.first().filter(|c| c.len() > 1).cloned();
+        let sel = if all.is_empty() { 0 } else { sel % all.len() };
+        let cohort = all.get(sel).filter(|c| c.len() > 1).cloned();
         let n = cohort.as_ref().map(|c| c.len()).unwrap_or(0);
-        Chain { cohort, all, residual_mean: vec![None; n], residual_max: vec![None; n] }
+        Chain { cohort, all, sel, residual_mean: vec![None; n], residual_max: vec![None; n] }
     }
 
     pub fn len(&self) -> usize {
@@ -195,12 +201,23 @@ impl Chain {
         self.cohort.as_ref().and_then(|c| c.epochs.get(i).copied())
     }
 
-    /// The key predicate selecting exactly one world-moment: this cohort's source
-    /// tree, this epoch. Both fields matter — the epoch alone would mix cohorts,
-    /// and the source alone is the whole history at once.
-    pub fn stage_predicate(&self, i: usize) -> Option<(String, u32)> {
+    /// The key predicate selecting exactly one world-moment: this cohort's
+    /// `(src, level, epochs)`. **All three fields matter**, and the third was
+    /// learned by looking at the picture rather than by reasoning.
+    ///
+    /// Epoch alone mixes source trees. Source alone is the whole history at once.
+    /// And `(src, epochs)` — which is what this returned first — silently merged
+    /// the two chains a world can hold at once: with a global L9 sweep at epochs
+    /// 5…40 beside an L13 beacon at 10…300, the beacon's early stages loaded the
+    /// *global* tiles too, so the surround was carved at epoch 10 and then
+    /// vanished to uncarved prior at epoch 50 when the L9 ladder ran out. On
+    /// screen that is terrain around the region changing as you scrub — a
+    /// coverage cliff wearing the appearance of geology, which is the exact fault
+    /// `watch::erosion_cohorts` groups by level to prevent. The grouping was
+    /// right and the loader predicate did not follow it.
+    pub fn stage_predicate(&self, i: usize) -> Option<(String, u8, u32)> {
         let c = self.cohort.as_ref()?;
-        Some((c.src.clone(), *c.epochs.get(i)?))
+        Some((c.src.clone(), c.level, *c.epochs.get(i)?))
     }
 }
 
@@ -293,6 +310,18 @@ pub struct FrameFacts {
     /// This frame's world-time epoch, when the lens is the settle history.
     pub stage_epoch: Option<u32>,
     pub stage_tiles: usize,
+    /// Drawn cells by the **fidelity tier that answered them** — the region's
+    /// level, not the view's ( #form-fidelity-ladder ).
+    ///
+    /// This is the countable half of the trap a fine view walks into. A coarse
+    /// region still answers a fine cell: `ErodedRegion::surface_m` returns a
+    /// bilinear read of the coarse carve *plus the fine prior's detail
+    /// re-added*. So a view at L13 over an L9 carve is full of kilometre-scale
+    /// relief, and none of it came from a fluvial kernel run at that scale.
+    /// Nothing looks wrong — which is why the census has to say it.
+    pub tier_cells: std::collections::BTreeMap<u8, usize>,
+    /// Total cells drawn this frame, the denominator for every fraction here.
+    pub cells: usize,
 }
 
 /// Where the sea datum on screen came from.

@@ -407,14 +407,24 @@ pub fn interior(roots: &[RootEntry]) -> Vec<InteriorReport> {
         .collect()
 }
 
-/// One erosion **settle history**: the stages carved under a single source tree.
+/// One erosion **settle history**: the stages carved under a single source tree
+/// *at a single level*.
 ///
-/// A chain is only coherent within one `src=` cohort. Two stages carved under
-/// different source trees are stages of two different worlds, and ordering them
-/// on one time axis would put the difference between two kernels on screen as
-/// though it were the passage of world-time — the same two-datum fault the
-/// stale-`src` ribbon is, moved onto the time axis. So a scrub picks a cohort
-/// and says which one.
+/// A chain is coherent only within one `(src, level)` cohort, and **both halves
+/// were learned the hard way**.
+///
+/// `src`: two stages carved under different source trees are stages of two
+/// different worlds, and ordering them on one time axis puts the difference
+/// between two kernels on screen as though it were the passage of world-time —
+/// the stale-`src` two-datum fault, moved onto the time axis.
+///
+/// `level`: a world can hold a coarse whole-globe sweep *and* a fine beacon
+/// patch under the same source tree, with different epoch ladders over different
+/// footprints (live instance, 2026-07-28: a global L9 sweep at epochs 5…40 beside
+/// an L13 beacon at epochs 10…300). Merging those yields one ladder whose rungs
+/// cover wildly unequal areas, so a scrub would show a region appearing and
+/// vanishing as it stepped — a *coverage* animation reading as geology. Level is
+/// therefore identity for a chain, not an attribute of one.
 #[derive(Clone, Debug)]
 pub struct ErosionCohort {
     /// The whole-crate source digest every stage in this cohort was carved under.
@@ -422,6 +432,11 @@ pub struct ErosionCohort {
     /// Whether that digest is the one this binary was built from — i.e. whether
     /// these stages are *this* world's settle history or a previous world's.
     pub is_current: bool,
+    /// Per face, the cohort's cell-grid extent at `level`:
+    /// `(oi_min, oj_min, oi_end, oj_end)` half-open. A fine chain covers a small
+    /// window of one face, and a viewer cannot find it by orbiting — so the
+    /// extent is part of the census rather than something the view guesses.
+    pub bounds: BTreeMap<u8, (u32, u32, u32, u32)>,
     /// Distinct `epochs` values present, ascending. **This is the chain's
     /// density, and it is not a view parameter**: erosion is a materialized-only
     /// chain ( #form-time-indexed-stage-chains FE(8) ), so a consumer gets
@@ -431,7 +446,7 @@ pub struct ErosionCohort {
     /// mean the chain is ragged — some tiles have a longer history than others,
     /// which a scrub must report rather than smooth over.
     pub tiles: Vec<usize>,
-    /// The finest level any stage in this cohort was carved at.
+    /// The level every stage in this cohort was carved at — identity, see above.
     pub level: u8,
 }
 
@@ -448,42 +463,84 @@ impl ErosionCohort {
     pub fn is_square(&self) -> bool {
         self.tiles.windows(2).all(|w| w[0] == w[1])
     }
+
+    /// Whether this chain covers a whole face at its level, or a window into one.
+    /// A whole-globe sweep is drawable from orbit; a beacon patch is not, and the
+    /// difference decides whether a viewer needs to be taken to it.
+    pub fn is_global(&self) -> bool {
+        let n = 1u32 << self.level;
+        self.bounds.len() > 1
+            || self.bounds.values().any(|&(a, b, c, d)| a == 0 && b == 0 && c == n && d == n)
+    }
+
+    /// The cohort's centre cell — `(face, i, j)` at its own level. What a viewer
+    /// has to be pointed at to see a fine chain at all.
+    pub fn centre(&self) -> Option<(u8, u32, u32)> {
+        // The face holding the widest extent; ties break by face index so the
+        // answer is stable across runs.
+        let (&face, &(i0, j0, i1, j1)) = self
+            .bounds
+            .iter()
+            .max_by_key(|(f, &(a, b, c, d))| ((c - a) as u64 * (d - b) as u64, std::cmp::Reverse(**f)))?;
+        Some((face, (i0 + i1) / 2, (j0 + j1) / 2))
+    }
+
+    /// Widest side of the cohort's extent, in cells at its level — the natural
+    /// size for a window that shows the whole chain and not much else.
+    pub fn span_cells(&self) -> u32 {
+        self.bounds
+            .values()
+            .map(|&(a, b, c, d)| (c - a).max(d - b))
+            .max()
+            .unwrap_or(1u32 << self.level)
+    }
 }
 
-/// Group every `erosion-tile` height root into settle-history cohorts by source
-/// digest, richest first.
+/// Group every `erosion-tile` height root into settle-history cohorts by
+/// `(source digest, level)`, richest first.
 ///
 /// Ordering is *usefulness for a time scrub*: cohorts with a real interior come
-/// before endpoint-only ones, and the current source wins ties — so the first
-/// entry is the chain a viewer should be offered, and the `is_current` flag is
-/// what tells them whether they are watching this world or a previous one.
-/// Stage-residual siblings (`aspect=`) are metadata, not surfaces, and are
-/// skipped exactly as [`crate::query::World::load_eroded_regions_where`] skips
-/// them.
+/// before endpoint-only ones, the current source wins next, and among current
+/// chains the one with more stages leads — so the first entry is the chain a
+/// viewer should be offered, and the `is_current` flag tells them whether they
+/// are watching this world or a previous one. Stage-residual siblings
+/// (`aspect=`) are metadata, not surfaces, and are skipped exactly as
+/// [`crate::query::World::load_eroded_regions_where`] skips them.
 pub fn erosion_cohorts(roots: &[RootEntry]) -> Vec<ErosionCohort> {
-    let mut per: BTreeMap<String, (BTreeMap<u32, usize>, u8)> = BTreeMap::new();
+    type Acc = (BTreeMap<u32, usize>, BTreeMap<u8, (u32, u32, u32, u32)>);
+    let mut per: BTreeMap<(String, u8), Acc> = BTreeMap::new();
     for r in roots {
         if !r.key.starts_with("erosion-tile@") || key_field(&r.key, "aspect").is_some() {
             continue;
         }
-        let (Some(src), Some(epochs)) = (
+        let num = |n| key_field(&r.key, n).and_then(|v| v.parse::<u32>().ok());
+        let (Some(src), Some(epochs), Some(level), Some(oi), Some(oj), Some(nx)) = (
             key_field(&r.key, "src"),
-            key_field(&r.key, "epochs").and_then(|v| v.parse::<u32>().ok()),
+            num("epochs"),
+            key_field(&r.key, "level").and_then(|v| v.parse::<u8>().ok()),
+            num("oi"),
+            num("oj"),
+            num("nx"),
         ) else {
             continue;
         };
-        let level = key_field(&r.key, "level").and_then(|v| v.parse::<u8>().ok()).unwrap_or(0);
-        let e = per.entry(src.to_string()).or_default();
+        let face = key_field(&r.key, "face").and_then(|v| v.parse::<u8>().ok()).unwrap_or(0);
+        let e = per.entry((src.to_string(), level)).or_default();
         *e.0.entry(epochs).or_default() += 1;
-        e.1 = e.1.max(level);
+        let b = e.1.entry(face).or_insert((oi, oj, oi + nx, oj + nx));
+        b.0 = b.0.min(oi);
+        b.1 = b.1.min(oj);
+        b.2 = b.2.max(oi + nx);
+        b.3 = b.3.max(oj + nx);
     }
     let cur = crate::nomotheke::SRC_HASH;
     let mut out: Vec<ErosionCohort> = per
         .into_iter()
-        .map(|(src, (counts, level))| ErosionCohort {
+        .map(|((src, level), (counts, bounds))| ErosionCohort {
             is_current: src == cur,
             epochs: counts.keys().copied().collect(),
             tiles: counts.values().copied().collect(),
+            bounds,
             level,
             src,
         })
@@ -741,6 +798,45 @@ mod tests {
         assert_eq!(cohorts[0].len(), 3, "the chain with an interior is offered first");
         assert!(!cohorts[0].is_current, "even when it is not this binary's source");
         assert!(cohorts[1].is_current);
+    }
+
+    /// **Level is chain identity.** A world holding a coarse global sweep and a
+    /// fine beacon patch under the SAME source tree holds two histories, not one.
+    /// Merged, their epoch ladders interleave over wildly unequal footprints, and
+    /// a scrub stepping that ladder would show a region appearing and vanishing —
+    /// a coverage animation that reads, to an eye watching for erosion, as
+    /// geology. (Live instance 2026-07-28: global L9 at epochs 5…40 beside an L13
+    /// beacon at epochs 10…300.)
+    #[test]
+    fn a_coarse_sweep_and_a_fine_beacon_are_two_chains_not_one() {
+        let cur = crate::nomotheke::SRC_HASH;
+        let mut roots = Vec::new();
+        for e in [5u32, 10, 15] {
+            for oi in [0u32, 64] {
+                roots.push(root(&format!(
+                    "erosion-tile@v|src={cur}|seed=0|face=0|level=9|oi={oi}|oj=0|nx=64|epochs={e}"
+                )));
+            }
+        }
+        for e in [10u32, 20, 30, 40] {
+            roots.push(root(&format!(
+                "erosion-tile@v|src={cur}|seed=0|face=1|level=13|oi=640|oj=5376|nx=64|epochs={e}"
+            )));
+        }
+        let cohorts = erosion_cohorts(&roots);
+        assert_eq!(cohorts.len(), 2, "one source tree, two levels, two chains");
+        let fine = cohorts.iter().find(|c| c.level == 13).expect("the beacon chain");
+        let coarse = cohorts.iter().find(|c| c.level == 9).expect("the global chain");
+        assert_eq!(fine.epochs, vec![10, 20, 30, 40], "ladders never interleave");
+        assert_eq!(coarse.epochs, vec![5, 10, 15]);
+        assert_eq!(cohorts[0].level, 13, "the deeper chain is offered first");
+
+        // The extent is census, not guesswork: a viewer cannot find a 64-cell
+        // window in an 8192-cell face by orbiting.
+        assert!(!fine.is_global(), "a beacon patch is a window, not a face");
+        assert_eq!(fine.centre(), Some((1, 640 + 32, 5376 + 32)));
+        assert_eq!(fine.span_cells(), 64);
+        assert!(coarse.is_global() || coarse.span_cells() == 128);
     }
 
     /// A ragged chain — stages covering different tile counts — is a frame that

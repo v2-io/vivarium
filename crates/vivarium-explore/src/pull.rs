@@ -43,12 +43,50 @@ use crate::water::{WaterField, WET_M};
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Request {
     pub level: u8,
+    /// `None` = the whole globe, six faces. `Some` = **one window into one
+    /// face**, which is how anything finer than a whole-face monolith gets
+    /// drawn: L13 is 8192² cells per face, and six of those is not a mesh, it is
+    /// a memory error with a nice comment.
+    ///
+    /// The window is not a different renderer. It is the same mesher with a
+    /// non-zero origin ( `mesh::FaceInput` ), because a globe path and a region
+    /// path that share no meshing code will disagree about the world, and the
+    /// disagreement will look like terrain.
+    pub patch: Option<Patch>,
     pub exag: f32,
     pub paint: Paint,
     pub lens: Lens,
+    /// Which settle history is on the time axis (index into `Chain::all`).
+    /// A world can hold more than one, and which you want is not inferable.
+    pub cohort: usize,
     /// Full-scale for the change ramp (m) — a different scale is a different
     /// picture, so it belongs in the equality that suppresses rebuilds.
     pub change_scale_m: f32,
+}
+
+/// A window `nx × nx` into one face's cell grid at `(oi, oj)`, at the request's
+/// level.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Patch {
+    pub face: u8,
+    pub oi: u32,
+    pub oj: u32,
+    pub nx: usize,
+}
+
+impl Patch {
+    /// The window of width `nx` centred on face cell `(i, j)`, slid to stay
+    /// inside the face. Sliding rather than clipping keeps the window a constant
+    /// size, so the mesh cost and the cell scale do not change as you approach an
+    /// edge — a view whose resolution silently drops near a face boundary would
+    /// be an artefact of the chart, drawn as if it were the world.
+    pub fn centred(face: u8, level: u8, i: u32, j: u32, nx: usize) -> Patch {
+        let face_n = 1u32 << level;
+        let nx = nx.min(face_n as usize);
+        let half = nx as u32 / 2;
+        let hi = face_n - nx as u32;
+        Patch { face, oi: i.saturating_sub(half).min(hi), oj: j.saturating_sub(half).min(hi), nx }
+    }
 }
 
 /// A completed frame: six meshes plus everything the HUD needs to describe them.
@@ -166,7 +204,7 @@ pub fn spawn(
         let mut cov = Coverage::parse(&roots);
         let mut water = WaterField::load(&world, &cov);
         let mut landings: Vec<watch::Landing> = Vec::new();
-        let mut chain = Chain::read(&roots);
+        let mut chain = Chain::read(&roots, 0);
         crate::lens::read_residuals(&store, &roots, &mut chain);
 
         while let Ok(req) = rx.recv() {
@@ -182,13 +220,27 @@ pub fn spawn(
                 water = WaterField::load(&world, &cov);
                 landings.clear();
                 ladder.refresh_residency(&world);
-                chain = Chain::read(&roots);
+                chain = Chain::read(&roots, chain.sel);
                 crate::lens::read_residuals(&store, &roots, &mut chain);
                 let _ = tx.send(Msg::Landings(roots.len()));
             }
+            if !chain.all.is_empty() && req.cohort % chain.all.len() != chain.sel {
+                chain = Chain::read(&roots, req.cohort);
+                crate::lens::read_residuals(&store, &roots, &mut chain);
+            }
 
             let level = req.level;
-            let nx = 1usize << level;
+            // The unit of work: either six whole faces, or one window into one.
+            // Everything downstream is written against this list, so the two
+            // modes are one code path with a different list.
+            let units: Vec<Patch> = match req.patch {
+                Some(p) => vec![p],
+                None => {
+                    let n = 1usize << level;
+                    (0u8..6).map(|f| Patch { face: f, oi: 0, oj: 0, nx: n }).collect()
+                }
+            };
+            let _nx = units[0].nx;
 
             // --- what surface, and on what datum -----------------------------
             let tp = crate::lens::lens_tp(req.lens, &ladder);
@@ -226,8 +278,10 @@ pub fn spawn(
                 // stages from two different kernels into one surface, and the
                 // source alone is the whole settle history at once.
                 Lens::Erosion(i) => match chain.stage_predicate(i) {
-                    Some((src, epoch)) => world.load_eroded_regions_where(|k| {
+                    Some((src, lvl, epoch)) => world.load_eroded_regions_where(|k| {
                         watch::key_field(k, "src") == Some(src.as_str())
+                            && watch::key_field(k, "level").and_then(|v| v.parse::<u8>().ok())
+                                == Some(lvl)
                             && watch::key_field(k, "epochs").and_then(|v| v.parse::<u32>().ok())
                                 == Some(epoch)
                     }),
@@ -247,7 +301,18 @@ pub fn spawn(
             // same law the in-face tile came from, or the seam instrument would
             // measure the gap between two different surfaces rather than the
             // world's own discontinuity.
+            //
+            // **It reads the loaded regions.** For a whole-face unit the ghost
+            // ring falls on other faces, where a carved tile usually is not — so
+            // this was written as the bare prior and the shortcut cost nothing
+            // visible. For a *window* into a face the ghost ring is ordinary
+            // in-face terrain, carved like everything around it, and the prior
+            // there would put a one-cell moat of uncarved ground around every
+            // patch: a manufactured discontinuity, at exactly the scale a fine
+            // view exists to inspect. Reading the regions is the same law the
+            // in-face tile came from, which is what this comment always asked for.
             let is_stage = matches!(req.lens, Lens::Stage(_));
+            let regions_ref = &regions;
             let ghost = move |face: Face, ci: i64, cj: i64, level: u8| -> f32 {
                 let n = 1usize << level;
                 let cu = ((ci as f64 + 0.5) / n as f64) * 2.0 - 1.0;
@@ -257,29 +322,58 @@ pub fn spawn(
                 if is_stage {
                     sea_level::tectonic_surface_at_tp(seed, cell, level, tp) as f32
                 } else {
-                    vivarium_world::erosion::surface_at(seed, cell, &[]) as f32
+                    vivarium_world::erosion::surface_at(seed, cell, regions_ref) as f32
                 }
             };
 
-            // --- build the six faces in parallel ------------------------------
+            // --- build the units in parallel ----------------------------------
             let mut tiles: Vec<Vec<f32>> = Vec::with_capacity(6);
             let mut seam = SeamStats::default();
             let (mut land, mut total, mut prior_fallback) = (0usize, 0usize, 0usize);
             let (mut inland_water, mut water_cells) = (0usize, 0usize);
             let (mut chg_sum, mut chg_min, mut chg_max) = (0.0f64, 0.0f32, 0.0f32);
             let (mut rising, mut falling) = (0usize, 0usize);
+            let mut tier_cells: std::collections::BTreeMap<u8, usize> = Default::default();
 
             let faces: Vec<FaceMesh> = std::thread::scope(|s| {
-                let (world, regions, cov, water, cache, ghost) =
-                    (&world, &regions, &frame_cov, &water, &stage_cache, &ghost);
-                let handles: Vec<_> = (0u8..6)
-                    .map(|f| {
+                let (world, regions, cov, water, cache, ghost, units) =
+                    (&world, &regions, &frame_cov, &water, &stage_cache, &ghost, &units);
+                let handles: Vec<_> = units
+                    .iter()
+                    .map(|&unit| {
                         s.spawn(move || {
+                            let (f, oi, oj, nx) = (unit.face, unit.oi, unit.oj, unit.nx);
                             let face = Face::from_index(f);
                             let tile = match req.lens {
-                                Lens::Stage(_) => cache.get_or_build(seed, face, level, nx, tp),
-                                _ => world.assemble_surface_tile(face, level, 0, 0, nx, regions).0,
+                                // The deep-time cache is keyed by whole face; a
+                                // window is computed directly rather than cached,
+                                // since a fine window is a different key space and
+                                // caching it would evict the ladder mid-sweep.
+                                Lens::Stage(_) if oi == 0 && oj == 0 && nx == 1usize << level =>
+                                    cache.get_or_build(seed, face, level, nx, tp),
+                                Lens::Stage(_) => {
+                                    let mut t = Vec::with_capacity(nx * nx);
+                                    for j in 0..nx as u32 {
+                                        for i in 0..nx as u32 {
+                                            let c = CellId::from_face_ij(face, oi + i, oj + j, level);
+                                            t.push(
+                                                sea_level::tectonic_surface_at_tp(seed, c, level, tp)
+                                                    as f32,
+                                            );
+                                        }
+                                    }
+                                    t
+                                }
+                                _ => world.assemble_surface_tile(face, level, oi, oj, nx, regions).0,
                             };
+
+                            // Every per-cell query below is asked in FACE cells,
+                            // because that is the frame the census and the water
+                            // field are indexed in; only the height tile is
+                            // patch-local. Mixing the two is the whole bug class
+                            // a windowed view invites, so the translation happens
+                            // once, here, and is named.
+                            let g = |ci: u32, cj: u32| (oi + ci, oj + cj);
 
                             // Per-cell provenance, sampled at the CENSUS level so
                             // a coarse view still reports the true tile boundary.
@@ -294,14 +388,16 @@ pub fn spawn(
                                     // grey in provenance mode.
                                     return (BuildState::Unbuilt, TileFlags::default());
                                 }
-                                let (bi, bj) = (to_build_level(ci), to_build_level(cj));
+                                let (gi, gj) = g(ci, cj);
+                                let (bi, bj) = (to_build_level(gi), to_build_level(gj));
                                 (cov.state_at_cell(f, bi, bj), cov.flags_at_cell(f, bi, bj))
                             };
                             let water_at = |ci: u32, cj: u32| -> f32 {
                                 if matches!(req.lens, Lens::Stage(_)) {
                                     return 0.0; // water tiles exist only for the present
                                 }
-                                water.depth_at(f, ci, cj, level)
+                                let (gi, gj) = g(ci, cj);
+                                water.depth_at(f, gi, gj, level)
                             };
 
                             // The change channel's baseline: the **uncarved
@@ -316,7 +412,8 @@ pub fn spawn(
                                 let mut b = Vec::with_capacity(nx * nx);
                                 for j in 0..nx as u32 {
                                     for i in 0..nx as u32 {
-                                        let cid = CellId::from_face_ij(face, i, j, level);
+                                        let (gi, gj) = g(i, j);
+                                        let cid = CellId::from_face_ij(face, gi, gj, level);
                                         b.push(
                                             vivarium_world::erosion::surface_at(seed, cid, &[]) as f32
                                         );
@@ -338,6 +435,15 @@ pub fn spawn(
                             let (mut l, mut fb, mut iw, mut wc) = (0usize, 0usize, 0usize, 0usize);
                             let (mut cs, mut cmin, mut cmax) = (0.0f64, 0.0f32, 0.0f32);
                             let (mut ri, mut fa) = (0usize, 0usize);
+                            // Which fidelity tier answered, per cell. On a fine
+                            // view over a coarse build this is the whole story:
+                            // #form-fidelity-ladder means a coarse region still
+                            // ANSWERS a fine cell (bilinear carve plus the fine
+                            // prior's detail re-added), so the picture is full of
+                            // fine relief that no fluvial kernel ever computed.
+                            // Nothing looks wrong. Counting the tiers is the only
+                            // thing that says so.
+                            let mut tiers: std::collections::BTreeMap<u8, usize> = Default::default();
                             for j in 0..nx as u32 {
                                 for i in 0..nx as u32 {
                                     let h = tile[j as usize * nx + i as usize];
@@ -356,9 +462,11 @@ pub fn spawn(
                                         }
                                     }
                                     if !is_stage {
-                                        let cid = CellId::from_face_ij(face, i, j, level);
-                                        if vivarium_world::erosion::tier_at(cid, regions).is_none() {
-                                            fb += 1;
+                                        let (gi, gj) = g(i, j);
+                                        let cid = CellId::from_face_ij(face, gi, gj, level);
+                                        match vivarium_world::erosion::tier_at(cid, regions) {
+                                            Some(t) => *tiers.entry(t).or_default() += 1,
+                                            None => fb += 1,
                                         }
                                         let d = water_at(i, j);
                                         if d > WET_M {
@@ -374,6 +482,9 @@ pub fn spawn(
                             let (fm, fseam) = mesh::build_face(&FaceInput {
                                 face,
                                 level,
+                                oi,
+                                oj,
+                                nx,
                                 tile: &tile,
                                 exag: req.exag,
                                 sea_m,
@@ -385,15 +496,18 @@ pub fn spawn(
                                 change: &change_at,
                                 change_scale_m: req.change_scale_m,
                             });
-                            (fm, tile, fseam, l, fb, iw, wc, cs, cmin, cmax, ri, fa)
+                            (fm, tile, fseam, l, fb, iw, wc, cs, cmin, cmax, ri, fa, tiers)
                         })
                     })
                     .collect();
                 handles
                     .into_iter()
                     .map(|h| {
-                        let (fm, tile, fseam, l, fb, iw, wc, cs, cmin, cmax, ri, fa) =
+                        let (fm, tile, fseam, l, fb, iw, wc, cs, cmin, cmax, ri, fa, tr) =
                             h.join().expect("face build panicked");
+                        for (t, n) in tr {
+                            *tier_cells.entry(t).or_default() += n;
+                        }
                         land += l;
                         prior_fallback += fb;
                         inland_water += iw;
@@ -437,6 +551,8 @@ pub fn spawn(
                     _ => None,
                 },
                 stage_tiles: regions.len(),
+                tier_cells,
+                cells: total,
             };
 
             let frame = Frame {

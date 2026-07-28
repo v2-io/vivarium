@@ -275,6 +275,91 @@ pub struct ResponseCensus {
     pub response_epochs_max: f32,
 }
 
+/// Channelization thresholds for [`DrainageSurface`], in multiples of the tile's
+/// **median cell area** — i.e. "this cell drains at least N cells' worth of
+/// runoff". An instrument choice, stated, not a physics claim: there is no
+/// drainage area at which a channel *is*, and the three rungs exist so a reader
+/// sees the network's shape rather than one threshold's answer.
+pub const CHANNEL_THRESHOLD_CELLS: [f32; 3] = [10.0, 100.0, 1000.0];
+
+/// Summary of a [`DrainageSurface`]. Areas in m²; every count is over the tile
+/// the surface came from. Subaerial-only where it says so.
+#[derive(Debug, Clone, Copy)]
+pub struct DrainageStats {
+    /// Cells above derived sea on the *unfilled* surface.
+    pub subaerial: usize,
+    /// `nx²` — the denominator for `subaerial`.
+    pub cells: usize,
+    /// Σ over subaerial cells of `cell_area × precip_weight` (m²) — the runoff
+    /// the land collects, and the denominator for basin shares.
+    pub land_runoff_m2: f64,
+    pub median_cell_area_m2: f32,
+    /// Largest MFD drainage area on the tile (m²) — the fan's trunk.
+    pub max_mfd_m2: f32,
+    /// Largest D8 accumulation on the tile (m²) — the thread's trunk.
+    pub max_d8_m2: f32,
+    /// `max_d8 / max_mfd`. **1.0 would mean the fan concentrates as tightly as a
+    /// thread; larger means the fan has smeared the trunk's discharge sideways.**
+    /// This is the fan of `#obs-cube-locked-kernel-bias` FE(1) measured on live
+    /// terrain rather than on a cone.
+    pub spread_ratio: f32,
+    /// Discharge-weighted count of downhill neighbours receiving MFD flow. 1.0
+    /// is a thread; the theoretical max is 8.
+    pub mean_out_degree: f32,
+    /// Subaerial cells whose MFD area clears each [`CHANNEL_THRESHOLD_CELLS`] rung.
+    pub channel_cells_mfd: [usize; 3],
+    /// The same rungs under D8 accumulation.
+    pub channel_cells_d8: [usize; 3],
+    /// Distinct terminal outlets reached by subaerial cells — the basin count.
+    pub basins: usize,
+    /// Share of land runoff collected by the single largest basin. **The
+    /// integration number**: near 1 is one trunk draining the tile, near 0 is
+    /// many small disconnected catchments.
+    pub largest_basin_share: f32,
+    /// How many basins it takes to cover half the land runoff (1 = one dominant).
+    pub basins_for_half: usize,
+    /// Cells the Priority-Flood fill had to raise by more than 1 m.
+    pub depression_cells: usize,
+    /// Σ of that raise × cell area (m³) — the **geometric capacity** of the
+    /// surface's closed depressions, filled to their spill points. Not a lake
+    /// volume: no evaporation, inflow, seepage or residence time is in this
+    /// account, and an endorheic basin under a dry climate holds far less.
+    pub depression_volume_m3: f64,
+    pub deepest_depression_m: f32,
+}
+
+/// The drainage field of one stored stage, recomputed on demand — see
+/// [`Fluvial::drainage_surface`]. Row-major `nx × nx`, matching the tile.
+pub struct DrainageSurface {
+    pub nx: usize,
+    /// MFD drainage area (m²), the live kernel's own field. **Diffused** — see
+    /// [`Fluvial::drainage_surface`] before painting it as a river.
+    pub mfd: Vec<f32>,
+    /// D8 single-receiver accumulation (m²) down the same tree. Concentrates
+    /// into threads; carries D8's grid-alignment artifact; **not** what the
+    /// kernel erodes with.
+    pub d8: Vec<f32>,
+    /// D8 receiver index per cell; outlets point to themselves.
+    pub recv: Vec<usize>,
+    /// The depression-filled surface the routing was derived on — the heights
+    /// water sees, which are not the heights the store holds.
+    pub filled_h: Vec<f32>,
+    /// `filled_h − stored h` (m): depression capacity depth. See
+    /// [`DrainageStats::depression_volume_m3`] for what this is not.
+    pub fill_depth: Vec<f32>,
+    pub stats: DrainageStats,
+}
+
+impl DrainageSurface {
+    /// Discharge in units of "cells drained" — the field divided by the tile's
+    /// median cell area, which is what the channel thresholds are stated in and
+    /// the only form in which two tiles at different levels compare.
+    pub fn in_cells(&self, field: &[f32]) -> Vec<f32> {
+        let a = self.stats.median_cell_area_m2.max(1.0);
+        field.iter().map(|v| v / a).collect()
+    }
+}
+
 impl Fluvial {
     /// Seed from the band-limited prior over `nx × nx` cells of `face` at `level`
     /// starting at `(oi, oj)` — the honest initial condition (no imposed shapes).
@@ -813,6 +898,205 @@ impl Fluvial {
             response_epochs_p50: pct(&mut resp_channel, 0.5),
             response_epochs_p90: pct(&mut resp_channel, 0.9),
             response_epochs_max: pct(&mut resp_channel, 1.0),
+        }
+    }
+
+    /// **Instrument, not law**: the drainage field this tile's *current* surface
+    /// carries — the thing the kernel computes every epoch and then discards.
+    ///
+    /// Same shape as [`Self::response_census`] and for the same reason: drainage
+    /// is a **pure function of a stored stage** (heights + cell areas + precip
+    /// weight), so it is *recomputed* on demand rather than memoized as a store
+    /// citizen. One fill + receivers + sort + two accumulations over `nx²` cells
+    /// — cheap enough that a view can pay it per tile, and a memo would need its
+    /// own nomos version, its own key, and a world rebuild to gain nothing but
+    /// the same numbers. (`DECISIONS[memoized-means-store-object]` gives the
+    /// condition that would flip this: a cold recompute expensive enough that
+    /// views pay it per *frame*.) Heights are restored — the reader must not
+    /// advance the world.
+    ///
+    /// **Both routers are returned, and that is the point.** They answer
+    /// different questions and a view must say which it is painting
+    /// (`#norm-no-depiction-without-referent`):
+    ///
+    /// - [`DrainageSurface::mfd`] is the live kernel's own field (Quinn MFD,
+    ///   $p=1.0$, spread over *every* downhill neighbour) — the field that
+    ///   decides where incision happens. It is a **diffused** surface, not a
+    ///   channel thread: on the equiangular cube-sphere its eight directions are
+    ///   a sheared quadrature and the fan does not converge
+    ///   (`#obs-cube-locked-kernel-bias` FE(1)). Painted narrow, it would be a
+    ///   fan drawn thin — a depiction of something the world does not contain.
+    /// - [`DrainageSurface::d8`] is single-receiver accumulation down the same
+    ///   D8 tree the implicit solve already uses. It concentrates into threads,
+    ///   and carries D8's own grid-alignment artifact — the defect MFD was
+    ///   adopted to dissolve. It is **not** what the kernel erodes with.
+    ///
+    /// [`DrainageStats::spread_ratio`] is the gap between them, measured rather
+    /// than argued: how much discharge the fan has smeared off the thread.
+    ///
+    /// **Precip weight is an input, not a default.** [`Self::from_region`]
+    /// rebuilds a field from stored heights alone and leaves `precip_weight` at
+    /// ones — uniform rain, which is *not* what the kernel ran (climate carries
+    /// fated ±50% low-frequency jitter, `crate::climate`). A reader that wants
+    /// the discharge the tile was actually carved under must
+    /// [`Self::set_precip_weight`] from the climate tile first.
+    pub fn drainage_surface(&mut self) -> DrainageSurface {
+        let n = self.nx * self.nx;
+        let saved_h = self.h.clone();
+        let outlets = self.outlets();
+        self.fill_depressions(&outlets);
+        let recv = self.receivers(&outlets);
+        let order = self.elevation_order();
+        self.accumulate_drainage(&order);
+        let mfd = self.drainage.clone();
+        let filled_h = self.h.clone();
+
+        // D8: the same runoff seed routed down the single steepest receiver.
+        let mut d8 = vec![0.0f32; n];
+        for i in 0..n {
+            d8[i] = self.cell_area[i] * self.precip_weight[i];
+        }
+        for &i in order.iter().rev() {
+            let r = recv[i];
+            if r != i {
+                let carried = d8[i];
+                d8[r] += carried;
+            }
+        }
+
+        // Discharge-weighted MFD out-degree: 1 is a thread, >1 is a fan. Weighted
+        // by the discharge each cell passes on, so trunk behaviour dominates
+        // rather than the headwater cells that carry almost nothing.
+        let nx = self.nx;
+        let (mut deg_num, mut deg_den) = (0.0f64, 0.0f64);
+        for i in 0..n {
+            let (x, y) = (i % nx, i / nx);
+            let hi = filled_h[i];
+            let mut k = 0usize;
+            for (dx, dy) in NEIGHBORS {
+                let (nxp, nyp) = (x as i32 + dx, y as i32 + dy);
+                if nxp < 0 || nyp < 0 || nxp >= nx as i32 || nyp >= nx as i32 {
+                    continue;
+                }
+                if hi - filled_h[nyp as usize * nx + nxp as usize] > 0.0 {
+                    k += 1;
+                }
+            }
+            if k > 0 {
+                deg_num += k as f64 * mfd[i] as f64;
+                deg_den += mfd[i] as f64;
+            }
+        }
+
+        // Depression capacity: what Priority-Flood had to add to make the surface
+        // drain. NOT a lake — it is the geometric volume a lake *could* occupy if
+        // filled to its spill point, with no evaporation, inflow or seepage in the
+        // account. It is however a referent the water nomos does not depend on.
+        let fill_depth: Vec<f32> = (0..n).map(|i| filled_h[i] - saved_h[i]).collect();
+
+        let sea = sea_level::derived_sea_level_m(self.seed) as f32;
+        let median_area = {
+            let mut a = self.cell_area.clone();
+            a.sort_by(f32::total_cmp);
+            a[a.len() / 2]
+        };
+
+        // Terminal outlet per cell (path-following; the D8 tree is acyclic after
+        // the fill, so this halts). Basins are counted over LAND runoff only —
+        // every submarine cell is its own outlet and would otherwise swamp the
+        // fragmentation number with sea floor.
+        let mut terminal = vec![usize::MAX; n];
+        for start in 0..n {
+            if terminal[start] != usize::MAX {
+                continue;
+            }
+            let mut path = Vec::new();
+            let mut cur = start;
+            loop {
+                if terminal[cur] != usize::MAX {
+                    break;
+                }
+                path.push(cur);
+                let r = recv[cur];
+                if r == cur {
+                    terminal[cur] = cur;
+                    break;
+                }
+                cur = r;
+            }
+            let end = terminal[cur];
+            for &p in &path {
+                terminal[p] = end;
+            }
+        }
+        let mut basin_runoff: std::collections::BTreeMap<usize, f64> = std::collections::BTreeMap::new();
+        let mut land_runoff = 0.0f64;
+        let mut subaerial = 0usize;
+        let mut depression_cells = 0usize;
+        let mut depression_volume_m3 = 0.0f64;
+        let mut deepest_depression_m = 0.0f32;
+        for i in 0..n {
+            if fill_depth[i] > 1.0 {
+                depression_cells += 1;
+                depression_volume_m3 += fill_depth[i] as f64 * self.cell_area[i] as f64;
+                deepest_depression_m = deepest_depression_m.max(fill_depth[i]);
+            }
+            if saved_h[i] <= sea {
+                continue;
+            }
+            subaerial += 1;
+            let r = self.cell_area[i] as f64 * self.precip_weight[i] as f64;
+            land_runoff += r;
+            *basin_runoff.entry(terminal[i]).or_insert(0.0) += r;
+        }
+        let mut basins: Vec<f64> = basin_runoff.into_values().collect();
+        basins.sort_by(|a, b| b.total_cmp(a));
+        let largest_basin_share = if land_runoff > 0.0 { (basins.first().copied().unwrap_or(0.0) / land_runoff) as f32 } else { 0.0 };
+        let mut acc = 0.0f64;
+        let mut basins_for_half = 0usize;
+        for b in &basins {
+            if acc >= land_runoff * 0.5 {
+                break;
+            }
+            acc += b;
+            basins_for_half += 1;
+        }
+
+        let count_above = |f: &[f32], mult: f32| -> usize {
+            let t = mult * median_area;
+            (0..n).filter(|&i| saved_h[i] > sea && f[i] >= t).count()
+        };
+        let max_of = |f: &[f32]| -> f32 { f.iter().cloned().fold(0.0f32, f32::max) };
+        let (max_mfd, max_d8) = (max_of(&mfd), max_of(&d8));
+        let channel_cells_mfd = CHANNEL_THRESHOLD_CELLS.map(|m| count_above(&mfd, m));
+        let channel_cells_d8 = CHANNEL_THRESHOLD_CELLS.map(|m| count_above(&d8, m));
+
+        self.h = saved_h; // restore — a reader must not advance the world
+        DrainageSurface {
+            nx,
+            mfd,
+            d8,
+            recv,
+            filled_h,
+            fill_depth,
+            stats: DrainageStats {
+                subaerial,
+                cells: n,
+                land_runoff_m2: land_runoff,
+                median_cell_area_m2: median_area,
+                max_mfd_m2: max_mfd,
+                max_d8_m2: max_d8,
+                spread_ratio: if max_mfd > 0.0 { max_d8 / max_mfd } else { 0.0 },
+                mean_out_degree: if deg_den > 0.0 { (deg_num / deg_den) as f32 } else { 0.0 },
+                channel_cells_mfd,
+                channel_cells_d8,
+                basins: basins.len(),
+                largest_basin_share,
+                basins_for_half,
+                depression_cells,
+                depression_volume_m3,
+                deepest_depression_m,
+            },
         }
     }
 

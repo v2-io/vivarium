@@ -61,10 +61,25 @@ use crate::paint::Paint;
 use crate::pull::{Frame, Msg, Request};
 use crate::water::WaterField;
 
-/// Sampling levels the whole-globe build supports. L9 = 512² cells/face ≈ 20 km
-/// cells. Finer than L9 wants a per-region quadtree, not a bigger monolith.
+/// Levels the **whole-globe** mesh spans. L9 = 512² cells/face ≈ 20 km cells,
+/// six faces = 1.6 M cells, which is already the ceiling for a monolith: L10
+/// would be 6.3 M and L13 would be 400 M.
 const LEVEL_MIN: u8 = 5;
-const LEVEL_MAX: u8 = 9;
+const LEVEL_GLOBE_MAX: u8 = 9;
+
+/// Levels the **region window** spans. Finer than L9 is drawn as one `PATCH_NX`
+/// window into one face rather than a bigger monolith — the note this constant
+/// replaces said "wants a per-region quadtree", and a camera-centred window is
+/// the first rung of one: constant cost, resolution set by level.
+///
+/// L13 ≈ 1.2 km cells, which is where the tree's fine builds live and the first
+/// scale at which fluvial form is a *shape* rather than a single cell.
+const LEVEL_MAX: u8 = 14;
+
+/// Cells across a region window. 384² = 147 k cells — under a tenth of the L9
+/// globe's mesh, so a window is cheaper than the globe it replaces at every
+/// level, and the cost is flat in level rather than quadrupling.
+const PATCH_NX: usize = 384;
 
 /// Relief exaggeration cycle for X. 1 = honest (a billiard ball, truthfully).
 const EXAG_STEPS: [f32; 4] = [1.0, 10.0, 20.0, 50.0];
@@ -138,6 +153,8 @@ struct Explorer {
     level: u8,
     exag_i: usize,
     change_i: usize,
+    /// Which settle history is on the time axis.
+    cohort: usize,
     /// Deep-time sweep.
     playing: bool,
     dwell: f32,
@@ -338,7 +355,7 @@ fn main() {
     let cov = Coverage::parse(&roots);
     let ladder = Ladder::read(&world, spec.demand.frames, view_frames);
     let water = WaterField::load(&world, &cov);
-    let mut chain = Chain::read(&roots);
+    let mut chain = Chain::read(&roots, 0);
     lens::read_residuals(&store, &roots, &mut chain);
     println!(
         "[explore] vivium \"{}\" (seed {:#018x}) at {} -- {} roots, {} tiles at L{}, ladder {} stages ({} built)",
@@ -403,6 +420,17 @@ fn main() {
         (None, None, false) => Lens::Present,
     };
 
+    // Opening ON a windowed chain means opening pointed at it. Without this the
+    // verification idiom (`VIVARIUM_EROSION=<i> VIVARIUM_SHOT=…`) photographs a
+    // planet from orbit and calls it a look at a 300 km patch — a session
+    // shipping a renderer it never actually saw.
+    let mut start_orbit = Orbit::default();
+    if let (Lens::Erosion(_), Some(c)) = (start_lens, chain.cohort.as_ref()) {
+        if !c.is_global() {
+            frame_cohort(&mut start_orbit, &mut true, c);
+        }
+    }
+
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -413,7 +441,7 @@ fn main() {
             ..default()
         }))
         .insert_resource(ClearColor(SPACE))
-        .insert_resource(Orbit::default())
+        .insert_resource(start_orbit)
         .insert_resource(Sun::default())
         .insert_resource(Explorer {
             lens: start_lens,
@@ -422,6 +450,7 @@ fn main() {
             level: fixed_level.unwrap_or(8),
             exag_i: 2,
             change_i: 2,
+            cohort: 0,
             playing: false,
             dwell: 0.0,
             dwell_per: 0.09,
@@ -516,6 +545,7 @@ fn input_update(
     mut orbit: ResMut<Orbit>,
     mut ex: ResMut<Explorer>,
     mut sun: ResMut<Sun>,
+    chain: Res<ChainRes>,
     mut exit: MessageWriter<AppExit>,
 ) {
     let dt = time.delta_secs().max(1e-4);
@@ -614,6 +644,19 @@ fn input_update(
     if keys.just_pressed(KeyCode::KeyR) {
         *orbit = Orbit::default();
     }
+    // B — go to the selected chain's own extent.
+    //
+    // Not a convenience. A fine chain is a 256-cell window in an 8192-cell face —
+    // roughly one part in a thousand of the globe by area — and an instrument that
+    // holds data a viewer cannot find is an instrument that holds nothing. The
+    // destination is read from the store census ( `ErosionCohort::centre` ), never
+    // from a coordinate anyone typed here, so it stays right when the builder
+    // moves the beacon.
+    if keys.just_pressed(KeyCode::KeyB) {
+        if let Some(c) = chain.0.cohort.as_ref().or(chain.0.all.first()) {
+            frame_cohort(&mut orbit, &mut ex.auto_level, c);
+        }
+    }
     if keys.just_pressed(KeyCode::KeyX) {
         ex.exag_i = (ex.exag_i + 1) % EXAG_STEPS.len();
     }
@@ -653,6 +696,29 @@ fn input_update(
     }
 }
 
+/// Point the camera at a chain's own extent and frame it.
+///
+/// Read from the store census ( `ErosionCohort::centre` / `span_cells` ), never
+/// from a coordinate typed here, so it stays right when the builder moves the
+/// beacon. The altitude frames the chain's arc with headroom, and `auto_level`
+/// then resolves the matching render level from the same number — so arriving at
+/// a chain and seeing it at its own resolution is one action rather than three.
+fn frame_cohort(orbit: &mut Orbit, auto_level: &mut bool, c: &watch::ErosionCohort) {
+    let Some((face, i, j)) = c.centre() else { return };
+    let n = 1u32 << c.level;
+    let cu = ((i as f64 + 0.5) / n as f64) * 2.0 - 1.0;
+    let cv = ((j as f64 + 0.5) / n as f64) * 2.0 - 1.0;
+    let d = CubeCoord { face: vivarium_world::sphere::Face::from_index(face), u: cu, v: cv }.to_unit();
+    orbit.yaw = (d[2] as f32).atan2(d[0] as f32);
+    orbit.pitch = (d[1] as f32).clamp(-1.0, 1.0).asin().clamp(-1.55, 1.55);
+    orbit.vel_yaw = 0.0;
+    orbit.vel_pitch = 0.0;
+    let span_km =
+        radius_km() * std::f32::consts::FRAC_PI_2 * c.span_cells() as f32 / (1u32 << c.level) as f32;
+    orbit.dist = radius_km() + (span_km * 1.4).clamp(20.0, 7.0 * radius_km());
+    *auto_level = true;
+}
+
 /// Lens selection: present / deep time / replay. Every one of these is a
 /// *selection among materialized or lawfully-derivable states* — none of them
 /// changes how the world evolves ( #form-core-view-wall FE(4) ).
@@ -660,6 +726,7 @@ fn lens_update(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
     mut ex: ResMut<Explorer>,
+    mut orbit: ResMut<Orbit>,
     ladder: Res<LadderRes>,
     chain: Res<ChainRes>,
 ) {
@@ -670,6 +737,16 @@ fn lens_update(
         ex.lens = Lens::Present;
         ex.playing = false;
         ex.replay_playing = false;
+    }
+
+    // G — switch which settle history is on the axis. There can be more than one
+    // (a global sweep and a fine beacon are two chains, `watch::erosion_cohorts`),
+    // and which one you want is not something the view can infer.
+    if keys.just_pressed(KeyCode::KeyG) {
+        ex.cohort = (ex.cohort + 1) % chain.0.all.len().max(1);
+        if let Lens::Erosion(_) = ex.lens {
+            ex.lens = Lens::Erosion(0);
+        }
     }
 
     // E — the settle history. Opening on stage 0 rather than the present is
@@ -683,6 +760,14 @@ fn lens_update(
         ex.playing = matches!(ex.lens, Lens::Erosion(_));
         ex.replay_playing = false;
         ex.dwell = 0.0;
+        // A chain that covers a window rather than the globe is invisible from
+        // wherever the camera happened to be, and a scrub of something off-screen
+        // is a scrub of a blank planet. Going there is part of selecting it.
+        if let (Lens::Erosion(_), Some(c)) = (ex.lens, chain.0.cohort.as_ref()) {
+            if !c.is_global() {
+                frame_cohort(&mut orbit, &mut ex.auto_level, c);
+            }
+        }
     }
 
     if let Lens::Erosion(i) = ex.lens {
@@ -787,14 +872,30 @@ fn lens_update(
 fn request_update(orbit: Res<Orbit>, mut ex: ResMut<Explorer>, tx: Res<ReqTx>) {
     if ex.auto_level {
         let r = radius_km();
-        let alt = (orbit.dist - r).max(120.0);
+        let alt = (orbit.dist - r).max(20.0);
         let quarter = r * std::f32::consts::FRAC_PI_2;
         let target_cell = alt * 0.005;
         let l = (quarter / target_cell).log2().ceil() as i32;
         ex.level = l.clamp(LEVEL_MIN as i32, LEVEL_MAX as i32) as u8;
     }
+    // Past the globe's ceiling the view becomes a window, centred on whatever the
+    // camera is actually looking at — which is the planet's centre direction, so
+    // "where you are pointed" and "what gets drawn" are the same thing and no
+    // separate focus concept is needed.
+    let patch = (ex.level > LEVEL_GLOBE_MAX).then(|| {
+        let d = Vec3::new(
+            orbit.pitch.cos() * orbit.yaw.cos(),
+            orbit.pitch.sin(),
+            orbit.pitch.cos() * orbit.yaw.sin(),
+        );
+        let (face, i, j, _) =
+            CubeCoord::from_unit([d.x as f64, d.y as f64, d.z as f64]).cell(ex.level).to_face_ij();
+        pull::Patch::centred(face.index(), ex.level, i, j, PATCH_NX)
+    });
     let want = Request {
         level: ex.level,
+        patch,
+        cohort: ex.cohort,
         exag: EXAG_STEPS[ex.exag_i],
         paint: ex.paint,
         lens: ex.lens,
@@ -939,9 +1040,29 @@ fn current_pick(
     let cc = CubeCoord::from_unit(dir);
     let level = frame.req.level;
     let (face, i, j, _) = cc.cell(level).to_face_ij();
-    let nx = 1usize << level;
     let f = face.index();
-    let elev_m = *frame.tiles.get(f as usize)?.get(j as usize * nx + i as usize)?;
+    // The pick reads the SAME tile the mesh was built from, so a reported
+    // elevation can never drift from the one on screen. In window mode that
+    // means translating into the window, and reporting nothing when the cursor
+    // is outside it — an honest miss rather than a plausible number from the
+    // wrong place.
+    let (tile, ti, tj, nx) = match frame.req.patch {
+        Some(p) => {
+            if p.face != f || i < p.oi || j < p.oj {
+                return None;
+            }
+            let (ti, tj) = ((i - p.oi) as usize, (j - p.oj) as usize);
+            if ti >= p.nx || tj >= p.nx {
+                return None;
+            }
+            (frame.tiles.first()?, ti, tj, p.nx)
+        }
+        None => {
+            let nx = 1usize << level;
+            (frame.tiles.get(f as usize)?, i as usize, j as usize, nx)
+        }
+    };
+    let elev_m = *tile.get(tj * nx + ti)?;
     let to_build = |c: u32| if level <= cov.level { c << (cov.level - level) } else { c >> (level - cov.level) };
     let (bi, bj) = (to_build(i), to_build(j));
     let g = cc.to_geo();
