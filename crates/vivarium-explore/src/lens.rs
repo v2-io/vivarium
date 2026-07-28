@@ -2,18 +2,30 @@
 //! to say about it.
 //!
 //! A lens is a *selection*, never an authorship: which materialized state to
-//! observe ( #form-core-view-wall FE(4)). The three lenses are the three
+//! observe ( #form-core-view-wall FE(4)). The four lenses are the four
 //! questions an instrument for checking a world's systems gets asked —
-//! *what is the world now*, *how did it get here in world-time*, and *how did
-//! the builder get here in build-time* — and the last two are deliberately the
-//! same mechanism at different ends ( #form-time-indexed-stage-chains FE(5)).
+//! *what is the world now*, *how did the deep-time driver get here*, *how did
+//! the surface itself get here in world-time*, and *how did the builder get
+//! here in build-time* — and the last three are deliberately the same mechanism
+//! at three ends ( #form-time-indexed-stage-chains FE(5)).
+//!
+//! **The two time axes are different kinds and the difference is load-bearing.**
+//! `Stage` walks the mantle-thermal cooling chain, which is **law-evaluable**:
+//! $T_p(t)$ is closed form, so a stage nobody built can still be evaluated and
+//! the view may sample it as finely as it likes. `Erosion` walks the fluvial
+//! settle history, which is **materialized-only**: a stage exists because
+//! something ran to produce it. Its density is exactly what the builder ran, and
+//! asking for more is a *build* request, never a view parameter
+//! ( #form-time-indexed-stage-chains FE(8) ). That is why `--frames` reaches the
+//! first and nothing reaches the second: there is no dial to turn, and offering
+//! one would be the viewer carrying knowledge that belongs to the world's phase.
 
 use std::collections::BTreeSet;
 
 use vivarium_world::lithosphere::MANTLE_TP_C;
 use vivarium_world::mantle_thermal::{self, potential_temp_c, present_abyssal};
 use vivarium_world::query::World;
-use vivarium_world::store::RootEntry;
+use vivarium_world::store::{RootEntry, Store};
 use vivarium_world::time::Time;
 use vivarium_world::watch::{self, Coverage};
 
@@ -29,6 +41,11 @@ pub enum Lens {
     /// exist for any epoch but the present, and pretending otherwise would be
     /// the instrument lying about the one thing it is for.
     Stage(usize),
+    /// One **erosion settle stage** — index into [`Chain::epochs`]. Every tile on
+    /// screen is drawn at the *same* epoch, so this is the first **world-time**
+    /// playback this tree can offer: the surface as it stood after that many
+    /// epochs of fluvial work, not the order the builder happened to write it.
+    Erosion(usize),
     /// **Replay**: the store as it stood after the first *n* roots landed. This
     /// is *build* history — the order the builder wrote things — not world-time.
     Replay(usize),
@@ -129,6 +146,98 @@ impl Ladder {
     }
 }
 
+/// The erosion settle history this explorer can scrub — one cohort, chosen.
+///
+/// ## Why there is no density parameter here, and never will be
+///
+/// [`Ladder`] above buys smoothness by evaluating the cooling law at more mantle
+/// temperatures, and that is legitimate because the law is closed-form. Nothing
+/// of the sort is available here. An erosion stage exists because the kernel
+/// integrated to it; reaching epoch 37 *means* paying the 37 epochs. So the
+/// chain has exactly the stages the builder ran, this type reports that number,
+/// and the only way to get more is `vivarium build`
+/// ( #form-time-indexed-stage-chains FE(8) ).
+///
+/// The temptation the norm forbids is precise and worth naming, because it is
+/// the obvious way to make this pretty: 8 stages over a whole planet is a
+/// slideshow, and tweening between them would produce exactly the smooth carving
+/// motion a pattern-matching eye is watching *for* — a renderer's guess wearing
+/// the appearance of geomorphology ( #norm-no-depiction-without-referent FE(5),
+/// which names this system by name). The honest picture is the jump, plus the
+/// statement that there is nothing in between. That is what
+/// [`chain_provenance_line`] says on screen every frame.
+#[derive(Clone)]
+pub struct Chain {
+    /// The chosen cohort, if any stage chain exists at all.
+    pub cohort: Option<watch::ErosionCohort>,
+    /// Every cohort found, so the HUD can say what was passed over.
+    pub all: Vec<watch::ErosionCohort>,
+    /// Mean recorded residual per stage (m), index-parallel to the cohort's
+    /// epochs; `None` where the stage recorded none (pre-chain endpoints never
+    /// got one — the record is made at compute time and is never backfilled).
+    pub residual_mean: Vec<Option<f32>>,
+    pub residual_max: Vec<Option<f32>>,
+}
+
+impl Chain {
+    pub fn read(roots: &[RootEntry]) -> Chain {
+        let all = watch::erosion_cohorts(roots);
+        let cohort = all.first().filter(|c| c.len() > 1).cloned();
+        let n = cohort.as_ref().map(|c| c.len()).unwrap_or(0);
+        Chain { cohort, all, residual_mean: vec![None; n], residual_max: vec![None; n] }
+    }
+
+    pub fn len(&self) -> usize {
+        self.cohort.as_ref().map(|c| c.len()).unwrap_or(0)
+    }
+
+    pub fn epoch(&self, i: usize) -> Option<u32> {
+        self.cohort.as_ref().and_then(|c| c.epochs.get(i).copied())
+    }
+
+    /// The key predicate selecting exactly one world-moment: this cohort's source
+    /// tree, this epoch. Both fields matter — the epoch alone would mix cohorts,
+    /// and the source alone is the whole history at once.
+    pub fn stage_predicate(&self, i: usize) -> Option<(String, u32)> {
+        let c = self.cohort.as_ref()?;
+        Some((c.src.clone(), *c.epochs.get(i)?))
+    }
+}
+
+/// What the erosion scrub is showing, said in the register of what produced it.
+///
+/// Three facts a viewer would otherwise have to ask for, and one they would not
+/// think to ask: that the stages are addressable but their *intermediate*
+/// accuracy is undeclared. The scheme's own authors bound their accuracy claim
+/// to the steady-state endpoint and explicitly except the transient at large
+/// timestep, and an interior stage is exactly a transient state
+/// ( #form-time-indexed-stage-chains FE(8) ).
+pub fn chain_provenance_line(chain: &Chain, i: usize) -> String {
+    let Some(c) = chain.cohort.as_ref() else {
+        return "no erosion settle history exists in this store -- `vivarium build` with a stage stride \
+                is what creates one"
+            .to_string();
+    };
+    let e = c.epochs.get(i).copied().unwrap_or(0);
+    let prev = if i > 0 { c.epochs.get(i - 1).copied() } else { None };
+    let between = match prev {
+        Some(p) => format!(
+            "NOTHING exists between epoch {p} and epoch {e} -- the jump you see IS the discontinuity, \
+             and no frame will ever be inserted there by this view"
+        ),
+        None => "this is the earliest materialized stage; the world before it is the uncarved prior".to_string(),
+    };
+    format!(
+        "surface = every tile at epoch {e}, one world-moment ({} tiles at L{}). {between}. \
+         Materialized-only chain: {} stages is exactly what the builder ran, and there is no view dial \
+         for more ( #form-time-indexed-stage-chains FE(8) ). Addressable is NOT certified-accurate -- \
+         an interior stage is a transient state, and the scheme's accuracy claim covers only the endpoint",
+        c.tiles.get(i).copied().unwrap_or(0),
+        c.level,
+        c.len(),
+    )
+}
+
 /// The store facts one frame is drawn from — assembled by the worker, read by
 /// the HUD. Everything here is *measured off the store*, never asserted.
 pub struct FrameFacts {
@@ -164,6 +273,26 @@ pub struct FrameFacts {
     /// Puts this view's store handle has refused. The wall, counted.
     pub refused_writes: usize,
     pub pull_s: f32,
+
+    // --- the change channel: measured, not asserted -----------------------
+    /// Signed elevation change (m) of every drawn cell against the **uncarved
+    /// initial topography** — the surface the fluvial kernel was seeded from.
+    /// Present only when the change paint is up, because computing it costs one
+    /// law evaluation per cell.
+    ///
+    /// This is the *net* of two things the store does not separate: the kernel's
+    /// uplift driver, which raises nearly everything, and fluvial incision, which
+    /// lowers a small minority. The fractions below are what let a viewer read
+    /// which is which rather than seeing "erosion" everywhere.
+    pub change_mean: f32,
+    pub change_min: f32,
+    pub change_max: f32,
+    /// Fraction of drawn cells that have RISEN / FALLEN by more than 0.5 m.
+    pub frac_rising: f32,
+    pub frac_falling: f32,
+    /// This frame's world-time epoch, when the lens is the settle history.
+    pub stage_epoch: Option<u32>,
+    pub stage_tiles: usize,
 }
 
 /// Where the sea datum on screen came from.
@@ -181,6 +310,57 @@ impl SeaProvenance {
         match self {
             SeaProvenance::StoreCitizen => "store citizen (built)",
             SeaProvenance::ViewComputed => "VIEW-COMPUTED (this stage is not built)",
+        }
+    }
+}
+
+/// Read the recorded residual for every stage of the chosen cohort.
+///
+/// The residual is a keyed sibling of the stage itself (`aspect=stage-residual`,
+/// one f32 — #form-time-indexed-stage-chains FE(3)), so it is read the same way
+/// the stage is: off the root census, by complete key. It is read *by cohort*
+/// rather than through `World::erosion_stage_residual`, which builds its key with
+/// the running binary's source digest and therefore cannot see a previous
+/// world's history at all.
+///
+/// **What the number is, and is not.** It is the mean $|\Delta h|$ of the
+/// stage's final epoch — what the kernel *did*. It is not a convergence
+/// criterion and nothing gates on it: sustained uplift pins erosion's residual at
+/// the driver's rate, so there is no near-stationarity to detect
+/// ( #obs-erosion-residual-is-driver-bound ).
+pub fn read_residuals(store: &Store, roots: &[RootEntry], chain: &mut Chain) {
+    let Some(c) = chain.cohort.as_ref() else {
+        return;
+    };
+    let mut sums = vec![(0.0f64, 0usize, 0.0f32); c.len()];
+    for r in roots {
+        if !r.key.starts_with("erosion-tile@")
+            || watch::key_field(&r.key, "aspect") != Some("stage-residual")
+            || watch::key_field(&r.key, "src") != Some(c.src.as_str())
+        {
+            continue;
+        }
+        let Some(e) = watch::key_field(&r.key, "epochs").and_then(|v| v.parse::<u32>().ok()) else {
+            continue;
+        };
+        let Some(i) = c.epochs.iter().position(|x| *x == e) else {
+            continue;
+        };
+        let Some(bytes) = store.object_bytes(&r.object) else {
+            continue;
+        };
+        if bytes.len() < 4 {
+            continue;
+        }
+        let v = f32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+        sums[i].0 += v as f64;
+        sums[i].1 += 1;
+        sums[i].2 = sums[i].2.max(v);
+    }
+    for (i, (sum, n, max)) in sums.into_iter().enumerate() {
+        if n > 0 {
+            chain.residual_mean[i] = Some((sum / n as f64) as f32);
+            chain.residual_max[i] = Some(max);
         }
     }
 }
@@ -207,7 +387,11 @@ pub fn replay_roots(landings: &[watch::Landing], upto: usize) -> Vec<RootEntry> 
 /// The mantle temperature a lens observes.
 pub fn lens_tp(lens: Lens, ladder: &Ladder) -> f64 {
     match lens {
-        Lens::Present | Lens::Replay(_) => MANTLE_TP_C,
+        // The settle history is surface time, not mantle time: the fluvial chain
+        // was run at the present mantle temperature, so scrubbing it must not
+        // also move T_p. Two clocks that happen to share a slider would be a
+        // depiction of a coupling this tree does not have.
+        Lens::Present | Lens::Replay(_) | Lens::Erosion(_) => MANTLE_TP_C,
         Lens::Stage(i) => ladder.tps.get(i).copied().unwrap_or(MANTLE_TP_C),
     }
 }
@@ -220,8 +404,10 @@ pub fn surface_provenance_line(
     facts: &FrameFacts,
     cov: &Coverage,
     view_level: u8,
+    chain: &Chain,
 ) -> String {
     match lens {
+        Lens::Erosion(i) => chain_provenance_line(chain, i),
         Lens::Present => {
             if facts.eroded_tiles == 0 {
                 return "surface = the pure tectonic prior. NO fluvial tile covers anything on screen \

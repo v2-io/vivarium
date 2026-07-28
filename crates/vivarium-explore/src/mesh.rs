@@ -149,6 +149,10 @@ pub struct FaceInput<'a> {
     /// Standing-water depth (m) per cell.
     pub water: &'a dyn Fn(u32, u32) -> f32,
     pub water_max_m: f32,
+    /// Signed elevation change (m) vs the uncarved initial topography per cell.
+    /// Returns 0 when the change channel is not being computed this frame.
+    pub change: &'a dyn Fn(u32, u32) -> f32,
+    pub change_scale_m: f32,
 }
 
 /// Build one face's mesh. Geometry: corners projected onto the sphere at
@@ -156,8 +160,20 @@ pub struct FaceInput<'a> {
 /// sphere (bathymetry is colour-only), which is what "show me the landmasses
 /// above water" means geometrically.
 pub fn build_face(input: &FaceInput) -> (FaceMesh, SeamStats) {
-    let FaceInput { face, level, tile, exag, sea_m, mode, ghost, state, water, water_max_m } =
-        *input;
+    let FaceInput {
+        face,
+        level,
+        tile,
+        exag,
+        sea_m,
+        mode,
+        ghost,
+        state,
+        water,
+        water_max_m,
+        change,
+        change_scale_m,
+    } = *input;
     let nx = 1usize << level;
     let n1 = nx + 1;
     let gn = nx + 3;
@@ -238,6 +254,8 @@ pub fn build_face(input: &FaceInput) -> (FaceMesh, SeamStats) {
                     water_m: water(ci, cj),
                     seam_excess_m: excess[j * n1 + i],
                     water_max_m,
+                    change_m: change(ci, cj),
+                    change_scale_m,
                 },
             );
         }

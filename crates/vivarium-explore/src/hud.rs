@@ -103,6 +103,72 @@ pub fn unmodelled(frame: &Frame, ladder: &Ladder, cov: &Coverage) -> Vec<String>
         );
     }
 
+    // 4a. The chain exists but is not being watched, or does not exist at all.
+    // Stated in every lens, because "there is a settle history in this store"
+    // is exactly the fact a viewer cannot see from a picture of the present.
+    match frame.chain.cohort.as_ref() {
+        Some(c) if !matches!(frame.req.lens, Lens::Erosion(_)) => out.push(format!(
+            "This store HOLDS a {}-stage erosion settle history (epochs {:?}, {} tiles at L{}) and you are not \
+             looking at it. Press E. The present surface is its last stage only.",
+            c.len(),
+            c.epochs,
+            c.tiles.first().copied().unwrap_or(0),
+            c.level
+        )),
+        None => out.push(format!(
+            "No erosion settle history exists in this store: {} carve cohort(s) present, none with more than one \
+             materialized time-index. There is no world-time erosion playback to offer, and no renderer can \
+             manufacture one -- materializing intermediate stages is builder work \
+             ( #form-time-indexed-stage-chains FE(8) ).",
+            frame.chain.all.len()
+        )),
+        _ => {}
+    }
+    // Cohorts passed over: a settle history under a source tree that is not the
+    // one being scrubbed is a *different world's* history, and silently dropping
+    // it is the same silence the stale-src census exists to break.
+    let passed: Vec<String> = frame
+        .chain
+        .all
+        .iter()
+        .filter(|c| Some(&c.src) != frame.chain.cohort.as_ref().map(|s| &s.src))
+        .map(|c| format!("{} ({} stage{})", &c.src[..8.min(c.src.len())], c.len(), if c.len() == 1 { "" } else { "s" }))
+        .collect();
+    if !passed.is_empty() {
+        out.push(format!(
+            "{} other erosion cohort(s) in this store are NOT on screen and cannot be: {}. Each was carved under a \
+             different source tree, so its stages belong to a different world -- putting them on one time axis \
+             would draw the difference between two kernels as though it were the passage of world-time.",
+            passed.len(),
+            passed.join(", ")
+        ));
+    }
+
+    // 4b. What the settle history is and is not, when it is the subject.
+    if let Lens::Erosion(_) = frame.req.lens {
+        out.push(format!(
+            "The settle history has {} materialized stages and the view cannot make more of them. Erosion is a \
+             MATERIALIZED-ONLY chain: a stage exists because the kernel integrated to it, so density is what the \
+             builder ran and asking for more is `vivarium build`, never a view flag \
+             ( #form-time-indexed-stage-chains FE(8) ). Nothing is interpolated between the ticks; the jumps are real.",
+            frame.chain.len()
+        ));
+        out.push(
+            "Interior stages are ADDRESSABLE, not certified-accurate. The scheme's authors bound their accuracy \
+             claim to the steady-state endpoint and except the transient at large timestep (drainage area lags one \
+             step; knickpoint propagation has a Courant condition), and an interior stage is exactly a transient \
+             state. So this history is citable and watchable, and its intermediate accuracy at the current epoch \
+             size is UNDECLARED."
+                .to_string(),
+        );
+        out.push(
+            "Deep time does not move here. The whole settle history was run at the PRESENT mantle temperature, so \
+             scrubbing it changes the surface and not T_p -- there is no thermal-fluvial coupling in this tree to \
+             depict, and a shared slider would have implied one."
+                .to_string(),
+        );
+    }
+
     // 5. Deep time carries no carve.
     if matches!(frame.req.lens, Lens::Stage(_)) {
         out.push(
@@ -153,6 +219,25 @@ pub fn header(
 
     let lens = match frame.req.lens {
         Lens::Present => "PRESENT".to_string(),
+        Lens::Erosion(i) => {
+            let c = frame.chain.cohort.as_ref();
+            format!(
+                "EROSION SETTLE  stage {}/{}  epoch {}{}  (WORLD-time, every tile at the same moment){}",
+                i + 1,
+                frame.chain.len(),
+                frame.facts.stage_epoch.map(|e| e.to_string()).unwrap_or_else(|| "?".into()),
+                c.map(|c| format!(" of {}", c.epochs.last().copied().unwrap_or(0))).unwrap_or_default(),
+                match c {
+                    Some(c) if !c.is_current => format!(
+                        "  |  !! carved under source {} -- NOT this binary's ({}). \
+                         A PREVIOUS world's settle history, shown faithfully",
+                        &c.src[..8.min(c.src.len())],
+                        &vivarium_world::nomotheke::SRC_HASH[..8]
+                    ),
+                    _ => String::new(),
+                }
+            )
+        }
         Lens::Stage(i) => format!(
             "DEEP TIME  stage {}/{}  {:.3} Ga  T_p {:.0} C  [{}]",
             i + 1,
@@ -177,8 +262,15 @@ pub fn header(
         f.pull_s,
         f.land_frac * 100.0
     );
-    let _ = writeln!(s, "{}", crate::lens::surface_provenance_line(frame.req.lens, f, cov, frame.req.level));
+    let _ = writeln!(
+        s,
+        "{}",
+        crate::lens::surface_provenance_line(frame.req.lens, f, cov, frame.req.level, &frame.chain)
+    );
     let _ = writeln!(s, "paint [{}]  {}", frame.req.paint.name(), frame.req.paint.legend());
+    if frame.req.paint == crate::paint::Paint::Change {
+        let _ = writeln!(s, "{}", change_line(frame));
+    }
     // Every line above can run long; the caller wraps the whole block so the
     // panel never widens past the half-window it is pinned to.
     s
@@ -277,6 +369,80 @@ pub fn timeline(ladder: &Ladder, idx: usize, width: usize) -> String {
     )
 }
 
+/// The measured change field, in numbers, beside the colour that shows it.
+///
+/// The fractions are the point. 88% rising and 5.6% falling is not a caption on
+/// the picture — it is the finding, and it is what stops the colour from being
+/// read as "erosion everywhere" when most of what moved was the uplift driver.
+pub fn change_line(frame: &Frame) -> String {
+    let f = &frame.facts;
+    format!(
+        "change vs the uncarved prior: mean {:+.2} m | range {:.0} .. {:+.0} m | {:.1}% of cells RISEN, \
+         {:.1}% FALLEN (>0.5 m) | ramp full-scale +-{:.0} m (Z cycles). Rising is the kernel's uplift driver, \
+         falling is where fluvial incision outran it -- the store does not separate them, the SIGN does",
+        f.change_mean,
+        f.change_min,
+        f.change_max,
+        f.frac_rising * 100.0,
+        f.frac_falling * 100.0,
+        frame.req.change_scale_m,
+    )
+}
+
+/// The settle-history timeline: one tick per **materialized** stage.
+///
+/// Unlike [`timeline`] there is no citizen/view-computed distinction to draw,
+/// and that absence is the honest content: every tick here is a store citizen
+/// because a stage that was not built does not exist
+/// ( #form-time-indexed-stage-chains FE(8) ). The bar therefore reads as sparse,
+/// and it should — 8 ticks is what forty epochs of settle history was built at.
+pub fn chain_timeline(chain: &crate::lens::Chain, idx: usize) -> String {
+    let Some(c) = chain.cohort.as_ref() else {
+        return String::new();
+    };
+    let mut bar = String::new();
+    for i in 0..c.len() {
+        if i == idx {
+            bar.push_str("[#]");
+        } else {
+            bar.push('#');
+        }
+        if i + 1 < c.len() {
+            bar.push_str("---");
+        }
+    }
+    let residual = match (chain.residual_mean.get(idx).copied().flatten(), chain.residual_max.get(idx).copied().flatten())
+    {
+        (Some(m), Some(x)) => format!(
+            "stage residual: mean {m:.3} m, max {x:.3} m across {} tiles -- the mean |dh| of this stage's FINAL \
+             epoch, recorded. It is what the kernel DID, not a criterion it met: sustained uplift pins erosion's \
+             residual at the driver's rate, so there is no near-stationarity to gate on \
+             ( #obs-erosion-residual-is-driver-bound )",
+            c.tiles.get(idx).copied().unwrap_or(0)
+        ),
+        _ => "stage residual: NOT RECORDED for this stage (endpoint carried over from a pre-chain build; the \
+              record is made at compute time and is never backfilled)"
+            .to_string(),
+    };
+    let ragged = if c.is_square() {
+        String::new()
+    } else {
+        format!(
+            "\n  !! ragged chain: stages cover {:?} tiles respectively -- a frame is one moment only where its \
+             stage covers everything; elsewhere you are seeing the uncarved prior",
+            c.tiles
+        )
+    };
+    format!(
+        "epoch {} {bar} {}   {} materialized stages, stride {}{}\n  {residual}",
+        c.epochs.first().copied().unwrap_or(0),
+        c.epochs.last().copied().unwrap_or(0),
+        c.len(),
+        c.epochs.get(1).zip(c.epochs.first()).map(|(b, a)| b - a).unwrap_or(0),
+        ragged,
+    )
+}
+
 /// The honesty block from the shared reader — **the same text** `vivarium watch`
 /// prints under its ASCII globe, byte for byte. One instrument at two fidelities
 /// of attention, not two instruments that happen to agree today.
@@ -311,7 +477,8 @@ pub fn craton_line(f: &FrameFacts) -> String {
 /// The key map, kept last so it never pushes information off the top.
 pub fn keys(_paint: Paint) -> String {
     "drag spin | wheel zoom | [ ] level | A auto-level | X relief | O pole | R reset\n\
-     TAB paint (surface/provenance/water/seam) | T deep time | K play/pause | J/L step stage | P present\n\
-     V replay build history | , . hour | N M day | Y headlight | C CAPTURE SIGHTING | Esc quit"
+     TAB paint (1 surface 2 provenance 3 water 4 seam 5 change) | Z change scale | P present\n\
+     E EROSION SETTLE HISTORY (world-time) | T deep time (mantle cooling) | V replay (build history)\n\
+     K play/pause | J/L step one stage | , . hour | N M day | Y headlight | C CAPTURE SIGHTING | Esc quit"
         .to_string()
 }

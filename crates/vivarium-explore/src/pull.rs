@@ -33,7 +33,7 @@ use vivarium_world::sphere::{CellId, CubeCoord, Face};
 use vivarium_world::store::Store;
 use vivarium_world::watch::{self, BuildState, Coverage, TileFlags};
 
-use crate::lens::{FrameFacts, Ladder, Lens, SeaProvenance};
+use crate::lens::{Chain, FrameFacts, Ladder, Lens, SeaProvenance};
 use crate::mesh::{self, FaceInput, FaceMesh, SeamStats};
 use crate::paint::Paint;
 use crate::water::{WaterField, WET_M};
@@ -46,6 +46,9 @@ pub struct Request {
     pub exag: f32,
     pub paint: Paint,
     pub lens: Lens,
+    /// Full-scale for the change ramp (m) — a different scale is a different
+    /// picture, so it belongs in the equality that suppresses rebuilds.
+    pub change_scale_m: f32,
 }
 
 /// A completed frame: six meshes plus everything the HUD needs to describe them.
@@ -63,6 +66,9 @@ pub struct Frame {
     /// Freshly-observed ladder residency (a builder in another terminal may have
     /// landed stages since the last frame).
     pub ladder_built: Vec<bool>,
+    /// The settle history as the worker last censused it — the chain grows while
+    /// a builder runs, so the scrub's own axis has to age with the store.
+    pub chain: Chain,
 }
 
 /// News the worker sends without a full rebuild.
@@ -160,6 +166,8 @@ pub fn spawn(
         let mut cov = Coverage::parse(&roots);
         let mut water = WaterField::load(&world, &cov);
         let mut landings: Vec<watch::Landing> = Vec::new();
+        let mut chain = Chain::read(&roots);
+        crate::lens::read_residuals(&store, &roots, &mut chain);
 
         while let Ok(req) = rx.recv() {
             let t0 = std::time::Instant::now();
@@ -174,6 +182,8 @@ pub fn spawn(
                 water = WaterField::load(&world, &cov);
                 landings.clear();
                 ladder.refresh_residency(&world);
+                chain = Chain::read(&roots);
+                crate::lens::read_residuals(&store, &roots, &mut chain);
                 let _ = tx.send(Msg::Landings(roots.len()));
             }
 
@@ -211,6 +221,18 @@ pub fn spawn(
             let regions = match req.lens {
                 Lens::Present => world.load_current_eroded_regions(),
                 Lens::Stage(_) => Vec::new(),
+                // One world-moment: this cohort's source tree, this exact epoch.
+                // Both fields are required — the epoch alone would assemble
+                // stages from two different kernels into one surface, and the
+                // source alone is the whole settle history at once.
+                Lens::Erosion(i) => match chain.stage_predicate(i) {
+                    Some((src, epoch)) => world.load_eroded_regions_where(|k| {
+                        watch::key_field(k, "src") == Some(src.as_str())
+                            && watch::key_field(k, "epochs").and_then(|v| v.parse::<u32>().ok())
+                                == Some(epoch)
+                    }),
+                    None => Vec::new(),
+                },
                 Lens::Replay(n) => {
                     if landings.is_empty() {
                         landings = watch::landings(&dir).unwrap_or_default();
@@ -244,6 +266,8 @@ pub fn spawn(
             let mut seam = SeamStats::default();
             let (mut land, mut total, mut prior_fallback) = (0usize, 0usize, 0usize);
             let (mut inland_water, mut water_cells) = (0usize, 0usize);
+            let (mut chg_sum, mut chg_min, mut chg_max) = (0.0f64, 0.0f32, 0.0f32);
+            let (mut rising, mut falling) = (0usize, 0usize);
 
             let faces: Vec<FaceMesh> = std::thread::scope(|s| {
                 let (world, regions, cov, water, cache, ghost) =
@@ -280,13 +304,56 @@ pub fn spawn(
                                 water.depth_at(f, ci, cj, level)
                             };
 
+                            // The change channel's baseline: the **uncarved
+                            // initial topography**, which is a pure function of
+                            // the seed ( `erosion::surface_at` with no regions is
+                            // exactly `gen::initial_topography_m` ). Evaluating a
+                            // law the view does not author, off the frame path,
+                            // writing nowhere — the same standing as the deep-time
+                            // stage surfaces above. Paid only when the change
+                            // paint is up, because it is one evaluation per cell.
+                            let baseline: Vec<f32> = if req.paint.needs_change() {
+                                let mut b = Vec::with_capacity(nx * nx);
+                                for j in 0..nx as u32 {
+                                    for i in 0..nx as u32 {
+                                        let cid = CellId::from_face_ij(face, i, j, level);
+                                        b.push(
+                                            vivarium_world::erosion::surface_at(seed, cid, &[]) as f32
+                                        );
+                                    }
+                                }
+                                b
+                            } else {
+                                Vec::new()
+                            };
+                            let change_at = |ci: u32, cj: u32| -> f32 {
+                                if baseline.is_empty() {
+                                    return 0.0;
+                                }
+                                tile[cj as usize * nx + ci as usize]
+                                    - baseline[cj as usize * nx + ci as usize]
+                            };
+
                             // Per-face tallies — the countable half of the frame.
                             let (mut l, mut fb, mut iw, mut wc) = (0usize, 0usize, 0usize, 0usize);
+                            let (mut cs, mut cmin, mut cmax) = (0.0f64, 0.0f32, 0.0f32);
+                            let (mut ri, mut fa) = (0usize, 0usize);
                             for j in 0..nx as u32 {
                                 for i in 0..nx as u32 {
                                     let h = tile[j as usize * nx + i as usize];
                                     if h > sea_m {
                                         l += 1;
+                                    }
+                                    if !baseline.is_empty() {
+                                        let d = change_at(i, j);
+                                        cs += d as f64;
+                                        cmin = cmin.min(d);
+                                        cmax = cmax.max(d);
+                                        if d > 0.5 {
+                                            ri += 1;
+                                        } else if d < -0.5 {
+                                            fa += 1;
+                                        }
                                     }
                                     if !is_stage {
                                         let cid = CellId::from_face_ij(face, i, j, level);
@@ -315,19 +382,27 @@ pub fn spawn(
                                 state: &state,
                                 water: &water_at,
                                 water_max_m: water.max_depth_m,
+                                change: &change_at,
+                                change_scale_m: req.change_scale_m,
                             });
-                            (fm, tile, fseam, l, fb, iw, wc)
+                            (fm, tile, fseam, l, fb, iw, wc, cs, cmin, cmax, ri, fa)
                         })
                     })
                     .collect();
                 handles
                     .into_iter()
                     .map(|h| {
-                        let (fm, tile, fseam, l, fb, iw, wc) = h.join().expect("face build panicked");
+                        let (fm, tile, fseam, l, fb, iw, wc, cs, cmin, cmax, ri, fa) =
+                            h.join().expect("face build panicked");
                         land += l;
                         prior_fallback += fb;
                         inland_water += iw;
                         water_cells += wc;
+                        chg_sum += cs;
+                        chg_min = chg_min.min(cmin);
+                        chg_max = chg_max.max(cmax);
+                        rising += ri;
+                        falling += fa;
                         total += tile.len();
                         tiles.push(tile);
                         seam.merge(&fseam);
@@ -352,6 +427,16 @@ pub fn spawn(
                 tp_c: tp,
                 refused_writes: store.refused_writes(),
                 pull_s: t0.elapsed().as_secs_f32(),
+                change_mean: (chg_sum / total.max(1) as f64) as f32,
+                change_min: chg_min,
+                change_max: chg_max,
+                frac_rising: rising as f32 / total.max(1) as f32,
+                frac_falling: falling as f32 / total.max(1) as f32,
+                stage_epoch: match req.lens {
+                    Lens::Erosion(i) => chain.epoch(i),
+                    _ => None,
+                },
+                stage_tiles: regions.len(),
             };
 
             let frame = Frame {
@@ -362,6 +447,7 @@ pub fn spawn(
                 facts,
                 roots: frame_roots,
                 ladder_built: ladder.built.clone(),
+                chain: chain.clone(),
             };
             if tx.send(Msg::Frame(Box::new(frame))).is_err() {
                 return; // window closed

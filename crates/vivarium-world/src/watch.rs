@@ -111,7 +111,13 @@ pub struct Coverage {
 }
 
 /// Pull one `key=value` field out of a canonical complete-key string.
-fn key_field<'a>(key: &'a str, name: &str) -> Option<&'a str> {
+///
+/// Public because a *chain* reader outside this crate needs it: selecting one
+/// settle-history stage is a predicate over `epochs=` and `src=` in the complete
+/// key ( [`crate::query::World::load_eroded_regions_where`] takes exactly such a
+/// predicate), and a caller that hand-rolls the parse is a second parser that
+/// can disagree with this one about what a key says.
+pub fn key_field<'a>(key: &'a str, name: &str) -> Option<&'a str> {
     key.split('|').find_map(|f| f.strip_prefix(name).and_then(|r| r.strip_prefix('=')))
 }
 
@@ -401,6 +407,91 @@ pub fn interior(roots: &[RootEntry]) -> Vec<InteriorReport> {
         .collect()
 }
 
+/// One erosion **settle history**: the stages carved under a single source tree.
+///
+/// A chain is only coherent within one `src=` cohort. Two stages carved under
+/// different source trees are stages of two different worlds, and ordering them
+/// on one time axis would put the difference between two kernels on screen as
+/// though it were the passage of world-time — the same two-datum fault the
+/// stale-`src` ribbon is, moved onto the time axis. So a scrub picks a cohort
+/// and says which one.
+#[derive(Clone, Debug)]
+pub struct ErosionCohort {
+    /// The whole-crate source digest every stage in this cohort was carved under.
+    pub src: String,
+    /// Whether that digest is the one this binary was built from — i.e. whether
+    /// these stages are *this* world's settle history or a previous world's.
+    pub is_current: bool,
+    /// Distinct `epochs` values present, ascending. **This is the chain's
+    /// density, and it is not a view parameter**: erosion is a materialized-only
+    /// chain ( #form-time-indexed-stage-chains FE(8) ), so a consumer gets
+    /// exactly what was built and asking for more is a build request.
+    pub epochs: Vec<u32>,
+    /// Tiles present at each epoch, index-parallel to `epochs`. Unequal entries
+    /// mean the chain is ragged — some tiles have a longer history than others,
+    /// which a scrub must report rather than smooth over.
+    pub tiles: Vec<usize>,
+    /// The finest level any stage in this cohort was carved at.
+    pub level: u8,
+}
+
+impl ErosionCohort {
+    /// Distinct materialized stages. `<= 1` means this cohort has no interior.
+    pub fn len(&self) -> usize {
+        self.epochs.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.epochs.is_empty()
+    }
+    /// True when every stage covers the same number of tiles — the condition
+    /// under which a scrub frame is one world-moment everywhere it draws.
+    pub fn is_square(&self) -> bool {
+        self.tiles.windows(2).all(|w| w[0] == w[1])
+    }
+}
+
+/// Group every `erosion-tile` height root into settle-history cohorts by source
+/// digest, richest first.
+///
+/// Ordering is *usefulness for a time scrub*: cohorts with a real interior come
+/// before endpoint-only ones, and the current source wins ties — so the first
+/// entry is the chain a viewer should be offered, and the `is_current` flag is
+/// what tells them whether they are watching this world or a previous one.
+/// Stage-residual siblings (`aspect=`) are metadata, not surfaces, and are
+/// skipped exactly as [`crate::query::World::load_eroded_regions_where`] skips
+/// them.
+pub fn erosion_cohorts(roots: &[RootEntry]) -> Vec<ErosionCohort> {
+    let mut per: BTreeMap<String, (BTreeMap<u32, usize>, u8)> = BTreeMap::new();
+    for r in roots {
+        if !r.key.starts_with("erosion-tile@") || key_field(&r.key, "aspect").is_some() {
+            continue;
+        }
+        let (Some(src), Some(epochs)) = (
+            key_field(&r.key, "src"),
+            key_field(&r.key, "epochs").and_then(|v| v.parse::<u32>().ok()),
+        ) else {
+            continue;
+        };
+        let level = key_field(&r.key, "level").and_then(|v| v.parse::<u8>().ok()).unwrap_or(0);
+        let e = per.entry(src.to_string()).or_default();
+        *e.0.entry(epochs).or_default() += 1;
+        e.1 = e.1.max(level);
+    }
+    let cur = crate::nomotheke::SRC_HASH;
+    let mut out: Vec<ErosionCohort> = per
+        .into_iter()
+        .map(|(src, (counts, level))| ErosionCohort {
+            is_current: src == cur,
+            epochs: counts.keys().copied().collect(),
+            tiles: counts.values().copied().collect(),
+            level,
+            src,
+        })
+        .collect();
+    out.sort_by_key(|c| (c.epochs.len() == 1, !c.is_current, std::cmp::Reverse(c.epochs.len())));
+    out
+}
+
 /// The honesty block: epistemic state the registry **already declares** and that
 /// has never reached a viewer.
 ///
@@ -588,5 +679,86 @@ mod tests {
     fn empty_store_replays_to_nothing_rather_than_panicking() {
         assert!(frame_bounds(&[], 10).is_empty());
         assert!(interior(&[]).is_empty());
+        assert!(erosion_cohorts(&[]).is_empty());
+    }
+
+    /// The property a world-time scrub rests on: **stages never cross source
+    /// trees**. Two cohorts carved under different digests are two worlds, and if
+    /// this grouping ever merged them a scrub would draw the difference between
+    /// two kernels as though it were elapsed world-time — indistinguishable, to
+    /// the eye, from geology.
+    #[test]
+    fn settle_histories_are_grouped_by_source_tree_and_never_merged() {
+        let cur = crate::nomotheke::SRC_HASH;
+        let old = "0000000000000000";
+        let tile = |src: &str, e: u32, oi: u32| {
+            root(&format!(
+                "erosion-tile@v|src={src}|seed=0|face=0|level=9|oi={oi}|oj=0|nx=64|epochs={e}"
+            ))
+        };
+        let mut roots = Vec::new();
+        for e in [5u32, 10, 15] {
+            for oi in [0u32, 64] {
+                roots.push(tile(cur, e, oi));
+                // The residual sibling: metadata, and it must not be counted as a
+                // stage or every epoch would appear to hold twice its tiles.
+                roots.push(root(&format!(
+                    "erosion-tile@v|src={cur}|seed=0|face=0|level=9|oi={oi}|oj=0|nx=64|epochs={e}|aspect=stage-residual"
+                )));
+            }
+        }
+        roots.push(tile(old, 40, 0));
+        roots.push(tile(old, 60, 0));
+
+        let cohorts = erosion_cohorts(&roots);
+        assert_eq!(cohorts.len(), 2, "two source trees, two histories");
+        let c = &cohorts[0];
+        assert!(c.is_current, "the current source's chain is offered first");
+        assert_eq!(c.epochs, vec![5, 10, 15]);
+        assert_eq!(c.tiles, vec![2, 2, 2], "residual siblings are metadata, not stages");
+        assert!(c.is_square());
+        assert_eq!(c.level, 9);
+        assert_eq!(cohorts[1].src, old);
+        assert_eq!(cohorts[1].epochs, vec![40, 60]);
+    }
+
+    /// A cohort with one materialized time-index has no interior, and ordering
+    /// must put it behind any chain that does — otherwise a store whose current
+    /// source is endpoint-only would offer a one-frame "scrub" while a real
+    /// history sat unoffered.
+    #[test]
+    fn endpoint_only_cohorts_sort_behind_real_chains() {
+        let cur = crate::nomotheke::SRC_HASH;
+        let mut roots = vec![root(&format!(
+            "erosion-tile@v|src={cur}|seed=0|face=0|level=9|oi=0|oj=0|nx=64|epochs=40"
+        ))];
+        for e in [5u32, 10, 15] {
+            roots.push(root(&format!(
+                "erosion-tile@v|src=deadbeefdeadbeef|seed=0|face=0|level=9|oi=0|oj=0|nx=64|epochs={e}"
+            )));
+        }
+        let cohorts = erosion_cohorts(&roots);
+        assert_eq!(cohorts[0].len(), 3, "the chain with an interior is offered first");
+        assert!(!cohorts[0].is_current, "even when it is not this binary's source");
+        assert!(cohorts[1].is_current);
+    }
+
+    /// A ragged chain — stages covering different tile counts — is a frame that
+    /// is one world-moment only where its stage reaches, and a scrub has to be
+    /// able to say so rather than presenting a partial moment as a whole one.
+    #[test]
+    fn a_ragged_chain_reports_itself_as_ragged() {
+        let cur = crate::nomotheke::SRC_HASH;
+        let mut roots = Vec::new();
+        for (e, tiles) in [(5u32, 2u32), (10, 1)] {
+            for oi in 0..tiles {
+                roots.push(root(&format!(
+                    "erosion-tile@v|src={cur}|seed=0|face=0|level=9|oi={oi}|oj=0|nx=64|epochs={e}"
+                )));
+            }
+        }
+        let c = &erosion_cohorts(&roots)[0];
+        assert_eq!(c.tiles, vec![2, 1]);
+        assert!(!c.is_square(), "unequal coverage across stages is visible, not smoothed");
     }
 }

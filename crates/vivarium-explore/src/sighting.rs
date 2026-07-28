@@ -154,9 +154,37 @@ fn body(
         match frame.req.lens {
             Lens::Present => "present (live world)".to_string(),
             Lens::Stage(i) => format!("deep-time stage {i}"),
+            Lens::Erosion(i) => format!(
+                "erosion settle stage {}/{} — WORLD-time, every tile at epoch {}",
+                i + 1,
+                frame.chain.len(),
+                frame.facts.stage_epoch.map(|e| e.to_string()).unwrap_or_else(|| "?".into())
+            ),
             Lens::Replay(n) => format!("replay after {n} root landings (BUILD history, not world-time)"),
         }
     );
+    // The whole point of a time-index in the key: a sighting on the settle
+    // history names a *key*, not a description, so whoever writes the probe can
+    // address exactly this moment ( #form-time-indexed-stage-chains FE(2) ).
+    if let (Lens::Erosion(i), Some(c)) = (frame.req.lens, frame.chain.cohort.as_ref()) {
+        let _ = writeln!(
+            s,
+            "- stage key fields: `epochs={}` `src={}`{} · {} tiles · recorded residual {} \
+             (measured final-epoch mean |Δh|, **not** a convergence criterion)",
+            frame.facts.stage_epoch.unwrap_or(0),
+            c.src,
+            if c.is_current { "" } else { " — **NOT this binary's source tree**" },
+            frame.facts.stage_tiles,
+            frame
+                .chain
+                .residual_mean
+                .get(i)
+                .copied()
+                .flatten()
+                .map(|r| format!("{r:.4} m"))
+                .unwrap_or_else(|| "not recorded".into()),
+        );
+    }
     if let Some(st) = &v.stage {
         let _ = writeln!(
             s,

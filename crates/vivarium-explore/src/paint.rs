@@ -33,10 +33,28 @@ pub enum Paint {
     /// drops the threshold and removes the competing signal so the structure of
     /// a discontinuity can be read.
     Seam,
+    /// Colour is **signed elevation change against the uncarved initial
+    /// topography** — the surface the fluvial kernel was seeded from.
+    ///
+    /// This mode exists because of a measurement, not a preference. Across the
+    /// default world's whole settle history the mean absolute change is 3.8 m at
+    /// the first stage and 25.6 m at the last, against relief of kilometres: in
+    /// hypsometric colour, forty epochs of erosion are invisible. The quantity is
+    /// real and was simply never drawn.
+    ///
+    /// It is signed and diverging for a second measured reason. 88% of cells
+    /// **rise** and 5.6% **fall** — the kernel's uplift driver acts nearly
+    /// everywhere while fluvial incision is a thin minority, exactly as
+    /// #obs-erosion-residual-is-driver-bound reports. A one-sided "erosion" ramp
+    /// would paint uplift and call it carving, which is the decalibration
+    /// #norm-no-depiction-without-referent exists to prevent. So rising and
+    /// falling are opposite hues and the HUD carries both fractions.
+    Change,
 }
 
 impl Paint {
-    pub const ALL: [Paint; 4] = [Paint::Surface, Paint::Provenance, Paint::Water, Paint::Seam];
+    pub const ALL: [Paint; 5] =
+        [Paint::Surface, Paint::Provenance, Paint::Water, Paint::Seam, Paint::Change];
 
     pub fn name(self) -> &'static str {
         match self {
@@ -44,7 +62,14 @@ impl Paint {
             Paint::Provenance => "provenance",
             Paint::Water => "water",
             Paint::Seam => "seam",
+            Paint::Change => "change",
         }
+    }
+
+    /// Whether this mode needs the per-cell baseline. Computing it is one law
+    /// evaluation per drawn cell, so it is paid only when it is the subject.
+    pub fn needs_change(self) -> bool {
+        self == Paint::Change
     }
 
     /// What the colour on screen *means* right now — stated every frame, because
@@ -68,6 +93,12 @@ impl Paint {
             Paint::Seam => {
                 "colour = cross-face elevation step in excess of 3x the local within-face step. \
                  Dark is healthy; magenta is a genuine chart-seam discontinuity in the world, not steep terrain"
+            }
+            Paint::Change => {
+                "colour = SIGNED elevation change vs the uncarved initial topography (the surface erosion was \
+                 seeded from). Blue = LOWERED (fluvial incision won here) | red/orange = RAISED (the uplift \
+                 driver won) | near-black = unchanged. The store does not separate the two, so this is the NET; \
+                 the sign is what tells them apart. Z cycles the scale"
             }
         }
     }
@@ -94,6 +125,14 @@ pub struct CellFacts {
     pub seam_excess_m: f32,
     /// Deepest water in the field (m), for the ramp.
     pub water_max_m: f32,
+    /// Signed elevation change (m) vs the uncarved initial topography; 0 when the
+    /// change channel is not being computed.
+    pub change_m: f32,
+    /// Full-scale for the change ramp (m), **fixed by the viewer, never
+    /// auto-fitted per frame**. An auto-scale would renormalize every step of a
+    /// time scrub, so a growing signal would look constant — the one thing the
+    /// scrub exists to show, hidden by the display of it.
+    pub change_scale_m: f32,
 }
 
 fn lerp3(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
@@ -226,6 +265,29 @@ pub fn shade(mode: Paint, f: CellFacts) -> [f32; 4] {
         }
 
         Paint::Seam => relief_modulate([0.16, 0.17, 0.20], f.h_m, f.sea_m),
+
+        Paint::Change => {
+            // Diverging about zero, on a signed sqrt so the small-but-real
+            // majority of the signal is visible without the few-hundred-metre
+            // outliers taking the whole range. Zero is near-black rather than
+            // white: unchanged ground should recede, not glare.
+            let t = (f.change_m / f.change_scale_m.max(1.0)).clamp(-1.0, 1.0);
+            let m = t.abs().sqrt();
+            let base = if t < 0.0 {
+                // LOWERED — incision. Cyan through deep blue.
+                lerp3([0.10, 0.11, 0.14], [0.20, 0.85, 1.00], m)
+            } else {
+                // RAISED — uplift outran incision here. Amber through red.
+                lerp3([0.10, 0.11, 0.14], [1.00, 0.42, 0.10], m)
+            };
+            // A hairline at the coastline, so the change field is still read
+            // against the geography it belongs to rather than floating free.
+            if (f.h_m - f.sea_m).abs() < 60.0 {
+                lerp3(base, [0.55, 0.55, 0.60], 0.35)
+            } else {
+                base
+            }
+        }
     };
     // Applied LAST and in every mode: see `seam_overlay`. Making this
     // conditional on the paint mode would return the C0 bridge to a text-only

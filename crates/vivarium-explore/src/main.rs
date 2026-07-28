@@ -55,7 +55,7 @@ use vivarium_world::sphere::CubeCoord;
 use vivarium_world::store::Store;
 use vivarium_world::watch::{self, BuildState, Coverage};
 
-use crate::lens::{Ladder, Lens};
+use crate::lens::{Chain, Ladder, Lens};
 use crate::mesh::radius_km;
 use crate::paint::Paint;
 use crate::pull::{Frame, Msg, Request};
@@ -68,6 +68,17 @@ const LEVEL_MAX: u8 = 9;
 
 /// Relief exaggeration cycle for X. 1 = honest (a billiard ball, truthfully).
 const EXAG_STEPS: [f32; 4] = [1.0, 10.0, 20.0, 50.0];
+
+/// Full-scale steps for the change ramp (m), cycled by Z.
+///
+/// Fixed steps rather than a per-frame auto-fit, and that is the whole design.
+/// The change field grows monotonically along the settle history — measured on
+/// the default world, mean |change| runs 3.8 m at the first stage to 25.6 m at
+/// the last — so a ramp that renormalized each frame would show a constant
+/// picture across a scrub whose entire subject is the growth. The default sits
+/// just above the last stage's mean so early stages read as faint and late ones
+/// as saturated, which is what the numbers actually say.
+const CHANGE_STEPS: [f32; 5] = [10.0, 40.0, 150.0, 600.0, 2400.0];
 
 const SPACE: Color = Color::srgb(0.012, 0.014, 0.022);
 
@@ -126,6 +137,7 @@ struct Explorer {
     auto_level: bool,
     level: u8,
     exag_i: usize,
+    change_i: usize,
     /// Deep-time sweep.
     playing: bool,
     dwell: f32,
@@ -156,6 +168,11 @@ struct Ident {
 
 #[derive(Resource)]
 struct LadderRes(Ladder);
+/// The settle history's own axis. Kept ECS-side so the input system knows how
+/// many stages exist without asking the worker — and refreshed from every frame,
+/// so a chain that grows while a builder runs grows on screen too.
+#[derive(Resource)]
+struct ChainRes(Chain);
 #[derive(Resource)]
 struct CovRes(Coverage);
 /// The water field, kept view-side for the cursor readout (the meshes already
@@ -228,11 +245,34 @@ vivarium explore -- the 3D explorer: an instrument for seeing whether a world's
   [dir]          which vivium (else $VIVARIUM_WORLD, else ~/.cache/vivarium/globe-world)
   --replay       open on the build history rather than the present
   --level L      fix the render level (else it follows altitude)
-  --frames N     how densely the VIEW samples the cooling law (default 120).
+  --frames N     how densely the VIEW samples the COOLING law (default 120).
                  This is observation density, not demand: it changes nothing
                  about the world and writes nothing. Stages the builder has
                  materialized are marked as store citizens on the timeline.
-  --paint MODE   surface | provenance | water | seam
+                 It reaches the cooling chain and nothing else, because that
+                 chain is law-evaluable -- T_p(t) is closed form, so a denser
+                 request is more evaluations of the law. It does NOT reach the
+                 erosion settle history, and no flag will: that chain is
+                 materialized-only, its density is exactly what the builder ran,
+                 and asking for more is a build request, not a view parameter.
+  --paint MODE   surface | provenance | water | seam | change
+
+THE TWO TIME AXES
+
+  E   the EROSION SETTLE HISTORY -- world-time. Every tile on screen is drawn at
+      the same epoch, so this is the surface evolving, not the builder working.
+      The stages are what the builder materialized (8 on the default world) and
+      nothing is interpolated between them: where the picture jumps, nothing
+      exists in between, and the HUD says so.
+  T   DEEP TIME -- the mantle cooling chain. Tectonics and isostasy only; no
+      fluvial carve exists at any epoch but the present.
+  V   REPLAY -- BUILD history, the order roots landed. Not world-time.
+
+  Paint 5 (change) is what makes the settle history legible: across the whole
+  history the mean absolute elevation change is 3.8 m rising to 25.6 m, against
+  relief of kilometres, so in hypsometric colour forty epochs of erosion are
+  invisible. It is signed for a reason -- 88% of cells RISE (the uplift driver)
+  and 5.6% FALL (fluvial incision won there).
 
 The store is opened READ-ONLY. This binary cannot author a world citizen; the
 HUD shows the refused-write count so the wall is a number, not a promise.
@@ -298,6 +338,8 @@ fn main() {
     let cov = Coverage::parse(&roots);
     let ladder = Ladder::read(&world, spec.demand.frames, view_frames);
     let water = WaterField::load(&world, &cov);
+    let mut chain = Chain::read(&roots);
+    lens::read_residuals(&store, &roots, &mut chain);
     println!(
         "[explore] vivium \"{}\" (seed {:#018x}) at {} -- {} roots, {} tiles at L{}, ladder {} stages ({} built)",
         spec.name,
@@ -309,6 +351,32 @@ fn main() {
         ladder.len(),
         ladder.built_count()
     );
+    match chain.cohort.as_ref() {
+        Some(c) => println!(
+            "[explore] erosion settle history: {} materialized stages, epochs {:?}, {} tiles at L{}, src {}{}\n\
+             [explore]   press E to scrub it, 5 for the change paint. This chain is materialized-only: its\n\
+             [explore]   density is what the builder ran, and no view flag can add to it.",
+            c.len(),
+            c.epochs,
+            c.tiles.first().copied().unwrap_or(0),
+            c.level,
+            &c.src[..8.min(c.src.len())],
+            if c.is_current {
+                " (this binary's source)".to_string()
+            } else {
+                format!(
+                    " -- NOT this binary's source ({}). A previous world's history; \
+                     the HUD says so on every frame.",
+                    &vivarium_world::nomotheke::SRC_HASH[..8]
+                )
+            }
+        ),
+        None => println!(
+            "[explore] no erosion settle history in this store (no nomos has more than one materialized \
+             time-index), so there is nothing for E to scrub. `vivarium build` with a stage stride is what \
+             creates one."
+        ),
+    }
 
     let landings = watch::landings(&dir).unwrap_or_default();
     let replay_frames = watch::frame_bounds(&landings, 240);
@@ -321,10 +389,18 @@ fn main() {
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
         .filter(|i| *i < ladder.len());
-    let start_lens = match (start_stage, start_replay && !replay_frames.is_empty()) {
-        (Some(i), _) => Lens::Stage(i),
-        (None, true) => Lens::Replay(replay_frames[0]),
-        (None, false) => Lens::Present,
+    // `VIVARIUM_EROSION=<i>` opens on one settle stage — the same verification
+    // idiom as `VIVARIUM_STAGE`, and the one that lets a session shoot the whole
+    // history frame by frame and actually look at what it shipped.
+    let start_erosion = std::env::var("VIVARIUM_EROSION")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .filter(|i| *i < chain.len());
+    let start_lens = match (start_erosion, start_stage, start_replay && !replay_frames.is_empty()) {
+        (Some(i), _, _) => Lens::Erosion(i),
+        (None, Some(i), _) => Lens::Stage(i),
+        (None, None, true) => Lens::Replay(replay_frames[0]),
+        (None, None, false) => Lens::Present,
     };
 
     App::new()
@@ -345,6 +421,7 @@ fn main() {
             auto_level: fixed_level.is_none(),
             level: fixed_level.unwrap_or(8),
             exag_i: 2,
+            change_i: 2,
             playing: false,
             dwell: 0.0,
             dwell_per: 0.09,
@@ -360,6 +437,7 @@ fn main() {
         })
         .insert_resource(Ident { name: spec.name, seed: spec.seed, dir })
         .insert_resource(LadderRes(ladder))
+        .insert_resource(ChainRes(chain))
         .insert_resource(CovRes(cov))
         .insert_resource(WaterRes(water))
         .insert_resource(ReqTx(req_tx))
@@ -539,6 +617,9 @@ fn input_update(
     if keys.just_pressed(KeyCode::KeyX) {
         ex.exag_i = (ex.exag_i + 1) % EXAG_STEPS.len();
     }
+    if keys.just_pressed(KeyCode::KeyZ) {
+        ex.change_i = (ex.change_i + 1) % CHANGE_STEPS.len();
+    }
     if keys.just_pressed(KeyCode::Tab) {
         ex.paint = ex.paint.cycle();
     }
@@ -547,6 +628,7 @@ fn input_update(
         (KeyCode::Digit2, Paint::Provenance),
         (KeyCode::Digit3, Paint::Water),
         (KeyCode::Digit4, Paint::Seam),
+        (KeyCode::Digit5, Paint::Change),
     ] {
         if keys.just_pressed(k) {
             ex.paint = p;
@@ -574,13 +656,59 @@ fn input_update(
 /// Lens selection: present / deep time / replay. Every one of these is a
 /// *selection among materialized or lawfully-derivable states* — none of them
 /// changes how the world evolves ( #form-core-view-wall FE(4) ).
-fn lens_update(time: Res<Time>, keys: Res<ButtonInput<KeyCode>>, mut ex: ResMut<Explorer>, ladder: Res<LadderRes>) {
+fn lens_update(
+    time: Res<Time>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut ex: ResMut<Explorer>,
+    ladder: Res<LadderRes>,
+    chain: Res<ChainRes>,
+) {
     let n = ladder.0.len().max(1);
+    let cn = chain.0.len();
 
     if keys.just_pressed(KeyCode::KeyP) {
         ex.lens = Lens::Present;
         ex.playing = false;
         ex.replay_playing = false;
+    }
+
+    // E — the settle history. Opening on stage 0 rather than the present is
+    // deliberate: the question this lens answers is "what changed", and it is
+    // only answerable from the beginning.
+    if keys.just_pressed(KeyCode::KeyE) && cn > 1 {
+        ex.lens = match ex.lens {
+            Lens::Erosion(_) => Lens::Present,
+            _ => Lens::Erosion(0),
+        };
+        ex.playing = matches!(ex.lens, Lens::Erosion(_));
+        ex.replay_playing = false;
+        ex.dwell = 0.0;
+    }
+
+    if let Lens::Erosion(i) = ex.lens {
+        if keys.just_pressed(KeyCode::KeyK) {
+            ex.playing = !ex.playing;
+            ex.dwell = 0.0;
+        }
+        if keys.just_pressed(KeyCode::KeyJ) {
+            ex.playing = false;
+            ex.lens = Lens::Erosion((i + cn - 1) % cn.max(1));
+        }
+        if keys.just_pressed(KeyCode::KeyL) {
+            ex.playing = false;
+            ex.lens = Lens::Erosion((i + 1) % cn.max(1));
+        }
+        if ex.playing && !ex.inflight {
+            ex.dwell += time.delta_secs();
+            // A materialized-only chain is short — 8 stages, not 120 — so each
+            // one has to be *looked at*, not swept past. The dwell is an order of
+            // magnitude longer than the cooling sweep's for that reason, and the
+            // jump between stages is left as a jump.
+            if ex.dwell >= 0.85 {
+                ex.dwell = 0.0;
+                ex.lens = Lens::Erosion((i + 1) % cn.max(1));
+            }
+        }
     }
     if keys.just_pressed(KeyCode::KeyT) {
         ex.lens = match ex.lens {
@@ -670,6 +798,7 @@ fn request_update(orbit: Res<Orbit>, mut ex: ResMut<Explorer>, tx: Res<ReqTx>) {
         exag: EXAG_STEPS[ex.exag_i],
         paint: ex.paint,
         lens: ex.lens,
+        change_scale_m: CHANGE_STEPS[ex.change_i],
     };
     if !ex.inflight && ex.requested != Some(want) && tx.0.send(want).is_ok() {
         ex.requested = Some(want);
@@ -682,6 +811,7 @@ fn apply_frames(
     rx: Res<MsgRx>,
     mut ex: ResMut<Explorer>,
     mut ladder: ResMut<LadderRes>,
+    mut chain: ResMut<ChainRes>,
     mut cov: ResMut<CovRes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -700,7 +830,19 @@ fn apply_frames(
     };
     ex.inflight = false;
     ladder.0.built = frame.ladder_built.clone();
+    chain.0 = frame.chain.clone();
     cov.0 = Coverage::parse(&frame.roots);
+    // A stage index that outlived a shrinking chain would silently address a
+    // different moment. Clamp rather than reset, so a builder landing new stages
+    // mid-scrub keeps you where you were looking.
+    if let Lens::Erosion(i) = ex.lens {
+        let n = chain.0.len();
+        if n == 0 {
+            ex.lens = Lens::Present;
+        } else if i >= n {
+            ex.lens = Lens::Erosion(n - 1);
+        }
+    }
 
     for e in &old {
         commands.entity(e).despawn();
@@ -855,6 +997,12 @@ fn hud_update(
                     i + 1,
                     ladder.0.len()
                 ),
+                Lens::Erosion(i) => format!(
+                    "erosion epoch {}  stage {}/{}",
+                    frame.facts.stage_epoch.unwrap_or(0),
+                    i + 1,
+                    frame.chain.len()
+                ),
                 Lens::Replay(n) => format!("replay {n} roots"),
             }
         );
@@ -878,6 +1026,10 @@ fn hud_update(
         s.push_str(&hud::timeline(&ladder.0, i, 64));
         s.push('\n');
         s.push_str(&hud::craton_line(&frame.facts));
+        s.push('\n');
+    }
+    if let Lens::Erosion(i) = frame.req.lens {
+        s.push_str(&hud::chain_timeline(&frame.chain, i));
         s.push('\n');
     }
     if let Lens::Replay(_) = frame.req.lens {

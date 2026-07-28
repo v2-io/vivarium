@@ -112,7 +112,7 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | | | | *(#gap) Run-modes carve (thin: LEXICON open referents + root isolation; no fat enum)* | missing |
 | | | | *(#gap) Builder daemon **implementation** (design owned above; not shipped)* | missing |
 | formulation | Machine Critical | [#form-time-indexed-stage-chains](src/form-time-indexed-stage-chains.md) | A settle sequence is addressable memos carrying a time-index, each recording its convergence-$\varepsilon$; replay and live-watching are one mechanism (poller, census, and the erosion chain — the first materialized-only interior — built) | draft |
-| | | | *(#gap) **The operated instrument**, narrowed — the reader half is built (`vivarium watch`, live + replay, owned by #form-time-indexed-stage-chains FE(5)). Still homeless: **epoch-ordered erosion playback** (the first honest world-time scrub, unblocked by the stage chain but unbuilt — replay still orders by landing time), watchpoints (no LEXICON entry), and "legible, steerable time regimes" (in-world clock vs wall clock, sim rate vs framerate — Joseph 2026-07-02)* | missing |
+| | | | *(#gap) **The operated instrument**, narrowed — the reader half is built (`vivarium watch`, live + replay, owned by #form-time-indexed-stage-chains FE(5)). Epoch-ordered erosion playback — the first honest world-time scrub — is now built and homed at #form-time-indexed-stage-chains FE(11) (`vivarium explore`, key predicate over `(src, epochs)`); `vivarium watch --replay` still orders by landing time and is the remaining half. Still homeless: watchpoints (no LEXICON entry), and "legible, steerable time regimes" (in-world clock vs wall clock, sim rate vs framerate — Joseph 2026-07-02)* | missing |
 
 ---
 
