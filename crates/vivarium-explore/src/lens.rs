@@ -63,7 +63,7 @@ pub enum Lens {
 ///    evolves*; sampling it more finely is the same freedom as choosing a render
 ///    level).
 /// 2. The dense ladder is built by the same **nested bisection** the builder
-///    uses ( #form-time-indexed-stage-chains FE(8) ), so it is a strict superset
+///    uses ( #form-time-indexed-stage-chains FE(9) ), so it is a strict superset
 ///    of whatever the builder materialized, containing every built stage
 ///    bit-exactly. A stage is then either a store citizen or view-computed, per
 ///    stage, and `vivarium build --frames N` visibly converts the second into

@@ -61,7 +61,7 @@ pub struct Demand {
     /// Cube-face subdivision level the builder sweeps.
     pub level: u8,
     /// How densely the deep-time cooling chain is sampled — rounded up to a
-    /// nested count when materialized ( #form-time-indexed-stage-chains FE(8) ).
+    /// nested count when materialized ( #form-time-indexed-stage-chains FE(9) ).
     pub frames: u32,
     /// Fluvial epochs per tile. Arbitrary; see the type note above.
     pub erosion_epochs: u32,
