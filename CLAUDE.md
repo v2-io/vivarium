@@ -29,6 +29,7 @@ A deterministic constructed-world laboratory (and sim game) in the RimWorld / DF
 | **Executable law / probes** | `crates/vivarium-world/` · examples · `vivarium status` · `bin/check` (tests + determinism clippy) |
 | **Seeing a world** | `vivarium explore` (`crates/vivarium-explore/`) — the 3D instrument; `vivarium watch` is the same reader in the terminal. Both bound by `#norm-no-depiction-without-referent` as well as `#form-core-view-wall`: the wall owns *authority*, that norm owns *depiction*, and a view can satisfy one and violate the other |
 | **Pending audits** | [`audits/`](audits/) — integrate per `#ops-audit-integration`; `.integrated/` only when done |
+| **Landing user-facing change** | [`changelog/`](changelog/) — the outcome-altitude acceptance check (`#ops-changelog-is-the-acceptance-check`): frozen captured entries; pre-register the expected entry before building; an unwritable entry queues the work *or* the missing instrument |
 | **Consolidation intuition** | [`CONSOLIDATION-STATUS.md`](CONSOLIDATION-STATUS.md) — big-picture residual estimate (**not** claim canon; core wins on conflict) |
 | **Residual mine** | [`.archive/`](.archive/) residual ledger only; live `doc/` is essentially **PROCESS.udon** (+ empty design/theory/plan dirs). Claim meat lives in `core/` |
 | **Fully integrated / superseded** | [`.super-archive/`](.super-archive/) — graduated from archive *or* doc; do not re-mine as claim source; see `MANIFEST.md` |

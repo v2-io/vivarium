@@ -170,6 +170,7 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
 | normative | Ops | [#ops-audit-integration](src/ops-audit-integration.md) | Audit reports: verify, adjudicate, integrate, then `.integrated/` | draft |
+| normative | Ops | [#ops-changelog-is-the-acceptance-check](src/ops-changelog-is-the-acceptance-check.md) | User-facing change lands with a frozen captured entry; an unwritable entry queues the work or the missing instrument | draft |
 | discussion | Project | [#disc-open-problem-census](src/disc-open-problem-census.md) | Open work derived from core gaps — index, not ranked superlatives | draft |
 | detail | Ops | [#detail-epistemics-toolchain](src/detail-epistemics-toolchain.md) | Structural vs harness tooling queue; wired clippy; skip reasons | draft |
 
