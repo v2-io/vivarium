@@ -261,6 +261,33 @@ pub struct Fluvial {
 const NEIGHBORS: [(i32, i32); 8] =
     [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)];
 
+/// See [`Fluvial::chi_profile`] — per-cell fields over the surface as it
+/// stands, all of length `nx × nx` and indexed the same way as `h`.
+#[derive(Debug, Clone)]
+pub struct ChiProfile {
+    /// $\chi$ (m) — the upstream integral $\int_{x_b}^{x}(A_0/A)^{m/n}\,dx$
+    /// along the D8 path, zero at every base-level cell.
+    pub chi: Vec<f32>,
+    /// The elevation this kernel's own update implies at driven steady state,
+    /// integrated up from each basin's base-level elevation. Zero free
+    /// parameters.
+    pub z_steady: Vec<f32>,
+    /// Linear index of the base-level cell each cell drains to; `u32::MAX`
+    /// where the cell reaches none.
+    pub basin: Vec<u32>,
+    /// The **filled** surface the network was derived on (the kernel's own
+    /// working surface, not the stored one).
+    pub h: Vec<f32>,
+    /// MFD drainage area (m²) — the same $A$ the incision step consumes.
+    pub drainage: Vec<f32>,
+    /// The outlet (base-level) set: coast plus, on a partial tile, the edge.
+    pub outlet: Vec<bool>,
+    /// Reference area (m²) $A_0$ that sets $\chi$'s scale.
+    pub a0_m2: f32,
+    /// Non-outlet cells that reached no base level (a routing defect if > 0).
+    pub unrouted: usize,
+}
+
 /// See [`Fluvial::response_census`]. All figures over the current surface;
 /// response percentiles are over **channelized** cells only (drainage above
 /// the stated threshold), Courant over all subaerial non-outlet cells.
@@ -268,6 +295,11 @@ const NEIGHBORS: [(i32, i32); 8] =
 pub struct ResponseCensus {
     pub subaerial: usize,
     pub channel_cells: usize,
+    /// Largest subaerial drainage accumulation, in **median-cell-area units** —
+    /// "how many cells' worth of runoff does the biggest catchment gather".
+    /// The drainage-integration number: fragmented radial nets read ~tens,
+    /// integrated basins read ~hundreds and up.
+    pub max_catchment_cells: f32,
     pub courant_p50: f32,
     pub courant_max: f32,
     pub response_epochs_p50: f32,
@@ -311,7 +343,30 @@ pub struct DrainageStats {
     /// The same rungs under D8 accumulation.
     pub channel_cells_d8: [usize; 3],
     /// Distinct terminal outlets reached by subaerial cells — the basin count.
+    /// **Read this with the outlet policy in hand:** a partial tile makes every
+    /// perimeter cell an outlet ([`Fluvial::outlets`]), so a fully subaerial
+    /// $64^2$ tile floors at 252 basins for reasons of tiling, not geography.
+    /// [`Self::largest_basin_share`] and [`Self::basins_for_half`] are the
+    /// integration numbers; this one is mostly a check on that policy.
     pub basins: usize,
+    /// Longest run of *identical* D8 flow direction anywhere in the channel
+    /// network (links, so 1 = every step turns). A meandering river turns; a
+    /// long dead-straight run is a lattice artifact rather than a landform, and
+    /// it is the defect a viewer's eye catches first in a painted network.
+    pub straight_run_max: usize,
+    /// Median straight-run length over channelized cells (rung 1 of
+    /// [`CHANNEL_THRESHOLD_CELLS`]).
+    pub straight_run_p50: usize,
+    /// Of the channel cells sitting on a run of 8 or more identical steps, the
+    /// fraction whose cell was **raised by the Priority-Flood fill**. This
+    /// discriminates the two candidate causes: near 1 says the straight runs are
+    /// the $\varepsilon$-gradient orienting flats (a fill artifact, and a
+    /// directional one the residual table does not yet name); near 0 says they
+    /// are the router picking lattice axes on real slope
+    /// (`#obs-cube-locked-kernel-bias` FE(1)).
+    pub straight_in_fill_frac: f32,
+    /// Channel cells on a run of 8 or more — the denominator of the above.
+    pub straight_cells: usize,
     /// Share of land runoff collected by the single largest basin. **The
     /// integration number**: near 1 is one trunk draining the tile, near 0 is
     /// many small disconnected catchments.
@@ -430,6 +485,14 @@ impl Fluvial {
     pub fn set_uplift_rate(&mut self, field: Vec<f32>) {
         debug_assert_eq!(field.len(), self.nx * self.nx, "uplift field must be nx × nx");
         self.uplift_rate = field;
+    }
+
+    /// The per-cell rock-uplift rate (m/epoch) this run is carving against — read
+    /// access for instruments that need the driver to say what the surface
+    /// *should* look like (see [`Fluvial::chi_profile`]). Zeros until
+    /// [`Fluvial::set_uplift_rate`] supplies the nomos's field.
+    pub fn uplift_rate(&self) -> &[f32] {
+        &self.uplift_rate
     }
 
     /// Convenience for INSTRUMENTS probing the kernel: a spatially-uniform uplift
@@ -872,12 +935,14 @@ impl Fluvial {
         let mut c_sub: Vec<f32> = Vec::new();
         let mut resp_channel: Vec<f32> = Vec::new();
         let mut subaerial = 0usize;
+        let mut max_drainage = 0.0f32;
         for i in 0..n {
             if self.h[i] <= sea || outlets[i] {
                 continue;
             }
             subaerial += 1;
             c_sub.push(courant[i]);
+            max_drainage = max_drainage.max(self.drainage[i]);
             if self.drainage[i] >= channel_area {
                 resp_channel.push(epochs_to_base[i]);
             }
@@ -893,6 +958,7 @@ impl Fluvial {
         ResponseCensus {
             subaerial,
             channel_cells: resp_channel.len(),
+            max_catchment_cells: max_drainage / median_area.max(1.0),
             courant_p50: pct(&mut c_sub, 0.5),
             courant_max: pct(&mut c_sub, 1.0),
             response_epochs_p50: pct(&mut resp_channel, 0.5),
@@ -1062,6 +1128,42 @@ impl Fluvial {
             basins_for_half += 1;
         }
 
+        // Straight-run length along the D8 tree: how many consecutive links keep
+        // the same direction. Ascending elevation visits the receiver first, so
+        // one pass suffices. Rivers turn; a lattice artifact does not.
+        let dir_of = |i: usize, r: usize| -> (i32, i32) {
+            let (x, y) = ((i % nx) as i32, (i / nx) as i32);
+            let (rx, ry) = ((r % nx) as i32, (r / nx) as i32);
+            (rx - x, ry - y)
+        };
+        let mut run = vec![0usize; n];
+        for &i in &order {
+            let r = recv[i];
+            if r == i {
+                continue;
+            }
+            let d = dir_of(i, r);
+            let rr = recv[r];
+            run[i] = if rr != r && dir_of(r, rr) == d { run[r] + 1 } else { 1 };
+        }
+        let chan_thresh = CHANNEL_THRESHOLD_CELLS[0] * median_area;
+        let mut runs: Vec<usize> = (0..n)
+            .filter(|&i| saved_h[i] > sea && mfd[i] >= chan_thresh && recv[i] != i)
+            .map(|i| run[i])
+            .collect();
+        let straight_run_max = runs.iter().copied().max().unwrap_or(0);
+        runs.sort_unstable();
+        let straight_run_p50 = runs.get(runs.len() / 2).copied().unwrap_or(0);
+        let long: Vec<usize> = (0..n)
+            .filter(|&i| saved_h[i] > sea && mfd[i] >= chan_thresh && run[i] >= 8)
+            .collect();
+        let straight_cells = long.len();
+        let straight_in_fill_frac = if straight_cells > 0 {
+            long.iter().filter(|&&i| fill_depth[i] > 0.01).count() as f32 / straight_cells as f32
+        } else {
+            0.0
+        };
+
         let count_above = |f: &[f32], mult: f32| -> usize {
             let t = mult * median_area;
             (0..n).filter(|&i| saved_h[i] > sea && f[i] >= t).count()
@@ -1091,12 +1193,107 @@ impl Fluvial {
                 channel_cells_mfd,
                 channel_cells_d8,
                 basins: basins.len(),
+                straight_run_max,
+                straight_run_p50,
+                straight_in_fill_frac,
+                straight_cells,
                 largest_basin_share,
                 basins_for_half,
                 depression_cells,
                 depression_volume_m3,
                 deepest_depression_m,
             },
+        }
+    }
+
+    /// **Instrument, not law**: the $\chi$ coordinate and the driven-steady-state
+    /// profile for this tile's *current* surface — the raw material for a
+    /// convergence criterion that is a statement about **shape** rather than
+    /// about a per-epoch residual.
+    ///
+    /// A residual tolerance cannot work here: sustained uplift pins mean
+    /// $\lvert\Delta h\rvert$ at the driver's rate forever, and on an inert tile
+    /// it is zero for the wrong reason (`#obs-erosion-residual-is-driver-bound`).
+    /// Two shape statements survive that, and this returns the material for both.
+    ///
+    /// **(a) $\chi$-linearity** (Perron & Royden 2013, *ESPL* 38:570–576,
+    /// Eqs. 6a/6b). With
+    /// $\chi = \int_{x_b}^{x}(A_0/A)^{m/n}\,\mathrm{d}x$ integrated upstream from
+    /// base level, a steady state under spatially invariant $U$ and $K$ has $z$
+    /// **exactly linear in $\chi$** with slope $(U/K)^{1/n}/A_0^{m/n}$ and
+    /// intercept the base-level elevation. Discretely, along the D8 path,
+    /// $\chi_i = \chi_{r(i)} + (A_0/A_i)^{m}\,d_i$.
+    ///
+    /// **(b) The zero-parameter form, which is exact algebra on *this* kernel's
+    /// own update.** One epoch adds $U_i$ and then solves
+    /// $h_i \leftarrow (h_i + f h_{r})/(1+f)$ with $f = k_{dt}A_i^{m}/d_i$
+    /// ([`Fluvial::incise`]). Demanding $h$ unchanged across the epoch gives
+    ///
+    /// $$h_i - h_{r(i)} = \frac{U_i\,d_i}{k_{dt}\,A_i^{m}}$$
+    ///
+    /// — a per-cell identity with **no fitted parameter**, integrated up from
+    /// each basin's base-level elevation into `z_steady`. It is the continuum
+    /// $\chi$ result specialised to the discrete scheme, and it holds under a
+    /// *spatially varying* $U$, which the literature form does not. The price is
+    /// that it consumes the uplift field, so it is only meaningful when one has
+    /// been supplied ([`Fluvial::set_uplift_rate`]).
+    ///
+    /// Neither statement is affected by the pinned residual: both describe the
+    /// surface at one instant. Both fail safe on an inert tile — no channel means
+    /// no $\chi$ to integrate along, so the test is *absent* rather than passed.
+    ///
+    /// $A$ is the kernel's own MFD drainage, not a D8 accumulation: the identity
+    /// above is exact only in the $A$ the incision step actually consumes, so
+    /// using anything else would test a textbook kernel instead of this one.
+    /// Computed on the surface as it stands (one fill + network derivation,
+    /// heights restored — `&mut` only for scratch), and the fill is why `h` comes
+    /// back in the result: the returned surface is the filled one the network was
+    /// derived on, which is what the profile statements are about.
+    pub fn chi_profile(&mut self, p: &FluvialParams, a0_m2: f32) -> ChiProfile {
+        let saved_h = self.h.clone();
+        let outlets = self.outlets();
+        self.fill_depressions(&outlets);
+        let recv = self.receivers(&outlets);
+        let order = self.elevation_order();
+        self.accumulate_drainage(&order);
+
+        let n = self.nx * self.nx;
+        let mut chi = vec![0.0f32; n];
+        let mut z_steady = vec![0.0f32; n];
+        let mut basin = vec![u32::MAX; n];
+        let mut unrouted = 0usize;
+        // Ascending elevation ⇒ receiver before donor, so one pass integrates
+        // both quantities up every flow path (the `response_census` pattern).
+        for &i in &order {
+            if outlets[i] || recv[i] == i {
+                z_steady[i] = self.h[i];
+                if outlets[i] {
+                    basin[i] = i as u32;
+                } else {
+                    unrouted += 1;
+                }
+                continue;
+            }
+            let r = recv[i];
+            let d = self.dist_m(i, r);
+            let a = self.drainage[i].max(f32::MIN_POSITIVE);
+            let am = a.powf(p.m);
+            chi[i] = chi[r] + (a0_m2.powf(p.m) / am) * d;
+            let f = p.k_dt * am / d;
+            z_steady[i] =
+                z_steady[r] + if f > 0.0 { self.uplift_rate[i] / f } else { f32::INFINITY };
+            basin[i] = basin[r];
+        }
+        let filled = std::mem::replace(&mut self.h, saved_h); // restore — the profile must not advance the world
+        ChiProfile {
+            chi,
+            z_steady,
+            basin,
+            h: filled,
+            drainage: self.drainage.clone(),
+            outlet: outlets,
+            a0_m2,
+            unrouted,
         }
     }
 
@@ -1315,6 +1512,293 @@ mod fluvial_tests {
             "bilinear pin must be convicted as NOT pinning: bilinear worst {bilinear_worst:.4} m \
              vs block-const worst {const_worst:.6} m (expected orders larger)"
         );
+    }
+
+    /// Ordinary least squares of `y` on `x`; returns `(slope, intercept, rms residual)`.
+    fn ols(x: &[f64], y: &[f64]) -> (f64, f64, f64) {
+        let n = x.len() as f64;
+        let (mx, my) = (x.iter().sum::<f64>() / n, y.iter().sum::<f64>() / n);
+        let sxx: f64 = x.iter().map(|a| (a - mx) * (a - mx)).sum();
+        let sxy: f64 = x.iter().zip(y).map(|(a, b)| (a - mx) * (b - my)).sum();
+        let s = if sxx > 0.0 { sxy / sxx } else { 0.0 };
+        let c = my - s * mx;
+        let ss: f64 = x.iter().zip(y).map(|(a, b)| (b - (c + s * a)).powi(2)).sum();
+        (s, c, (ss / n).sqrt())
+    }
+
+    /// The load-bearing claim: run the incision solve against sustained uplift
+    /// long enough and the surface **approaches** the profile `chi_profile`
+    /// predicts, with the fitted χ slope recovering $U/(k_{dt}A_0^{m})$ — while
+    /// the per-epoch $\lvert\Delta h\rvert$ is doing nothing a tolerance could
+    /// read ( #obs-erosion-residual-is-driver-bound ).
+    ///
+    /// Deposition, talus and creep are switched off here on purpose: the
+    /// identity is a balance between uplift and the incision solve alone, and it
+    /// is *quantitatively* wrong with the other operators on — the live default
+    /// composition settles ~1.6× steeper, which is a finding for a probe and a
+    /// segment, not something to hide inside a unit test's parameters
+    /// ( #detail-erosion-composition FE(3) lists the operators).
+    ///
+    /// A small dome so the test is cheap in a debug build; the assertions are
+    /// ratios against this same landscape's own epoch-0 state, so none of them
+    /// can be re-tuned into a false green.
+    #[test]
+    fn the_surface_approaches_the_predicted_chi_profile_under_sustained_uplift() {
+        let p = FluvialParams {
+            epochs: 1,
+            deposition: 0.0,
+            diffusivity_m2: 0.0,
+            max_slope: 1.0e6,
+            ..Default::default()
+        };
+        let uplift = 0.5f32;
+        // A 40² dome, small enough that its channel network crosses in a few
+        // hundred epochs (`Fluvial::response_census` is the a-priori form).
+        let dome = || {
+            let seed = 0u64;
+            let sea = crate::sea_level::derived_sea_level_m(seed);
+            let (level, oi, oj, nx) = (19u8, 108_500u32, 186_350u32, 40usize);
+            let mut f = Fluvial::from_surface(seed, Face::ZPos, level, oi, oj, nx, |c| {
+                let (_, i, j, _) = c.to_face_ij();
+                let (cx, cy) = (
+                    i.saturating_sub(oi) as f64 - nx as f64 / 2.0,
+                    j.saturating_sub(oj) as f64 - nx as f64 / 2.0,
+                );
+                sea + 800.0 - 0.05 * (cx * cx + cy * cy)
+            });
+            f.set_uniform_uplift(uplift);
+            f
+        };
+
+        // (normalized zero-parameter residual, median fitted χ slope) over the
+        // channelized cells of every basin with enough of them to fit.
+        let measure = |f: &mut Fluvial| -> (f64, Option<f64>, usize) {
+            let a0 = f.cell_area[f.cell_area.len() / 2];
+            let prof = f.chi_profile(&p, a0);
+            assert_eq!(prof.unrouted, 0, "every non-outlet cell must reach a base level");
+            let mut med = f.cell_area.clone();
+            med.sort_by(f32::total_cmp);
+            let thresh = 10.0 * med[med.len() / 2];
+            let mut by_basin = std::collections::BTreeMap::<u32, Vec<usize>>::new();
+            for i in 0..prof.chi.len() {
+                if prof.basin[i] != u32::MAX && prof.chi[i] > 0.0 && prof.drainage[i] >= thresh {
+                    by_basin.entry(prof.basin[i]).or_default().push(i);
+                }
+            }
+            let all: Vec<usize> = by_basin.values().flatten().copied().collect();
+            assert!(all.len() >= 32, "too few channel cells to judge ({})", all.len());
+            let hs: Vec<f32> = all.iter().map(|&i| prof.h[i]).collect();
+            let relief = (hs.iter().cloned().fold(f32::NEG_INFINITY, f32::max)
+                - hs.iter().cloned().fold(f32::INFINITY, f32::min)) as f64;
+            let rms0 = (all
+                .iter()
+                .map(|&i| ((prof.h[i] - prof.z_steady[i]) as f64).powi(2))
+                .sum::<f64>()
+                / all.len() as f64)
+                .sqrt();
+            let mut slopes: Vec<f64> = by_basin
+                .values()
+                .filter(|v| v.len() >= 8)
+                .map(|cells| {
+                    let x: Vec<f64> = cells.iter().map(|&i| prof.chi[i] as f64).collect();
+                    let y: Vec<f64> = cells.iter().map(|&i| prof.h[i] as f64).collect();
+                    ols(&x, &y).0
+                })
+                .collect();
+            slopes.sort_by(f64::total_cmp);
+            // At epoch 0 the dome has no basin with enough channel cells to fit:
+            // the shape test is *absent*, not passed — the fail-safe that makes
+            // this criterion usable on inert tiles at all.
+            let median = slopes.get(slopes.len() / 2).copied();
+            (rms0 / relief.max(1e-9), median, all.len())
+        };
+
+        let (start, start_slope, _) = measure(&mut dome());
+        assert!(start_slope.is_none(), "the undissected dome has no fittable channel — the test would be vacuous if it did");
+        let mut settled = dome();
+        settled.erode(&FluvialParams { epochs: 400, ..p.clone() });
+        let (end, slope, _) = measure(&mut settled);
+        let slope = slope.expect("the settled landscape must have a fittable channel network");
+
+        assert!(
+            end < 0.1 * start,
+            "the surface must approach the predicted steady profile \
+             (normalized residual {end:.4} after 400 epochs vs {start:.4} at epoch 0)"
+        );
+        let a0 = settled.cell_area[settled.cell_area.len() / 2];
+        let predicted = uplift as f64 / (p.k_dt as f64 * (a0 as f64).powf(p.m as f64));
+        assert!(
+            (slope / predicted - 1.0).abs() < 0.15,
+            "the settled χ slope must recover U/(k_dt·A₀^m): fitted {slope:.4}, predicted {predicted:.4}"
+        );
+    }
+
+    /// The literature form (Perron & Royden 2013): under uniform $U$ and $K$ a
+    /// steady profile is **linear in χ** with slope $U/(k_{dt}A_0^{m})$. Asserted
+    /// on the predicted steady profile, together with the two known-bads the
+    /// criterion has to reject — a knickpoint (right slope, wrong shape) and a
+    /// doubled slope (right shape, wrong rate). Both halves must be checked or
+    /// the criterion passes landscapes it should convict
+    /// ( #norm-probe-sensitivity FE(2)).
+    #[test]
+    fn chi_linearity_passes_the_steady_profile_and_convicts_both_known_bads() {
+        let p = FluvialParams {
+            epochs: 1,
+            deposition: 0.0,
+            diffusivity_m2: 0.0,
+            max_slope: 1.0e6,
+            ..Default::default()
+        };
+        let uplift = 0.5f32;
+        let mut f = small();
+        f.set_uniform_uplift(uplift);
+        let a0 = f.cell_area[f.cell_area.len() / 2];
+        let prof = f.chi_profile(&p, a0);
+
+        // One basin's channel cells: the largest by cell count, channels being
+        // cells whose drainage exceeds ten median cell areas.
+        let mut area = prof.drainage.clone();
+        let mut med = f.cell_area.clone();
+        med.sort_by(f32::total_cmp);
+        let thresh = 10.0 * med[med.len() / 2];
+        area.sort_by(f32::total_cmp);
+        let mut counts = std::collections::BTreeMap::<u32, Vec<usize>>::new();
+        for i in 0..prof.chi.len() {
+            if prof.basin[i] != u32::MAX && prof.chi[i] > 0.0 && prof.drainage[i] >= thresh {
+                counts.entry(prof.basin[i]).or_default().push(i);
+            }
+        }
+        let cells = counts.values().max_by_key(|v| v.len()).expect("no channelized basin").clone();
+        assert!(cells.len() >= 8, "largest basin has too few channel cells ({})", cells.len());
+
+        let chi: Vec<f64> = cells.iter().map(|&i| prof.chi[i] as f64).collect();
+        let z: Vec<f64> = cells.iter().map(|&i| prof.z_steady[i] as f64).collect();
+        let relief = z.iter().cloned().fold(f64::NEG_INFINITY, f64::max)
+            - z.iter().cloned().fold(f64::INFINITY, f64::min);
+        let predicted = uplift as f64 / (p.k_dt as f64 * (a0 as f64).powf(p.m as f64));
+
+        let (slope, _, rms) = ols(&chi, &z);
+        assert!(
+            rms < 0.01 * relief,
+            "the steady profile must be linear in χ (rms {rms:.3} m vs relief {relief:.1} m)"
+        );
+        assert!(
+            (slope / predicted - 1.0).abs() < 0.02,
+            "fitted χ slope {slope:.4} must recover U/(k_dt·A₀^m) = {predicted:.4}"
+        );
+
+        // Known-bad 1 — a knickpoint: the same profile with everything above the
+        // median χ lifted. Same slope at both ends, wrong shape.
+        let mid = {
+            let mut s = chi.clone();
+            s.sort_by(f64::total_cmp);
+            s[s.len() / 2]
+        };
+        let kz: Vec<f64> =
+            z.iter().zip(&chi).map(|(v, c)| if *c > mid { v + 0.2 * relief } else { *v }).collect();
+        let (_, _, krms) = ols(&chi, &kz);
+        assert!(
+            krms > 0.05 * relief,
+            "a knickpoint must fail the shape test (rms {krms:.3} m vs relief {relief:.1} m)"
+        );
+
+        // Known-bad 2 — the right shape at the wrong rate: a landscape twice as
+        // steep in χ passes the residual test and must be caught by the slope.
+        let wz: Vec<f64> = chi.iter().zip(&z).map(|(c, v)| v + slope * c).collect();
+        let (wslope, _, wrms) = ols(&chi, &wz);
+        assert!(wrms < 0.01 * relief, "the doubled profile is still linear (rms {wrms:.3} m)");
+        assert!(
+            (wslope / predicted - 1.0).abs() > 0.5,
+            "a doubled χ slope must fail the rate test (fitted {wslope:.4} vs predicted {predicted:.4})"
+        );
+    }
+
+    /// The reader must be a READER: heights come back bit-identical, so a view
+    /// or probe calling it cannot advance the world (`#form-core-view-wall`).
+    /// The fill genuinely moves them mid-call — `filled_h` differing from the
+    /// restored `h` is what proves the restore is doing work rather than the
+    /// call being inert.
+    #[test]
+    fn drainage_surface_restores_the_world_it_read() {
+        let mut f = small();
+        f.erode(&FluvialParams { epochs: 6, ..Default::default() });
+        // Gouge a pit, so the fill has something real to move. On a surface
+        // already graded to its outlets the fill is inert (see
+        // `depression_capacity_fires_on_a_pit_and_not_on_a_graded_dome`), and a
+        // restore test over an inert call proves nothing.
+        let nx = f.nx;
+        for y in (nx / 2 - 4)..(nx / 2 + 4) {
+            for x in (nx / 2 - 4)..(nx / 2 + 4) {
+                f.h[y * nx + x] -= 200.0;
+            }
+        }
+        let before = f.h.clone();
+        let d = f.drainage_surface();
+        assert_eq!(f.h, before, "the reader advanced the world");
+        assert!(
+            d.filled_h.iter().zip(before.iter()).any(|(a, b)| (a - b).abs() > 1e-4),
+            "the fill changed nothing, so the restore proves nothing — this probe would pass on an inert call"
+        );
+        // And it is idempotent: reading twice gives the same field.
+        let d2 = f.drainage_surface();
+        assert_eq!(d.mfd, d2.mfd, "two reads of one surface disagreed");
+    }
+
+    /// Discharge must actually consume the precipitation field. This is the guard
+    /// on the honesty note in [`Fluvial::drainage_surface`]: `from_region` leaves
+    /// `precip_weight` at ones, so a caller who forgets to supply climate is
+    /// reading UNIFORM-rain discharge — and this convicts that the difference is
+    /// real rather than cosmetic. A wiring regression that dropped the weight
+    /// would make the two runs identical and fail here.
+    #[test]
+    fn discharge_consumes_the_precipitation_field() {
+        let mut f = small();
+        f.erode(&FluvialParams { epochs: 6, ..Default::default() });
+        let uniform = f.drainage_surface().stats.max_mfd_m2;
+
+        // Rain hard on one half of the tile only — mean-preserving over the tile
+        // so this is a redistribution, not more water.
+        let nx = f.nx;
+        let w: Vec<f32> = (0..nx * nx).map(|i| if i % nx < nx / 2 { 1.8 } else { 0.2 }).collect();
+        f.set_precip_weight(w);
+        let skewed = f.drainage_surface().stats.max_mfd_m2;
+
+        let rel = (skewed - uniform).abs() / uniform.max(1.0);
+        assert!(rel > 0.05, "precip weight moved the trunk by only {:.3}% — is it wired?", 100.0 * rel);
+    }
+
+    /// The depression measure must fire on a real pit and stay quiet on a graded
+    /// surface — `#norm-probe-sensitivity`: a capacity number that reported
+    /// something everywhere would certify nothing, and one that reported nothing
+    /// on a 200 m crater would be the failure it is meant to detect.
+    #[test]
+    fn depression_capacity_fires_on_a_pit_and_not_on_a_graded_dome() {
+        let mut clean = small();
+        clean.erode(&FluvialParams { epochs: 6, ..Default::default() });
+        let quiet = clean.drainage_surface().stats;
+        assert_eq!(
+            quiet.depression_cells, 0,
+            "a tile graded to its own edge outlets should hold no closed depression, got {}",
+            quiet.depression_cells
+        );
+
+        // Gouge a crater into the same eroded surface.
+        let nx = clean.nx;
+        let mut pitted = small();
+        pitted.h = clean.h.clone();
+        for y in (nx / 2 - 4)..(nx / 2 + 4) {
+            for x in (nx / 2 - 4)..(nx / 2 + 4) {
+                pitted.h[y * nx + x] -= 200.0;
+            }
+        }
+        let loud = pitted.drainage_surface().stats;
+        assert!(loud.depression_cells >= 16, "the crater was not detected ({} cells)", loud.depression_cells);
+        assert!(
+            loud.deepest_depression_m > 100.0,
+            "a 200 m crater must read as a deep depression, got {:.1} m",
+            loud.deepest_depression_m
+        );
+        assert!(loud.depression_volume_m3 > 0.0);
     }
 
     #[test]
