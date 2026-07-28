@@ -192,6 +192,8 @@ Live floor data: [`tabularium/terrestris.ordinum.udon`](../tabularium/terrestris
 | observation | Model Critical | [#obs-erosion-residual-is-driver-bound](src/obs-erosion-residual-is-driver-bound.md) | Uplift pins erosion's residual (no stationarity to gate on); most tiles are subaerially empty and do no fluvial work | draft |
 | observation | Model Critical | [#obs-chi-shape-is-erosions-criterion](src/obs-chi-shape-is-erosions-criterion.md) | $\chi$-linearity is a convergence criterion the driver-bound residual cannot supply; measured on the L13 settle history, one a-priori response time is ~a quarter of the approach, and the fitted slope misses pure SPL by the deposition term | draft |
 | observation | Physics Critical | [#obs-tile-outlets-grade-away-the-basins](src/obs-tile-outlets-grade-away-the-basins.md) | Edge-sink tiles grade to their own perimeter: 0.02% of L9 land in a closed depression (hence no inland water), basins capped at one tile (trunk 3.85× short), 13% seam pits on assembly | draft |
+| observation | Physics Critical | [#obs-the-erodible-world-is-down-the-cooling-chain](src/obs-the-erodible-world-is-down-the-cooling-chain.md) | Land triples and stand gains a km by the chain's cold end, but emergence saturates inside the chain, suture belts stay thin, and the pour-grain ledger already removed a fifth to a whole s.d. of stand | draft |
+| formulation | Model | [#form-erosion-at-a-cooling-stage](src/form-erosion-at-a-cooling-stage.md) | Erosion keyed by $T_p$: a materialized-only chain over a law-evaluable one; stage-parallel vs chain-carried forks on the rock-mass ledger, not on cost — unbuilt design | draft |
 
 **Hydrosphere & atmosphere** (water · hydrology · climate · ocean · coastal …)
 
