@@ -1,10 +1,10 @@
 # Consolidation status — big-picture intuition
 
-*Body updated 2026-07-28: open-work item 1 closed. **Not claim canon.** When this file disagrees with `core/`, core wins.*
+*Body updated 2026-07-28 (late): the lede had lagged its own open list — caught by an outside reader, which is exactly the numbers-decay class `#norm-caught-disciplines-become-mechanisms` FE(2)(b) names. **Not claim canon.** When this file disagrees with `core/`, core wins.*
 
 ## The picture, in one paragraph
 
-The claim channel is **88 segments** and in good order, and vivarium has a **working instrument**: `vivarium explore` / `watch`, views of the live world that report their own epistemic state. The 2026-07-24 frontier — *the instrument can see, but erosion has nothing to show* — is closed: the erosion settle history is now a materialized stage chain (interior epochs as store citizens at the manifest's stride, `#form-time-indexed-stage-chains` FE(8)), so the system Joseph most wants to watch has an addressable, replayable interior. The next frontier is **showing that interior in world-time**: replay still orders by build history (landing time), and the first honest world-time scrub — epoch-ordered erosion playback — is unblocked and unbuilt.
+The claim channel is **92 segments** and in good order, and the 2026-07-28 arc turned the instrument into a **closed loop**: instrument the settle (stage chains, world-time scrub `E`, region window to L14) → measure what it actually approaches (χ-shape criterion: one response time ≈ a quarter of the approach; at G=0 the criterion is exact, deposition carries the floor) → relocate the mystery the eye kept reporting (no lakes is a **bed property** — tile-edge outlets grade every tile to its own perimeter — not a water-kernel failure) → push structure one level deeper (tectonics is the column: sutures, zonation, uplift as the freeboard derivative — so present-anchor fragmentation is *youth*, truthful for a pre-collision era). The lies the loop caught are **tiling and era**, not missing features; the ladder below is ordered by exactly that.
 
 ## What is true now, and measured
 
