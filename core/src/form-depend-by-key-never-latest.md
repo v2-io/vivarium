@@ -44,6 +44,7 @@ Without this rule, content-addressing buys cache reuse and loses the laboratory:
 ## Working Notes
 
 - **Open coverage, named rather than implied:** the convictor reaches the global epoch chain only. Per-tile demand order (two explorers walking different routes over the same face), cross-face order, and the flux-BC tile seam are uncovered — the last because those tiles are unbuilt. Extending the probe outward is the natural companion to the demand spool, since that is what will first produce genuinely divergent build orders.
+- **Witness frames are per-thread** (`query::READ_FRAMES` is thread-local; RAII-balanced under early return and panic unwind). No compute path spawns threads today, so attribution is correct — but if one ever parallelizes internally (rayon, scoped threads), dependency pulls on worker threads land in those threads' empty stacks and silently vanish from the parent's set, whose root would then carry a *partial* read-set indistinguishable from a complete one. Wiring a parallel compute means carrying the frame across the spawn, or marking that path unwired (`deps: None`) until it does.
 - **Do not re-derive** the leg-vs-leg form without cache isolation: it was demonstrated insensitive to an under-keyed global memo (2026-07-24) and is the shape a future agent will reach for first.
 - Source: builder-explorer-decoupling §0; dual-home demote law paragraph there to pointer.
 - Sibling gaps: full builder daemon / demand spool remain OUTLINE §III.
