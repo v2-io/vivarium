@@ -182,6 +182,14 @@ fn dt_for(l: f64) -> f64 {
 
 fn main() {
     println!("=== ROLL-WAVE PROBE ===\n");
+    // A full sweep is ~40 minutes (the §7 ladder alone reaches 512² × 5 DOF).
+    // `VIVARIUM_ROLLWAVE_ONLY=7` runs a single section, so a probe that needs
+    // re-running after a kernel change does not cost a whole sitting. Sections
+    // are independent — each relaxes its own base state from scratch.
+    if std::env::var("VIVARIUM_ROLLWAVE_ONLY").as_deref() == Ok("7") {
+        jarrett_refinement();
+        return;
+    }
 
     // ── §1 Slope ladder: does the Jarrett/roll-wave separation survive? ─────
     // Reproduces the 2026-07-13 table with the parameters that are now REAL
@@ -454,6 +462,15 @@ fn main() {
     }
     println!();
 
+}
+
+/// §7 — the Jarrett artefact under grid refinement, with its own control.
+/// Split out so `VIVARIUM_ROLLWAVE_ONLY=7` can run it alone: it is the section
+/// most often needed after a roughness change, and the cheapest one to re-run
+/// against a 40-minute full sweep.
+fn jarrett_refinement() {
+    let dt_fix = 0.02;
+    let d0 = 1.0;
     // ── §7 The Jarrett artefact under refinement, with its own control. ────
     println!("── §7 The JARRETT artefact under refinement (5% slope, cap ON) ───");
     println!("   dt = 0.02 s, domain 307.2 m; the control holds n at Jarrett's own base value");

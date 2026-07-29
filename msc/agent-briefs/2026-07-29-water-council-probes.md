@@ -409,3 +409,18 @@ So the growth-rate work genuinely needs a writable, f64 copy of the kernel, and 
 ### §6.4 Bearing on the momentum-closure deferral
 
 Joseph's new declared-lesser-law row (dropped advective term) has a due-date question, and these measurements bear on it in a direction that **relaxes** it slightly. The advective term's absence was being invoked to explain the roll-wave instability the kernel supposedly resolved-but-could-not-saturate. On the measurements, that is not what is happening: the growing mode has no Froude threshold, so it is not the instability the advective term would bound. What *is* now visible is that the breaking cap does real work at the steep end (`ρ no-cap` = 1.02298 at 70% against 1.00000 shipped), and the cap is precisely an unphysical stand-in for the missing advective saturation. So the honest statement is: **the closure upgrade is owed by the cap's existence, not by a roll-wave instability** — the debt is real and its justification changes. It becomes *due* when a claim depends on supercritical flow being quantitatively right; nothing in the current ladder does.
+
+### §6.5 P8c — the grid divergence is gone (measured, not inferred)
+
+The strongest indictment of the retired form was that its growth rate *diverged* under refinement. Re-run after the demotion (`VIVARIUM_ROLLWAVE_ONLY=7`), 5% slope, cap on, dt = 0.02 s, domain 307.2 m:
+
+| l (m) | nx | σ SHIPPED **before** | σ SHIPPED **after** | ρ n-CONST after |
+|---|---|---|---|---|
+| 4.80 | 64 | −0.00417 | −0.00149 | 0.999970 |
+| 2.40 | 128 | −0.00003 | −0.00002 | 1.000000 |
+| 1.20 | 256 | **+0.02787** | **−0.00003** | 0.999999 |
+| 0.60 | 512 | **+1.55559** | **−0.00000** | 1.000000 |
+
+`ρ SHIPPED` equals `ρ n-CONST` to every digit printed, at every grid. The term that got worse without bound as the mesh refined — the thing that made it a hazard for a multiresolution architecture specifically — is now indistinguishable from holding `n` fixed. `DECISIONS[jarrett-is-inconsistent-not-merely-artefactual]` is closed by the demotion, and becomes history rather than an open indictment.
+
+**Probe usability, fixed in passing.** The full `roll_wave` sweep is ~40 minutes and had no way to run one section — so re-verifying one claim after a kernel change cost a whole sitting, which is why the sweep that was supposed to produce this table died unfinished. `VIVARIUM_ROLLWAVE_ONLY=7` now runs §7 alone in about a minute. Sections are independent (each relaxes its own base state), so the same gate generalises to the others when someone needs them.
