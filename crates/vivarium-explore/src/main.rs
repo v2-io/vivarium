@@ -272,7 +272,7 @@ vivarium explore -- the 3D explorer: an instrument for seeing whether a world's
                  erosion settle history, and no flag will: that chain is
                  materialized-only, its density is exactly what the builder ran,
                  and asking for more is a build request, not a view parameter.
-  --paint MODE   surface | provenance | water | seam | change
+  --paint MODE   surface | provenance | water | seam | change | depression
 
 THE TWO TIME AXES
 
@@ -672,6 +672,7 @@ fn input_update(
         (KeyCode::Digit3, Paint::Water),
         (KeyCode::Digit4, Paint::Seam),
         (KeyCode::Digit5, Paint::Change),
+        (KeyCode::Digit6, Paint::Depression),
     ] {
         if keys.just_pressed(k) {
             ex.paint = p;

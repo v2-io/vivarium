@@ -334,6 +334,12 @@ pub fn spawn(
             let (mut chg_sum, mut chg_min, mut chg_max) = (0.0f64, 0.0f32, 0.0f32);
             let (mut rising, mut falling) = (0usize, 0usize);
             let mut tier_cells: std::collections::BTreeMap<u8, usize> = Default::default();
+            // Depression capacity summed over the drawn units. Summing is
+            // correct only because each unit is read as its own walled domain:
+            // these are per-window capacities, not one planetary basin census,
+            // and the HUD says so rather than implying a globe-wide total.
+            let (mut dep_cells_total, mut dep_capacity_total, mut dep_deepest_total) =
+                (0usize, 0.0f64, 0.0f32);
 
             let faces: Vec<FaceMesh> = std::thread::scope(|s| {
                 let (world, regions, cov, water, cache, ghost, units) =
@@ -423,6 +429,60 @@ pub fn spawn(
                             } else {
                                 Vec::new()
                             };
+                            let (mut dep_cells, mut dep_capacity_m3, mut dep_deepest_m) =
+                                (0usize, 0.0f64, 0.0f32);
+                            // The depression channel: what the DRAWN surface
+                            // could hold. Run through `Fluvial::drainage_surface`
+                            // — the same reader `base_level_probe`,
+                            // `discharge_probe` and the unit tests use — so the
+                            // picture and the numbers cannot drift apart. The
+                            // reader saves and restores the heights it reads
+                            // (`drainage_surface_restores_the_world_it_read`), so
+                            // it cannot advance anything, and it opens no store.
+                            //
+                            // The contract is set to NoFluxWall EXPLICITLY rather
+                            // than inferred. A window short of a whole face infers
+                            // `BaseLevelSink`, which makes the window's own rim an
+                            // outlet and drains every basin that reaches it — the
+                            // reader would then report ~0 capacity and the paint
+                            // would be black for a reason that is about the reader
+                            // rather than the world ( #form-declared-boundary-contract ;
+                            // the same understatement measured at
+                            // #obs-tile-outlets-grade-away-the-basins FE(5), where a
+                            // sink-contract reader read 19.67% against a wall
+                            // reader's 63.5%). The wall has its own bias — it hands
+                            // the window no outlet at all when there is no coast in
+                            // it — and the HUD says which one is up.
+                            let depression: Vec<f32> = if req.paint.needs_depression() {
+                                let region = vivarium_world::erosion::ErodedRegion {
+                                    face,
+                                    level,
+                                    oi,
+                                    oj,
+                                    nx,
+                                    h: tile.clone(),
+                                    seed,
+                                };
+                                let mut f = vivarium_world::erosion::Fluvial::from_region(&region);
+                                f.set_edge_contract(
+                                    vivarium_world::erosion::EdgeContract::NoFluxWall,
+                                );
+                                let ds = f.drainage_surface();
+                                dep_cells = ds.stats.depression_cells;
+                                dep_capacity_m3 = ds.stats.depression_volume_m3;
+                                dep_deepest_m = ds.stats.deepest_depression_m;
+                                ds.fill_depth
+                            } else {
+                                Vec::new()
+                            };
+                            let depression_max_m =
+                                depression.iter().copied().fold(0.0f32, f32::max);
+                            let depression_at = |ci: u32, cj: u32| -> f32 {
+                                if depression.is_empty() {
+                                    return 0.0;
+                                }
+                                depression[cj as usize * nx + ci as usize]
+                            };
                             let change_at = |ci: u32, cj: u32| -> f32 {
                                 if baseline.is_empty() {
                                     return 0.0;
@@ -493,18 +553,38 @@ pub fn spawn(
                                 state: &state,
                                 water: &water_at,
                                 water_max_m: water.max_depth_m,
+                                depression: &depression_at,
+                                depression_max_m,
                                 change: &change_at,
                                 change_scale_m: req.change_scale_m,
                             });
-                            (fm, tile, fseam, l, fb, iw, wc, cs, cmin, cmax, ri, fa, tiers)
+                            (
+                                fm,
+                                tile,
+                                fseam,
+                                l,
+                                fb,
+                                iw,
+                                wc,
+                                cs,
+                                cmin,
+                                cmax,
+                                ri,
+                                fa,
+                                tiers,
+                                (dep_cells, dep_capacity_m3, dep_deepest_m),
+                            )
                         })
                     })
                     .collect();
                 handles
                     .into_iter()
                     .map(|h| {
-                        let (fm, tile, fseam, l, fb, iw, wc, cs, cmin, cmax, ri, fa, tr) =
+                        let (fm, tile, fseam, l, fb, iw, wc, cs, cmin, cmax, ri, fa, tr, dep) =
                             h.join().expect("face build panicked");
+                        dep_cells_total += dep.0;
+                        dep_capacity_total += dep.1;
+                        dep_deepest_total = dep_deepest_total.max(dep.2);
                         for (t, n) in tr {
                             *tier_cells.entry(t).or_default() += n;
                         }
@@ -553,6 +633,9 @@ pub fn spawn(
                 stage_tiles: regions.len(),
                 tier_cells,
                 cells: total,
+                depression_cells: dep_cells_total,
+                depression_capacity_m3: dep_capacity_total,
+                depression_deepest_m: dep_deepest_total,
             };
 
             let frame = Frame {

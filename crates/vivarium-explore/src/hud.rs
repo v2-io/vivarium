@@ -279,6 +279,9 @@ pub fn header(
     if frame.req.paint == crate::paint::Paint::Change {
         let _ = writeln!(s, "{}", change_line(frame));
     }
+    if frame.req.paint == crate::paint::Paint::Depression {
+        let _ = writeln!(s, "{}", depression_line(frame));
+    }
     // Every line above can run long; the caller wraps the whole block so the
     // panel never widens past the half-window it is pinned to.
     s
@@ -454,6 +457,40 @@ pub fn change_line(frame: &Frame) -> String {
     )
 }
 
+/// What the bed could hold, beside what it actually holds — and the gap between
+/// them stated as the gap, because a viewer looking at a violet basin will
+/// otherwise read it as a lake.
+///
+/// Both numbers come from the frame's own measurement rather than from any
+/// claim: capacity from `Fluvial::drainage_surface` over the drawn surface,
+/// standing water from the built `water-tile` field. When the second is zero and
+/// the first is not, that is the world's present state and this line says which
+/// two things stand in the way, because "no water" invites exactly the wrong
+/// diagnosis ( #obs-lakes-are-routed-over-not-carved-away FE(11),
+/// #obs-water-fill-never-settles ).
+pub fn depression_line(frame: &Frame) -> String {
+    let f = &frame.facts;
+    let pct = 100.0 * f.depression_cells as f32 / f.cells.max(1) as f32;
+    let cap_km3 = f.depression_capacity_m3 / 1e9;
+    let held = if f.inland_water_cells == 0 {
+        "and NONE of it holds standing water: the water nomos settles 40 s of world time at any level,          and the shipped carve grades each tile to its own perimeter. Capacity is the bed's; water is not"
+            .to_string()
+    } else {
+        format!(
+            "against {} cells actually holding inland standing water -- the gap is what is unfilled",
+            f.inland_water_cells
+        )
+    };
+    format!(
+        "capacity to the spill point: {} cells ({:.2}% of drawn), deepest {:.0} m, {:.3e} km^3 -- {}.          Read under a NO-FLUX WALL at each drawn unit's rim (a sink contract there would drain them and          report ~0); on a multi-tile surface inherited basins and tile-seam pits are both in this number          and nothing here separates them",
+        f.depression_cells,
+        pct,
+        f.depression_deepest_m,
+        cap_km3,
+        held,
+    )
+}
+
 /// The settle-history timeline: one tick per **materialized** stage.
 ///
 /// Unlike [`timeline`] there is no citizen/view-computed distinction to draw,
@@ -557,6 +594,7 @@ pub fn depiction(frame: &Frame, headlight: bool) -> Vec<String> {
         frame.req.exag,
         headlight,
         frame.seam.cross_max > 0.0,
+        frame.req.paint,
     )
 }
 
@@ -574,7 +612,7 @@ pub fn craton_line(f: &FrameFacts) -> String {
 pub fn keys(_paint: Paint) -> String {
     "drag spin | wheel zoom (past L9 the globe becomes a REGION WINDOW) | [ ] level | A auto-level\n\
      X relief | O pole | R reset | B GO TO THE SELECTED CHAIN'S REGION | G cycle chains\n\
-     TAB paint (1 surface 2 provenance 3 water 4 seam 5 change) | Z change scale | P present\n\
+     TAB paint (1 surface 2 provenance 3 water 4 seam 5 change 6 depression) | Z change scale | P present\n\
      E EROSION SETTLE HISTORY (world-time) | T deep time (mantle cooling) | V replay (build history)\n\
      K play/pause | J/L step one stage | , . hour | N M day | Y headlight | C CAPTURE SIGHTING | Esc quit"
         .to_string()

@@ -56,6 +56,20 @@ erosion-tile               M/-   46302   34 (epochs)
 ```
 The erosion chain's interior survived the rekey: every store went stale when the law changed, the world was rebuilt in ~3 minutes, and the settle history came back with the same shape under new keys. The rebuild cost nothing measurable — the L9 erosion sweep runs 384 tiles in 12.0 s against 12.4 s before.
 
+## Postscript 2026-07-28: the requisition is filled
+
+The instrument this entry asked for exists. `vivarium explore --paint depression` (key **6**) draws standing-water **capacity** — depth to the spill point of every closed basin in the drawn surface — through `Fluvial::drainage_surface`, the same reader `base_level_probe` and the unit tests use, so the picture and the numbers cannot drift apart. The HUD reports cells, deepest, and capacity in km³ beside the count of cells actually holding standing water, because the gap between those two is the honest subject.
+
+Three things the mode had to decide, each declared on screen rather than in a comment:
+
+- **The palette is violet→white, deliberately not the water mode's cyan.** A filled basin has the shape, position and colour of a lake and the eye will take it for one. A unit test holds the two ramps apart in hue, because a caption is not what the eye is reading.
+- **The reader treats each drawn unit's rim as a no-flux wall,** set explicitly rather than inferred. The inferred contract for any window short of a whole face makes its own rim an outlet and reports ~0 — the paint would be black for a reason about the reader rather than the world. A test convicts this: the same trench reads 0 cells under the inferred contract and 96 under the declared wall.
+- **On a multi-tile surface the number mixes inherited basins with tile-seam pits,** and nothing in the picture separates them. The HUD says so every frame.
+
+This does not change the entry above: capacity is still not water, and `watered 0` still stands. What changed is that the quantity is now visible instead of living in a probe's printout.
+
+*Incident worth recording, because it is a standing open question meeting a real cost:* documenting the new mode in the CLI help text moved `SRC_HASH` and staled every store, because the source digest covers `src/bin/`. A help-string edit cost a full world rebuild (~50 s of sweeps). That is the tradeoff `#form-complete-content-addressed-key`'s open question describes, priced.
+
 ## Postscript space
 
-*(Errata get a dated postscript here, never an edit.)*
+*(Further errata get a dated postscript here, never an edit.)*

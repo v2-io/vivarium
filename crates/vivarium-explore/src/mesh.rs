@@ -208,6 +208,9 @@ pub struct FaceInput<'a> {
     /// Standing-water depth (m) per cell.
     pub water: &'a dyn Fn(u32, u32) -> f32,
     pub water_max_m: f32,
+    /// Capacity (m) to the spill point per cell; 0 where the surface drains.
+    pub depression: &'a dyn Fn(u32, u32) -> f32,
+    pub depression_max_m: f32,
     /// Signed elevation change (m) vs the uncarved initial topography per cell.
     /// Returns 0 when the change channel is not being computed this frame.
     pub change: &'a dyn Fn(u32, u32) -> f32,
@@ -233,6 +236,8 @@ pub fn build_face(input: &FaceInput) -> (FaceMesh, SeamStats) {
         state,
         water,
         water_max_m,
+        depression,
+        depression_max_m,
         change,
         change_scale_m,
     } = *input;
@@ -318,6 +323,8 @@ pub fn build_face(input: &FaceInput) -> (FaceMesh, SeamStats) {
                     state: st,
                     flags,
                     water_m: water(ci, cj),
+                    depression_m: depression(ci, cj),
+                    depression_max_m,
                     seam_excess_m: excess[j * n1 + i],
                     water_max_m,
                     change_m: change(ci, cj),

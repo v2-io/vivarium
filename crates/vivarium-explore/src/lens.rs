@@ -322,6 +322,24 @@ pub struct FrameFacts {
     pub tier_cells: std::collections::BTreeMap<u8, usize>,
     /// Total cells drawn this frame, the denominator for every fraction here.
     pub cells: usize,
+
+    // --- the depression channel: a property of the BED, not hydrology --------
+    /// Cells whose drawn surface sits below the spill point of a closed basin,
+    /// with the geometric volume that basin could hold and the deepest such
+    /// cell. Present only when the depression paint is up.
+    ///
+    /// **Capacity, not water.** No inflow, evaporation, seepage or residence
+    /// time is in the account, and the water nomos ( `inland_water_cells`
+    /// above) is the separate question of what actually stands. The two being
+    /// far apart is the current honest state of the world, not an instrument
+    /// fault.
+    ///
+    /// Summed over the drawn units, each read as its own walled domain — so on
+    /// a six-face frame this is six window censuses added, not one planetary
+    /// basin count.
+    pub depression_cells: usize,
+    pub depression_capacity_m3: f64,
+    pub depression_deepest_m: f32,
 }
 
 /// Where the sea datum on screen came from.

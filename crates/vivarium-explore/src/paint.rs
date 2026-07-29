@@ -50,11 +50,36 @@ pub enum Paint {
     /// #norm-no-depiction-without-referent exists to prevent. So rising and
     /// falling are opposite hues and the HUD carries both fractions.
     Change,
+    /// Colour is **standing-water CAPACITY** — how deep water would stand at
+    /// each cell if every closed basin in the drawn surface filled to its spill
+    /// point. Not water: a property of the bed.
+    ///
+    /// This mode exists because a repair had no picture. Until 2026-07-28 the
+    /// fluvial epoch filled every closed basin and kept the raise, so the stored
+    /// bed was depression-free by construction and this paint would have been
+    /// black everywhere by law rather than by geography
+    /// ( #obs-lakes-are-routed-over-not-carved-away ). The repair made the
+    /// quantity real and left it visible only inside a probe's printout, which
+    /// is the gap this closes.
+    ///
+    /// **It is a capacity, and the caption has to keep saying so** — no
+    /// evaporation, inflow, seepage or residence time is in the account, and the
+    /// water nomos settles 40 s of world time at any level, so nothing here is
+    /// standing water and much of it never will be ( #obs-water-fill-never-settles ).
+    /// Press 3 for the water that actually exists; the difference between the two
+    /// pictures is the honest subject of this one.
+    Depression,
 }
 
 impl Paint {
-    pub const ALL: [Paint; 5] =
-        [Paint::Surface, Paint::Provenance, Paint::Water, Paint::Seam, Paint::Change];
+    pub const ALL: [Paint; 6] = [
+        Paint::Surface,
+        Paint::Provenance,
+        Paint::Water,
+        Paint::Seam,
+        Paint::Change,
+        Paint::Depression,
+    ];
 
     pub fn name(self) -> &'static str {
         match self {
@@ -63,7 +88,15 @@ impl Paint {
             Paint::Water => "water",
             Paint::Seam => "seam",
             Paint::Change => "change",
+            Paint::Depression => "depression",
         }
+    }
+
+    /// Whether this mode needs the depression fill over the drawn surface. It is
+    /// one Priority-Flood pass per drawn unit, so it is paid only when it is the
+    /// subject — the same bargain [`Self::needs_change`] makes.
+    pub fn needs_depression(self) -> bool {
+        self == Paint::Depression
     }
 
     /// Whether this mode needs the per-cell baseline. Computing it is one law
@@ -100,6 +133,14 @@ impl Paint {
                  driver won) | near-black = unchanged. The store does not separate the two, so this is the NET; \
                  the sign is what tells them apart. Z cycles the scale"
             }
+            Paint::Depression => {
+                "colour = CAPACITY of the drawn bed to hold standing water: depth to the spill point of each \
+                 closed basin (violet shallow -> white deep). THIS IS NOT WATER -- no inflow, evaporation, \
+                 seepage or residence time is in it, and press 3 for the water that actually exists. \
+                 The reader treats the drawn window's rim as a NO-FLUX WALL, so basins reaching a tile edge \
+                 are counted; on an assembled multi-tile surface that mixes inherited basins with seam pits \
+                 the tiling manufactures, and nothing here separates them"
+            }
         }
     }
 
@@ -133,6 +174,12 @@ pub struct CellFacts {
     /// time scrub, so a growing signal would look constant — the one thing the
     /// scrub exists to show, hidden by the display of it.
     pub change_scale_m: f32,
+    /// Depth (m) water would stand at if this cell's basin filled to its spill
+    /// point; 0 where the surface already drains. Computed only when the
+    /// depression channel is up.
+    pub depression_m: f32,
+    /// Deepest capacity in the drawn unit (m), for the ramp.
+    pub depression_max_m: f32,
 }
 
 fn lerp3(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
@@ -288,6 +335,27 @@ pub fn shade(mode: Paint, f: CellFacts) -> [f32; 4] {
                 base
             }
         }
+
+        Paint::Depression => {
+            if f.depression_m <= 1.0 {
+                // Drains. Neutral grey by relief below the datum's own dark, so
+                // the capacity reads as the subject and the coastline still
+                // places it. The 1 m floor is the probes' own threshold, kept
+                // identical so the picture and the numbers agree.
+                if f.h_m > f.sea_m {
+                    let g = 0.20 + 0.28 * ((f.h_m - f.sea_m) / 3500.0).clamp(0.0, 1.0);
+                    [g, g, g * 0.97]
+                } else {
+                    [0.05, 0.07, 0.12]
+                }
+            } else {
+                // Violet through white: deliberately NOT the water mode's cyan,
+                // because these two pictures must never be mistaken for each
+                // other — one is hydrology and one is a hole.
+                let t = (f.depression_m / f.depression_max_m.max(1.0)).clamp(0.0, 1.0).powf(0.45);
+                lerp3([0.34, 0.16, 0.55], [0.97, 0.94, 1.00], t)
+            }
+        }
     };
     // Applied LAST and in every mode: see `seam_overlay`. Making this
     // conditional on the paint mode would return the C0 bridge to a text-only
@@ -304,8 +372,28 @@ pub fn shade(mode: Paint, f: CellFacts) -> [f32; 4] {
 /// affordances."* An enumeration nobody maintains is worthless, so it is
 /// generated from the running view's own state and shown on the HUD and in every
 /// sighting, rather than kept as prose somewhere.
-pub fn declared_affordances(exag: f32, headlight: bool, has_seams: bool) -> Vec<String> {
+pub fn declared_affordances(
+    exag: f32,
+    headlight: bool,
+    has_seams: bool,
+    mode: Paint,
+) -> Vec<String> {
     let mut v = Vec::new();
+    if mode == Paint::Depression {
+        // The one genuinely dangerous reading this mode invites. A violet basin
+        // has the shape, position and colour of a lake, and the eye will take it
+        // for one; the legend says otherwise but the legend is not what the eye
+        // is doing. So the affordance is declared here, where every sighting
+        // carries it, rather than only in a line the viewer may not be reading.
+        v.push(
+            "DEPRESSION paint draws CAPACITY, and a filled basin here is NOT a lake -- no inflow,              evaporation, seepage or residence time is in the account, and press 3 to see the standing              water that actually exists (usually none). ADMITTED as a real measured quantity of the bed              drawn in a non-water palette on purpose; what is unreal is the lake your eye supplies."
+                .to_string(),
+        );
+        v.push(
+            "DEPRESSION paint reads each drawn unit as a NO-FLUX WALLED domain. That is a declared              boundary contract, not an absent one: a coastless window gets no outlet but its own lowest              cell, which can make most of its area read as one basin. The alternative contract drains              every basin reaching a rim and reports ~0, so there is no neutral reader here -- only a              named one."
+                .to_string(),
+        );
+    }
     if exag != 1.0 {
         v.push(format!(
             "relief exaggerated x{exag:.0} -- ADMITTED: self-announcing (no eye reads x20 relief as literal); \
@@ -339,4 +427,128 @@ pub fn declared_affordances(exag: f32, headlight: bool, has_seams: bool) -> Vec<
             .to_string(),
     );
     v
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vivarium_world::erosion::{EdgeContract, ErodedRegion, Fluvial};
+    use vivarium_world::sphere::Face;
+
+    fn facts(h_m: f32, depression_m: f32, water_m: f32) -> CellFacts {
+        CellFacts {
+            h_m,
+            sea_m: 0.0,
+            state: BuildState::Eroded,
+            flags: Default::default(),
+            water_m,
+            seam_excess_m: 0.0,
+            water_max_m: 100.0,
+            change_m: 0.0,
+            change_scale_m: 200.0,
+            depression_m,
+            depression_max_m: 300.0,
+        }
+    }
+
+    /// **The depression paint must not be mistakable for the water paint**, and
+    /// that is a colour claim rather than a caption claim — the caption is what
+    /// the eye is not reading ( #norm-no-depiction-without-referent ).
+    ///
+    /// Capacity is a property of the bed and standing water is hydrology; the
+    /// world currently has a great deal of the first and none of the second, so
+    /// two pictures that looked alike would say the opposite of the truth.
+    #[test]
+    fn capacity_and_standing_water_are_drawn_in_palettes_that_cannot_be_confused() {
+        let deep_capacity = shade(Paint::Depression, facts(500.0, 250.0, 0.0));
+        let deep_water = shade(Paint::Water, facts(500.0, 0.0, 80.0));
+        // Compared on hue rather than brightness: the violet ramp rises through
+        // red as well as blue, the cyan ramp does not rise through red at all.
+        let red_over_blue = |c: [f32; 4]| c[0] / c[2].max(1e-6);
+        assert!(
+            red_over_blue(deep_capacity) > 2.0 * red_over_blue(deep_water),
+            "capacity {deep_capacity:?} and standing water {deep_water:?} are too close in hue to be told apart"
+        );
+    }
+
+    /// A dry cell and a filled basin must be visibly different, or the mode
+    /// reports nothing ( #norm-probe-sensitivity — a paint that draws the same
+    /// colour everywhere certifies nothing, exactly like a measure that never
+    /// fires).
+    #[test]
+    fn the_depression_paint_fires_on_a_basin_and_is_quiet_on_ground_that_drains() {
+        let dry = shade(Paint::Depression, facts(500.0, 0.0, 0.0));
+        let shallow = shade(Paint::Depression, facts(500.0, 30.0, 0.0));
+        let deep = shade(Paint::Depression, facts(500.0, 250.0, 0.0));
+        let lum = |c: [f32; 4]| c[0] + c[1] + c[2];
+        assert!(lum(shallow) > lum(dry) * 1.2, "a 30 m basin must separate from dry ground");
+        assert!(lum(deep) > lum(shallow) * 1.5, "capacity must be readable as a depth, not a mask");
+        // The 1 m floor is the probes' own threshold; below it the paint is dry.
+        assert_eq!(shade(Paint::Depression, facts(500.0, 0.9, 0.0)), dry);
+    }
+
+    /// **Why `pull` sets the boundary contract explicitly instead of letting it
+    /// be inferred** — the whole reason this mode shows anything at all.
+    ///
+    /// A drawn window short of a whole cube face infers `BaseLevelSink`, which
+    /// makes the window's own rim an outlet: every basin reaching it drains, and
+    /// the paint would be black for a reason about the *reader* rather than the
+    /// world. This is the same understatement measured on the beacon patch,
+    /// where a sink-contract reader read 19.67% of the window in closed
+    /// depressions against a wall reader's 63.5%
+    /// ( #obs-tile-outlets-grade-away-the-basins FE(5) ).
+    ///
+    /// Reverting `set_edge_contract` in `pull.rs` fails this.
+    #[test]
+    fn the_inferred_contract_would_drain_the_basin_this_mode_exists_to_draw() {
+        // A window (not a whole face): ground ramping down in +x, with a trench
+        // cut across it that spans the full y range and therefore TOUCHES the
+        // window's rim — which is the geometry at issue, a basin reaching a tile
+        // edge. The trench floor stays well above the ramp's far end, so the
+        // window's global minimum is at the low edge and the trench is a genuine
+        // closed basin rather than the domain's own sink.
+        let (level, oi, oj, nx) = (9u8, 64u32, 64u32, 32usize);
+        // Anchored to the derived sea, or every cell is below the datum, every
+        // cell is an outlet under BOTH contracts, and the test compares two
+        // no-ops (the vacuous-footprint failure `Fluvial`'s own suite records).
+        let sea = vivarium_world::sea_level::derived_sea_level_m(0) as f32;
+        let mut h = vec![0.0f32; nx * nx];
+        for j in 0..nx {
+            for i in 0..nx {
+                let ramp = sea + 3000.0 - 120.0 * i as f32;
+                let trench = if (6..10).contains(&i) { 400.0 } else { 0.0 };
+                h[j * nx + i] = ramp - trench;
+            }
+        }
+        let region = ErodedRegion { face: Face::ZPos, level, oi, oj, nx, h, seed: 0 };
+
+        let inferred = Fluvial::from_region(&region);
+        assert_eq!(
+            inferred.edge_contract(),
+            EdgeContract::BaseLevelSink,
+            "a window short of a whole face must still infer the sink contract, or this test is not about the real default"
+        );
+        let drained = Fluvial::from_region(&region).drainage_surface().stats;
+
+        let mut walled = Fluvial::from_region(&region);
+        walled.set_edge_contract(EdgeContract::NoFluxWall);
+        let held = walled.drainage_surface().stats;
+
+        assert_eq!(
+            drained.depression_cells, 0,
+            "the inferred contract drains the trench through the rim it reaches — got {} cells",
+            drained.depression_cells
+        );
+        assert!(
+            held.depression_cells >= nx,
+            "the declared wall must hold the trench this mode exists to draw — got {} cells, deepest {:.0} m",
+            held.depression_cells,
+            held.deepest_depression_m
+        );
+        assert!(
+            held.deepest_depression_m > 100.0,
+            "and must hold it at its real depth, not a sliver — got {:.0} m",
+            held.deepest_depression_m
+        );
+    }
 }

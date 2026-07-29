@@ -163,7 +163,8 @@ COMMANDS
                                 of attention. Same store, same reader, same
                                 live-vs-replay semantics, same epistemic overlay;
                                 it differs only in how it draws. Paint modes:
-                                surface | provenance | water | seam. Press C on
+                                surface | provenance | water | seam | change |
+                                depression. Press C on
                                 anything that looks wrong and it writes a sighting.
                                 (Runs as a separate binary, `vivarium-explore`, so
                                 this CLI never links a renderer -- see below.)
