@@ -15,20 +15,63 @@ pub fn corner_uv(i: u64, j: u64, level: u8) -> (f64, f64) {
     (2.0 * (i as f64) / n - 1.0, 2.0 * (j as f64) / n - 1.0)
 }
 
-/// Exact solid angle (steradians) of cube-sphere cell `(face, i, j)` at `level`.
+/// Solid angle (steradians) of cube-sphere cell `(face, i, j)` at `level`, as the
+/// spherical excess of the cell's two corner triangles. Face-independent on the
+/// unit sphere (the six faces are congruent), so `face` is unused.
 ///
-/// On a cube face, gnomonic tangents are $X=\tan(\pi u/4)$, $Y=\tan(\pi v/4)$,
-/// $d\Omega = dX\,dY/(1+X^2+Y^2)^{3/2}$, with antiderivative
-/// $\mathcal{F}(X,Y)=\arctan(XY/\sqrt{1+X^2+Y^2})$. Face-independent on the unit sphere.
+/// **Why not the closed form.** The gnomonic antiderivative
+/// $\mathcal{F}(X,Y)=\arctan(XY/\sqrt{1+X^2+Y^2})$ gives the exact answer as
+/// $\mathcal{F}(u_1,v_1)-\mathcal{F}(u_1,v_0)-\mathcal{F}(u_0,v_1)+\mathcal{F}(u_0,v_0)$
+/// — four $O(1)$ terms whose difference is the (tiny) solid angle. As the cell
+/// shrinks the terms converge on each other and the **relative** cancellation error
+/// grows like $4^{\text{level}}$: measured 1.6e-6 median at L19, 4.1e-4 at L23,
+/// 5.5e-3 (worst 6.8e-2) at L25 = `MAX_LEVEL`. That is a live-kernel quantity —
+/// `cell_area_m2` is the per-cell runoff in `erosion::accumulate_drainage` and the
+/// volume in `deposit` — and the error is spatially high-frequency, which is the
+/// shape that reads as sub-grid texture rather than as a numerical floor.
+///
+/// **The form used instead.** Van Oosterom–Strackee,
+/// $\tan(\Omega/2) = |a\cdot(b\times c)| / (1 + a\cdot b + b\cdot c + c\cdot a)$,
+/// with the triple product evaluated as $a\cdot((b-a)\times(c-a))$ — algebraically
+/// identical (the $a\times a$ and $a\cdot(b\times a)$ terms vanish) but formed from
+/// *differences* of nearby corner vectors rather than from their raw components.
+/// The denominator is $O(1)$ and well-conditioned. Measured against an independent
+/// Gauss–Legendre quadrature of the Jacobian (a sum of positive terms times an
+/// exactly-representable cell size, hence cancellation-free, and self-converged to
+/// ~2e-16): relative residual 2e-11 at L19, 3e-10 at L23, 4e-10 at L25 — six to
+/// seven orders better than the closed form, and no longer growing as $4^{level}$.
+///
+/// ⚠ **The NAIVE Van Oosterom–Strackee form is not the fix**: with the triple
+/// product taken directly from the corner components it also degrades as
+/// $4^{\text{level}}$ (1.8e-3 at L25), only ~7× better than the closed form. The
+/// difference reformulation is the load-bearing part. Probe:
+/// `examples/solid_angle_precision.rs` measures all three against the quadrature.
 pub fn cell_solid_angle(_face: Face, i: u64, j: u64, level: u8) -> f64 {
     let (u0, v0) = corner_uv(i, j, level);
     let (u1, v1) = corner_uv(i + 1, j + 1, level);
-    let f = |u: f64, v: f64| -> f64 {
-        let x = (u * std::f64::consts::FRAC_PI_4).tan();
-        let y = (v * std::f64::consts::FRAC_PI_4).tan();
-        (x * y / (1.0 + x * x + y * y).sqrt()).atan()
+    let p = |u: f64, v: f64| -> [f64; 3] {
+        crate::sphere::CubeCoord { face: Face::ZPos, u, v }.to_unit()
     };
-    (f(u1, v1) - f(u1, v0) - f(u0, v1) + f(u0, v0)).abs()
+    let (a, b, c, d) = (p(u0, v0), p(u1, v0), p(u1, v1), p(u0, v1));
+    tri_solid_angle(a, b, c) + tri_solid_angle(a, c, d)
+}
+
+/// Solid angle of the spherical triangle on unit vectors `a`, `b`, `c`
+/// (Van Oosterom–Strackee, difference-formed triple product — see
+/// [`cell_solid_angle`] for why the difference form is the load-bearing part).
+#[inline]
+fn tri_solid_angle(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> f64 {
+    let d1 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    let d2 = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    let x = [
+        d1[1] * d2[2] - d1[2] * d2[1],
+        d1[2] * d2[0] - d1[0] * d2[2],
+        d1[0] * d2[1] - d1[1] * d2[0],
+    ];
+    let dot = |p: [f64; 3], q: [f64; 3]| p[0] * q[0] + p[1] * q[1] + p[2] * q[2];
+    let num = dot(a, x).abs();
+    let den = 1.0 + dot(a, b) + dot(b, c) + dot(c, a);
+    2.0 * num.atan2(den)
 }
 
 /// Cell area in m² on a sphere of the given radius.

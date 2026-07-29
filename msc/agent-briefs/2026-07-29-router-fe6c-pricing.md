@@ -8,7 +8,9 @@ DECISIONS entries appended at `:by claude :status proposed`.*
 
 **Nothing in `core/` or `core/OUTLINE.md` was edited** (per the brief — canon
 lands with one pair of hands). Proposed segment text is drafted below for you to
-land or reject. **No `src/` change was made**, though one is now warranted (§4).
+land or reject. **One `src/` change landed** — `measure::cell_solid_angle`, under Joseph's
+explicit re-key grant relayed mid-task; §3 carries it, including a correction to
+what I first told you the fix was.
 
 ---
 
@@ -100,25 +102,55 @@ own NOTE predicted exactly this. Its numbers describe a retired kernel — and
 `router_fe6c.rs` and P0 is green; `router_pricing.rs` is left alone (yours to
 retire or re-port).
 
-**`measure::cell_solid_angle` loses relative precision as the level refines.**
-The four-term arctangent difference cancels catastrophically as the cell shrinks;
-relative error grows like `4^level`. Measured against Van Oosterom–Strackee
-(probe: `examples/solid_angle_precision.rs`):
+**`measure::cell_solid_angle` lost relative precision as `4^level` — now fixed and
+landed** (`src/measure.rs`), under your relayed grant: *"Don't worry about
+rekeying — get the truth in place :-) Let the cache worry about the cache."*
 
-| L13 | L16 | **L19** | **L21** | **L23** | **L25** |
-|---|---|---|---|---|---|
-| 5e-10 | 3e-8 | **1.6e-6** | **3.2e-5** | **4.1e-4** | **5.5e-3** (max 6.8e-2) |
+**One correction to what I told you the first time, and it is the substantive
+part.** I said the fix was "VOS on the four corners, drop-in." That was wrong,
+and wrong for a reason worth naming: **my probe used naive VOS as its reference**,
+so it could see a disagreement growing as `4^level` but could not say *which*
+formula was drifting. I attributed it to the closed form on a mechanism argument
+— four cancelling arctangents — and the mechanism was right about the closed form
+while being silent about the reference. Measured against a real reference, **naive
+VOS degrades as `4^level` too** (1.8e-3 at L25), only ~7× better. Shipping it
+would have bought a factor of 7 while claiming a factor of a million.
 
-`cell_area_m2` is the per-cell runoff in `accumulate_drainage` and the volume in
-`deposit`. It *replaced* uniform `cell_m²` because per-cell area accuracy was
-shown to matter (`#obs-cube-locked-kernel-bias`, +17.8%). At the walk-scale tiers
-the repo already contemplates, its replacement carries high-frequency per-cell
-noise of 0.04%–0.5% median. Harmless at L19; a real ceiling on fine tiers, and
-the *shape* (spatially random) is what would read as sub-grid texture.
+The reference is now tensor Gauss–Legendre on the Jacobian — positive terms times
+an exactly-representable cell size, cancellation-free by construction, and
+self-converged to ~2e-16 (the probe reports that convergence, which is what makes
+it usable as truth rather than as a second opinion). Against it:
 
-Fix is a drop-in — VOS on the four corners, same inputs, no new dependency, no
-behaviour change above L16. **Not landed:** a `src/` edit re-keys every world
-under every cohort and you had siblings on the store. Your call when to take it.
+| | L13 | L19 | L23 | L25 |
+|---|---|---|---|---|
+| legacy (retired) | −4.8e-10 | −3.0e-6 | +2.9e-4 | −1.3e-2 |
+| naive VOS (*not* the fix) | −3.1e-11 | −5.9e-7 | +6.2e-5 | +1.8e-3 |
+| **landed** | **−5.6e-13** | **−1.9e-11** | **−2.9e-10** | **−4.0e-10** |
+
+The landed form is VOS with the triple product as `a·((b−a)×(c−a))` —
+algebraically identical, but formed from *differences* of nearby corner vectors.
+**The difference reformulation is the load-bearing part**, not VOS as such. Flat
+from L16 on. Coarse levels where the old form was healthy are unchanged to
+rounding (L4 delta 3e-16): the value change at any level is exactly the old error
+at that level, which is what makes this a precision fix rather than a physics
+change.
+
+**Independent corroboration, which is the part that convinced me:** an unrelated
+gate in my own harness — P1's `max |A_spherical/A_planar − 1|` at L19 — moved
+**4.44e-5 → 5.44e-8** across the change. Different file, different quantity,
+predicted direction and magnitude. That is the check I would have wanted from
+someone else.
+
+**Verification of the cost.** `bin/check` green (180 lib + 3 cli_admission +
+decision-refs + null-space gate + determinism clippy). The **FE(6c) pricing was
+re-run across the change** — every conclusion and the entire arm ordering survive,
+RMS-CUBE shifts < 0.007, P0 still bit-matches. Every store cohort is invalidated
+by design; accepted per the grant. The probe carries a hard guard (worst
+|live/quad − 1| over L13–L25 < 1e-8, measured 2.5e-9) so a future simplification
+back to a cancelling form fails loudly rather than silently at L23 inside a
+landscape.
+`DECISIONS[cell-solid-angle-now-uses-a-difference-formed-spherical-excess]`
+supersedes the parked entry and carries the correction.
 
 **Cross-link:** `DECISIONS[the-discrete-gcl-is-a-spec-not-a-defect]` from this
 session's structure strand records that `measure.rs` carries **no edge length,
@@ -185,11 +217,13 @@ project has now hit twice:
 
 ### `#obs-cube-locked-kernel-bias`
 
-Candidate Working Note (or a `#gap` row if you'd rather it be owed): `cell_area_m2`
-retired uniform `cell_m²` on accuracy grounds, and its own relative precision
-degrades as `4^level` — 1.6e-6 median at L19, 4.1e-4 at L23, 5.5e-3 at L25 —
-because `cell_solid_angle` cancels four O(1) arctangents. Probe:
-`examples/solid_angle_precision.rs`. Drop-in fix identified, not landed (re-key).
+Candidate Working Note: `cell_area_m2` retired uniform `cell_m²` on accuracy
+grounds, and its own relative precision degraded as `4^level` (−3.0e-6 at L19,
++2.9e-4 at L23, −1.3e-2 at L25) because `cell_solid_angle` cancelled four O(1)
+arctangents. **Fixed 2026-07-29** — difference-formed spherical excess, now flat
+at ~1e-10 from L16 on, guarded by `examples/solid_angle_precision.rs`. Worth a
+line because the *shape* of the defect (a tiny quantity formed as the difference
+of O(1) terms) is generic and this module is where such quantities live.
 
 ## 5. Feedback on the brief, since you asked
 
@@ -228,6 +262,7 @@ The brief was the reason this went where it went, and specifically:
 ## 6. Still on the line
 
 Happy to: run the specific-catchment-area re-tuned stream-power arm (the honest
-magnitude test); sweep faces/levels/forcing; land the VOS fix and take the re-key
-when you say; re-port or retire `router_pricing.rs`; or draft the segment edits
-as a patch if you'd rather review a diff than prose.
+magnitude test); sweep faces/levels/forcing; re-port or retire
+`router_pricing.rs`; sweep for other places the same cancelling-difference shape
+hides (the `cell_solid_angle` mechanism is generic, and I have not looked); or
+draft the segment edits as a patch if you'd rather review a diff than prose.

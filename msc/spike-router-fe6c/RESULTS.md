@@ -210,36 +210,66 @@ but they describe a retired kernel — and `#obs-routing-curl-spiral` FE(8) cite
 them as present truth. The strawman band replicates on the current kernel (above),
 so the FE(8) conclusion survives; the citation should say which kernel.
 
-### B. `measure::cell_solid_angle` loses relative precision as the level refines
+### B. `measure::cell_solid_angle` lost relative precision as the level refined — fixed
 
-Probe: `crates/vivarium-world/examples/solid_angle_precision.rs` (new).
-The four-term arctangent difference `F(u₁,v₁) − F(u₁,v₀) − F(u₀,v₁) + F(u₀,v₀)`
-cancels catastrophically as the cell shrinks; measured against the
-cancellation-free Van Oosterom–Strackee form, the relative error grows like
-`4^level`:
+Probe: `crates/vivarium-world/examples/solid_angle_precision.rs`. **Landed in
+`src/measure.rs` on 2026-07-29** under Joseph's explicit grant — *"Don't worry
+about rekeying — get the truth in place :-) Let the cache worry about the cache."*
 
-| level | cell | median rel. err | max rel. err |
-|---|---|---|---|
-| L13 | 1222 m | 5.3e-10 | 4.7e-9 |
-| L16 | 153 m | 2.8e-8 | 3.3e-7 |
-| **L19** | 19.1 m | 1.6e-6 | 2.9e-5 |
-| **L21** | 4.8 m | 3.2e-5 | 4.9e-4 |
-| **L23** | 1.19 m | 4.1e-4 | 5.4e-3 |
-| **L25** | 0.30 m | 5.5e-3 | 6.8e-2 |
+The retired closed form evaluated `F(u₁,v₁) − F(u₁,v₀) − F(u₀,v₁) + F(u₀,v₀)` with
+`F = atan(XY/√(1+X²+Y²))` — four O(1) terms whose difference is the tiny solid
+angle. Relative cancellation error grew like `4^level`.
 
-`cell_area_m2` is consumed by the live fluvial kernel (`erosion.rs:485` → per-cell
-runoff in `accumulate_drainage`, volumes in `deposit`). It *replaced* uniform
-`cell_m²` precisely because per-cell area accuracy was shown to matter
-(`#obs-cube-locked-kernel-bias`, +17.8% area-weighted bias). At the walk-scale
-tiers the repo already contemplates (L23–L25, `MAX_LEVEL = 25`) its replacement
-carries 0.04%–0.5% median and up to 7% worst-case per-cell noise — and the noise
-is spatially high-frequency, which is the shape that reads as sub-grid texture
-rather than as a numerical floor. Harmless at L19; a real ceiling on fine tiers.
+**⚠ The first version of this finding named the wrong fix, and the reason is worth
+keeping.** It reported the error *against naive Van Oosterom–Strackee* and
+proposed naive VOS as the drop-in. Measured against a real reference, **naive VOS
+degrades as `4^level` too** — 1.8e-3 at L25, only ~7× better than the form it
+would replace. The proposal would have bought a factor of 7 while claiming a
+factor of a million. The methodological error: *the probe used as its reference a
+formula with the same failure mode as the one under test*, so it could measure a
+disagreement but could not attribute it.
 
-Fix is a drop-in (VOS on the four corners; same inputs, no new dependency).
-**Not landed** — a `src/` edit re-keys every world under every cohort
-(`#form-complete-content-addressed-key`), and there were sibling agents on the
-shared store.
+The reference now is tensor Gauss–Legendre on the Jacobian — a sum of **positive**
+terms times an **exactly representable** cell size, hence cancellation-free by
+shape, and self-converged to ~2e-16 (the probe reports that convergence, which is
+what licenses it as truth). Against it:
+
+| level | cell | legacy (retired) | naive VOS | **landed** |
+|---|---|---|---|---|
+| L13 | 1222 m | −4.8e-10 | −3.1e-11 | **−5.6e-13** |
+| L16 | 153 m | −2.2e-8 | +7.1e-9 | **+2.6e-13** |
+| **L19** | 19.1 m | −3.0e-6 | −5.9e-7 | **−1.9e-11** |
+| **L21** | 4.8 m | +3.8e-5 | −7.8e-6 | **−5.9e-11** |
+| **L23** | 1.19 m | +2.9e-4 | +6.2e-5 | **−2.9e-10** |
+| **L25** | 0.30 m | −1.3e-2 | +1.8e-3 | **−4.0e-10** |
+
+The landed form is VOS with the triple product built as `a·((b−a)×(c−a))` —
+algebraically identical to `a·(b×c)` but formed from *differences* of nearby
+corner vectors. **The difference reformulation is the load-bearing part**, not VOS
+as such. Flat from L16 on; six to seven orders better; no longer `4^level`.
+
+Why it mattered: `cell_area_m2` is consumed by the live fluvial kernel
+(`erosion.rs:485` → per-cell runoff in `accumulate_drainage`, volumes in
+`deposit`), and it *replaced* uniform `cell_m²` precisely because per-cell area
+accuracy was shown to matter (`#obs-cube-locked-kernel-bias`, +17.8%
+area-weighted bias). At L23–L25 its replacement carried 0.04%–0.5% median and up
+to 7% worst-case per-cell noise, spatially high-frequency — the shape that reads
+as sub-grid texture rather than as a numerical floor.
+
+**Independent corroboration.** An unrelated gate in this spike's own harness —
+P1's `max |A_spherical/A_planar − 1|` at L19, measuring the cell's genuine
+sphericity against the tangent-plane quad — moved **4.44e-5 → 5.44e-8** across the
+change. Different file, different quantity, predicted direction and magnitude.
+
+**Cost and verification.** Every stored world cohort is invalidated by design
+(SRC_HASH, `#form-complete-content-addressed-key`) — accepted per the grant.
+`bin/check` green (180 lib + 3 cli_admission + decision-refs + null-space gate +
+determinism clippy). The FE(6c) pricing above was **re-run across the change**:
+every conclusion and the entire arm ordering survive, RMS-CUBE shifts < 0.007.
+The probe carries a hard guard (worst |live/quad − 1| over L13–L25 < 1e-8;
+measured 2.5e-9) so a future simplification back to a cancelling form fails
+loudly instead of silently inside a landscape.
+`DECISIONS[cell-solid-angle-now-uses-a-difference-formed-spherical-excess]`.
 
 ### C. Cross-link to the same session's structure strand
 
@@ -266,8 +296,9 @@ those quantities are landed in `measure.rs`, both tests should ride along.
    receiver (D∞-style two-neighbour split) is not tested, because the incision and
    deposition machinery assumes a tree.
 5. The reconstruction divides by the spherical `cell_area`, not the tangent-plane
-   quad area the identity is stated on. Difference ~3e-6 at L19; irrelevant here,
-   would need care at coarse tiers.
+   quad area the identity is stated on. Difference is now ~5e-8 at L19 (it was
+   ~4e-5 before the `cell_solid_angle` fix, and that discrepancy is what exposed
+   the fix); irrelevant here, would need care at coarse tiers.
 
 ## Reproduce
 
