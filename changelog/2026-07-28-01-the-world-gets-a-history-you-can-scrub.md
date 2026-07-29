@@ -45,3 +45,9 @@ Yesterday `erosion-tile` read **1** — endpoint only, no interior. Water is now
 ## Instrument gaps this entry exposes (the requisition clause)
 
 The whole-globe ASCII (`vivarium info`) can't show any of today's change — its glyphs are build-state, not relief, and at ~600 km/character the carving is sub-glyph. The 3D explorer is currently the *only* surface on which today's work is visible, and no capture path exists from it short of the sighting key. A CLI-level region render (ASCII relief/discharge shot of a named window at a named stage) would make future entries' before/after pairs one command each.
+
+## Postscript 2026-07-29: pre-registrations landed
+
+1. **Fill repair** — entry `2026-07-28-02` (and adjudication in `2026-07-28-03`).
+2. **Halo/seam** — production Jacobi path landed; user-visible cross-tile entry is `2026-07-29-01-cross-tile-beds-under-jacobi-still-tiled-to-the-eye` (residual 4×4 lattice + flux/spill open). Explorer capture path also exists (`VIVARIUM_SHOT` / delay).
+3. **Era carve** — still queued (hotspots rank 3).

@@ -76,7 +76,7 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
 **Max attainable: discussion-grade** as maintained ideation — completeness is impossible; honesty about dated judgment is the bar.
 
-**Currently `discussion-grade`.** Joseph 2026-07-29 asked for a home for *active work* (not geographic hotspots); a prior draft over-weighted "molten code for measurement era" and under-weighted **evolving TODO with rationale** — this body corrects that. Leverage rank (FE(5)) and molten table (FE(6)) dated **2026-07-29**, revised after halo thin vertical (keyed region path landed; rank 1 is now *wire the shipped build*). Outside-reader rank not Joseph-ratified. Stage `draft`.
+**Currently `discussion-grade`.** Joseph 2026-07-29 asked for a home for *active work* (not geographic hotspots); a prior draft over-weighted "molten code for measurement era" and under-weighted **evolving TODO with rationale** — this body corrects that. Leverage rank (FE(5)) and molten table (FE(6)) dated **2026-07-29**, revised after halo **adoption** (builder/view ship Jacobi; rank 1 is water settle; 1b flux/spill). Outside-reader rank not Joseph-ratified. Stage `draft`.
 
 ## Discussion
 
