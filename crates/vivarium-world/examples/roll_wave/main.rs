@@ -240,16 +240,25 @@ fn main() {
     println!("   is dt-free: v = d^{{2/3}}·√S/n = {:.3} m/s ⇒ Fr = {:.3} (capped at 2.0).",
         d0.powf(2.0 / 3.0) * 0.70f64.sqrt() / 0.13,
         d0.powf(2.0 / 3.0) * 0.70f64.sqrt() / 0.13 / (9.8 * d0).sqrt());
-    println!("   dt (s)     Fr of the relaxed base state     error vs the capped answer");
+    println!("   dt (s)     Fr of the relaxed base state     error vs capped     outflow-clamp");
     {
         let geom = tilted(64, 0.70, 4.8);
         for &dt in &[0.8f64, 0.4, 0.2, 0.1, 0.05, 0.02, 0.01] {
             let p = PipeParams { dt, ..PipeParams::kernel_default(4.8) };
-            let (base, _) = water_op::relax_to_steady(&geom, &p, d0, 20000);
+            let (base, g) = water_op::relax_to_steady(&geom, &p, d0, 20000);
             let fr = water_op::froude(&base, &geom, &p);
-            println!("   {dt:5.3}      {fr:8.4}                        {:+7.2}%", 100.0 * (fr / 2.0 - 1.0));
+            // The outflow clamp is the OTHER dt-dependent mechanism in the
+            // steady state, and it is a legitimate one (a cell cannot ship more
+            // than it holds in one step). Counted so the residual at coarse dt
+            // is attributed rather than assumed.
+            println!(
+                "   {dt:5.3}      {fr:8.4}                        {:+7.2}%          {:5.1}%",
+                100.0 * (fr / 2.0 - 1.0),
+                100.0 * g.clamped as f64 / (geom.n() as f64)
+            );
         }
-        println!("   ⇒ the shipped pairing (dt 0.2 s at l 4.8 m) sits ~8% slow, one-sided.");
+        println!("   Friction is now implicit in the UPDATED flux, so the friction");
+        println!("   steady state is dt-free by algebra. Any residual is the outflow clamp.");
     }
     println!();
 

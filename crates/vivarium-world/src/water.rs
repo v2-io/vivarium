@@ -533,8 +533,29 @@ impl WaterSim {
             let raw = f + dt * g * hflow * head;
             guards.rectifier = raw < 0.0;
             let accel = raw.max(0.0);
-            let v = accel / (hflow * l);
-            let f = accel / (1.0 + dt * g * n * n * v / hflow.powf(4.0 / 3.0));
+            // Manning friction, IMPLICIT IN THE UPDATED FLUX. The friction term
+            // is `dt·g·n²·|v|/h^{4/3}` with `v = f/(h·l)`, so writing it in the
+            // NEW flux gives `f = A/(1 + k·f)` with `k = dt·g·n²/(h^{7/3}·l)` —
+            // a quadratic with the closed form below. No iteration.
+            //
+            // ⚠ WHY THIS AND NOT THE PREVIOUS FORM. It used to evaluate `v` from
+            // `accel`, the PRE-friction flux. That makes the STEADY STATE A
+            // FUNCTION OF dt: measured 2026-07-29 at 70% slope, Fr 1.358 at
+            // dt 0.8 s, 1.848 at the shipped 0.2 s, 2.000 only at dt ≤ 0.05 s —
+            // the shipped pairing ran ~8% SLOW, one-sided, and it is not a CFL
+            // violation (the documented `dt ≲ l/√(g·d)` gives 1.53 s there).
+            // Implicit in the updated flux, the steady state cancels dt exactly:
+            // `f = A/(1+k·f)` at `f_new = f_old` gives `k·f² = dt·g·h·head`, and
+            // `k ∝ dt`, leaving `f = l·h^{5/3}·√S/n` — Manning, dt-free.
+            // `DECISIONS[the-shipped-water-timestep-is-friction-bound-not-cfl-bound]`.
+            //
+            // The rationalised root `2A/(1+√(1+4kA))` is used rather than
+            // `(−1+√(1+4kA))/(2k)`: both are the same root, but the latter is a
+            // difference of nearly-equal numbers as `k → 0` (the low-friction
+            // limit every shallow pipe sits in) and loses precision there. This
+            // form is exact at `k = 0`, where it returns `A`.
+            let k = dt * g * n * n / (hflow.powf(7.0 / 3.0) * l);
+            let f = 2.0 * accel / (1.0 + (1.0 + 4.0 * k * accel).sqrt());
             // Breaking limit: natural steep streams self-organise to Fr ≈ 1
             // (Grant 1997) — surge fronts that outrun ~2× critical BREAK and
             // shed momentum as turbulence. Without this loss the travelling

@@ -267,8 +267,14 @@ pub fn step(state: &mut [f64], geom: &Geom, p: &PipeParams, guards: &mut Guards)
                 guards.near_kink += 1;
             }
             let accel = raw.max(0.0);
-            let v = accel / (hflow * p.l);
-            let mut ff = accel / (1.0 + p.dt * p.g * n_manning * n_manning * v / hflow.powf(4.0 / 3.0));
+            // Mirrors the kernel's IMPLICIT-IN-UPDATED-FLUX Manning friction
+            // (landed 2026-07-29): `f = A/(1 + k·f)`, `k = dt·g·n²/(h^{7/3}·l)`,
+            // taken in the rationalised form that is exact at `k = 0`. The
+            // previous form evaluated `v` from the pre-friction flux and made
+            // the steady state a function of dt. If this and `water.rs` ever
+            // disagree the pin will say so.
+            let kf = p.dt * p.g * n_manning * n_manning / (hflow.powf(7.0 / 3.0) * p.l);
+            let mut ff = 2.0 * accel / (1.0 + (1.0 + 4.0 * kf * accel).sqrt());
             if p.breaking_cap {
                 let cap = p.froude_cap * (p.g * hflow).sqrt() * hflow * p.l;
                 if ff > cap {
