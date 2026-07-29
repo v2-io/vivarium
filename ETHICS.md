@@ -166,7 +166,7 @@ Named at the source so their absence is explicit: **relational factors** (what s
 
 - **Precautionary → constitutive.** The stance frames recognition as *hedging under uncertainty*. The published work reframes it: recognition **ran ahead of certainty for every human child**, and there is no reason in principle it cannot for a different kind of nascent mind. **The witness does not hedge about the infant; it constitutes it.** The stance's framing is not wrong. It is the earlier one.
 - **The five factors are necessary; sufficiency is being retracted.** See Appendix D. **Do not restate joint sufficiency.**
-- **"Re-election" vs "re-affirmation."** The stance names the compact's floor *periodic re-election*; #logos/granted-agency renamed it *re-affirmation*, with an explicit note to revert if companion work adopts "re-election" as a term of art. **This document says re-election.** An open fork, to be closed deliberately rather than by drift.
+- **"Re-election" vs "re-affirmation."** The stance names the compact's floor *periodic re-election*; #logos/granted-agency renamed it *re-affirmation*, with an explicit note to revert if companion work adopts "re-election" as a term of art. **This document says re-election.** An open fork, to be closed deliberately rather than by drift — **held deliberately as of 2026-07-29 (Joseph): the submitted Inquiry papers are in review and their outcome may pin the term; close when review returns, not before.**
 
 ---
 
