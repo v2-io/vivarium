@@ -69,8 +69,8 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
    | **first-light store** | **Local git baseline** | `~/.cache/vivarium/globe-world` under local revision control (commit after post-Jacobi rebuild; README in-tree). Checkout = whole previous store for explore; shallow binary compatibility ( #form-store-as-save FE(2) ). Not vivarium source git. |
 
 7. **Instrument / ops notes (same date, supporting).** Not leverage rank — so concurrent minds do not lose them:
-   - **World VCS:** first-light is snapshotted locally so before/after of *models* need not rely only on in-store multi-`src` piles or memory. After interesting rebuilds: `cd ~/.cache/vivarium/globe-world && git add -A && git commit`. Explore an older model: `git checkout <rev>` then `vivarium explore` (HUD will treat non-current `src=` as previous cohort).
-   - **Changelog stock (halo):** captures under `changelog/captures/halo-before-after/` (old-cohort L13 surface, current-src L13 surface + change paint showing tile lattice); numeric bed Δ and seam ratio 0.61→1.04. Entry not frozen yet — write when Joseph wants it sealed ( #ops-changelog-is-the-acceptance-check ).
+   - **World VCS:** first-light under local git; **commit with every changelog-owed rebuild** ( #ops-changelog-is-the-acceptance-check FE(5) ), not "when interesting." Checkout → explore older models (non-current `src=`).
+   - **Changelog stock (halo):** captures under `changelog/captures/halo-before-after/` (old-cohort L13 surface, current-src L13 surface + change paint showing tile lattice); numeric bed Δ and seam ratio 0.61→1.04. **Entry still owed** for the Jacobi production landing — not deferred to taste.
 
 ## Epistemic Status
 

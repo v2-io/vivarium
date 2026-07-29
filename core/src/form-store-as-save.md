@@ -50,7 +50,7 @@ Treating the store as "just a cache" reintroduces a second home for world truth 
 
 ## Working Notes
 
-- **first-light local git (2026-07-29):** `~/.cache/vivarium/globe-world` is a local-only repo; baseline commit after the post-Jacobi halo rebuild (`src` prefix `b129b27c`). Ignores `status.json`. Commit after rebuilds worth a named restore; tags optional (`pre-jacobi`, …). Changelog before/after can also use `git checkout <rev>` of that tree ( #ops-changelog-is-the-acceptance-check ).
+- **first-light local git (2026-07-29):** `~/.cache/vivarium/globe-world` is a local-only repo; baseline `28cb20d` post-Jacobi (`src` prefix `b129b27c`). Ignores `status.json`. **Commit when a changelog-owed rebuild lands** ( #ops-changelog-is-the-acceptance-check FE(5) ) — same bar as the entry, not optional taste. Tags optional for eras.
 - **Sole home.** Do not reintroduce `form-save-is-memo-store` or `form-store-is-save` as parallel slugs.
 - **Dual homes demoted:** DESIGN-REDUX §13 (file graduated `core store/pull/ladder segments`); ARCHITECTURE §5; `store.rs` / `query.rs` module docs; plan headers.
 - **Residual / TENTATIVE shapes reserved from graduated REDUX §13 (not FE):**
