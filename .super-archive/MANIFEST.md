@@ -2,6 +2,13 @@
 
 *Present-tense index of graduated substrate. Not claim law. Newest batches first.*
 
+## 2026-07-29 batch 10 — quick sweep: landed findings and closed correspondence
+
+| Path | Note |
+|------|------|
+| `from-msc/build-parameterization-findings-2026-07-24.md` | All four work items verified landed: `--frames` densification (nested, `cooling_stages_refined`), convergence params on manifest demand (`spec.rs` `erosion_epochs`/`water_steps`), the epoch/frame terminology carve (LEXICON `\|term[epoch]`), water's 200 literal moved. DECISIONS rows cite it; near-miss specimen preserved in its body. |
+| `from-root/feedback-from-asf.md` | Cross-repo correspondence (2026-07-14/16/21), both sides answered and every item closed or absorbed; its 2026-07-21 reply's `ASF.md §N` pointers went stale again, which is the graduating reason. Last unabsorbed meat — the Level-4 mechanism-counterfactual handshake — homed on `#post-determinism-as-ontology` WN before graduation. |
+
 ## 2026-07-29 batch 9 — the Jul-14 candidate inventory, adjudicated empty
 
 | Path | Note |
