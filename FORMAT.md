@@ -194,7 +194,7 @@ Not `[[asf/aat#def-directed-separation]]`, not path-based `[[../../asf/01-aat-co
 
 **`depends:` frontmatter.** Lists **this member's** segment slugs only (files that must exist under `core/src/`). Foreign prerequisites are **not** `depends:` rows (tooling and promotion assume local files). Cite them in Formal Expression / Epistemic Status / Discussion as `#asf/…` instead. If a claim is unstatable without a foreign segment, say so in Epistemic Status and list the `#asf/…` identities there.
 
-**Verify a slug exists before citing it.** A dead cross-reference is worse than none. For `#asf/…`, verify against `~/src/archema-io/asf/` (segment file or terminology entry).
+**Verify a slug exists before citing it.** A dead cross-reference is worse than none. For `#asf/…`, verify against `~/src/arch/asf/` (segment file or terminology entry).
 
 **Forward references to unwritten segments are expected and correct.** They are dependency markers, not broken links — including forward `#asf/…` only when the upstream slug is known to be planned; prefer citing live ASF slugs.
 

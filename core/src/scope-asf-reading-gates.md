@@ -20,7 +20,7 @@ Levels are **cumulative**. "Read" means read-for-comprehension. Work that lands 
 
 1. This project's front door: `CLAUDE.md`, `core/OUTLINE.md`, `FORMAT.md`, and `#scope-moratorium-endogenous-emergence` / `ETHICS.md` (Standing Moratorium Imperative).
 2. Know that vivarium is an ASF instrument: worlds authored so AAT quantities can be known by construction ( #disc-vivarium-purpose, #def-in-vivia), with mathematics cited as `#asf/…` rather than re-proved here.
-3. Know where the theory lives: `~/src/archema-io/asf/` (AAT / TST / LLM / ELI volumes). Cost: minutes.
+3. Know where the theory lives: `~/src/arch/asf/` (AAT / TST / LLM / ELI volumes). Cost: minutes.
 
 ### Level B — before designing any world *system*
 

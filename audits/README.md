@@ -25,7 +25,9 @@ Full claim form: `#ops-audit-integration`. Spine:
 
 ## Live status
 
-**No pending reports** (2026-07-24). All three 2026-07-21 reports are retired to [`.integrated/`](.integrated/) with their disposition trails:
+**One pending report** (2026-07-28): [`grok-final-overview-2026-07-28.md`](grok-final-overview-2026-07-28.md) — outside-reader synthesis of the day, stored whole as the handoff surface. The session-side fix-pass (audit Q1–Q12) already landed; what keeps it pending is its own residual list (Q7 self-firing guard, post-fill remeasure hygiene, L13-vs-L9 over-generalization watch). Retire per the spine above when those are dispositioned.
+
+All three 2026-07-21 reports are retired to [`.integrated/`](.integrated/) with their disposition trails:
 
 | Report | One-line disposition |
 |---|---|

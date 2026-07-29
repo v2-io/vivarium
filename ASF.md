@@ -2,7 +2,7 @@
 
 *Historical bridge file. **Not claim canon.** Do not cite section numbers as law.*
 
-Vivarium is a supporting project for **ASF/AAT** (`~/src/archema-io/asf/`). Worlds are authored so quantities the theory needs can be known by construction. **Sole claim truth for vivarium project claims:** segments under `core/src/` ( #scope-segment-canon · `core/OUTLINE.md` · `FORMAT.md`).
+Vivarium is a supporting project for **ASF/AAT** (`~/src/arch/asf/`). Worlds are authored so quantities the theory needs can be known by construction. **Sole claim truth for vivarium project claims:** segments under `core/src/` ( #scope-segment-canon · `core/OUTLINE.md` · `FORMAT.md`).
 
 > [!danger] **Standing Moratorium** — `ETHICS.md` / #scope-moratorium-endogenous-emergence. Bind before any agent-seam work.
 

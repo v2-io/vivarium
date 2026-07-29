@@ -6,7 +6,7 @@
 >
 > **It is not exempt from the new discipline. It is in debt to it.** Two things are owed:
 >
-> 1. **The register needs scrubbing.** Much of what follows argues in emphasis rather than in claims — bold, capitals, ⛔. The measurements underneath are real and were expensive; the typography is not evidence, and an absolute is a claim with no predicate. See `core/OUTLINE.md` §No absolutes.
+> 1. **The register needs scrubbing.** Much of what follows argues in emphasis rather than in claims — bold, capitals, ⛔. The measurements underneath are real and were expensive; the typography is not evidence, and an absolute is a claim with no predicate. See `FORMAT.md` §6 "No absolutes".
 > 2. **It should not be prose.** A hand-kept markdown table is exactly the artifact class that goes stale, and this file already says so in its own opening: the ledger *"becomes generated, not hand-kept"* once each nomos carries its declaration as data. The destination is **udon**, with proper tooling, when the udon-util crate is ready — at which point the ledger is generated, and this file retires to `.archive/` with the others.
 >
 > Until then it is authoritative for what it records, and the `include_str!` guard stays live.
