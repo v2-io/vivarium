@@ -186,9 +186,10 @@ fn main() {
     // `VIVARIUM_ROLLWAVE_ONLY=7` runs a single section, so a probe that needs
     // re-running after a kernel change does not cost a whole sitting. Sections
     // are independent — each relaxes its own base state from scratch.
-    if std::env::var("VIVARIUM_ROLLWAVE_ONLY").as_deref() == Ok("7") {
-        jarrett_refinement();
-        return;
+    match std::env::var("VIVARIUM_ROLLWAVE_ONLY").as_deref() {
+        Ok("7") => return jarrett_refinement(),
+        Ok("9") => return froude_threshold_crux(),
+        _ => {}
     }
 
     // ── §1 Slope ladder: does the Jarrett/roll-wave separation survive? ─────
@@ -425,6 +426,15 @@ fn main() {
     }
     println!();
 
+}
+
+/// §9 — the Froude-threshold crux: is the growth a function of Fr, or of n?
+/// Split out behind `VIVARIUM_ROLLWAVE_ONLY=9` for the same reason as §7 —
+/// this is the section a kernel change most often invalidates, and it is the
+/// seal gate on the no-Froude-threshold result.
+fn froude_threshold_crux() {
+    let dt_fix = 0.02;
+    let d0 = 1.0;
     // ── §9 The crux, isolated. ─────────────────────────────────────────────
     // §5 (n = 0.13) is stable everywhere and §8 (n = 0.04) grows everywhere —
     // but those two arms differ in θ as well as n (0.8 vs 1.0), so neither can

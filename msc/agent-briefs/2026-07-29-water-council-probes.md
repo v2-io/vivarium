@@ -424,3 +424,22 @@ The strongest indictment of the retired form was that its growth rate *diverged*
 `ρ SHIPPED` equals `ρ n-CONST` to every digit printed, at every grid. The term that got worse without bound as the mesh refined — the thing that made it a hazard for a multiresolution architecture specifically — is now indistinguishable from holding `n` fixed. `DECISIONS[jarrett-is-inconsistent-not-merely-artefactual]` is closed by the demotion, and becomes history rather than an open indictment.
 
 **Probe usability, fixed in passing.** The full `roll_wave` sweep is ~40 minutes and had no way to run one section — so re-verifying one claim after a kernel change cost a whole sitting, which is why the sweep that was supposed to produce this table died unfinished. `VIVARIUM_ROLLWAVE_ONLY=7` now runs §7 alone in about a minute. Sections are independent (each relaxes its own base state), so the same gate generalises to the others when someone needs them.
+
+### §6.6 Seal gate passed — the Vedernikov result reproduces post-fix
+
+The entry's own gate asked for the Froude-threshold sweep re-run on the corrected kernel, with execute-on-reproduce baked in. Run at kernel era `de4c6c4` (`VIVARIUM_ROLLWAVE_ONLY=9`; θ = 1.0 both columns, no cap, no Jarrett, dt 0.02 s, l 4.8 m, 64²):
+
+```
+slope          n = 0.04                    n = 0.13
+             Fr        ρ                 Fr        ρ
+  0.5%     0.563   1.000154  GROWS     0.174   1.000067  GROWS
+  2.0%     1.129   1.000420  GROWS     0.348   1.000071  GROWS
+ 20.0%     3.571   1.005220  GROWS     1.099   1.001202  GROWS
+ 70.0%     6.682   1.012906  GROWS     2.056   1.002984  GROWS
+```
+
+**All sixteen configurations grow**, exactly as pre-fix. Growth at **Fr 0.174** survives; the matched-Froude pair still disagrees ~2.9× (Fr 1.129 → 1.000420 against Fr 1.099 → 1.001202). The friction fix moved these in the fourth decimal — and moved the base states onto *exact* Manning normal flow (Fr 2.056 at 70%, n 0.13, which is the analytic value), a base state the pre-fix run could not reach. So the result is now measured on a base state that is right rather than 8% slow.
+
+Executed per the gate: the entry is **sealed council-accepted**, its numbers re-stamped to this era per FORMAT §161, and the two carve-out amendments landed — the physical identification falls on `our-kernels-have-no-null-space-the-solitons-were-roll-waves` (with the null-space result, staggering asset, κ's role and the Jarrett split explicitly preserved), and the council qualifier is withdrawn from `theta-is-lax-friedrichs-not-rhie-chow`, which strengthens that entry's own thesis.
+
+One scope note kept honest rather than glossed: the θ-stabilises half is cited from §1's **cap-on** post-fix ladder (70%: ρ 1.00000 at θ 0.8 against 1.00059 at θ 1.0). §5's cap-off sweep was **not** re-run, so "stable through Fr 2.43" remains a pre-fix figure and is not quoted in the sealed entry.
