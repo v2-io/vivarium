@@ -44,6 +44,8 @@ A seam is a boundary in space, time, or both. What crosses is a flux of a conser
 
    The two slugs are not synonyms, and reaching for the register at a same-level seam does not fit: there is no hanging node, nothing is subdivided, and no flux has been double-counted. What the register *does* supply to the same-level problem is its restriction law (FE(3) there, the length-weighted low-pass), which is what lets a **flux** record cross levels where a **state** halo cannot — so the level-asymmetric case, where a tile's neighbours are resolved finer than it is, belongs to the flux object and not to the halo.
 
+9. **More families exist under the same English word.** Same-level tile and hanging-node grain are not exhaustive. Cube **panel** two-point flux ( #obs-the-two-point-defect-lives-on-the-panel-seam ), cube **chart-edge** multi-cell halo sampling ( #obs-chart-edge-halo-clamps-to-the-face ), and **store cohort** dual memos (src / schedule) are distinct interfaces with distinct repairs. The map lives at #form-seam-families so FE(8) is not re-expanded into a second taxonomy here.
+
 ## Epistemic Status
 
 **Max attainable: exact** for "exchange fluxes, not states" as Earth-system coupler and AMR practice (Berger–Oliger / Berger–Colella; Gear–Wells multirate; HMM on-demand micro) — primary-read precedents held at #detail-seam-precedents .

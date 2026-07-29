@@ -35,11 +35,13 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
    | **This segment** | What looks *highest leverage* next, and what code is *too hot to quote cold*? |
    | Claim segments / DECISIONS | What is *true* or *decided*? |
 
-4. **Name the object, not the family.** Two live **seam** families share one English word and must not merge in briefs or rankings:
-   - **Tile seam** — same-level base level / halo / flux / spill ( #form-same-level-halo-exchange , #obs-tile-outlets-grade-away-the-basins ).
-   - **Panel seam** — cube-chart boundary two-point flux ( #obs-the-two-point-defect-lives-on-the-panel-seam ).
+4. **Name the object, not the family.** Several **seam** families share one English word and must not merge in briefs or rankings. Full table: #form-seam-families . Short list for rank rows:
+   - **Same-level tile** — base level / halo / flux / spill ( #form-same-level-halo-exchange ).
+   - **Panel** — cube-chart two-point flux ( #obs-the-two-point-defect-lives-on-the-panel-seam ).
+   - **Chart-edge halo** — multi-cell off-face sampling; production clamps ( #obs-chart-edge-halo-clamps-to-the-face ).
+   - **Store cohort** — plain vs halo (and src) dual memos.
 
-   Related as "the sphere is real at seams"; **different repairs.** Rows below say which.
+   Related as "the sphere is real at joins"; **different repairs.**
 
 5. **Highest-leverage next — dated 2026-07-29** (revised after builder/view halo adoption). Ideation rank only.
 
