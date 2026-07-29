@@ -1,0 +1,62 @@
+
+############ ROUTING PRICING EXPERIMENT ############
+Prices DECISIONS[routing-violates...] severity. Predictions: msc/spike-router-pricing/PREDICTIONS.md
+
+---- LOCALIZE: per-epoch first divergence (off-centre) ----
+  epochs=0: max|Δh|=0.0000e0  differing cells=0  max|Δcell_area|=0.0000e0  max|Δdrainage|=0.0000e0
+  epochs=1: max|Δh|=0.0000e0  differing cells=0  max|Δcell_area|=0.0000e0  max|Δdrainage|=0.0000e0
+  epochs=2: max|Δh|=0.0000e0  differing cells=0  max|Δcell_area|=0.0000e0  max|Δdrainage|=0.0000e0
+  epochs=5: max|Δh|=0.0000e0  differing cells=0  max|Δcell_area|=0.0000e0  max|Δdrainage|=0.0000e0
+
+---- P0: LiveMfd arm vs live erosion.rs (bit-for-bit), 3x ----
+  trial 0: off-centre bitmatch=true  centre bitmatch=true
+  trial 1: off-centre bitmatch=true  centre bitmatch=true
+  trial 2: off-centre bitmatch=true  centre bitmatch=true
+  P0 PASS — harness LiveMfd == live erosion.rs
+
+---- determinism: EdgeTrue + EdgeFull drainage bit-identical across 3 reruns ----
+  determinism PASS (3x bit-identical)
+
+================ SITE: OFF-CENTRE (corner, sheared Jacobian) ================
+  face=ZPos level=19 origin=(100,100) nx=96 dome=1200m uplift=0.02m/epoch epochs=80
+  land fraction: 8172/9216 = 88.7%
+  vs LiveMfd baseline: [OLD]=UniformOld(pre-6c1ad97) [EDGE]=fan-only diag-kill [FULL]=fan+tree diag-kill
+  -- tau=   20  (live channel cells: 2769)
+     M1 Jaccard-disagree  live↔OLD=0.7021  live↔EDGE=0.6872  live↔FULL=0.7539
+     M3 axis-frac  live=0.440  Δaxis(OLD)=+0.1670  Δaxis(EDGE)=-0.0909  Δaxis(FULL)=-0.0873
+  -- tau=   50  (live channel cells: 501)
+     M1 Jaccard-disagree  live↔OLD=0.8530  live↔EDGE=0.8562  live↔FULL=0.9145
+     M3 axis-frac  live=0.555  Δaxis(OLD)=+0.0994  Δaxis(EDGE)=-0.1323  Δaxis(FULL)=-0.0978
+  -- tau=  100  (live channel cells: 244)
+     M1 Jaccard-disagree  live↔OLD=0.7539  live↔EDGE=0.7524  live↔FULL=0.9142
+     M3 axis-frac  live=0.672  Δaxis(OLD)=+0.1856  Δaxis(EDGE)=-0.0018  Δaxis(FULL)=+0.0923
+  M2 log-drainage spearman/relL2  OLD=0.285/0.141  EDGE=0.189/0.174  FULL=0.039/0.168
+
+================ SITE: FACE-CENTRE CONTROL (D4 acquittal) ================
+  face=ZPos level=19 origin=(262096,262096) nx=96 dome=1200m uplift=0.02m/epoch epochs=80
+  land fraction: 8133/9216 = 88.2%
+  vs LiveMfd baseline: [OLD]=UniformOld(pre-6c1ad97) [EDGE]=fan-only diag-kill [FULL]=fan+tree diag-kill
+  -- tau=   20  (live channel cells: 2902)
+     M1 Jaccard-disagree  live↔OLD=0.5437  live↔EDGE=0.6022  live↔FULL=0.6021
+     M3 axis-frac  live=0.589  Δaxis(OLD)=+0.0001  Δaxis(EDGE)=-0.0586  Δaxis(FULL)=-0.1574
+  -- tau=   50  (live channel cells: 575)
+     M1 Jaccard-disagree  live↔OLD=0.6010  live↔EDGE=0.7198  live↔FULL=0.7507
+     M3 axis-frac  live=0.586  Δaxis(OLD)=-0.0009  Δaxis(EDGE)=-0.0920  Δaxis(FULL)=-0.2456
+  -- tau=  100  (live channel cells: 222)
+     M1 Jaccard-disagree  live↔OLD=0.2688  live↔EDGE=0.4929  live↔FULL=0.7343
+     M3 axis-frac  live=0.824  Δaxis(OLD)=-0.0189  Δaxis(EDGE)=+0.0139  Δaxis(FULL)=-0.1629
+  M2 log-drainage spearman/relL2  OLD=0.527/0.115  EDGE=0.431/0.129  FULL=0.357/0.146
+
+======= NULL-TEST DIFFERENTIAL (cube-locked channel-axis bias) =======
+  axis-fraction excess over live, corner minus centre. ~0 ⇒ no cube-locked
+  orientation consequence; large ⇒ real cube-locked landscape effect.
+  CUBE = (arm−live at corner) − (arm−live at centre). tau | OLD | EDGE(fan) | FULL(fan+tree)
+    20 | OLD +0.1668 | EDGE -0.0322 | FULL +0.0701
+    50 | OLD +0.1003 | EDGE -0.0402 | FULL +0.1479
+   100 | OLD +0.2045 | EDGE -0.0157 | FULL +0.2552
+  Reading: OLD's large +CUBE = the length fix (6c1ad97) removed a real cube-locked
+  grid-axis channel bias. EDGE ~0 = killing diagonals in the FAN adds little further
+  cube-locked bias. FULL large +CUBE = killing diagonals in the RECEIVER TREE too is
+  landscape-consequential AND a naive D4 tree is itself NOT cube-safe (it axis-locks
+  more at the corner). The full FE(6b) surface is priced; the fan half is benign, the
+  tree half is not — the principled Coatléven FV remedy (not a naive D4 kill) is open.

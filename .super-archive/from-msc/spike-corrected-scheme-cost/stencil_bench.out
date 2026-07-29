@@ -1,0 +1,187 @@
+# stencil_bench — the hot-loop cost of the corrected finite-volume scheme
+#
+# Answers `grid-comparison-report.md` §10.6: the corrected scheme is a 5x5 solve
+# per cell per step; nobody had benchmarked it, and the precomputed-stencil rescue
+# was an INFERENCE. Both are measured here, on real cube-sphere geometry, on the
+# dense Cartesian tile layout `erosion.rs` actually uses.
+
+## 0. A REFUTED HYPOTHESIS (recorded as a result)
+
+`probes::lsq_gradients_quadratic` fits `[x, y, x²/2, xy, y²/2]` with x, y in **metres**,
+so at L6 (~156 km cells) the quadratic columns are ~1e5x the linear ones. The normal
+equations are correspondingly ill-conditioned — cond(AᵀA) is the SQUARE of cond(A):
+
+| level | cell size | cond(AᵀA), as written | cond(AᵀA), nondimensionalised |
+|---|---|---|---|
+| L6 |   156352 m | 1.22e10 | 8.00e0 |
+| L9 |    19546 m | 1.91e8 | 8.00e0 |
+| L12 |     2443 m | 2.98e6 | 8.00e0 |
+| L15 |      305 m | 4.66e4 | 8.00e0 |
+| L19 |       19 m | 1.82e2 | 8.00e0 |
+
+I PREDICTED this meant part of the report's 3.65e-4 was conditioning noise, and that
+the scheme would look better once conditioned. §A tests it on the report's own harness.
+**It is refuted**: the fix changes the answer by 1.7e-14. The error lands in the
+ill-determined QUADRATIC directions; the two linear components actually read out are
+recovered accurately anyway. The report's number is truncation error, as claimed. [M]
+
+What survives, and is operationally load-bearing: **cond 1.2e10 ≫ f32's ~1e7 range, so
+the 5x5 solve can never be done in f32.** It bears on HOW the precomputed weights must
+be built (in f64, once), not on what the scheme's accuracy is. [M]
+
+## A. VERIFICATION — the dense kernels vs. the report's own reference implementation
+
+The oracle is `grid_lab`'s `probes::laplacian(Scheme::FvLsq)` on `grids::cube_sphere`
+(equiangular, n=64 ⇒ L6, 24 576 cells — the report's own size). A dense tile is cut
+from the interior of face 0 and every kernel is compared CELL FOR CELL.
+
+- my lifted edge_flux vs probes::laplacian(FvLsq) : rel L2 = 1.38e-14
+
+  §0's prediction, tested on the report's own harness (whole-sphere, 24 576 cells):
+  - `probes::harmonic_error(FvLsq)`, verbatim     : 3.645e-4   ← the report's table says 3.65e-4
+  - FvLsq AS WRITTEN (normal equations in metres) : rel L2 vs exact = 3.770e-4
+  - FvLsq NONDIMENSIONALISED (cond 1e10 -> 8.0)   : rel L2 vs exact = 3.770e-4
+  - the two answers differ from each other by       rel L2 = 1.732e-14
+  ⇒ §0's hypothesis is REFUTED. The conditioning is real and harmless; the report's
+    accuracy number is truncation error, not round-off. [M]
+
+- cell centres    : max |Δ| = 0.000e0  (unit vectors)
+- cell areas      : max rel Δ = 0.000e0
+- Moore-set mismatches : 0
+- edge transmissibility: max rel Δ = 0.000e0
+- edge offset w_i      : max |Δ| = 0.000e0 m
+- edge offset w_j      : max |Δ| = 0.000e0 m
+- K3 (5x5 solve/cell/step, dense) vs the mesh oracle : rel L2 = 3.964e-15   ← must be round-off
+- GRADIENT: dense vs mesh, max |Δ| = 4.314e-21  (|∇u| ~ 2.354e-7)  ⇒ rel 1.833e-14
+    ring 0 from interior edge ( 124 cells): max rel Δ = 4.160e-12
+    ring 1 from interior edge ( 116 cells): max rel Δ = 4.997e-12
+    ring 2 from interior edge ( 108 cells): max rel Δ = 1.712e-12
+    ring 3 from interior edge ( 100 cells): max rel Δ = 5.179e-13
+    ring 4 from interior edge (  92 cells): max rel Δ = 1.387e-12
+    ring 5 from interior edge ( 484 cells): max rel Δ = 3.752e-12
+- K5 (precomputed FUSED 21-pt, f64) vs K3  : L2 = 2.738e-13   ← must be round-off
+
+  ⇒ The precomputed 21-point stencil is an EXACT algebraic refactor of the corrected
+    scheme, not an approximation. Same operator, same numbers, to round-off. [M]
+
+## B. ACCURACY — what the correction buys, and what the cheap forms give back
+
+Relative L2 error of the discrete Laplace-Beltrami operator against the EXACT
+eigenvalue of an l=2 harmonic, measured on a 64x64 tile of real cube-sphere geometry.
+
+| level | cell | naive 5-pt | FV 2-point | CORRECTED (exact) | fused f32 | frozen-const f32 |
+|---|---|---|---|---|---|---|
+| L6 | 143921 m | 1.63e-1 | 2.90e-1 | **1.64e-4** | 1.79e-4 | 1.57e-1 |
+| L9 | 19515 m | 4.40e-3 | 2.34e-2 | **3.51e-6** | 3.89e-3 | 6.29e-3 |
+| L12 | 2443 m | 7.02e-5 | 2.80e-3 | **5.52e-8** | 2.63e-1 | 3.15e-1 |
+
+⚠ The harmonic is SMOOTH: at fine levels its second difference falls below f32
+  epsilon and the f32 columns measure catastrophic cancellation in the TEST FIELD,
+  not error in the scheme. The honest f32 question is asked on rough terrain:
+
+L19, 64x64 tile, rough terrain (6 octaves, ~1.5 km relief over 1.2 km, ~19 m cells).
+Three DIFFERENT questions, separated — the first run conflated them:
+
+| what is being isolated | weights | field | rel L2 vs exact-f64 |
+|---|---|---|---|
+| **f32 FIELD** rounding (the deployed precision) | f32 | f32 | 3.064e-3 |
+| **f32 WEIGHT** rounding alone | f32 | f64 | 3.925e-9 |
+| **the FROZEN approximation** alone | const, f64 | f64 | 5.070e-9 |
+| frozen + f32 (what you would ship) | const, f32 | f32 | 3.064e-3 |
+
+⇒ The f32 FIELD dominates: storing the weights in f32 is ~free (3.9e-9), and the
+  frozen-constant approximation is ALSO ~free at L19 (5.1e-9) — a 64-cell tile spans
+  1.2e-4 of a face, over which the metric is essentially constant. Both are swamped
+  by the f32 height field vivarium already uses. [M]
+
+## C. COST — cell-updates/s at L19, TILE_NX = 64 (what the builder actually sweeps)
+
+| kernel | cell-updates/s (median of 9) | run-to-run | vs baseline | coeff B/cell |
+|---|---|---|---|---|
+| K0 naive 5-pt (BASELINE = today) | **3.21 G** | ±0.6% | 1.000x | 0 |
+|   [noise-floor control: K0 again] | **3.26 G** | ±0.9% | 1.017x | 0 |
+| K1 FV two-point, true metric | **1.69 G** | ±0.4% | 0.525x | 20 |
+| K3 CORRECTED, 5x5 solve/cell/step | **4.1 M** | ±0.5% | 0.001x | 0 (solved live) |
+| K2 CORRECTED + metric rebuilt/step | **1.2 M** | ±1.0% | 0.000x | 0 (solved live) |
+| K4 PRECOMPUTED fused 21-pt (SoA) | **265.5 M** | ±0.9% | 0.083x | 84 (21 f32) |
+|   [K4 with AoS weights — layout cost] | **89.6 M** | ±5.0% | 0.028x | 84 (21 f32) |
+| K5 PRECOMPUTED fused 21-pt, f64 | **166.4 M** | ±0.4% | 0.052x | 168 (21 f64) |
+| K6 PRECOMPUTED two-pass (keeps fluxes) | **73.9 M** | ±3.2% | 0.023x | 148 |
+| K7 FROZEN const-coeff 21-pt (APPROX) | **384.5 M** | ±1.1% | 0.120x | 0 (in registers) |
+
+Precompute, once per tile (amortised over the tile's steps):
+- tile geometry (centres, areas, 4 edges/cell) : 2.40 ms  (64x64)
+- fused 21-pt weights (the 5x5 inverse/cell)   : 4.40 ms
+- break-even vs re-solving every step          : 6.92 steps
+  (i.e. the precompute pays for itself almost immediately; erosion runs 100s-1000s of steps/tile)
+
+## D. THE CACHE CLIFF — where each scheme falls out of L2 (this machine: 16 MB)
+
+The coefficient stream is 84 B/cell against the field's 4 B/cell — 21x. So the
+corrected scheme should meet the cliff when 84·N² ≈ 16 MB, i.e. N ≈ 437. Predicted
+BEFORE measuring; the sweep is deliberately dense across that point.
+
+| patch | cells | field MB | coeff MB | K0 naive | K4 fused f32 | K7 frozen |
+|---|---|---|---|---|---|---|
+| 64² | 4096 | 0.02 | 0.3 | 3.49 G (±1.1%) | **278.7 M** (±4.9%) | 361.7 M (±3.4%) |
+| 128² | 16384 | 0.07 | 1.4 | 4.37 G (±2.5%) | **293.7 M** (±4.7%) | 465.9 M (±0.1%) |
+| 256² | 65536 | 0.27 | 5.5 | 4.37 G (±0.7%) | **284.8 M** (±1.0%) | 558.4 M (±0.2%) |
+| 384² | 147456 | 0.60 | 12.4 | 4.93 G (±2.8%) | **289.3 M** (±6.6%) | 620.1 M (±0.5%) |
+| 512² | 262144 | 1.07 | 22.0 | 4.79 G (±1.8%) | **224.4 M** (±15.2%) | 627.6 M (±0.6%) |
+| 768² | 589824 | 2.38 | 49.5 | 4.98 G (±2.9%) | **195.3 M** (±2.2%) | 634.3 M (±0.9%) |
+| 1024² | 1048576 | 4.23 | 88.1 | 3.13 G (±1.9%) | **158.1 M** (±5.1%) | 467.9 M (±0.1%) |
+| 2048² | 4194304 | 16.84 | 352.3 | 3.32 G (±4.7%) | **205.7 M** (±1.0%) | 483.0 M (±0.7%) |
+
+## E. CONSERVATION, AND WHERE THE FROZEN STENCIL BREAKS
+
+Operator applied ONCE to a compactly-supported bump (all boundary fluxes = 0):
+`Σ Aᵢ·Δuᵢ` must be EXACTLY zero for a conservative scheme.
+
+| kernel | Σ Aᵢ·Δuᵢ / Σ Aᵢ·|Δuᵢ| | exactly conservative? |
+|---|---|---|
+| K4/K5 PRECOMPUTED fused (per-cell) | +1.99e-14 | **YES** (round-off) |
+| K7 FROZEN const-coeff | -2.85e-10 | **NO** — a real leak |
+
+The frozen stencil's other exposure — the metric is worst at a face CORNER, not centre:
+
+| tile position on face (L19) | frozen-vs-exact rel L2 (f64) |
+|---|---|
+| face centre | 5.07e-9 |
+| mid-face | 3.98e-5 |
+| near face edge | 8.89e-5 |
+| face CORNER | 6.93e-5 |
+
+## F. WHAT THIS COSTS *EROSION* — the stencil is one pass inside a much bigger epoch
+
+Real `Fluvial::erode`, L19, 64x64 tile, 40 epochs (the CLI's default):
+
+| | µs per epoch per tile | share of the epoch |
+|---|---|---|
+| **the whole epoch** (Priority-Flood + sort + routing + incise + deposit + talus + creep) | 540.0 | 100% |
+| `creep` — the ONE 5-point Laplacian pass in it (today) | 1.28 | 0.24% |
+| the same pass, CORRECTED **as written** (K3, 5x5 solve/cell/step) | 999 | 185% |
+| the same pass, CORRECTED + **precomputed** (K4) | 15.75 | 2.9% |
+
+| what an erosion EPOCH costs | µs | vs today |
+|---|---|---|
+| today (naive creep) | 540 | 1.00x |
+| corrected, AS WRITTEN | 1538 | **2.85x** |
+| corrected, PRECOMPUTED | 555 | **1.027x** |
+
+⚠ READ BOTH TABLES TOGETHER. "790x slower" is TRUE of the stencil and MISLEADING
+  about erosion: it is a ratio on a term that is 0.24% of the epoch. Even the
+  UNRESCUED scheme only makes an erosion epoch 2.8x slower. The precomputed
+  form makes it 1.027x. Quoting the stencil ratio as the cost to vivarium would be
+  the alarming number winning because it is louder. [M]
+
+⇒ Replacing creep's stencil with the corrected one adds **14.5 µs/epoch**, i.e.
+  **+2.7% on a full erosion epoch** — not +1130%. The 12.3x is a ratio on a term
+  that is 0.24% of the work. [M]
+
+⚠ AND THE HONEST LIMIT OF THAT: `creep` is the only pass the fused-Laplacian form
+  can replace. The Prime Question's actual target is **MFD routing**, which needs
+  materialised per-edge FLUXES and therefore the two-pass form (K6), and which sits
+  inside the Priority-Flood/sort/accumulate block — the expensive part. **That
+  substitution is NOT measured here and it is the residue of this spike.** Do not
+  read '+2.7% on an epoch' as the cost of fixing MFD.
+

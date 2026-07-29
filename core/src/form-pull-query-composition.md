@@ -34,7 +34,7 @@ World-law values are obtained by **pull evaluation** of declared nomos at comple
 
 **Do not read:** “engine unbuilt” as “pattern untrue.” Strengthen-before-soften: keep the thin law; thick architecture residual is owned by #form-three-scoped-runtime (built/unbuilt/open labels live there).
 
-Stage `draft`. Hostile-read FE from peer adjudication `msc/agent-briefs/2026-07-23-lazy-query-graph-adjudication.md` (parent re-weighted: code rank last).
+Stage `draft`. Hostile-read FE from peer adjudication `.super-archive/from-msc/agent-briefs/2026-07-23-lazy-query-graph-adjudication.md` (parent re-weighted: code rank last).
 
 ## Discussion
 

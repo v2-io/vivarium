@@ -12,7 +12,7 @@
 //! ever goes blind to its own known-bad, or hallucinates a mode in its
 //! known-clean control, or loses a real kernel's cleanliness.** That makes it
 //! wireable into `bin/check`. It is the demonstration behind the graduation note
-//! in `msc/spike-null-space-probe/NOTE.md`; the graduation cost is naming-only
+//! in `.super-archive/from-msc/spike-null-space-probe/NOTE.md`; the graduation cost is naming-only
 //! (lift `linalg` + the control ops into the crate as `src/…` so a `#[test]` can
 //! reach them — this example proves the assertion body is small and green today).
 //!

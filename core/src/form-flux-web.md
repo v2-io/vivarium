@@ -40,6 +40,6 @@ Per-quantity granularity is also the upgrade path: a higher-fidelity producer th
 
 - Ice/pointer targets once stable: `flux.rs` module docs; ARCHITECTURE §9 coupler bullets; regula-conformance-design §3 (reasoning trail).
 - Sibling segments: #def-nomos (article), #form-ordinum-governs-flux-web (ladder drives web), #form-kernel-imperative-boundary (declare vs kernel), hydrosphere box, #form-derived-sea-level .
-- **Do not** mint `#form-sufficient-statistic-seam` — dual-home of column + seam + this FE(6). Adjudication: `msc/agent-briefs/2026-07-23-sufficient-statistic-adjudication.md`.
+- **Do not** mint `#form-sufficient-statistic-seam` — dual-home of column + seam + this FE(6). Adjudication: `.super-archive/from-msc/agent-briefs/2026-07-23-sufficient-statistic-adjudication.md`.
 - Residual trail: drop freeboard incomplete item when live graph matches claim.
 - **Decl upgrade done (rock-mass ledger adopted, 2026-07-24):** `LITHO_COLUMN`'s promise is now `Conservation::Conserved` — the mass-return exists (`erosion_return.rs`, `#form-isostasy-column` FE(9)), is the live default surface, and its closed-box probe (`rock_mass_is_conserved_across_the_ledger_pass`) is the convicting instrument. Still a nicety, not done: wiring the ledger as its *own* nomos edge (consuming `EMERGED_LAND`, promising a rebounded/bounded-relief column) — deferred because it would be a dangling producer until a consumer reads it; the conservation is enforced at the ledger stage inside `sea_level`'s pour today.

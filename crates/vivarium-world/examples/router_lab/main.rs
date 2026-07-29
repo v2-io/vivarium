@@ -342,7 +342,7 @@ fn main() {
 
     write_md(&lad, &p1rows, &idrows, &azrows, &levrows, &angles, &g32, det,
         r2(&py, &[&p2]), r2(&py, &[&pm1]), r2(&py, &[&p2, &pm1]));
-    println!("\n\n\x1b[1mWrote msc/spike-principled-router/MEASUREMENTS.md\x1b[0m");
+    println!("\n\n\x1b[1mWrote .super-archive/from-msc/spike-principled-router/MEASUREMENTS.md\x1b[0m");
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -442,6 +442,6 @@ fn write_md(
     let _ = writeln!(s, "| \\|m1_true\\| | {r2m1:.3} |");
     let _ = writeln!(s, "| both | {r2both:.3} |");
 
-    std::fs::create_dir_all("msc/spike-principled-router").ok();
-    std::fs::write("msc/spike-principled-router/MEASUREMENTS.md", s).ok();
+    std::fs::create_dir_all(".super-archive/from-msc/spike-principled-router").ok();
+    std::fs::write(".super-archive/from-msc/spike-principled-router/MEASUREMENTS.md", s).ok();
 }

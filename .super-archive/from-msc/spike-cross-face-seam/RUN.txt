@@ -1,0 +1,99 @@
+SPIKE — cross-face seam machinery (halo transform + face-keyed flux)
+seam under test: ZPos east edge (u→+1) re-homes to XPos; radius 6371000 m
+
+
+╔══════════════════════════════════════════════════════════════════════════════
+║ PROBE 0  —  the seam is a genuine cube-face boundary (a guard that can fail)
+╚══════════════════════════════════════════════════════════════════════════════
+  ZPos east-edge cell face = ZPos
+  its re-homed east neighbour face = XPos
+  (chunk.rs::fill leaves this out-of-face halo slot at Default — the FE(4) gap)
+  ✓ the probed seam is a genuine cube-face boundary.
+
+
+╔══════════════════════════════════════════════════════════════════════════════
+║ PROBE 1  —  the face axis transform is LATENT in the projection (depth-1 involution + adjacency)
+╚══════════════════════════════════════════════════════════════════════════════
+  L 4: involution 64/64 bit-exact   adjacency ratio d_cross/within ∈ [0.9166, 1.3482]
+         known-bad (clamp) collapses to ~0 distance on 64/64 cells ⇒ the check is not vacuous
+  L 6: involution 256/256 bit-exact   adjacency ratio d_cross/within ∈ [0.8798, 1.3971]
+         known-bad (clamp) collapses to ~0 distance on 256/256 cells ⇒ the check is not vacuous
+  L 8: involution 1024/1024 bit-exact   adjacency ratio d_cross/within ∈ [0.8695, 1.4099]
+         known-bad (clamp) collapses to ~0 distance on 1024/1024 cells ⇒ the check is not vacuous
+
+
+╔══════════════════════════════════════════════════════════════════════════════
+║ PROBE 2  —  halo DEPTH — where the two cross-face grids stop corresponding
+╚══════════════════════════════════════════════════════════════════════════════
+  depth 1: A-extrapolation ≠ B-grid-walk on 0/256 edge cells  (0 of them in the corner eighths)
+  depth 2: A-extrapolation ≠ B-grid-walk on 200/256 edge cells  (63 of them in the corner eighths)
+  depth 3: A-extrapolation ≠ B-grid-walk on 222/256 edge cells  (63 of them in the corner eighths)
+  depth 4: A-extrapolation ≠ B-grid-walk on 232/256 edge cells  (63 of them in the corner eighths)
+  (depth 1 is exact by construction; growth with depth = the cross-face grids co-align ONLY on the shared edge)
+
+
+╔══════════════════════════════════════════════════════════════════════════════
+║ PROBE 3  —  face-flux identity: canonical, symmetric across faces, a real store citizen
+╚══════════════════════════════════════════════════════════════════════════════
+  cross-face pair: a=CellId(10952472818788335616)(10952472818788335616) on ZPos, b=CellId(576742227280134144)(576742227280134144) on XPos
+  FaceId symmetric across seam: true
+  owner (lower CellId, global Ord) = the XPos-side cell: true
+  known-bad local-index rule: a.i=63, b.i=0 — a per-face index gives no global order (ambiguous owner)
+  persisted 1 face-flux root(s) through the real store.rs
+  reopened store → flux for the seam face = Some(42.5) (survives save/reopen)
+  census enumerates it by meaning: key = Some("face-flux@v0|lo=576742227280134144|hi=10952472818788335616")
+
+
+╔══════════════════════════════════════════════════════════════════════════════
+║ PROBE 4a  —  CONSERVATION — today's default-0 out-of-face halo is a mass SINK at the seam
+╚══════════════════════════════════════════════════════════════════════════════
+  steps    1: rel mass drift -4.0676e-14   (default-0 halo = Dirichlet-0 sink)
+  steps   10: rel mass drift -4.0665e-13   (default-0 halo = Dirichlet-0 sink)
+  steps  100: rel mass drift -4.0677e-12   (default-0 halo = Dirichlet-0 sink)
+  steps 1000: rel mass drift -4.0678e-11   (default-0 halo = Dirichlet-0 sink)
+
+
+╔══════════════════════════════════════════════════════════════════════════════
+║ PROBE 4b  —  CONSERVATION — matched same-level cross-face seam: TwoSided vs SingleValued
+╚══════════════════════════════════════════════════════════════════════════════
+  SingleValued steps    1: rel mass drift -1.1483e-16
+  SingleValued steps   10: rel mass drift -2.2965e-16
+  SingleValued steps  100: rel mass drift +0.0000e0
+  SingleValued steps 1000: rel mass drift -3.4448e-16
+  SingleValued steps 10000: rel mass drift +0.0000e0
+      TwoSided steps    1: rel mass drift -1.1483e-16
+      TwoSided steps   10: rel mass drift -2.2965e-16
+      TwoSided steps  100: rel mass drift +0.0000e0
+      TwoSided steps 1000: rel mass drift -3.4448e-16
+      TwoSided steps 10000: rel mass drift +0.0000e0
+  (matched seam: symmetric geometry ⇒ two-sided may also conserve — the register's value here is the DATA-STRUCTURE guarantee, tested next where it bites)
+
+
+╔══════════════════════════════════════════════════════════════════════════════
+║ PROBE 4c  —  CONSERVATION — cross-face HANGING NODE (PROBE 7 lifted onto a cube edge)
+╚══════════════════════════════════════════════════════════════════════════════
+  16 coarse edge cells → 32 fine sub-cells (32 distinct), all on XPos: true
+  SingleValued steps    1: rel mass drift +0.0000e0
+  SingleValued steps   10: rel mass drift +1.5324e-16
+  SingleValued steps  100: rel mass drift +0.0000e0
+  SingleValued steps 1000: rel mass drift +4.5971e-16
+  SingleValued steps 10000: rel mass drift +3.2179e-15
+      TwoSided steps    1: rel mass drift +0.0000e0
+      TwoSided steps   10: rel mass drift +4.5971e-16
+      TwoSided steps  100: rel mass drift +4.9035e-15
+      TwoSided steps 1000: rel mass drift +4.9342e-14
+      TwoSided steps 10000: rel mass drift +4.9250e-13
+  (single-valued applies one sub-face flux once with opposite signs — conservation is a property of the DATA STRUCTURE, now across a cube edge)
+
+
+╔══════════════════════════════════════════════════════════════════════════════
+║ PROBE 5  —  CONTINUITY, known-bad first — default-0 plateaus, filled halo vanishes with the arc
+╚══════════════════════════════════════════════════════════════════════════════
+  L 6: within-face step 0.5069 m | cross step FILLED 0.5130 m (≈ within, vanishes with arc) | cross step DEFAULT-0 121.78 m (plateaus — a manufactured cliff)
+  L 8: within-face step 0.1293 m | cross step FILLED 0.1297 m (≈ within, vanishes with arc) | cross step DEFAULT-0 121.35 m (plateaus — a manufactured cliff)
+  L10: within-face step 0.0325 m | cross step FILLED 0.0325 m (≈ within, vanishes with arc) | cross step DEFAULT-0 121.25 m (plateaus — a manufactured cliff)
+  ⇒ FILLED tracks the within-face step and shrinks as the arc shrinks; DEFAULT-0 stays at full field scale ⇒ it is a discontinuity, not physics.
+
+
+(predictions pre-registered in PREDICTIONS.md; verdicts in the landing report — this binary prints only measurements)
+

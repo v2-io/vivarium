@@ -1,0 +1,1932 @@
+ESAIM: M2AN 54 (2020) 1917–1949                   ESAIM: Mathematical Modelling and Numerical Analysis
+https://doi.org/10.1051/m2an/2020025                                                 www.esaim-m2an.org
+
+
+
+
+SOME MULTIPLE FLOW DIRECTION ALGORITHMS FOR OVERLAND FLOW
+                    ON GENERAL MESHES
+
+
+                                                Julien Coatléven˚
+
+         Abstract. After recalling the most classical multiple flow direction algorithms (MFD), we establish
+         their equivalence with a well chosen discretization of Manning–Strickler models for water flow. From
+         this analogy, we derive a new MFD algorithm that remains valid on general, possibly non conforming
+         meshes. We also derive a convergence theory for MFD algorithms based on the Manning–Strickler
+         models. Numerical experiments illustrate the good behavior of the method even on distorted meshes.
+
+         Mathematics Subject Classification. 65N08, 65N12, 65N15.
+
+         Received September 17, 2019. Accepted April 9, 2020.
+
+
+
+
+                                                  1. Introduction
+   Overland water flow plays a major role in hydrogeology at many time scales, from million of years for
+stratigraphic studies of interest for the oil and gas industry to several days or weeks for predicting river flooding
+and landslides. Intermediate time scales are also increasingly studied as they are of crucial interest for climatic
+forecasts, from glacier withdrawal to desert expansion. Of course, a huge literature exists in the corresponding
+fields, describing the physical phenomenons involved with an equally huge model diversity (Navier–Stokes,
+Stokes, shallow water, etc...). Due to the complexity underlying flow models, approximate, phenomenologically
+based models have been developed to increase computational speed. Among those models, a common approach
+that has given satisfactory results is the one based on the so-called multiple flow directions algorithms (MFD).
+   The idea underlying all MFD algorithms is that water routing at large space scales will be mainly governed by
+the topographic slope. Using digital elevation models that provide a meshed representation of the topography,
+those algorithms compute water flow by distributing water from the topographically higher discrete cells to
+the topographically lower ones, each distribution formula corresponding to a specific MFD algorithm. In most
+cases, the MFD algorithms are developed assuming that the mesh is a uniform cartesian grid, with the same
+space step in each direction. Historically, the first MFD algorithms were in fact single flow direction algorithms,
+where the distribution formula selected only one neighbour, generally the one with the steepest slope. The
+deficiencies of such simple algorithms are the origin of the development of MFD algorithms (see [26]). The most
+classical MFD algorithm [16, 22] uses directly the slope to distribute the flow, while models using powers of
+the slope were developed to concentrate the flow and limit diffusion effects due to the use of coarse meshes
+
+  Keywords and phrases. Multiple flow direction algorithm, overland flow, virtual element method, hybrid finite volume, general
+  meshes.
+  IFP Énergies nouvelles, 1 et 4 avenue de Bois-Préau, Rueil-Malmaison 92852, France.
+  ˚ Corresponding author: julien.coatleven@ifpen.fr
+
+
+
+Article published by EDP Sciences                                                                 ○ EDP Sciences, SMAI 2020
+                                                                                                  c
+1918                                                J. COATLÉVEN
+
+
+(see [18, 21, 25]). Some attempts have been made to apply MFD algorithms on more general meshes, with an
+emphasis on triangular ones (see [24, 27]). We refer the reader to [9] for a comparison of some of those methods,
+and to the references in the aforementioned papers for a more complete overview of the tremendous literature
+on MFD algorithms, on which we will not try to be exhaustive.
+   All those algorithms proceed sequentially from the higher cells to the lower ones, however as was already
+noticed in [23], using an MFD algorithm is in fact equivalent to solving a linear system using a specific cell
+ordering. The key idea underlying the present paper comes from a deeper study of the linear system associated
+with one of the earliest MFD algorithm. Indeed, we will explain that this linear system is completely equivalent to
+a two point flux finite volume scheme (see [10]) applied to a stationary Manning–Strickler model for water flow.
+It was then clear that replacing the TPFA scheme that requires a strong orthogonality hypothesis on meshes to
+remain valid by more advanced flux approximation schemes would allow us to derive MFD algorithms adapted
+to general meshes. Moreover, this equivalence will also allow us to derive a theoretical framework within which
+we will be able to study the convergence properties of MFD algorithms. In our numerical experiments, we have
+considered two flux reconstructions inspired by two finite volume schemes: the hybrid finite volume (see [11,12])
+and the virtual volume method (or conservative first order virtual element method, see [5]). Of course, other
+choices could have been made (for instance VAG finite volumes [13, 14] or discontinuous Galerkin methods [7]),
+however those two schemes will be sufficient to illustrate our approach.
+   The paper will be organized as follows: after describing the data and meshes, we recall the most classical mul-
+tiple flow direction algorithms, and reformulate them in a more algebraic fashion. Next, using this reformulation
+we explain how they are linked with the TPFA scheme for a family of Manning–Strickler models. We elaborate
+on this basis to overcome the mesh limitations induced by the TPFA scheme, introducing a new family of MFD
+algorithms that will remain valid on a huge class of meshes, including those with hanging nodes. We then study
+the convergence properties of all methods and conclude by some numerical illustrations.
+
+                     2. Classical multiple flow direction algorithms
+2.1. Mesh and data description
+   Let Ω be a bounded polyhedral connected domain of R2 , whose boundary is denoted BΩ “ ΩzΩ. We recall the
+usual notations describing a mesh ℳ “ p𝒯 , ℱq of Ω. 𝒯 is a finite family of connected open disjoint polygonal
+subsets of Ω (the cells of the mesh), such that Ω “ Y𝐾P𝒯 𝐾. For any 𝐾 P 𝒯 , we denote by |𝐾| the measure of
+|𝐾|, by B𝐾 “ 𝐾z𝐾 the boundary of 𝐾, by ℎ𝐾 its diameter and by 𝑥𝐾 its barycenter. ℱ is a finite family of
+disjoint subsets of hyperplanes of R2 included in Ω (the faces of the mesh) such that, for all 𝜎 P ℱ, its measure
+is denoted |𝜎|, its diameter ℎ𝜎 and its barycenter 𝑥𝜎 . For any 𝐾 P 𝒯 , there exists a subset ℱ𝐾 of ℱ such that
+B𝐾 “ Y𝜎Pℱ𝐾 𝜎. Then, for any 𝜎 P ℱ, we denote by 𝒯𝜎 “ t𝐾 P 𝒯 | 𝜎 P ℱ𝐾 u. Next, for all 𝐾 P 𝒯 and all 𝜎 P ℱ𝐾 ,
+we denote by 𝑛𝐾,𝜎 the unit normal vector to 𝜎 outward to 𝐾, and 𝑑𝐾,𝜎 “ ||𝑥𝜎 ´𝑥𝐾 ||. The set of boundary faces
+is denoted ℱext , while interior faces are denoted ℱint . Finally for any 𝜎 P ℱint , we denote 𝑑𝐾𝐿 “ ||𝑥𝐾 ´ 𝑥𝐿 ||
+where 𝒯𝜎 “ t𝐾, 𝐿u. We assume that there exists a subset ℱext,in of ℱext such that:
+                                        ď
+                             BΩin “          𝜎 where BΩin “ t𝑥 P BΩ | ∇𝑏 ¨ 𝑛 ą 0u
+                                    𝜎Pℱext,in
+
+and we denote of course ℱext,out “ ℱext zℱext,in . As usual, ℎ “ max𝐾P𝒯 ℎ𝐾 will denote the mesh size. In what
+follows, we will assume that our mesh satisfies:
+(A1) There exists a real number 𝜌 ą 0 and a matching simplicial submesh 𝒮𝒯 of ℳ such that for any 𝑇 P 𝒮𝒯 ,
+     𝜌ℎ𝑇 ď 𝑟𝑇 where 𝑟𝑇 is the inradius of 𝑇 , and for any 𝑇 P 𝒯 and any 𝑇 P 𝒮𝒯 such that 𝑇 Ă 𝐾, 𝜌ℎ𝐾 ď ℎ𝑇 .
+From [3, 7], we know that assumption (A1) implies that for any 𝑘 P N, there exists 𝐶𝑡𝑟,𝑘 ą 0 independent on ℎ
+such that for any 𝐾 P 𝒯 , any 𝜎 P ℱ𝐾 and any 𝑝 P P𝑘 p𝐾q:
+
+                                         ||𝑝||𝐿2 p𝜎q ď 𝐶𝑡𝑟,𝑘 ℎ´1{2
+                                                              𝜎    ||𝑝||𝐿2 p𝐾q .                              (2.1)
+                                 SOME MULTIPLE FLOW DIRECTION ALGORITHMS                                     1919
+
+
+
+
+                                      Figure 1. Example of real topography.
+
+
+There also exists 𝐶𝑡𝑟 ą 0 independent on ℎ such that for any 𝑣 P 𝐻 1 p𝐾q:
+                                               ´                                 ¯1{2
+                                                        2                 2
+                              ||𝑣||𝐿2 p𝜎q ď 𝐶𝑡𝑟 ℎ´1
+                                                 𝐾 ||𝑣||𝐿2 p𝐾q ` ℎ𝐾 ||∇𝑣||𝐿2 p𝐾q      .                      (2.2)
+
+Finally, assumption (A1) implies that for any integer 𝑘, there exists 𝐶poly,𝑘 ą 0 such that for any 𝐾 P 𝒯 and
+any 𝑣 P 𝐻 𝑠 p𝐾q with 𝑠 P t1, . . . , 𝑘 ` 1u, there exists 𝑝 P P𝑘 p𝐾q such that
+                                1{2
+              |𝑣 ´ 𝑝|𝐻 𝑚 p𝐾q ` ℎ𝐾 |𝑣 ´ 𝑝|𝐻 𝑚 pB𝐾q ď 𝐶poly,𝑘 ℎ𝑠´𝑚
+                                                             𝐾   |𝑣|𝐻 𝑠 p𝐾q   for 𝑚 P t0, . . . , 𝑠 ´ 1u .   (2.3)
+
+In the estimates that will follow, the constant 𝐶 ą 0 will always denote by convention a quantity independent
+on the mesh size ℎ, whose value can change from line to line. Also by convention for any 𝜎 P ℱint we will
+denote 𝒯𝜎 “ t𝐾, 𝐿u. In the same way, when considering a cell 𝐾 and one of its interior faces 𝜎 P ℱ𝐾 X ℱint , by
+convention the cell 𝐿 will denote the other element of 𝒯𝜎 .
+   In order to be able to establish error estimates, we assume that the topography, often called the basement in
+the geological community and thus usually denoted 𝑏, satisfies 𝑏 P 𝑊 2,8 pΩq and that there exists 𝛼 ą 0 such
+that ´∆𝑏 ě 𝛼 for almost every 𝑥 P Ω. However, from the practical point of view 𝑏 is only known through some
+pointwise values, very often given as a digitized surface elevation, on which some interpolation and upscaling or
+downscaling processes have been applied (see Fig. 1). Thus, its Laplacian cannot be expected to be practically
+computable, and the above assumption should really be considered as an abstract technical requirement for
+establishing convergence estimates. Thus, our data will more realistically consists in some discrete mesh-based
+p𝐵 𝐾 q𝐾P𝒯 representation of 𝑏, where each 𝐵 𝐾 can represent several pointwise values of 𝑏, complemented by a
+water source term 𝑓 P 𝐿8 pΩq, possibly also only known through a mesh-based representation.
+
+2.2. The classical multiple flow direction algorithm
+   In the geological literature, multiple flow direction algorithms are considered as purely algorithmic ways of
+distributing water from one cell to another. Thus, they are generally described in a purely algorithmic fashion.
+Consequently, in this section to introduce the most classical MFD algorithms we will follow the presentation
+1920                                                  J. COATLÉVEN
+
+
+generally found in the geological community, that is to say a purely algorithmic point of view. One of our first
+tasks will precisely consists in abstracting ourselves from this algorithmic setting. For any 𝐾 P 𝒯 , let 𝑏𝐾 be a
+value for the topography associated with cell 𝐾. To fix notations, consider for the moment that
+                                                        ż
+                                                    1
+                                             𝑏𝐾 “          𝑏 @𝐾 P 𝒯
+                                                   |𝐾| 𝐾
+but other approximations can be considered, for instance 𝑏𝐾 “ 𝑏 p𝑥𝐾 q for any 𝐾 P 𝒯 if 𝑏 is regular enough.
+Multiple flow direction algorithms are based on formulae to distribute the water flow from a cell to its neighbours
+that are topographically lower. The most classical distribution formula consists simply in distributing the flow
+proportionally to the ratio 𝑠𝐾𝐿 {𝑠𝐾 of the discrete slope 𝑠𝐾𝐿 between the high cell 𝐾 and the low cell 𝐿 regarding
+the total positive slope 𝑠𝐾 of the high cell 𝐾, where the discrete slope 𝑠𝐾𝐿 is given by
+                                                            |𝜎|
+                                                 𝑠𝐾𝐿 “          p𝑏𝐾 ´ 𝑏𝐿 q
+                                                           𝑑𝐾𝐿
+and the total positive slope 𝑠𝐾 of cell 𝐾 is given by
+                                                       ÿ             |𝜎|
+                                      𝑠𝐾 “                               p𝑏𝐾 ´ 𝑏𝐿 q .
+                                               𝜎Pℱ𝐾 Xℱint ,𝑏𝐾 ě𝑏𝐿
+                                                                    𝑑𝐾𝐿
+
+Notice that in many cases of the literature, as the MFD algorithm is applied on a uniform cartesian mesh with
+the same space step in every direction, the face measure |𝜎| is simply omitted (see for instance [16, 22]), with
+no impact on the ratio 𝑠𝐾𝐿 {𝑠𝐾 . To give a detailed description of the most classical multiple flow direction
+algorithms, we need to introduce some notations. Let 𝑏0 “ max t𝑏𝐾 | 𝐾 P 𝒯 u, 𝒯0 “ t𝐾 P 𝒯 | 𝑏𝐾 “ 𝑏0 u and
+𝒯ˆ´1 “ H. The set 𝒯0 thus denotes the set of cells with maximum topographic height. Then, for any 𝑛 P N we
+define the set 𝒯ˆ𝑛 of elements of 𝒯 by setting:
+                      ď                                                      !                 )
+             𝒯ˆ𝑛 “        𝒯𝑖 where 𝒯𝑖 “ t𝐾 P 𝒯 | 𝑏𝐾 “ 𝑏𝑖 u and 𝑏𝑖 “ max 𝑏𝐾 | 𝐾 P 𝒯 z𝒯ˆ𝑖´1 .
+                    0ď𝑖ď𝑛
+
+
+By construction, as 𝒯 is a finite set there exists 𝑁𝑏 ą 0 such that 𝒯𝑁𝑏 ´1 ‰ H and 𝒯ˆ𝑁𝑏 ´1 “ 𝒯 . Thus, for any
+𝑛 ě 𝑁𝑏 , we have 𝒯𝑛 “ H and 𝒯ˆ𝑛 “ 𝒯ˆ𝑁𝑏 ´1 .
+  To model water sources, we define a family p𝑓𝐾 q𝐾P𝒯 by setting:
+                                                      ż
+                                                   1
+                                            𝑓𝐾 “         𝑓 @𝐾 P 𝒯 .
+                                                  |𝐾| 𝐾
+The classical MFD algorithm (reformulated from [16,22]) then reads as follows (see Fig. 2 for a visual illustration,
+where the width of the arrows is roughly following the amount of distributed water):
+ (i) For any 𝐾 P 𝒯 , the water influx 𝑞r𝐾 is initialized at 0.
+
+(ii) For any 𝐾 P 𝒯0 , the water influx 𝑞r𝐾 is given by 𝑞r𝐾 “ |𝐾|𝑓𝐾 .
+
+(iii) Loop for 𝑛 “ 1 . . . 𝑁𝑏 ´ 1.
+
+(iii-1) For any 𝐿 P 𝒯ˆ𝑛´1 , we distribute the entire water influx 𝑞r𝐿 to the neighbours that belong to 𝒯𝑛 propor-
+        tionally to the slope between the cell 𝐿 and its neighbour, i.e.:
+                                                     ÿ                     𝑞𝐿
+                                                                        |𝜎|r
+                          𝑞r𝐾 ÐÝ 𝑞r𝐾 `                                        p𝑏𝐿 ´ 𝑏𝐾 q   for all 𝐾 P 𝒯𝑛
+                                                                       𝑑𝐾𝐿 𝑠𝐿
+                                         𝜎Pℱ𝐾 Xℱint ,𝑏𝐾 ă𝑏𝐿 ,𝐿P𝒯^𝑛´1
+                                  SOME MULTIPLE FLOW DIRECTION ALGORITHMS                                   1921
+
+
+
+
+         Figure 2. Basic principle of MFD algorithms: water is distributed to lower neighbouring cells
+         proportionally to the slope.
+
+        where 𝑠𝐿 is the total positive slope in cell 𝐿, and ÐÝ denotes the action of updating 𝑞r𝐾 .
+
+(iii-2) For any 𝐾 P 𝒯𝑛 , the water influx is complemented by the local sources by setting
+                                                        𝑞r𝐾 ÐÝ 𝑞r𝐾 ` |𝐾|𝑓𝐾 .
+(iv) End loop for 𝑛 “ 1 . . . 𝑁𝑏 ´ 1.
+   The MFD algorithm admits a reformulation as a linear system that will play a key role in the remaining of
+the paper. To our knowledge, only [23] mentioned this reformulation, although without exhibiting an explicit
+formula. This link seemed to have been most of the time simply overlooked by the geological community:
+Theorem 2.1. The MFD algorithm is equivalent to solving the following linear system for the unknown
+ 𝑞𝐾 q𝐾P𝒯
+pr
+                               ÿ             𝑞𝐿
+                                          |𝜎|r
+                    𝑞r𝐾 ´                        p𝑏𝐿 ´ 𝑏𝐾 q “ |𝐾|𝑓𝐾 @𝐾 P 𝒯                     (2.4)
+                          𝜎Pℱ Xℱ ,𝑏 ă𝑏
+                                         𝑑 𝐾𝐿 𝑠𝐿
+                                     𝐾    int   𝐾   𝐿
+
+where
+                                                        ÿ             |𝜎|
+                                         𝑠𝐾 “                             p𝑏𝐾 ´ 𝑏𝐿 q
+                                                𝜎Pℱ𝐾 Xℱint ,𝑏𝐾 ě𝑏𝐿
+                                                                     𝑑𝐾𝐿
+using an ordering for the cells of 𝒯 based on decreasing topography 𝑏𝐾 and a lower triangular solver.
+Proof. First, notice that as cells 𝐾 P 𝒯𝑛 are updated only at step 𝑛, their expression is complete past this step
+and given by:
+                                    ÿ               𝑞𝐿
+                                                 |𝜎|r
+                   𝑞r𝐾 “                                p𝑏𝐿 ´ 𝑏𝐾 q ` |𝐾|𝑓𝐾 for all 𝐾 P 𝒯 z𝒯𝑛 .
+                                            ^
+                                                𝑑 𝐾𝐿 𝑠𝐿
+                         𝜎Pℱ𝐾 Xℱint ,𝑏𝐾 ă𝑏𝐿 ,𝐿P𝒯𝑛´1
+1922                                                   J. COATLÉVEN
+
+
+However, by construction of the sets 𝒯ˆ𝑖 , any 𝐿 P 𝒯 such that 𝑏𝐿 ą 𝑏𝐾 for 𝐾 P 𝒯𝑛 , will satisfy 𝐿 P 𝒯ˆ𝑛´1 . Thus,
+the above expression can be simplified in:
+                                     ÿ                 𝑞𝐿
+                                                    |𝜎|r
+                      𝑞r𝐾 “                               p𝑏𝐿 ´ 𝑏𝐾 q ` |𝐾|𝑓𝐾       for all 𝐾 P 𝒯 z𝒯𝑛
+                              𝜎Pℱ𝐾 Xℱint ,𝑏𝐾 ă𝑏𝐿
+                                                   𝑑𝐾𝐿 𝑠𝐿
+
+where the set 𝒯ˆ𝑛´1 no longer appears. As for any 𝐾 P 𝒯 , there exists 0 ď 𝑛 ď 𝑁𝑏 ´ 1 such that 𝐾 P 𝒯𝑛 ,
+and noticing that 𝑠𝐿 ą 0 as soon as there exists 𝜎 P ℱ𝐿 X ℱint , 𝒯𝜎 “ t𝐾, 𝐿u such that 𝑏𝐿 ą 𝑏𝐾 , (2.4) follows
+by induction. Finally, starting from (2.4), if one chooses an ordering for the cells of 𝒯 based on decreasing
+topography 𝑏𝐾 , it is clear that the above system becomes a lower triangular one for 𝑞r𝐾 . It should be obvi-
+ous at this point that the associated lower triangular solver then coincides exactly with the classical MFD
+algorithm.                                                                                                  
+
+   A great advantage of considering the above system rather than its algorithmic counterpart is that it makes
+clear that triangular solvers are not the only possible linear solvers, which was indeed the main point of [23].
+A wide range of linear solvers can be used to solve (2.4), and most importantly parallel solvers than can
+considerably speed up the solving process on meshes with a huge cell number.
+Remark 2.2. Many variants of this classical MFD algorithm exist, which at least to the authors knowledge
+mainly consist in modifying the way the influx is distributed from an upper cell to its lower neighbours: powers
+of the slope instead of the slope, probabilistic repartitions, repartitions using a specified number of neighbours
+for a given mesh structure, etc... With the exception of distribution formulae that use powers of the slope instead
+of the slope itself, proceeding as we have done for the most classical MFD algorithm it is not difficult to show
+that all those variants can be rewritten under the form:
+                                         ÿ             𝜆𝜎 |𝜎|r
+                                                             𝑞𝐿
+                          𝑞r𝐾 ´                                 p𝑏𝐿 ´ 𝑏𝐾 q “ |𝐾|𝑓𝐾       @𝐾 P 𝒯
+                                  𝜎Pℱ𝐾 Xℱint ,𝑏𝐾 ă𝑏𝐿
+                                                       𝑑𝐾𝐿 𝑠𝐿
+
+with this time
+                                                       ÿ           𝜆𝜎 |𝜎|
+                                       𝑠𝐾 “                               p𝑏𝐾 ´ 𝑏𝐿 q .
+                                              𝜎Pℱ𝐾 Xℱint ,𝑏𝐾 ě𝑏𝐿
+                                                                   𝑑𝐾𝐿
+
+The coefficient 𝜆𝜎 associated with each face will take different values depending on the way one want to modify
+the influx repartition. Notice that we have chosen to not consider distribution formulae based on powers of the
+slope as they only had some technical difficulties with no fundamental differences in the analysis.
+
+                      3. On the link with Manning–Strickler models
+  Consider the following classical transient Manning–Strickler model:
+                                      ˇ
+                                      ˇ B𝑢
+                                      ˇ    ´ div p𝜆𝑢𝑚 ∇𝑏q “ 𝑓 in Ω
+                                      ˇ B𝑡
+                                      ˇ
+                                      ˇ ´𝑢𝑚 ∇𝑏 ¨ 𝑛 “ 0         on BΩin
+
+where 𝑢 is the water height, 𝑚 a parameter and 𝑛 denotes the outward normal to Ω. The coefficient 𝜆 P 𝐿8 pΩq
+is the inverse of the Manning–Strickler coefficient expressing soil roughness, and is assumed to satisfy 0 ă 𝜆´ ď
+𝜆 ď 𝜆` ă `8 almost everywhere in Ω. Formally, the steady state associated with the above system is the
+following stationary Manning–Strickler model for overland flow:
+                                        ˇ
+                                        ˇ ´div p𝜆𝑢𝑚 ∇𝑏q “ 𝑓 in Ω
+                                                                                                             (3.1)
+                                        ˇ
+                                        ˇ ´𝜆𝑢𝑚 ∇𝑏 ¨ 𝑛 “ 0
+                                        ˇ
+                                                                on BΩin .
+                                     SOME MULTIPLE FLOW DIRECTION ALGORITHMS                                  1923
+
+Denoting 𝑢𝜆,𝑚 “ 𝜆𝑢𝑚 , 𝛽 “ ´∇𝑏 P 𝑊 1,8 pΩq and 𝜇 “ ´∆𝑏 ě 𝛼 ą 0 P 𝐿8 pΩq, remark that (3.1) can be
+rewritten:                    ˇ
+                              ˇ 𝛽 ¨ ∇𝑢𝜆,𝑚 ` 𝜇𝑢𝜆,𝑚 “ 𝑓 in Ω
+                                                                                            (3.2)
+                              ˇ
+                              ˇ
+                              ˇ𝑢     “0               on BΩ .
+                                          𝜆,𝑚                                      in
+
+Stationary transport problems of the form (3.2) have of course received a lot of attention in the existing
+literature, in particular as they correspond to a popular model for neutron transport. Their well-posedness has
+been considered for instance in [1, 2], or more recently in [8, 15, 17]. Thus, from the results of [8, 15] and the
+regularity hypotheses on 𝑏, 𝑓 , and 𝜆, we know that there exists a unique 𝑢 P 𝐿8 pΩq solution of (3.2). As the
+water height 𝑢 only appears through its 𝑚-th power 𝑢𝑚 , in the remaining of the paper we will with a slight
+abuse of notations directly use 𝑢 instead of 𝑢𝑚 .
+   We are now going to explain that the classical MFD algorithm coincides with a well chosen discretization
+of the stationary Manning–Strickler model. Assume that the mesh is orthogonal, i.e. there exists a family of
+centroids p𝑥𝐾 q𝐾P𝒯 such that:
+
+                       ˚                            𝑥𝐿 ´ 𝑥𝐾
+                  𝑥𝐾 P 𝐾      @𝐾 P 𝒯      and                  “ 𝑛𝐾,𝜎       for 𝜎 P ℱint , 𝜎 “ t𝐾, 𝐿u
+                                                  ||𝑥𝐿 ´ 𝑥𝐾 ||
+and let us denote 𝑑𝐾,𝜎 the distance of 𝑥𝐾 to the hyperplane containing 𝜎 for any 𝜎 P ℱ𝐾 and any 𝐾 P 𝒯 .
+Then, one can use a two-point finite volume scheme to discretize the steady-state Manning model. Assume that
+𝑏𝐾 “ 𝑏 p𝑥𝐾 q or at least a second order approximation of it. Denoting 𝑢𝐾 for any 𝐾 P 𝒯 the discrete water
+height unknown, if one further assumes that 𝑏𝜎 “ 𝑏𝐾 for any 𝜎 P ℱext and 𝐾 P 𝒯𝜎 which is generally what is
+done in practical applications of the MFD algorithm, for any 𝐾 P 𝒯 we get:
+                                         ÿ
+                                                   rup
+                                               𝜏𝐾𝐿 𝑢𝜎 p𝑏𝐾 ´ 𝑏𝐿 q “ |𝐾|𝑓𝐾
+                                        𝜎Pℱ𝐾 Xℱint
+
+      rup
+where 𝑢                      rup
+       𝜎 “ 𝑢𝐾 if 𝑏𝐾 ě 𝑏𝐿 and 𝑢𝜎 “ 𝑢𝐿 if 𝑏𝐾 ă 𝑏𝐿 and the transmissivity 𝜏𝐾𝐿 is given for instance by the
+harmonic mean:                                                            ż
+                                       |𝜎|𝜆𝐾 𝜆𝐿                        1
+                           𝜏𝐾𝐿 “                       where 𝜆𝐾 “            𝜆.
+                                   𝜆𝐾 𝑑𝐿,𝜎 ` 𝜆𝐿 𝑑𝐾,𝜎                 |𝐾| 𝐾
+Immediately we deduce the following equivalence result, which despite its simplicity is the cornerstone of the
+present paper:
+Theorem 3.1. The TPFA scheme for Manning Strickler’s model is equivalent to the MFD algorithm.
+Proof. Gathering the faces by upwinding kind, we get:
+                      ÿ                                           ÿ
+                               𝜏𝐾𝐿 𝑢𝐾 p𝑏𝐾 ´ 𝑏𝐿 q ´                              𝜏𝐾𝐿 𝑢𝐿 p𝑏𝐿 ´ 𝑏𝐾 q “ |𝐾|𝑓𝐾 .   (3.3)
+                𝜎Pℱ𝐾 Xℱint ,𝑏𝐾 ě𝑏𝐿                         𝜎Pℱ𝐾 Xℱint ,𝑏𝐾 ă𝑏𝐿
+
+Setting                                                    ÿ
+                                         𝑠𝐾 “                        𝜏𝐾𝐿 p𝑏𝐾 ´ 𝑏𝐿 q
+                                                𝜎Pℱ𝐾 Xℱint ,𝑏𝐾 ě𝑏𝐿
+
+and noticing that 𝑠𝐿 ą 0 as soon as there exists 𝜎 P ℱ𝐿 X ℱint such that 𝑏𝐿 ą 𝑏𝐾 , we see that equation (3.3)
+can be rewritten:                           ÿ
+                             𝑠𝐾 𝑢𝐾 ´                  𝜏𝐾𝐿 𝑢𝐿 p𝑏𝐿 ´ 𝑏𝐾 q “ |𝐾|𝑓𝐾 .
+                                         𝜎Pℱ𝐾 Xℱint ,𝑏𝐾 ă𝑏𝐿
+
+Defining the water influx by 𝑞r𝐾 “ 𝑠𝐾 𝑢𝐾 , we thus obtain:
+                                            ÿ            𝑞r𝐿
+                                𝑞r𝐾 ´                𝜏𝐾𝐿     p𝑏𝐿 ´ 𝑏𝐾 q “ |𝐾|𝑓𝐾 .                             (3.4)
+                                      𝜎Pℱ Xℱ ,𝑏 ă𝑏
+                                                         𝑠 𝐿
+                                           𝐾     int   𝐾   𝐿
+
+
+If we take 𝜆 “ 1, immediately we see that (3.4) is exactly the MFD equation (2.4).                               
+1924                                                  J. COATLÉVEN
+
+
+   Surprisingly, this result seems to be absent of the MFD literature. The main reason is probably that formu-
+lations of MFD algorithms as linear systems are equally difficult to find. From this equivalence between the
+classical MFD and the two-point flux approximation (TPFA) of the classical Manning–Strickler model, some
+useful observations can be made. Probably the most surprising one is that the MFD unknown pr       𝑞𝐾 q𝐾P𝒯 can be
+used instead of 𝑢𝐾 to solve the two-point approximation of the Manning–Strickler model. Moreover, existence
+and uniqueness of solutions of the MFD problem (3.4) are now an immediate consequence of its equivalence
+with the MFD algorithm without requiring any hypothesis on the topography. Next, let us mention that when
+modeling overland flow, the quantity of interest is not the water height but the water discharge, i.e. the norm
+||𝜆ℎ𝑚 ∇𝑏|| of the water flux vector. This is the reason why no water height explicitly appears in MFD algorithms.
+However, a crucial consequence of our equivalence result is that the usual unknown 𝑞r𝐾 of the MFD algorithm,
+while an excellent choice from the algebraic perspective, is probably not the good quantity to represent the water
+discharge. Indeed, using 𝑞r𝐾 “ 𝑠𝐾 𝑢𝐾 and the consistency of the two-point formula we see that it approximates:
+                                                  ÿ ż                    `
+                                          𝑞r𝐾 «          𝑢 p´𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 q
+                                                   𝜎Pℱ𝐾   𝜎
+
+
+where 𝑣 ` “ maxp0, 𝑣q. We cannot expect such a 𝑞r𝐾 to be an approximation of the norm of 𝜆𝑢∇𝑏, as it
+approximates the accumulated influx in a cell which is a mesh dependent quantity. Thus, no kind of convergence
+let alone approximation properties can be expected for such a quantity in general. To effectively compute a
+discrete water discharge 𝑞𝐾 for each cell 𝐾 P 𝒯 , we reconstruct cellwise the water flux vector by setting:
+                     ÿ             𝜏𝐾𝐿 𝑞r𝐾                              ÿ       𝜏𝐾𝐿 𝑞r𝐿
+       𝑄𝐾 “                                p𝑏𝐾 ´ 𝑏𝐿 q p𝑥𝜎 ´ 𝑥𝐾 q ´                      p𝑏𝐿 ´ 𝑏𝐾 q p𝑥𝜎 ´ 𝑥𝐾 q .
+              𝜎Pℱ𝐾 Xℱint ,𝑏𝐾 ą𝑏𝐿
+                                   |𝐾|𝑠𝐾                           𝜎Pℱ Xℱ ,𝑏 ă𝑏
+                                                                                |𝐾|𝑠𝐿
+                                                                      𝐾   int   𝐾   𝐿
+
+
+
+The consistent water discharge is immediately given by 𝑞𝐾 “ ||𝑄𝐾 ||. We will illustrate in the numerical section
+the convergence deficiency of 𝑞r𝐾 , and how 𝑞𝐾 has a much better behavior. Obviously, for any 𝐾 P 𝒯 such that
+𝑠𝐾 ‰ 0, we can compute an equivalent positive water height by setting 𝑢𝐾 “ 𝑞r𝐾 {𝑠𝐾 . Cells where 𝑠𝐾 “ 0 are
+cells where all discrete fluxes are ingoing fluxes, thus it is clear that one should either set 𝑢𝐾 “ `8 or 𝑢𝐾 “ 0
+depending if water effectively reaches the cell or not. From the definition of 𝑄𝐾 , we see that the value of 𝑢𝐾
+for such cells will have no influence on the water discharge and its asymptotic convergence. It is thus clear that
+one can always define 𝑢𝐾 by setting:
+                                                     ˇ 𝑞r𝐾
+                                                     ˇ
+                                                     ˇ       if 𝑠𝐾 ą 0
+                                              𝑢𝐾 “ ˇˇ 𝑠𝐾
+                                                     ˇ0      otherwise.
+
+
+Remark 3.2. Notice that using the harmonic mean is not mandatory if one can use an approximation of 𝜆
+directly on the faces, leading to the transmissivity 𝜏𝐾𝐿 “ |𝜎|𝜆𝜎 {𝑑𝐾𝐿 in which case (3.4) will correspond to one
+of the many variants of the classical MFD.
+
+
+4. Some conservative and consistent flux reconstructions on general meshes
+   From the equivalence between the MFD algorithms and the TPFA scheme for the stationary Manning–
+Strickler model, an obvious way of generalizing MFD algorithms to general meshes consists in replacing the
+TPFA flux reconstruction formula by more advanced flux reconstruction techniques that are still valid on
+general meshes. We follow the idea of [4]: we consider a gradient reconstruction in each cell that will consist in
+a consistent part plus a stabilization part. However, contrary to [4] where the stabilization was used to obtain
+coercivity, here we will use this stabilization to enforce conservativity.
+                                  SOME MULTIPLE FLOW DIRECTION ALGORITHMS                                     1925
+
+4.1. A conservative flux reconstruction formula
+  For any cell 𝐾 P 𝒯 , let us denote 𝐵 𝐾 “ 𝒟 𝐾 p𝑏q the local values associated with the topography 𝑏, and
+𝑋𝐾 “ R𝒩𝐾 the set of local values, with 𝒩𝐾 the number of local values. The operator 𝒟 𝐾 : 𝐻 1 p𝐾q ÞÝÑ 𝑋𝐾
+will of course depend on the considered reconstruction formula, however to simplify notations we consider that
+the value 𝑏𝐾 at 𝑥𝐾 always belongs to the set of local values. Those local values represent all the knowledge we
+have in practice of the field 𝑏, and once again its Laplacian cannot be expected to be computable. For typical
+applications such as stratigraphic modelling it consists in cell values complemented by vertex or face values, thus
+conditioning the schemes we can effectively use. We assume that we are given a gradient reconstruction operator
+∇𝐾 : 𝑋𝐾 ÞÝÑ R2 , and we define a reconstruction formula in each cell through the operator Π𝐾 : 𝑋𝐾 ÞÝÑ P1 p𝐾q,
+where P1 p𝐾q is the set of first order polynomials on 𝐾 and:
+
+                                   Π𝐾 p𝐵 𝐾 q p𝑥q “ 𝑏𝐾 ` ∇𝐾 p𝐵 𝐾 q ¨ p𝑥 ´ 𝑥𝐾 q
+
+and thus ∇Π𝐾 p𝐵 𝐾 q “ ∇𝐾 p𝐵 𝐾 q. Such gradient reconstructions are the usual basis of modern finite volume
+methods (see [4, 5, 12]), and many formulae can be found in the literature. Using those reconstructions, it is
+tempting to define the flux operator 𝐹𝐾,𝜎 p𝐵 𝐾 q by setting:
+
+                                      𝐹𝐾,𝜎 p𝐵 𝐾 q “ ´|𝜎|𝜆𝐾 ∇𝐾 p𝐵 𝐾 q ¨ 𝑛𝐾,𝜎 .
+
+As consistency of the flux will of course rely on the consistency of the gradient reconstruction operators, the
+above definition will indeed lead to consistent fluxes, however to construct our generalized MFD algorithms
+conservativity will play a crucial role. This means that we will require the conservativity of the flux:
+                                                ÿ
+                                                    𝐹𝐾,𝜎 p𝐵 𝐾 q “ 0
+                                               𝐾P𝒯𝜎
+
+which cannot be satisfied in general (except by the two-point fluxes) with such a simple formula. This is the
+reason why, following the ideas of [4], we introduce a stabilized gradient operator ∇𝐾,𝜎 : 𝑋𝐾 ˆ R ÞÝÑ R by
+setting:
+                                                 𝜂
+                 ∇𝐾,𝜎 p𝐵 𝐾 , 𝜌𝜎 q “ ∇𝐾 p𝐵 𝐾 q `      pp𝜌𝜎 ´ 𝑏𝐾 q ´ ∇𝐾 p𝐵 𝐾 q ¨ p𝑥𝜎 ´ 𝑥𝐾 qq 𝑛𝐾,𝜎
+                                                𝑑𝐾,𝜎
+where 𝜂 ą 0 is a stabilization parameter. Then, for any 𝐾 P 𝒯 and any 𝜎 P ℱ𝐾 , we define an intermediate flux
+operator 𝐹ˆ𝐾,𝜎 : 𝑋𝐾 ˆ R ÞÝÑ R by setting:
+
+                                 𝐹ˆ𝐾,𝜎 p𝐵 𝐾 , 𝜌𝜎 q “ ´|𝜎|𝜆𝐾 ∇𝐾,𝜎 p𝐵 𝐾 , 𝜌𝜎 q ¨ 𝑛𝐾,𝜎 .
+
+Obviously, for any 𝜎 P ℱint , we would like to define ˆ𝑏𝜎 as the solution of
+                                              ÿ         ´        ¯
+                                                  𝐹ˆ𝐾,𝜎 𝐵 𝐾 , ˆ𝑏𝜎 “ 0.                                        (4.1)
+                                             𝐾P𝒯𝜎
+
+
+Fortunately, as 𝜆 is positive almost everywhere we immediately deduce that such a ˆ𝑏𝜎 is always defined and is
+given by:
+                                 ˜                                ˆ                           ˙¸
+           ˆ𝑏𝜎 “ ˜      1           ÿ 𝜂𝜆𝐾         ÿ                 𝜂𝜆𝐾
+                               ¸            𝑏𝐾 `      ∇𝐾 p𝐵 𝐾 q ¨        p𝑥𝜎 ´ 𝑥𝐾 q ´ 𝜆𝐾 𝑛𝐾,𝜎    .       (4.2)
+                     ÿ 𝜂𝜆𝑀              𝑑
+                                  𝐾P𝒯𝜎 𝐾,𝜎       𝐾P𝒯𝜎
+                                                                    𝑑𝐾,𝜎
+
+                   𝑀 P𝒯
+                         𝑑𝑀,𝜎
+                        𝜎
+
+                                                                                            Ś
+Thus, for any 𝜎 P ℱint , it is legitimate to define the conservative flux operator 𝐹𝐾,𝜎 :      𝐿P𝒯𝜎 𝑋𝐿 ÞÝÑ R by
+setting:                                                     ´          ¯
+                                          𝐹𝐾,𝜎 p𝐵 𝜎 q “ 𝐹ˆ𝐾,𝜎 𝐵 𝐾 , ˆ𝑏𝜎                                       (4.3)
+1926                                                     J. COATLÉVEN
+
+
+where ˆ𝑏𝜎 is the unique solution of (4.1), while for any 𝜎 P ℱext , we simply set:
+                                           𝐹𝐾,𝜎 p𝐵 𝜎 q “ ´|𝜎|𝜆𝐾 ∇𝐾 p𝐵 𝐾 q ¨ 𝑛𝐾,𝜎 .                                  (4.4)
+
+
+Remark 4.1. It is tempting to recover conservativity using the following simpler formula for 𝐹ˆ𝐾,𝜎 p𝐵 𝜎 q:
+                                                       1
+                                         𝐹ˆ𝐾,𝜎 p𝐵 𝜎 q “ p𝐹𝐾,𝜎 p𝐵 𝐾 q ´ 𝐹𝐿,𝜎 p𝐵 𝐿 qq .
+                                                       2
+The main drawback of this alternative formula can be understood in cases where 𝜆 is discontinuous, where this
+would obviously lead to a very coarse approximation of the flux along the lines of discontinuity of 𝜆. Provided
+those discontinuities are resolved by the mesh, our formula for 𝐹ˆ𝐾,𝜎 p𝐵 𝜎 q will instead behave as the usual
+harmonic mean. It is thus a more robust and versatile choice.
+
+4.2. Consistency properties of the flux
+   Denoting 𝐵p𝑥, 𝜉q the ball centered at 𝑥 of radius 𝜉 and 𝐵Ω p𝑥, 𝜉q “ 𝐵p𝑥, 𝜉q X Ω, we recall the usual definition
+of strong consistency for gradient reconstruction operators:
+Definition 4.2 (Strong consistency). The gradient reconstruction operator
+                                                                    ´     ∇𝐾 is¯strongly consistent if and
+only if there exists 𝐶 ą 0 independent on ℎ such that for any 𝜙 P 𝐶 2 𝐵Ω p𝑥𝐾 , 𝜉q , every 0 ă 𝜉 ď 2ℎ𝐾 and
+every 𝑥 P 𝐵Ω p𝑥𝐾 , 𝜉q:
+                              |∇𝜙p𝑥q ´ ∇𝐾 p𝒟 𝐾 p𝜙qq| ď 𝐶𝜉||𝜙||𝑊 2,8 p𝐵Ω p𝑥𝐾 ,𝜉qXΩq .
+As an
+    ´ immediate ¯ consequence of the above definition, we have, using Taylor’s expansion and the density of
+𝐶 8
+     𝐵Ω p𝑥𝐾 , 𝜉q in 𝑊 2,8 p𝐵Ω p𝑥, 𝜉qq that for any 𝜙 P 𝑊 2,8 pΩq there exists 𝐶 ą 0 depending on 𝜙 but not on
+ℎ such that for every ℎ𝐾 ď 𝜉 ď 2ℎ𝐾 , any 𝐾 P 𝒯 and almost every 𝑥 P 𝐵Ω p𝑥𝐾 , 𝜉q:
+                                     |∇𝜙p𝑥q ´ ∇𝐾 p𝒟 𝐾 p𝜙qq| ď 𝐶𝜉||𝜙||𝑊 2,8 p𝐵Ω p𝑥𝐾 ,𝜉qq
+and
+                                    |𝜙p𝑥q ´ Π𝐾 p𝒟 𝐾 p𝜙qq p𝑥q| ď 𝐶𝜉 2 ||𝜙||𝑊 2,8 p𝐵Ω p𝑥𝐾 ,𝜉qq .
+Another immediate consequence is the consistency of our discrete fluxes:
+Proposition 4.3. Assume that assumption (A1) is satisfied and that the gradient reconstruction operator is
+strongly consistent. Then, there exists 𝐶 ą 0 independent on ℎ such that for any 𝐾 P 𝒯 , any 𝜎 P ℱ𝐾 , any
+𝑏 P 𝑊 2,8 pΩq and any 𝜆 P 𝑊 1,8 pΩq, we have:
+                  ˇˇ                          ˇˇ
+                  ˇˇ 1                        ˇˇ
+                  ˇˇ 𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 ˇˇ                   ď 𝐶ℎ𝐾 ||𝜆||𝑊 1,8 pΩq ||𝑏||𝑊 2,8 pΩq . (4.5)
+                  ˇˇ |𝜎|                      ˇˇ 8
+                                                 𝐿 p𝐵Ω p𝑥𝐾 ,2ℎ𝐾 qq
+
+
+                        ` ˘
+Proof. By density of 𝐶 8 Ω in 𝑊 1,8 pΩq and 𝑊 2,8 pΩq, it is clear that it suffices to establish the result for
+        ` ˘              ` ˘
+𝜆 P 𝐶 8 Ω and 𝑏 P 𝐶 8 Ω . Assuming such regularity, we start by establishing that there exists 𝐶 ą 0
+independent on ℎ such that for any 𝜎 P ℱint :
+          |ˆ𝑏𝜎 ´ 𝑏 p𝑥𝜎 q | ď 𝐶ℎ2𝐾 ||𝑏||𝑊 2,8 pΩq   and |ˆ𝑏𝜎 ´ Π𝐾 p𝐵 𝐾 q p𝑥𝜎 q | ď 𝐶ℎ2𝐾 ||𝑏||𝑊 2,8 pΩq   @𝐾 P 𝒯𝜎 .   (4.6)
+As by construction, we have Π𝐾 p𝐵 𝐾 q p𝑥𝜎 q “ 𝑏𝐾 ` ∇𝐾 p𝐵 𝐾 q ¨ p𝑥𝜎 ´ 𝑥𝐾 q, slightly rewriting (4.2) we get:
+                                       ˜                                                               ¸
+                               1         ÿ 𝜂𝜆𝐿                                  ÿ
+        ˆ𝑏𝜎 ´ 𝑏 p𝑥𝜎 q “ ˜            ¸           pΠ𝐿 p𝐵 𝐿 q p𝑥𝜎 q ´ 𝑏 p𝑥𝜎 qq ´      𝜆𝐿 ∇𝐿 p𝐵 𝐿 q ¨ 𝑛𝐿,𝜎 .
+                           ÿ 𝜂𝜆𝑀            𝑑
+                                        𝐿P𝒯𝜎 𝐿,𝜎                               𝐿P𝒯𝜎
+
+                          𝑀 P𝒯
+                                𝑑𝑀,𝜎
+                                𝜎
+                                      SOME MULTIPLE FLOW DIRECTION ALGORITHMS                                          1927
+
+Immediately, using the strong consistency of the gradient operator we get that for all 𝐾 P 𝒯𝜎 :
+                                  |Π𝐾 p𝐵 𝐾 q p𝑥𝜎 q ´ 𝑏 p𝑥𝜎 q | ď 𝐶ℎ2𝐾 ||𝑏||𝑊 2,8 p𝐵Ω p𝑥𝐾 ,ℎ𝐾 qq
+and thus for all 𝐾 P 𝒯𝜎 :
+                                                           ÿ 𝜂𝜆𝐿
+                                                                      ℎ2𝐿
+        1        ÿ  𝜂𝜆𝐿                                   𝐿P𝒯
+                                                                𝑑 𝐿,𝜎
+  ˜            ¸        |Π𝐿 p𝐵 𝐿 q p𝑥𝜎 q ´ 𝑏 p𝑥𝜎 q | ď 𝐶 ˜ 𝜎             ¸ ||𝑏||𝑊 2,8 p𝐵Ω p𝑥𝐾 ,ℎ𝐾 qq ď 𝐶ℎ2𝐾 ||𝑏||𝑊 2,8 pΩq
+    ÿ 𝜂𝜆𝑀 𝐿P𝒯 𝑑𝐿,𝜎                                          ÿ 𝜂𝜆𝑀
+                  𝜎
+
+
+   𝑀 P𝒯
+         𝑑 𝑀,𝜎                                             𝑀 P𝒯
+                                                                  𝑑𝑀,𝜎
+          𝜎                                                              𝜎
+
+
+as under assumption (A1), we know (see [3, 7]) that there exists 𝐶 ą 0 such that for any p𝐾, 𝑀 q P 𝒯 2 such that
+ℱ𝐾 X ℱ𝑀 ‰ H, we have ℎ𝑀 {ℎ𝐾 ď 𝐶. Moreover, as the gradient operator is strongly consistent, we know that:
+                                                   `                                                          ˘
+            |𝜆𝐾 ∇𝐾 p𝐵 𝐾 q ´ 𝜆 p𝑥𝜎 q ∇𝑏 p𝑥𝜎 q | ď 𝐶ℎ ||𝜆||𝑊 1,8 pΩq ||𝑏||𝑊 1,8 pΩq ` ||𝜆||𝐿8 pΩq ||𝑏||𝑊 2,8 pΩq .
+Using:                                           ÿ
+                                                        𝜆 p𝑥𝜎 q ∇𝑏 p𝑥𝜎 q ¨ 𝑛𝐾,𝜎 “ 0
+                                                 𝐾P𝒯𝜎
+we get:           ˇ                        ˇ
+                  ˇ ÿ                      ˇ     `                                                          ˘
+                       𝜆𝐾 ∇𝐾 p𝐵 𝐾 q ¨ 𝑛𝐾,𝜎 ˇ ď 𝐶ℎ ||𝜆||𝑊 1,8 pΩq ||𝑏||𝑊 1,8 pΩq ` ||𝜆||𝐿8 pΩq ||𝑏||𝑊 2,8 pΩq .
+                  ˇ                        ˇ
+                  ˇ
+                  ˇ𝐾P𝒯                     ˇ
+                        𝜎
+
+Meanwhile, we clearly get using again assumption (A1):
+                    1             1      1            1                    1           𝐶ℎ𝐾
+              ˜             ¸ď       ˜       ¸ď                max 𝑑𝑀,𝜎 ď     max ℎ𝑀 ď
+               ÿ 𝜂𝜆𝑀             𝜂𝜆´   ÿ   1    𝜂𝜆´ card p𝒯𝜎 q 𝑀 P𝒯𝜎      𝜂𝜆´ 𝑀 P𝒯𝜎    𝜂𝜆´
+
+              𝑀 P𝒯
+                   𝑑𝑀,𝜎                  𝑀 P𝒯𝜎
+                                                 𝑑𝑀,𝜎
+                   𝜎
+
+
+which finally establishes that:
+                                              |ˆ𝑏𝜎 ´ 𝑏 p𝑥𝜎 q | ď 𝐶ℎ2𝐾 ||𝑏||𝑊 2,8 pΩq
+and (4.6) immediately follows using the triangular inequality and the strong consistency of the gradient operator.
+Then, for any 𝑥 P 𝐵Ω p𝑥𝐾 , 2ℎ𝐾 q and any 𝜎 P ℱint :
+           1
+              𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝜆p𝑥q∇𝑏p𝑥q ¨ 𝑛𝐾,𝜎 “ 𝜆𝐾 p∇𝑏p𝑥q ´ ∇𝐾 p𝐵 𝐾 qq ¨ 𝑛𝐾,𝜎 ` p𝜆p𝑥q ´ 𝜆𝐾 q ∇𝑏p𝑥q ¨ 𝑛𝐾,𝜎
+          |𝜎|
+                                                  𝜂𝜆𝐾 ´ˆ                   ¯
+                                               ´       𝑏𝜎 ´ Π𝐾 p𝐵 𝐾 q p𝑥𝜎 q .
+                                                  𝑑𝐾,𝜎
+Immediately, as the gradient reconstruction operator is strongly consistent we get:
+                                 |𝜆𝐾 p∇𝑏p𝑥q ´ ∇𝐾 p𝐵 𝐾 qq ¨ 𝑛𝐾,𝜎 | ď 𝐶𝜆` ℎ𝐾 ||𝑏||𝑊 2,8 pΩq
+while Taylor’s expansion immediately gives:
+                                 |p𝜆p𝑥q ´ 𝜆𝐾 q ∇𝑏p𝑥q ¨ 𝑛𝐾,𝜎 | ď 𝐶ℎ𝐾 ||𝜆||𝑊 1,8 pΩq ||𝑏||𝑊 1,8 .
+Under assumption (A1), we have ℎ𝐾 {𝑑𝐾,𝜎 ď ℎ𝐾 {𝜌𝐾 ď 1{𝜌 which combined with (4.6) gives the desired result
+for 𝜎 P ℱint . For 𝜎 P ℱext , we directly get:
+           1
+              𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝜆p𝑥q∇𝑏p𝑥q ¨ 𝑛𝐾,𝜎 “ 𝜆𝐾 p∇𝑏p𝑥q ´ ∇𝐾 p𝐵 𝐾 qq ¨ 𝑛𝐾,𝜎 ` p𝜆p𝑥q ´ 𝜆𝐾 q ∇𝑏p𝑥q ¨ 𝑛𝐾,𝜎
+          |𝜎|
+and thus applying the same estimates than in the case of interior faces concludes the proof of (4.5).                        
+1928                                                     J. COATLÉVEN
+
+
+               5. A multiple flow direction algorithm on general meshes
+5.1. The generalized MFD algorithm
+  Given an approximation p𝐵 𝐾 q𝐾P𝒯 of the topography and p𝑓𝐾 q𝐾P𝒯 of the source term as data, and using
+both upwinding for the water height and ´  our discrete fluxes, the ¯most natural discrete formulation of the
+Manning–Strickler model consists in finding p𝑢𝐾 q𝐾P𝒯 , p𝑢𝜎 q𝜎Pℱ 𝒟     such that:
+                                                                              ext,in
+
+                                      ˇ ÿ
+                                      ˇ      𝑢up 𝐹𝐾,𝜎 p𝐵 𝜎 q “ |𝐾|𝑓𝐾            @𝐾 P 𝒯
+                                      ˇ 𝜎Pℱ 𝜎
+                                      ˇ
+                                      ˇ    𝐾                                                                    (5.1)
+                                                                                      𝒟
+                                      ˇ
+                                      ˇ 𝑢𝜎 “ 0                                  @𝜎 P ℱext,in
+
+where the upwinding formula 𝑣𝜎up for any set of cell values p𝑣𝐾 q𝐾P𝒯 is defined by:
+                                ˇ
+                                ˇ 𝑣𝐾 if 𝐹𝐾,𝜎 p𝐵 𝜎 q ě 0
+                        𝑣𝜎up “ ˇ                              @𝜎 P ℱint , 𝒯𝜎 “ t𝐾, 𝐿u
+                                ˇ
+                                ˇ 𝑣𝐿   if 𝐹𝐾,𝜎 p𝐵 𝜎 q ă 0
+
+and                                    ˇ
+                                       ˇ 𝑣𝐾     if   𝐹𝐾,𝜎 p𝐵 𝜎 q ě 0
+                                𝑣𝜎up “ ˇ                                     @𝜎 P ℱext , 𝒯𝜎 “ t𝐾u
+                                       ˇ
+                                       ˇ0       if 𝐹𝐾,𝜎 p𝐵 𝜎 q ă 0
+and where we have defined the influx boundary associated with the discrete fluxes by setting
+                                    𝒟
+                                   ℱext,in “ t𝜎 P ℱext | 𝐹𝐾,𝜎 p𝐵 𝜎 q ă 0, 𝒯𝜎 “ t𝐾u u .
+
+By construction of the fluxes, for any 𝜎 P ℱint we have that 𝐹𝐿,𝜎 p𝐵 𝜎 q “ ´𝐹𝐾,𝜎 p𝐵 𝜎 q. Mimicking what we have
+                                                                                                             𝒟
+done for the TPFA scheme, we gather faces by upwinding kind and use the fact that 𝑢up     𝜎 “ 0 for all 𝜎 P ℱext,in ,
+leading to:    ¨                              ˛
+                         ÿ                                    ÿ
+               ˝                   𝐹𝐾,𝜎 p𝐵 𝜎 q‚𝑢𝐾 ´                        𝑢𝐿 𝐹𝐿,𝜎 p𝐵 𝜎 q “ |𝐾|𝑓𝐾 .
+                   𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qě0                         𝜎Pℱ𝐾 Xℱint ,𝐹𝐿,𝜎 p𝐵 𝜎 qą0
+
+Defining:                                       ÿ
+                                 𝑠𝐾 “                          𝐹𝐾,𝜎 p𝐵 𝜎 q    and 𝑞r𝐾 “ 𝑠𝐾 𝑢𝐾
+                                         𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qě0
+
+and noticing that 𝑠𝐿 ą 0 as soon as there exists 𝜎 P ℱ𝐿 such that 𝐹𝐿,𝜎 p𝐵 𝜎 q ą 0, we see that the above equation
+can be rewritten:
+                                              ÿ           𝑞r𝐿
+                               𝑞r𝐾 ´                          𝐹𝐿,𝜎 p𝐵 𝜎 q “ |𝐾|𝑓𝐾 .
+                                                          𝑠𝐿
+                                          𝜎Pℱ𝐾 Xℱint ,𝐹𝐿,𝜎 p𝐵 𝜎 qą0
+
+             𝒟
+For any 𝜎 P ℱext,in , we set:
+                                                     ÿ
+                                 𝑠𝜎 “ ´                         𝐹𝐾,𝜎 p𝐵 𝜎 q    and 𝑞r𝜎 “ 𝑠𝜎 𝑢𝜎 .
+                                          𝐾P𝒯𝜎 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+
+Gathering all those results, we obtain:
+                       ˇ
+                       ˇ                ÿ                𝑞r𝐿
+                       ˇ 𝑞r𝐾 ´                               𝐹𝐿,𝜎 p𝐵 𝜎 q “ |𝐾|𝑓𝐾           @𝐾 P 𝒯
+                       ˇ                                 𝑠 𝐿
+                       ˇ
+                       ˇ       𝜎Pℱ𝐾 Xℱint ,𝐹𝐿,𝜎 p𝐵 𝜎 qą0                                                        (5.2)
+                       ˇ
+                                                                                                 𝒟
+                       ˇ 𝑞r𝜎 “ 0                                                           @𝜎 P ℱext,in .
+                                          SOME MULTIPLE FLOW DIRECTION ALGORITHMS                                                1929
+                                                    ´                                               ¯
+                                                      𝑞𝐾 q𝐾P𝒯 , pr
+Notice that the above system is set for the unknowns pr          𝑞𝜎 q𝜎Pℱ 𝒟                           , thus it has the same number of
+                                                                                           ext,in
+unknowns than the original system (5.1). We still reconstruct a water flux vector cellwise by setting:
+                  ÿ              𝑞r𝐾                                               ÿ                  𝑞r𝐿
+ 𝑄𝐾 “                                𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑥𝜎 ´ 𝑥𝐾 q `                                             𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑥𝜎 ´ 𝑥𝐾 q (5.3)
+                               |𝐾|𝑠𝐾                                                                |𝐾|𝑠𝐿
+         𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0                                          𝜎Pℱ𝐾 Xℱint ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+
+
+the consistent water discharge being given by 𝑞𝐾 “ ||𝑄𝐾 ||. Finally, for any cell 𝐾 P 𝒯 , we set 𝑢𝐾 as we have
+done for the TPFA case:
+                                                ˇ 𝑞r𝐾
+                                                ˇ
+                                                ˇ     if 𝑠𝐾 ‰ 0
+                                          𝑢𝐾 “ ˇˇ 𝑠𝐾                                                      (5.4)
+                                                ˇ0    otherwise
+                    𝒟
+while for any 𝜎 P ℱext,in , 𝑢𝜎 “ 0. Notice that this new system allows to correctly define the numerical method,
+while the system (5.1) does not uniquely define the water height on cells where 𝑠𝐾 “ 0. Contrary to system (3.4),
+system (5.2) admits no obvious renumbering of mesh elements that makes the system triangular. However, as
+it is anyway necessary to enable parallelism, we say that the generalized MFD algorithm will consists in solving
+the linear system (5.2) using any linear solver of the literature. Notice that as we are using the unknown 𝑞r rather
+than 𝑢, the discrete system (5.2) takes the form of a perturbation of the identity matrix. Thus, we expect its
+condition number to be relatively good (depending of course of the coefficient 𝜆) and in any case much better
+than if had tried to solve (5.2) directly.
+
+5.2. On existence and uniqueness for the generalized MFD algorithm
+  Existence and uniqueness of a solution to the above system are much less obvious than in the case of the
+TPFA scheme. To explain this fact, let us denote
+
+                                                       𝒯 ˚ “ t𝐾 P 𝒯 | 𝑠𝐾 ą 0u .
+
+Using the definition of 𝒯 ˚ , summing (5.2) over 𝐾 P 𝒯 , after a straightforward manipulation of the last sum we
+get:
+     ÿ                 ÿ              ÿ            𝑞r𝐾               ÿ                 ÿ                𝑞r𝐿               ÿ
+              𝑞r𝐾 `                                    𝐹𝐾,𝜎 p𝐵 𝜎 q ´                                        𝐹𝐿,𝜎 p𝐵 𝜎 q “     |𝐾|𝑓𝐾
+                                                   𝑠𝐾                                                   𝑠𝐿
+   𝐾P𝒯 z𝒯 ˚           𝐾P𝒯 ˚ 𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0                       ˚
+                                                                     𝐿P𝒯    𝜎Pℱ𝐿 Xℱint ,𝐹𝐿,𝜎 p𝐵 𝜎 qą0                     𝐾P𝒯
+
+
+and consequently:
+                              ÿ                ÿ               ÿ                𝑞r𝐾               ÿ
+                                      𝑞r𝐾 `                                         𝐹𝐾,𝜎 p𝐵 𝜎 q “     |𝐾|𝑓𝐾 .                    (5.5)
+                                                                                𝑠𝐾
+                           𝐾P𝒯 z𝒯 ˚           𝐾P𝒯 ˚ 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0                     𝐾P𝒯
+
+
+Thus, the existence of a solution for any second member p𝑓𝐾 q𝐾P𝒯 requires that:
+
+      𝒜 “ p𝒯 z𝒯 ˚ q Y 𝒯 ˚˚ ‰ H where                  𝒯 ˚˚ “ t𝐾 P 𝒯 ˚ | t𝜎 P ℱ𝐾 X ℱext | 𝐹𝐾,𝜎 p𝐵 𝜎 q ą 0u ‰ Hu .                 (5.6)
+
+In the case of the TPFA scheme, condition (5.6) is necessarily satisfied. If condition (5.6) is not satisfied,
+then (5.2) can have a solution only if      ÿ
+                                                |𝐾|𝑓𝐾 “ 0.
+                                                             𝐾P𝒯
+
+From this observation, it seems clear that establishing an exhaustive existence and uniqueness theory for system
+(5.2) is a more complex task than what one could expect. For the continuous problem, well-posedness is directly
+linked to the properties of the topography 𝑏 and in particular to its Laplacian. Unsurprisingly, well-posedness
+of (5.2) will be directly linked to the properties of the quantity that plays the role of the topography 𝑏 at the
+1930                                                               J. COATLÉVEN
+
+
+discrete level, that is to say the flux family p𝐹𝐾,𝜎 p𝐵 𝜎 qq𝐾P𝒯 ,𝜎Pℱ𝐾 . Without any further assumption on the mesh,
+far from the asymptotic regime consistency alone cannot be expected to ensure well-posedness for coarse meshes.
+This means that well-posedness will in general be controlled by the structure of the discrete flux family rather
+than by the properties of 𝑏. As in practice the Laplacian of 𝑏 cannot be computed in general, it is anyway better
+to have an existence result that uses only computable quantities. In fact, not only the necessary condition (5.6)
+must be satisfied, but it also requires that there does not exist what we will call a flux cycle. For any subset 𝒞
+of 𝒯 , we denote:
+                                                𝒞
+                                              ℱint “ t𝜎 P ℱint | 𝒯𝜎 Ă 𝒞u .
+We say that a set of cells 𝒞 Ă 𝒯 form a flux cycle if and only if for any 𝐾 P 𝒞
+                                                                          𝒞
+                                                                `           ˘
+                                    𝐹𝐾,𝜎 p𝐵 𝜎 q ď 0 @𝜎 P ℱ𝐾 z ℱ𝐾 X ℱint
+                            ÿ                                             ÿ
+           and                         𝐹𝐾,𝜎 p𝐵 𝜎 q ą 0 and                                                        𝐹𝐾,𝜎 p𝐵 𝜎 q ă 0.
+                              𝒞 ,𝐹
+                       𝜎Pℱ𝐾 Xℱint                                                          𝒞 ,𝐹
+                                                                                    𝜎Pℱ𝐾 Xℱint
+                                   𝐾,𝜎 p𝐵 𝜎 qą0                                                 𝐾,𝜎 p𝐵 𝜎 qă0
+
+
+The first condition implies that water can enter the cycle but not leave it, while the second condition implies that
+water will run through the cycle without stopping anywhere. Whether such configurations can exist on coarse
+meshes for consistent flux families is a difficult question. However, from the physical point of view flux cycles
+are completely unrealistic as they represent regions where water will at some point go from a topographically
+low region to a topographically higher one. Moreover, under the positivity hypothesis on the Laplacian of the
+topography, we know that for the exact fluxes we have:
+                                               ÿ ż
+                                                     ´𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 ą 0
+                                                            𝜎Pℱ𝐾   𝜎
+
+
+and thus no flux cycle can exist. Thus, the presence of flux cycles should be considered as anomalous and a
+sign that a too coarse mesh has been used. A natural sufficient condition of existence and uniqueness for (5.2)
+should then be one that is satisfied by the continuous fluxes and immediately implies that no flux cycle exist.
+Proposition 5.1. We say that there exists a flowing path from 𝐾 P 𝒯 z𝒜 to 𝒜 if there exists 𝐾
+                                                                                            r P 𝒜 such that
+
+                   D 𝑛𝐾 P N, 𝑛𝐾 ą 0             and      p𝜎𝑖 q0ď𝑖ď𝑛𝐾 ´1        such that     𝜎𝑖 P ℱint     @0 ď 𝑖 ď 𝑛𝐾 ´ 1
+
+         and    𝒯𝜎𝑖 “ t𝐾𝑖 , 𝐾𝑖`1 u         @0 ď 𝑖 ď 𝑛𝐾 ´ 1             where    𝐾 “ 𝐾0        𝐾
+                                                                                              r “ 𝐾𝑛
+                                                                                                     𝐾
+                                                                                                                 and   𝐹𝐾𝑖 ,𝜎𝑖 p𝐵 𝜎𝑖 q ą 0.
+If 𝒜 ‰ H and for any cell 𝐾 P 𝒯 z𝒜 there exists a flowing path to 𝒜, then (5.2) is well-posed.
+Proof. As system (5.2)
+                  ´    is linear, it suffices¯ to establish uniqueness to ensure the existence of solutions. Thus,
+assume that 𝑞r “ pr 𝑞𝐾 q𝐾P𝒯 , pr
+                               𝑞𝜎 q𝜎Pℱ 𝒟        is solution of (5.2) with zero right-hand side. Then, taking the
+                                                   ext,in
+modulus of (5.2) and summing over 𝐾 P 𝒯 we get:
+                                         ÿ               ÿ                ÿ                 𝑞𝐿 |
+                                                                                           |r
+                                                𝑞𝐾 | ď
+                                               |r                                                𝐹𝐿,𝜎 p𝐵 𝜎 q .                                (5.7)
+                                         𝐾P𝒯             𝐾P𝒯 𝜎Pℱ𝐾 Xℱint ,𝐹𝐿,𝜎 p𝐵 𝜎 qą0
+                                                                                            𝑠𝐿
+
+Again, we have:
+ÿ                 ÿ                  ÿ                 ÿ                 𝑞𝐾 |
+                                                                        |r                 ÿ                      ÿ                𝑞𝐾 |
+                                                                                                                                  |r
+       𝑞𝐾 | “
+      |r                    𝑞𝐾 |`
+                           |r                                                 𝐹𝐾,𝜎 p𝐵 𝜎 q`                                              𝐹𝐾,𝜎 p𝐵 𝜎 q
+                                                                         𝑠𝐾                                                        𝑠𝐾
+𝐾P𝒯             𝐾P𝒯 z𝒯 ˚            𝐾P𝒯 ˚ 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0                          ˚𝐾P𝒯    𝜎Pℱ𝐾 Xℱint ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+
+while:
+                  ÿ                  ÿ                 𝑞𝐿 |
+                                                      |r                  ÿ                    ÿ                  𝑞𝐿 |
+                                                                                                                 |r
+                                                            𝐹𝐿,𝜎 p𝐵 𝜎 q “                                              𝐹𝐿,𝜎 p𝐵 𝜎 q .
+                  𝐾P𝒯 𝜎Pℱ𝐾 Xℱint ,𝐹𝐿,𝜎 p𝐵 𝜎 qą0
+                                                       𝑠𝐿                  ˚
+                                                                                                                  𝑠𝐿
+                                                                           𝐿P𝒯    𝜎Pℱ𝐿 Xℱint ,𝐹𝐿,𝜎 p𝐵 𝜎 qą0
+                                      SOME MULTIPLE FLOW DIRECTION ALGORITHMS                                                     1931
+
+Injecting this into (5.7), we obtain:
+                             ÿ                   ÿ               ÿ                 𝑞𝐾 |
+                                                                                  |r
+                                       𝑞𝐾 | `
+                                      |r                                                𝐹𝐾,𝜎 p𝐵 𝜎 q ď 0
+                                                                                   𝑠𝐾
+                           𝐾P𝒯 z𝒯 ˚             𝐾P𝒯 ˚ 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+
+which immediately implies that 𝑞r𝐾 “ 0 for any 𝐾 P 𝒜. Next, let us denote 𝒯0 “ 𝒯 and 𝒜0 “ 𝒜, and define 𝒯𝑖
+for any 𝑖 ě 1 by setting:               ď
+                             𝒯𝑖 “ 𝒯 z        𝒜𝑘 where 𝒜𝑖 “ p𝒯𝑖 z𝒯𝑖˚ q Y 𝒯𝑖˚˚
+                                            0ď𝑘ď𝑖´1
+
+with                                                                                          (   (
+                                                                         𝑖
+             𝒯𝑖˚ “ t𝐾 P 𝒯𝑖 | 𝑠𝐾 ą 0u      and 𝒯𝑖˚˚ “ 𝐾 P 𝒯𝑖˚ | 𝜎 P ℱ𝐾 X ℱext | 𝐹𝐾,𝜎 p𝐵 𝜎 q ą 0 ‰ H
+and for any 𝑖 ě 1:
+                                                     𝑖                                                𝑖          𝑖
+             ℱ𝑖 “ t𝜎 P ℱ | 𝒯𝜎 X 𝒯𝑖 ‰ Hu         and ℱint “ t𝜎 P ℱ𝑖 X ℱint | 𝒯𝜎 Ă 𝒯𝑖 u            and ℱext “ ℱ𝑖 zℱint .
+
+Clearly, as 𝒜 ‰ H we have 𝒯1 Ĺ 𝒯0 or 𝒯1 “ H. We now proceed by induction. Assume that for 𝑛 ě 1, we have
+established that
+                                    ď
+               𝑞r𝐾 “ 0 for all 𝐾 P        𝒜𝑘 and 𝒯𝑖 Ĺ 𝒯𝑖´1 or 𝒯𝑖 “ H @1 ď 𝑖 ď 𝑛 ´ 1.
+                                        0ď𝑘ď𝑛´1
+
+If 𝒯𝑛 “ H, then there is nothing to prove. Otherwise, as for any 𝐾 P 𝒯𝑛 , there exists a flow path to 𝒜, then
+𝒯𝑛˚˚ ‰ H. Thus, summing over 𝒯𝑛 and proceeding as above we obtain that:
+                             ÿ                   ÿ               ÿ                 𝑞𝐾 |
+                                                                                  |r
+                                       𝑞𝐾 | `
+                                      |r                                                𝐹𝐾,𝜎 p𝐵 𝜎 q ď 0.
+                                                             𝑛 ,𝐹
+                                                                                   𝑠𝐾
+                          𝐾P𝒯𝑛 z𝒯𝑛˚             𝐾P𝒯𝑛˚ 𝜎Pℱ𝐾 Xℱext 𝐾,𝜎 p𝐵 𝜎 qą0
+
+
+
+Thus, we obtain that 𝑞r𝐾 “ 0 for any 𝐾 P 𝒜𝑛 and 𝒜𝑛 ‰ H which implies 𝒯𝑛`1 Ĺ 𝒯𝑛 . Then, it is clear that the
+sequence p𝒯𝑖 q𝑖ě0 is strictly decreasing in the sense that it satisfies 𝒯𝑖 Ĺ 𝒯𝑖´1 or 𝒯𝑖 “ H because of the flow path
+assumption. Thus, there exists 𝑛𝒯 ą 0 such that 𝒯𝑛𝒯 “ H and thus 𝑞r “ 0, which concludes the proof.               
+
+                                           6. Convergence analysis
+   The main idea underlying our convergence analysis is that for all consistent fluxes, if the topography 𝑏 is
+regular enough numerical fluxes will converge to the continuous ones. The major originality of the present
+analysis regarding for instance finite volumes or discontinuous Galerkin methods for steady-advection diffusion
+problems of the form (3.2) is that here the coefficients 𝛽 and 𝜇 are approximated through discrete differential
+operators applied to the topography 𝑏. Thus, this additional approximation has to be handled carefully to
+recover the correct convergence estimates.
+   To establish precise error estimates we first need to choose a discrete norm. To this end, we define
+                                        1`                                                      ˘
+                             𝜔𝐾,𝜎 “        |𝐹𝐾,𝜎 p𝐵 𝜎 q | ` |𝜎| ||𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 ||𝐿8 p𝐵p𝑥𝐾 ,2ℎ𝐾 qq
+                                        2
+and set for 𝑣 “ p𝑣𝐾 q𝐾P𝒯 :
+
+             𝛼𝜆´ ÿ          1 ÿ                      ÿ                              1 ÿ            ÿ
+ ||𝑣||2ℎ “              2
+                    |𝐾|𝑣𝐾 `                                         𝜔𝐾,𝜎 |𝑣𝐾 |2 `                                 𝜔𝐾,𝜎 p𝑣𝐾 ´ 𝑣𝜎up q2 .
+              2 𝐾P𝒯         2 𝐾P𝒯                                                   2 𝐾P𝒯
+                                        𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0                           𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+
+
+In the above expression, one would more naturally expect to find 𝐹𝐾,𝜎 p𝐵 𝜎 q instead of 𝜔𝐾,𝜎 . However, their
+behavior is difficult to control and in particular, it is complex to estimate the way this fluxes stay away from zero
+1932                                                    J. COATLÉVEN
+
+                             ş
+when the continuous fluxes    𝜎
+                                  𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 cancel creating technical difficulties, which 𝜔𝐾,𝜎 avoids. Immediately,
+we get that:
+                                                 1 ˇˇ                                                    ˇ
+                    |𝜔𝐾,𝜎 ´ |𝐹𝐾,𝜎 p𝐵 𝜎 q | | “        |𝐹𝐾,𝜎 p𝐵 𝜎 q ´ |𝜎| ||𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 ||𝐿8 p𝐵p𝑥𝐾 ,2ℎ𝐾 qq ˇ
+                                                 2
+and thus:
+                                                                         1
+                                           |𝜔𝐾,𝜎 ´ |𝐹𝐾,𝜎 p𝐵 𝜎 q | | ď      𝑅𝐾,𝜎                                   (6.1)
+                                                                         2
+where for any 𝐾 P 𝒯 and any 𝜎 P ℱ𝐾 we have denoted:
+                  ˆˇ            ż           ˇ                                                       ˙
+                   ˇ                        ˇ ˇ                                                    ˇ
+      𝑅𝐾,𝜎 “ max ˇ𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 ˇ , |𝐹𝐾,𝜎 p𝐵 𝜎 q | ´ |𝜎| ||𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 ||𝐿8 p𝐵p𝑥𝐾 ,2ℎ𝐾 qq .
+                   ˇ                        ˇ ˇ                                                    ˇ              (6.2)
+                                       𝜎
+
+Notice that from (4.5), we get that there exists 𝐶 ą 0 such that for any 𝐾 P 𝒯 and any 𝜎 P ℱ𝐾 , we have:
+
+                                       𝑅𝐾,𝜎 ď 𝐶|𝜎|ℎ𝐾 ||𝜆||𝑊 1,8 pΩq ||𝑏||𝑊 2,8 pΩq .                              (6.3)
+
+The main objective of this section is to establish the following explicit 𝐿2 error estimate:
+Theorem 6.1. Assume that the gradient operator underlying the fluxes is consistent. Further assume that the
+mesh satisfies assumption (A1), that 𝜆 P 𝑊 1,8 pΩq and that the solution 𝑢 of (3.1) belongs to 𝐻 1 pΩq. Let
+                             ˜                                                                   ¸
+                                                        𝑅𝐾,𝜎                                𝑅𝐾,𝜎
+                  𝛾pℎq “ max            sup                  ,          sup
+                               𝐾P𝒯 ,𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0 𝜔𝐾,𝜎 𝐾P𝒯 ,𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 q‰0 𝜔𝐾,𝜎
+
+
+with 𝑅𝐾,𝜎 defined by (6.2). Then, there exists ℐℎ p𝑢q P 𝐿2 pΩq such that for any 𝐾 P 𝒯 , ℐℎ p𝑢q|𝐾 “ ℐ𝐾 p𝑢q is
+constant on 𝐾 and:
+                                              1{2
+                       |𝑢 ´ ℐ𝐾 p𝑢q|2𝐿2 p𝐾q ` ℎ𝐾 |𝑢 ´ ℐ𝐾 p𝑢q|2𝐿2 pB𝐾q ď 𝐶poly ℎ𝐾 |𝑢|𝐻 1 p𝐾q .
+Moreover if 𝛾pℎq Ñ 0 when ℎ Ñ 0, then there exists ℎ0 ą 0 and 𝐶 ą 0 depending on 𝑢, 𝜆, 𝑏 and the mesh
+parameters such that for any ℎ ď ℎ0 :
+
+                                     ||𝑢 ´ ℐℎ p𝑢q||ℎ ď 𝐶 maxpℎ, 𝛾pℎqq1{2 ||𝑢||𝐻 1 pΩq                             (6.4)
+
+where 𝑢 is reconstructed by (5.4) from the solution of (5.2).
+   Notice that the existence of ℐℎ p𝑢q in the above result is an immediate consequence of assumption (A1) and
+(2.3). As a corollary, we will then be able to establish an explicit error estimate for the water discharge:
+Corollary 6.2. Under the assumptions of Proposition 6.1, there exists ℎ0 ą 0 and 𝐶 ą 0 depending on 𝑢, 𝜆,
+𝑏 and the mesh parameters such that for any ℎ ď ℎ0 :
+            ˜                                   ¸1{2
+                ÿ
+                    || ´ 𝜆𝑢∇𝑏 ´ 𝑄𝐾 ||2𝐿2 p𝐾q2          ď 𝐶 maxpℎ, 𝛾pℎqq1{2 p1 ` maxpℎ, 𝛾pℎqq1{2 q||𝑢||𝐻 1 pΩq .   (6.5)
+              𝐾P𝒯
+
+
+
+The error estimates use the surprising factor 𝛾pℎq instead of ℎ as one could legitimately expect. This comes
+from the fact that we use approximate fluxes, which is equivalent in some sense to using a quadrature formula
+for the coefficients of (3.2). As the natural norm for the discrete problem uses those approximate fluxes, it
+seems unfortunately unavoidable that this impacts the error estimate. In the case where for any 𝐾 P 𝒯 and any
+𝜎 P ℱ𝐾 that is indeed present in the norm || ¨ ||ℎ , the 𝜔𝐾,𝜎 ’s are bounded by below by a constant independent on
+ℎ, which will happen most of the time in practice, then 𝛾pℎq will behave as ℎ and we retrieve a convergence at
+rate ℎ1{2 . Controlling the lower bound for 𝜔𝐾,𝜎 is the reason why we have used a supremum on a set containing
+                                         SOME MULTIPLE FLOW DIRECTION ALGORITHMS                                                 1933
+
+more than 𝐾 in the definition of 𝜔𝐾,𝜎 . If this supremum is zero, most gradient reconstruction operators and
+in particular those described in our numerical experiments will provide a discrete gradient that aligns with the
+continuous one and the discrete flux will be zero too, avoiding most of the problematic cases for the asymptotic
+behavior of 𝜔𝐾,𝜎 . In the case of exact fluxes it is known that for the water height 𝑢 the optimal convergence
+rate to 𝑢 is ℎ1{2 , even if superconvergence at rate ℎ is very often observed in practice, as revealed by [6, 19] (see
+also [7]). Thus, as additional flux consistency terms could only decrease the convergence rate, it seems clear
+that our estimate for the water height cannot be expected to be improved in terms of order of convergence.
+   The proof of Theorem 6.1 being rather lengthy, we will try to decompose it as much as possible. Let us notice
+that in the special case where ∇𝑏 is constant, the discrete flux are exact. Then our problem corresponds to
+a piecewise constant version of the discontinuous ř   Galerkin method described in [20], and we can in principle
+follow the steps of their proof. Denoting ||𝑣||2ℎ “ 𝐾P𝒯 ||𝑣||2𝐾,ℎ with obvious notations, the first step of their
+proof is to establish a local error identity for ||𝑢𝐾 ´ 𝑣𝐾 ||𝐾,ℎ for any 𝑣𝐾 in R, using the exactness of the flux.
+Then, taking 𝑣𝐾 “ ℐ𝐾 p𝑢q and summing over 𝐾 P 𝒯 , they obtain a global error estimate where the residual
+terms only involve 𝑢 ´ ℐp𝑢q, which can be straightforwardly estimated using polynomial approximation results.
+   The general guideline of our proof is the same, however we have to endure some additional technicalities due
+to the non exactness of the flux. We first start by establishing the equivalent of the local error identity of [20],
+but keeping our approximate flux in the result. Thus, an additional residual term standing for the consistency
+error of the flux will appear on the right hand side of our identity. Then, to match the definition of the || ¨ ||ℎ
+norm, each time our estimates will involve the sum of the flux over the full set ℱ𝐾 , we will replace it by the
+Laplacian of 𝑏, and put the difference in a residual term. For an isolated flux term, we will do the same using
+this time either 𝜔𝐾,𝜎 if the term is involved in the || ¨ ||ℎ norm or by the continuous flux if it is directly a residual
+term. Thus, when summing the local error identities over 𝐾 P 𝒯 to obtain the global error estimate, residual
+terms involving the discrete counterpart of the Laplacian will be handled through a technical result described
+in the following subsection, while other residual terms will be estimated directly using the strong consistency of
+the flux. The reason for doing so is to obtain an error estimate involving only the || ¨ ||ℎ norm on the left-hand
+side and residual terms involving either 𝑢 ´ ℐp𝑢q or flux consistency error terms on the right-hand side. Finally,
+each residual term will be estimated using polynomial approximation results and the consistency of the flux.
+
+6.1. Local error identity and approximation results for the Laplacian
+  Let us now establish an abstract local error identity, following the lines of [20].
+
+Lemma 6.3. For any 𝐾 P 𝒯 , any 𝑣𝐾 P R and any 𝜂 “ p𝜂𝜎 q𝜎Pℱ𝐾 P 𝐿2 pB𝐾q constant on each 𝜎 P ℱ𝐾 , we have:
+
+        1           ÿ                                         2    1          ÿ                                   2
+                                  𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢𝐾 ´ 𝑣𝐾 q `                                   𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢up
+                                                                                                           𝜎 ´ 𝜂𝜎 q
+        2                                                          2
+            𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0                                        𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                 1             ÿ                                                             2   1 ÿ                         2
+               ´                             𝐹𝐾,𝜎 p𝐵 𝜎 q pp𝑢𝐾 ´ 𝑣𝐾 q ´ p𝑢up
+                                                                         𝜎 ´ 𝜂𝜎 qq `                   𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢𝐾 ´ 𝑣𝐾 q
+                 2                                                                               2 𝜎Pℱ
+                       𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0                                                            𝐾
+                                               ż
+                            ÿ             1
+               “                                   𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢 ´ 𝑣𝐾 q p𝑢𝐾 ´ 𝑣𝐾 q
+                                         |𝜎|   𝜎
+                   𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+                                                   ż
+                               ÿ              1
+                   `                                   𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢 ´ 𝜂𝜎 q p𝑢𝐾 ´ 𝑣𝐾 q
+                                             |𝜎|   𝜎
+                       𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                        ÿ ż ˆ 1                          ˙
+                   ´             𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 𝑢 p𝑢𝐾 ´ 𝑣𝐾 q                                                           (6.6)
+                       𝜎Pℱ 𝜎 |𝜎|
+                           𝐾
+
+
+
+where 𝑢 is the solution of the continuous problem (3.1).
+1934                                                                         J. COATLÉVEN
+
+
+Proof. This proof is a direct adaptation of its counterpart in [20]. For any 𝑤𝐾 P R and any 𝜉 “ p𝜉𝜎 q𝜎Pℱ𝐾 P
+𝐿2 pB𝐾q constant on each 𝜎 P ℱ𝐾 , consider:
+                                  ÿ                                      ÿ
+                                                                                          2
+                   ℐ𝐾 “ ´                   𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑤𝐾 ´ 𝜉𝜎 q 𝑤𝐾 `      𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑤𝐾 .
+                                        𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0                                                      𝜎Pℱ𝐾
+                              ` 2                ˘
+Using the identity 𝑎p𝑎 ´ 𝑏q “ 21𝑎 ´ 𝑏2 ` p𝑎 ´ 𝑏q2 , we obtain:
+              ÿ
+                              2    1       ÿ
+                                                                  2   1                                                        ÿ
+        ℐ𝐾 “     𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑤𝐾  ´                   𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑤𝐾 `                                                                       𝐹𝐾,𝜎 p𝐵 𝜎 q 𝜉𝜎2
+             𝜎Pℱ
+                                   2                                  2
+                       𝐾                                   𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0                                        𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                    1                ÿ                                              2
+                  ´                               𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑤𝐾 ´ 𝜉𝜎 q
+                    2
+                        𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+
+and thus:
+                                   1             ÿ
+                                                                                    2      1               ÿ
+                        ℐ𝐾 “                                           𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑤𝐾 `                                     𝐹𝐾,𝜎 p𝐵 𝜎 q 𝜉𝜎2
+                                   2                                                       2
+                                       𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0                                     𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                                     1                 ÿ                                               2         1 ÿ                2
+                                   ´                                      𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑤𝐾 ´ 𝜉𝜎 q `                     𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑤𝐾 .
+                                     2                                                                           2 𝜎Pℱ
+                                            𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0                                                         𝐾
+
+
+On the other hand, from (5.1) multiplying by 𝑤𝐾 and using the definition of 𝑢up
+                                                                             𝜎 we have by construction:
+                      ÿ                                     ÿ                       ż
+                                                  up
+              ´                𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢𝐾 ´ 𝑢𝜎 q 𝑤𝐾 `      𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑢𝐾 𝑤𝐾 “    𝑓 𝑤𝐾 .
+                      𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0                                                      𝜎Pℱ𝐾                                     𝐾
+
+Let us now set 𝑤𝐾 “ 𝑢𝐾 ´ 𝑣𝐾 and 𝜉𝜎 “ 𝑢up
+                                      𝜎 ´ 𝜂𝜎 for all 𝜎 P ℱ𝐾 . We obtain:
+                         ÿ                                   ż         ÿ
+            ℐ𝐾 “ ´               𝐹𝐾,𝜎 p𝐵 𝜎 q p𝜂𝜎 ´ 𝑣𝐾 q 𝑤𝐾 `   𝑓 𝑤𝐾 ´    𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑣𝐾 𝑤𝐾 .
+                               𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0                                                 𝐾                    𝜎Pℱ𝐾
+
+Using ´div p𝑢𝜆∇𝑏q “ 𝑓 , this leads to:
+                    ÿ                                      ż                  ÿ
+      ℐ𝐾 “ ´                   𝐹𝐾,𝜎 p𝐵 𝜎 q p𝜂𝜎 ´ 𝑣𝐾 q 𝑤𝐾 `   ´div p𝑢𝜆∇𝑏q 𝑤𝐾 ´   𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑣𝐾 𝑤𝐾 .
+                   𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0                                                     𝐾                                   𝜎Pℱ𝐾
+
+Integrating by parts, we get:
+            ż                                     ÿ ż
+                 ´div p𝑢𝜆∇𝑏q 𝑤𝐾 “ ´                                𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 𝑢𝑤𝐾
+            𝐾                                    𝜎Pℱ𝐾          𝜎
+
+                                                 ÿ        1
+                                                               ż                            ÿ ż ˆ 1                          ˙
+                                            “                          𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑢𝑤𝐾 ´             𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 𝑢𝑤𝐾 .
+                                                𝜎Pℱ𝐾
+                                                         |𝜎|       𝜎                       𝜎Pℱ 𝜎 |𝜎|
+                                                                                               𝐾
+
+Then:
+                                                     ż                                                           ż
+                                 ÿ           1                                                     ÿ        1
+        ℐ𝐾 “ ´                                             𝐹𝐾,𝜎 p𝐵 𝜎 q p𝜂𝜎 ´ 𝑣𝐾 q 𝑤𝐾 `                                𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢 ´ 𝑣𝐾 q 𝑤𝐾
+                      𝜎Pℱ𝐾 ,𝐹𝐾,𝜎     p𝐵 qă0
+                                            |𝜎|        𝜎                                        𝜎Pℱ𝐾
+                                                                                                           |𝜎|    𝜎
+                                        𝜎
+
+                     ÿ ż ˆ 1                                 ˙
+                  ´                 𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 𝑢𝑤𝐾
+                    𝜎Pℱ𝐾 𝜎
+                               |𝜎|
+                                         ż                                                    ż
+                         ÿ             1                                      ÿ             1
+                “                           𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢 ´ 𝜂𝜎 q 𝑤𝐾 `                           𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢 ´ 𝑣𝐾 q 𝑤𝐾
+                  𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                                      |𝜎| 𝜎                            𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+                                                                                           |𝜎| 𝜎
+                     ÿ ż ˆ 1                                 ˙
+                  ´                 𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 𝑢𝑤𝐾
+                    𝜎Pℱ    𝜎   |𝜎|
+                           𝐾
+
+which finally establishes the desired identity.                                                                                                               
+                                    SOME MULTIPLE FLOW DIRECTION ALGORITHMS                                                1935
+
+   In the above local error identity, one can see that the left hand side strongly looks like the 𝐾-term of the ||¨||ℎ
+norm. However, to match the || ¨ ||ℎ norm, we need to replace the sum of the fluxes over ℱ𝐾 by the Laplacian
+of 𝑏, as well as isolated flux by 𝜔𝐾,𝜎 . If this last operation straightforwardly leads to a residual term because of
+(6.1), however the following lemma precise what kind of link we can expect between the discrete Laplacian and
+the true Laplacian:
+
+Lemma 6.4. For any p𝑤𝐾 q𝐾P𝒯 , one has:
+                                   ÿ ż                                           ż ˆ                  ˙
+  ÿ    ÿ                                                 ÿ            ÿ   1
+          𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑤𝐾 “ ´       𝜆∆𝑏𝑤𝐾 `                                   𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎
+ 𝐾P𝒯 𝜎Pℱ𝐾                    𝐾P𝒯 𝐾           𝐾P𝒯 𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0 𝜎
+                                                                         |𝜎|
+                                                                     ż ˆ                               ˙
+                                    up
+                                          ÿ            ÿ                    1
+                           ˆ p𝑤𝐾 ´ 𝑤𝜎 q `                                      𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 𝑤𝐾 .
+                                          𝐾P𝒯                          𝜎   |𝜎|
+                                                         𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+
+
+
+
+Proof. Let us first notice that:
+                       ÿ ÿ                               ÿ              ÿ
+                                   𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑤𝜎up “                                   𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑤𝜎up .
+                      𝐾P𝒯 𝜎Pℱ𝐾                          𝐾P𝒯 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+
+
+Indeed, using 𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝐹𝐿,𝜎 p𝐵 𝜎 q “ 0 for any 𝜎 P ℱint , 𝒯𝜎 “ t𝐾, 𝐿u we have
+                                             ÿ       ÿ
+                                                              𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑤𝜎up “ 0
+                                             𝐾P𝒯 𝜎Pℱ𝐾 Xℱint
+
+
+while for 𝜎 P ℱext such that 𝐹𝐾,𝜎 p𝐵 𝜎 q ą 0, 𝒯𝜎 “ t𝐾u, 𝑤𝜎up “ 0 immediately implies that:
+                                     ÿ              ÿ
+                                                                    𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑤𝜎up “ 0.
+                                    𝐾P𝒯 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+
+
+Thus, we have:
+                      ÿ    ÿ                            ÿ           ÿ
+                                𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑤𝐾 “                               𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑤𝐾 ´ 𝑤𝜎up q
+                     𝐾P𝒯 𝜎Pℱ𝐾                        𝐾P𝒯 𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                                                          ÿ               ÿ
+                                                     `                                   𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑤𝐾
+                                                         𝐾P𝒯 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+
+
+using the definition of 𝑤𝜎up . In the same way:
+      ÿ ż                   ÿ ÿ ż                         ÿ                    ÿ            ż
+             ´𝜆∆𝑏𝑤𝐾 “                    ´𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 𝑤𝐾 “                                       ´𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 p𝑤𝐾 ´ 𝑤𝜎up q
+      𝐾P𝒯   𝐾              𝐾P𝒯 𝜎Pℱ𝐾      𝜎                        𝐾P𝒯 𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0 𝜎
+                               ÿ               ÿ              ż
+                           `                                      ´𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 𝑤𝐾 .
+                               𝐾P𝒯 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0 𝜎
+
+
+Combining those expressions gives the expected result.                                                                       
+
+6.2. Global error estimate
+   From the local error identity, and the link between the discrete and continuous Laplacians, we deduce a global
+estimate for the discrete norm of the error:
+1936                                                          J. COATLÉVEN
+
+
+Lemma 6.5. Using the hypothesis and notations of Proposition 6.1, we have:
+                                                      ż
+               2
+                   ÿ            ÿ                  1
+ ||𝑢 ´ ℐℎ p𝑢q||ℎ ď                                       𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢 ´ ℐ𝜎up p𝑢qq pp𝑢up     up
+                                                                                        𝜎 ´ ℐ𝜎 p𝑢qq ´ p𝑢𝐾 ´ ℐ𝐾 p𝑢qqq
+                   𝐾P𝒯 𝜎Pℱ𝐾 Xℱint ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                                                  |𝜎| 𝜎
+                                                         ż
+                      ÿ             ÿ                 1
+                   `                                         𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢 ´ ℐ𝐾 p𝑢qq p𝑢𝐾 ´ ℐ𝐾 p𝑢qq
+                     𝐾P𝒯 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+                                                     |𝜎| 𝜎
+                                                         ż
+                      ÿ             ÿ                 1
+                   `                                         𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢 ´ ℐ𝜎up p𝑢qq pp𝑢𝐾 ´ ℐ𝐾 p𝑢qq ´ p𝑢up   up
+                                                                                                           𝜎 ´ ℐ𝜎 p𝑢qqq
+                     𝐾P𝒯 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                                                     |𝜎|   𝜎
+
+                      ÿ ÿ ż ˆ 1                                       ˙
+                   ´                     𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 𝑢 p𝑢𝐾 ´ ℐ𝐾 p𝑢qq
+                     𝐾P𝒯 𝜎Pℱ𝐾 𝜎
+                                     |𝜎|
+                       ˜     ż                                                                      ¸
+                     1 ÿ                                 2
+                                                              ÿ ÿ
+                                                                                                  2
+                   ´              𝜆∆𝑏|𝑢𝐾 ´ ℐ𝐾 p𝑢q| `                     𝐹𝐾,𝜎 p𝐵 𝜎 q |𝑢𝐾 ´ ℐ𝐾 p𝑢q|
+                     2 𝐾P𝒯 𝐾                                  𝐾P𝒯 𝜎Pℱ𝐾
+                     1 ÿ            ÿ                                                                         2
+                   ´                             p|𝐹𝐾,𝜎 p𝐵 𝜎 q | ´ 𝜔𝐾,𝜎 q pp𝑢𝐾 ´ ℐ𝐾 p𝑢qq ´ p𝑢up       up
+                                                                                                𝜎 ´ ℐ𝜎 p𝑢qqq
+                     2 𝐾P𝒯
+                                  𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                         1 ÿ                ÿ
+                     ´                                        p|𝐹𝐾,𝜎 p𝐵 𝜎 q | ´ 𝜔𝐾,𝜎 q |𝑢𝐾 ´ ℐ𝐾 p𝑢q|2 .
+                         2 𝐾P𝒯
+                                  𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+
+
+
+Proof. We start from (6.6) with 𝑣𝐾 “ ℐ𝐾 p𝑢q and 𝜂𝜎 “ ℐ𝜎up p𝑢q. Summing over 𝐾 P 𝒯 the second term of the
+left hand side of (6.6) leads to:
+                            1 ÿ               ÿ                                            2
+                                                            𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢up   up
+                                                                          𝜎 ´ ℐ𝜎 p𝑢qq
+                            2 𝐾P𝒯
+                                      𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                                          1 ÿ                 ÿ                                           2
+                                    “´                                        𝐹𝐿,𝜎 p𝐵 𝜎 q p𝑢𝐿 ´ ℐ𝐿 p𝑢qq
+                                          2 𝐿P𝒯
+                                                  𝜎Pℱ𝐿 Xℱint ,𝐹𝐿,𝜎 p𝐵 𝜎 qą0
+                                         1 ÿ                   ÿ                                              2
+                                       `                                       𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢𝜎 ´ ℐ𝜎 p𝑢qq
+                                         2 𝐾P𝒯
+                                                   𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                                       1 ÿ                    ÿ                                           2
+                                    “´                                        𝐹𝐿,𝜎 p𝐵 𝜎 q p𝑢𝐿 ´ ℐ𝐿 p𝑢qq
+                                       2 𝐿P𝒯
+                                                  𝜎Pℱ𝐿 Xℱint ,𝐹𝐿,𝜎 p𝐵 𝜎 qą0
+
+                                       𝒟
+as both 𝑢𝜎 and ℐ𝜎 p𝑢q cancels for 𝜎 P ℱext,in . Thus, summing over 𝐾 P 𝒯 the first two terms of the left hand
+side of (6.6), we obtain:
+    1 ÿ            ÿ                                               2    1 ÿ             ÿ                                          2
+                                  𝐹𝐾,𝜎 p𝐵 𝜎 q pℎ𝑚,𝐾 ´ ℐ𝐾 p𝑢qq `                                        𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢up   up
+                                                                                                                     𝜎 ´ ℐ𝜎 p𝑢qq
+    2 𝐾P𝒯                                                               2 𝐾P𝒯
+            𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0                                                  𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+            1 ÿ                   ÿ                                                 2
+          “                                       𝐹𝐾,𝜎 p𝐵 𝜎 q pℎ𝑚,𝐾 ´ ℐ𝐾 p𝑢qq .
+            2 𝐾P𝒯
+                     𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+                                     SOME MULTIPLE FLOW DIRECTION ALGORITHMS                                            1937
+
+  Consequently, summing over 𝐾 P 𝒯 the entire left hand side of (6.6) leads to:
+               ÿ            1 ÿ ÿ
+                     ℐ𝐾 “              𝐹𝐾,𝜎 p𝐵 𝜎 q |𝑢𝐾 ´ ℐ𝐾 p𝑢q|2
+               𝐾P𝒯
+                            2 𝐾P𝒯 𝜎Pℱ
+                                     𝐾
+
+                               1 ÿ         ÿ                                                     2
+                            ´                         𝐹𝐾,𝜎 p𝐵 𝜎 q pp𝑢𝐾 ´ ℐ𝐾 p𝑢qq ´ p𝑢up   up
+                                                                                     𝜎 ´ ℐ𝜎 p𝑢qqq
+                               2 𝐾P𝒯
+                                       𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                              1 ÿ                   ÿ
+                            `                                      𝐹𝐾,𝜎 p𝐵 𝜎 q |𝑢𝐾 ´ ℐ𝐾 p𝑢q|2 “ 𝐹1 ` 𝐹2 ` 𝐹3 .
+                              2 𝐾P𝒯
+                                       𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+
+The first term of the above expression rewrites:
+                       ż
+                 1 ÿ
+            𝐹1 “          ´𝜆∆𝑏|𝑢𝐾 ´ ℐ𝐾 p𝑢q|2
+                 2 𝐾P𝒯 𝐾
+                      ˜     ż                                                         ¸
+                    1 ÿ                          2
+                                                   ÿ ÿ
+                                                                                    2
+                 `             𝜆∆𝑏|𝑢𝐾 ´ ℐ𝐾 p𝑢q| `          𝐹𝐾,𝜎 p𝐵 𝜎 q |𝑢𝐾 ´ ℐ𝐾 p𝑢q|    “ 𝐿0 ` 𝐿1
+                    2 𝐾P𝒯 𝐾                        𝐾P𝒯 𝜎Pℱ              𝐾
+
+
+while the second term and third term give:
+                  1 ÿ             ÿ                                                       2
+      𝐹2 ` 𝐹3 “                                 𝜔𝐾,𝜎 pp𝑢𝐾 ´ ℐ𝐾 p𝑢qq ´ p𝑢up   up
+                                                                        𝜎 ´ ℐ𝜎 p𝑢qqq
+                  2 𝐾P𝒯
+                          𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                      1 ÿ               ÿ
+                  `                                       𝜔𝐾,𝜎 |𝑢𝐾 ´ ℐ𝐾 p𝑢q|2
+                      2 𝐾P𝒯
+                              𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+                      1 ÿ             ÿ                                                                          2
+                  `                                 p|𝐹𝐾,𝜎 p𝐵 𝜎 q | ´ 𝜔𝐾,𝜎 q pp𝑢𝐾 ´ ℐ𝐾 p𝑢qq ´ p𝑢up   up
+                                                                                                𝜎 ´ ℐ𝜎 p𝑢qqq
+                      2 𝐾P𝒯
+                              𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                      1 ÿ               ÿ
+                  `                                       p|𝐹𝐾,𝜎 p𝐵 𝜎 q | ´ 𝜔𝐾,𝜎 q |𝑢𝐾 ´ ℐ𝐾 p𝑢q|2 “ 𝐿2 ` 𝐿3 ` 𝐿4 ` 𝐿5
+                      2 𝐾P𝒯
+                              𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+
+with obvious notations. Immediately, using the hypothesis on 𝜆 and 𝑏 we have:
+                                                     𝛼𝜆´ ÿ                   2
+                                            𝐿0 ě            |𝐾| p𝑢𝐾 ´ ℐ𝐾 p𝑢qq .
+                                                      2 𝐾P𝒯
+
+Then, noticing that the second member of the sum over 𝐾 P 𝒯 of (6.6) can be decomposed          ř       into three terms
+𝑇1 ` 𝑇2 ` 𝑇3 with obvious notations and combining the above results, we have that 𝐾P𝒯 ℐ𝐾 “ 𝑇1 ` 𝑇2 ` 𝑇3
+is equivalent to ||𝑢 ´ ℐℎ p𝑢q||2ℎ ď 𝑇1 ` 𝑇2 ` 𝑇3 ´ 𝐿1 ´ 𝐿4 ´ 𝐿5 as 𝐿0 ` 𝐿2 ` 𝐿3 exactly gives the square of the
+                                                                               𝒟
+|| ¨ ||ℎ norm. Using the fact that both 𝑢𝜎 and ℐ𝜎 p𝑢q cancels for 𝜎 P ℱext,in       , we obtain:
+                                                   ż
+                  ÿ             ÿ               1
+       𝑇1 ` 𝑇2 “                                      𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢 ´ ℐ𝜎up p𝑢qq pp𝑢up     up
+                                                                                    𝜎 ´ ℐ𝜎 p𝑢qq ´ p𝑢𝐾 ´ ℐ𝐾 p𝑢qqq
+                 𝐾P𝒯 𝜎Pℱ𝐾 Xℱint ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                                               |𝜎|  𝜎
+                                                      ż
+                    ÿ              ÿ               1
+                 `                                       𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢 ´ ℐ𝐾 p𝑢qq p𝑢𝐾 ´ ℐ𝐾 p𝑢qq
+                   𝐾P𝒯 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+                                                  |𝜎| 𝜎
+                                                      ż
+                    ÿ              ÿ               1
+                 `                                       𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢 ´ ℐ𝜎up p𝑢qq pp𝑢𝐾 ´ ℐ𝐾 p𝑢qq ´ p𝑢up    up
+                                                                                                       𝜎 ´ ℐ𝜎 p𝑢qqq
+                   𝐾P𝒯
+                                                  |𝜎|  𝜎
+                        𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+
+which concludes the proof.                                                                                                
+1938                                                       J. COATLÉVEN
+
+
+6.3. Estimation of the residual terms
+   Establishing Proposition 6.1 now just consists in estimating each term řappearing in the second member of
+                                                                             7
+the above global estimate. From Lemma 6.5, we see that ||𝑢 ´ ℐℎ p𝑢q||2ℎ ď 𝑖“1 𝑇𝑖 with obvious notations. The
+first three terms account for the polynomial approximation error, while the four other terms account for the
+consistency error of the flux. We now estimate those two families of residual terms separately.
+Proof of Proposition 6.1: terms accounting for polynomial approximation error. Using               Cauchy–Schwarz
+inequality and the fact that p𝑢up
+                               𝜎  ´ ℐ up
+                                      𝜎  p𝑢qq ´ p𝑢𝐾 ´  ℐ 𝐾 p𝑢qq is constant   on 𝜎 gives:
+                                                 ˆż                                     ˙
+                   2
+                       ÿ            ÿ                  1
+              |𝑇1 | ď                                     |𝐹𝐾,𝜎 p𝐵 𝜎 q | ||𝑢 ´ ℐ𝜎 p𝑢q| ||𝑢 ´ ℐℎ p𝑢q||2ℎ .
+                                                                                up    2
+
+                      𝐾P𝒯                           𝜎 |𝜎|
+                               𝜎Pℱ𝐾 Xℱint ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+
+As the gradient operator underlying the fluxes is consistent, we know from Proposition 4.5 that there exists
+𝐶 ą 0 such that:
+                 ˇ             ˇ
+                 ˇ 𝐹𝐾,𝜎 p𝐵 𝜎 qˇ ď || 1 𝐹𝐾,𝜎 p𝐵 𝜎 q ´ 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 ||𝐿8 p𝜎q ` ||𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 ||𝐿8 p𝜎q
+                 ˇ 1           ˇ
+                 ˇ |𝜎|         ˇ    |𝜎|
+                                        ď 𝐶ℎ||𝜆||𝑊 1,8 pΩq ||𝑏||𝑊 2,8 pΩq ` ||𝜆||𝐿8 pΩq ||𝑏||𝑊 2,8 pΩq .
+As soon as ℎ ď ℎ0 for some fixed ℎ0 this leads to the existence of some 𝐶 ą 0 independent on ℎ such that
+                                             ÿ        ÿ            ˆż                ˙
+               2
+          |𝑇1 | ď 𝐶||𝜆||𝑊 1,8 pΩq ||𝑏||𝑊 2,8                           |𝑢 ´ ℐ𝜎 p𝑢q| ||𝑢 ´ ℐℎ p𝑢q||2ℎ .
+                                                                             up    2
+
+                                                  𝐾P𝒯 𝜎Pℱ𝐾 Xℱint ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0    𝜎
+
+
+Then, using the definition of ℐℎ p𝑢q, we get
+                                       ż
+                                          |𝑢 ´ ℐ𝜎up p𝑢q|2 ď 𝐶ℎ𝐾𝜎up |𝑢|2𝐻 1 p𝐾𝜎up q
+                                              𝜎
+
+where, if 𝜎 P ℱint , 𝐾𝜎up “ 𝐾 if 𝐹𝐾,𝜎 p𝐵 𝜎 q ě 0 and 𝐾𝜎up “ 𝐿 if 𝐹𝐾,𝜎 p𝐵 𝜎 q ă 0, and 𝐾𝜎up “ 𝐾
+if 𝜎 P ℱext . From [7], we know that assumption (A1) implies that card pℱ𝐾 q is bounded by a constant
+𝜌ℱ depending on the mesh parameters but independent on ℎ, and thus there exists 𝐶 ą 0 such that
+|𝑇1 |2 ď 2ℎ𝐶||𝜆||𝑊 1,8 pΩq ||𝑏||𝑊 2,8 |𝑢|2𝐻 1 pΩq ||𝑢´ℐℎ p𝑢q||2ℎ . For 𝑇2 , obviously we have using Cauchy–Schwarz inequal-
+ity:                                                      ˆż                                       ˙
+                    2
+                         ÿ                 ÿ                      1
+               |𝑇2 | ď                                               |𝐹𝐾,𝜎 p𝐵 𝜎 q | ||𝑢 ´ ℐ𝐾 p𝑢q| ||𝑢 ´ ℐℎ p𝑢q||2ℎ
+                                                                                                 2
+
+                         𝐾P𝒯                                 𝜎   |𝜎|
+                               𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+
+and thus, proceeding the same way than for 𝑇1 , we obtain |𝑇2 |2 ď 2ℎ𝐶||𝜆||𝑊 1,8 pΩq ||𝑏||𝑊 2,8 |𝑢|2𝐻 1 pΩq ||𝑢 ´ ℐℎ p𝑢q||2ℎ .
+                                                                       𝒟
+The situation is more delicate for 𝑇3 . Indeed, ℐ𝜎up p𝑢q “ 0 for 𝜎 P ℱext,in , while 𝑢 “ 0 on 𝜎 P ℱext,in , thus ℐ𝜎up p𝑢q
+                                                           𝒟
+is not directly a good approximation of 𝑢. For any 𝜎 P ℱext,in Xℱext,in , ℐ𝜎up p𝑢q “ 𝑢 “ 0 and thus the contribution
+                                                                          𝒟
+to 𝑇3 is zero. Then, it just remains to consider the case where 𝜎 P ℱext,in      and 𝜎 R ℱext,in . In this case we have
+   ş                                                                                    ˇ              ş                ˇ
+´ 𝜎 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 ě 0 while 𝐹𝐾,𝜎 p𝐵 𝜎 q ăˇş0. However, by   ˇ definition of the   residual ˇ𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 ˇ ď
+                                                                                                         𝜎
+𝑅𝐾,𝜎 which immediately implies that ˇ 𝜎 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 ˇ ď 𝑅𝐾,𝜎 and |𝐹𝐾,𝜎 p𝐵 𝜎 q| ď 𝑅𝐾,𝜎 . Consequently, we get
+using Cauchy–Schwarz inequality:
+                        ¨                                           ˛1{2
+                                                              ż
+                          ÿ            ÿ              1
+                |𝑇3 | ď ˝                                𝑅𝐾,𝜎 𝑢2 ‚
+                         𝐾P𝒯
+                                                     |𝜎|       𝜎
+                                 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                           ¨                                                                               ˛1{2
+                               ÿ               ÿ                                                           2‚
+                        ˆ˝                                    𝑅𝐾,𝜎 pp𝑢𝐾 ´ ℐ𝐾 p𝑢qq ´ p𝑢up   up
+                                                                                      𝜎 ´ ℐ𝜎 p𝑢qqq                .
+                             𝐾P𝒯 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                                         SOME MULTIPLE FLOW DIRECTION ALGORITHMS                                1939
+
+Using the definition of 𝛾pℎq and the trace inequality on Ω, this leads to:
+             ¨                                         ˛1{2
+                                                 ż
+                ÿ            ÿ            1
+𝑇3 ď 𝛾pℎq1{2 ˝                               𝑅𝐾,𝜎 𝑢2 ‚ ||𝑢 ´ ℐℎ p𝑢q||ℎ ď 𝐶ℎ1{2 𝛾pℎq1{2 ||𝑢||𝐻 1 pΩq ||𝑢 ´ ℐℎ p𝑢q||ℎ .
+               𝐾P𝒯
+                                         |𝜎|       𝜎
+                    𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+
+                                                                                                                   
+  It finally remains to estimate the terms accounting for the consistency error on the fluxes.
+Proof of Proposition 6.1: terms accounting for flux consistency error. For 𝑇4 , let us first remark that:
+                                ż ˆ                              ˙
+                   ÿ       ÿ          1
+          𝑇4 “ ´                         𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 𝑢 pp𝑢𝐾 ´ ℐ𝐾 p𝑢qq ´ p𝑢up        up
+                                                                                           𝜎 ´ ℐ𝜎 p𝑢qqq
+                  𝐾P𝒯 𝜎Pℱ𝐾 Xℱint 𝜎
+                                     |𝜎|
+                                 ż ˆ                             ˙
+                   ÿ       ÿ          1
+               ´                         𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 𝑢 p𝑢𝐾 ´ ℐ𝐾 p𝑢qq .
+                  𝐾P𝒯 𝜎Pℱ Xℱ      𝜎  |𝜎|
+                           𝐾       ext
+
+
+Using the fact that both 𝑢𝜎 and ℐ𝜎 p𝑢q cancel for 𝜎 P ℱ𝐾 X ℱext and 𝐹𝐾,𝜎 p𝐵 𝜎 q ă 0, this rewrites:
+                                      ż ˆ                              ˙
+                ÿ         ÿ                1
+      𝑇4 “ ´                                  𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 𝑢 pp𝑢𝐾 ´ ℐ𝐾 p𝑢qq ´ p𝑢up     up
+                                                                                            𝜎 ´ ℐ𝜎 p𝑢qqq
+               𝐾P𝒯 𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0 𝜎
+                                          |𝜎|
+                                          ż ˆ                              ˙
+                ÿ            ÿ                  1
+            ´                                      𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 𝑢 p𝑢𝐾 ´ ℐ𝐾 p𝑢qq “ 𝑇4,1 ` 𝑇4,2 .
+               𝐾P𝒯                          𝜎  |𝜎|
+                    𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+
+Cauchy–Schwarz inequality then leads to:
+                       ¨                                                 ˛1{2
+                                                                   ż
+                         ÿ         ÿ                    1
+             |𝑇4,1 | ď ˝                                   𝑅𝐾,𝜎        𝑢2 ‚
+                            𝐾P𝒯 𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                                                       |𝜎|         𝜎
+                            ¨                                                                   ˛1{2
+                                ÿ              ÿ              ´                               ¯
+                                                                                             2 ‚
+                         ˆ˝                               𝑅𝐾,𝜎 p𝑢𝐾 ´ ℐ𝐾 p𝑢qq ´ p𝑢up   up
+                                                                                 𝜎 ´ ℐ𝜎 p𝑢qq         .
+                                𝐾P𝒯 𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+
+Using (6.3), (2.2) and the definition of 𝛾pℎq, we easily get:
+                       ¨                               ˛1{2
+                         ÿ          ÿ             ż
+    |𝑇4,1 | ď 𝐶𝛾pℎq1{2 ˝                      ℎ𝐾 𝑢2 ‚ ||𝑢 ´ ℐℎ p𝑢q||ℎ ď 𝐶𝛾pℎq1{2 ||𝑢||𝐻 1 pΩq ||𝑢 ´ ℐℎ p𝑢q||ℎ .
+                         𝐾P𝒯 𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0          𝜎
+
+
+In the same way, Cauchy–Schwarz inequality and this time the trace inequality on Ω directly gives:
+                   ¨                               ˛1{2
+                     ÿ        ÿ              ż
+|𝑇4,2 | ď 𝐶𝛾pℎq1{2 ˝                      ℎ𝐾 𝑢2 ‚ ||𝑢 ´ ℐℎ p𝑢q||ℎ ď 𝐶𝛾pℎq1{2 ℎ1{2 ||𝑢||𝐻 1 pΩq ||𝑢 ´ ℐℎ p𝑢q||ℎ .
+                    𝐾P𝒯 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0         𝜎
+
+
+From Lemma 6.4, we deduce that:
+                          ÿ                   ÿ              ´                                ¯
+                                                                           2                2
+                  |𝑇5 | ď                                𝑅𝐾,𝜎 p𝑢𝐾 ´ ℐ𝐾 p𝑢qq ´ p𝑢up   up
+                                                                                𝜎 ´ ℐ𝜎 p𝑢qq
+                               𝐾P𝒯 𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                                    ÿ              ÿ                                 2
+                               `                                   𝑅𝐾,𝜎 p𝑢𝐾 ´ ℐ𝐾 p𝑢qq .
+                                   𝐾P𝒯 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+1940                                                      J. COATLÉVEN
+
+
+Using p𝑎2 ´ 𝑏2 q “ p𝑎 ´ 𝑏qp𝑎 ` 𝑏q and Cauchy–Schwarz inequality, we obtain:
+                                          ¨                                                                                  ˛1{2
+                                              ÿ            ÿ                                                             2
+         |𝑇5 | ď 𝛾pℎq1{2 ||𝑢 ´ ℐℎ p𝑢q||ℎ ˝                              𝑅𝐾,𝜎 pp𝑢𝐾 ´ ℐ𝐾 p𝑢qq ` p𝑢up   up
+                                                                                                𝜎 ´ ℐ𝜎 p𝑢qqq
+                                                                                                             ‚
+                                              𝐾P𝒯 𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                                              ¨                                                             ˛1{2
+                                                  ÿ               ÿ                                         2‚
+                 ` 𝛾pℎq1{2 ||𝑢 ´ ℐℎ p𝑢q||ℎ ˝                                      𝑅𝐾,𝜎 p𝑢𝐾 ´ ℐ𝐾 p𝑢qq               .
+                                                 𝐾P𝒯 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+
+
+Using (6.3) and assumption (A1), we immediately obtain that:
+                    ÿ        ÿ                          2
+                                                               ÿ                   2
+                                      𝑅𝐾,𝜎 p𝑢𝐾 ´ ℐ𝐾 p𝑢qq ď 𝐶𝜌ℱ   |𝐾| p𝑢𝐾 ´ ℐ𝐾 p𝑢qq
+                     𝐾P𝒯 𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0                                        𝐾P𝒯
+
+                                                    up
+and in the same way, using the fact that 𝑢up
+                                          𝜎 “ and ℐ𝜎 p𝑢q “ 0 on any 𝜎 P ℱext such that 𝐹𝐾,𝜎 p𝐵 𝜎 q ă 0 and
+the commensurability of ℎ𝐾 and ℎ𝐿 if ℱ𝐾 X ℱ𝐾 ‰ H under assumption (A1):
+            ÿ        ÿ                            2
+                                                        ÿ        ÿ                              2
+                               𝑅𝐾,𝜎 p𝑢up     up
+                                       𝜎 ´ ℐ𝜎 p𝑢qq ď 𝐶                    |𝜎|ℎ𝐿 pℎ𝐿 ´ ℐ𝐿up p𝑢qq
+             𝐾P𝒯 𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0                                    𝐿P𝒯 𝜎Pℱ𝐿 ,𝐹𝐿,𝜎 p𝐵 𝜎 qą0
+                                                                             ÿ                          2
+                                                                  ď 𝐶𝜌ℱ           |𝐾| p𝑢𝐾 ´ ℐ𝐾 p𝑢qq
+                                                                            𝐾P𝒯
+
+and also:
+       ÿ              ÿ                                       2
+                                                                        ÿ               ÿ                                           2
+                                       𝑅𝐾,𝜎 p𝑢𝐾 ´ ℐ𝐾 p𝑢qq ď 𝐶                                           |𝜎|ℎ𝐾 p𝑢𝐾 ´ ℐ𝐾 p𝑢qq
+       𝐾P𝒯 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0                                  𝐾P𝒯 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+                                                                            ÿ                       2
+                                                                  ď 𝐶𝜌ℱ          |𝐾| p𝑢𝐾 ´ ℐ𝐾 p𝑢qq .
+                                                                          𝐾P𝒯
+
+Gathering those intermediate results, we get that |𝑇5 | ď 𝐶𝛾pℎq1{2 ||𝑢 ´ ℐℎ p𝑢q||2ℎ . Finally, we have by definition
+of 𝛾pℎq and || ¨ ||ℎ that |𝑇6 ` 𝑇7 | ď 𝐶𝛾pℎq1{2 ||𝑢 ´ ℐℎ p𝑢q||2ℎ . Then, using the hypothesis that 𝛾pℎq goes to zero
+                                                                                                          1{2
+when ℎ goes to zero, for any 𝐶 ą 0 independent on ℎ there exists ℎ0 ą 0 such that 1 ´ 𝐶 max pℎ, 𝛾pℎqq ą 1{2,
+and the result then immediately follows.                                                                           
+
+6.4. Error estimate for the water discharge
+  To establish Corollary 6.2, we will need an auxiliary discrete stability result:
+Lemma 6.6. The following estimates holds:
+            1 ÿ ÿ                       1 ÿ                       ÿ
+                      𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑢2𝐾 `                                           𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑢2𝐾
+            2 𝐾P𝒯 𝜎Pℱ                   2 𝐾P𝒯
+                      𝐾                               𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+                                              1 ÿ             ÿ                         2
+                                                                                                             ÿ
+                                          ´                                 p𝑢𝐾 ´ 𝑢up
+                                                                                   𝜎 q 𝐹𝐾,𝜎 p𝐵 𝜎 q “               |𝐾|𝑓𝐾 𝑢𝐾 .           (6.7)
+                                              2 𝐾P𝒯                                                         𝐾P𝒯
+                                                      𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+
+
+
+Proof. To establish (6.7), using the definition of 𝑢up
+                                                    𝜎 , we obtain multiplying (5.1) by 𝑢𝐾 and summing over
+𝐾 P𝒯:
+         ÿ          ÿ                           ÿ        ÿ                             ÿ
+                              𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑢2𝐾 `                   𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑢up
+                                                                               𝜎 𝑢𝐾 “     |𝐾|𝑓𝐾 𝑢𝐾 .
+         𝐾P𝒯 𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0                        𝐾P𝒯 𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0                              𝐾P𝒯
+                                      SOME MULTIPLE FLOW DIRECTION ALGORITHMS                                                        1941
+                      ´         ¯
+                    1       𝑢𝑝2                  2
+Remark that 𝑢up         2
+             𝜎 𝑢𝐾 “ 2 𝑢𝐾 ` 𝑢𝜎     ´ 21 p𝑢𝐾 ´ 𝑢up
+                                              𝜎 q which immediately leads to
+
+  ÿ                    ÿ           ÿ                                      1 ÿ              ÿ
+        |𝐾|𝑓𝐾 𝑢𝐾 “                               𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑢2𝐾 `                                      𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑢2𝐾
+  𝐾P𝒯                𝐾P𝒯 𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+                                                                          2 𝐾P𝒯
+                                                                                  𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                         1 ÿ            ÿ                                   2     1 ÿ              ÿ                                 2
+                     `                                 𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑢𝑢𝑝
+                                                                    𝜎  ´                                        𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢𝐾 ´ 𝑢up
+                                                                                                                                   𝜎 q .
+                         2 𝐾P𝒯                                                    2 𝐾P𝒯
+                                 𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0                                      𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+
+Using the fact that:
+                 ÿ             ÿ                                 2         ÿ               ÿ
+                                           𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑢𝑢𝑝
+                                                        𝜎  “´                                             𝐹𝐿,𝜎 p𝐵 𝜎 q 𝑢2𝐿
+                 𝐾P𝒯 𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0                                  𝐿P𝒯 𝜎Pℱ𝐿 Xℱint ,𝐹𝐿,𝜎 p𝐵 𝜎 qą0
+
+we immediately get (6.7) as:
+                1 ÿ          ÿ                                           1 ÿ              ÿ                               2
+                                                 𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑢2𝐾 `                                      𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑢𝑢𝑝
+                                                                                                                     𝜎
+                  2 𝐾P𝒯                                                  2 𝐾P𝒯
+                           𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0                                    𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                           1 ÿ                   ÿ
+                         “                                           𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑢2𝐾 .
+                           2 𝐾P𝒯
+                                    𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0
+
+                                                                                                                                           
+Proof of Corollary 6.2. Let us denote p𝑒𝑖 q0ď𝑖ď1 the canonical basis of R2 . Assume that ℎ ď ℎ0 , where ℎ0 is
+defined in Proposition 6.1 and consider:
+                                            ÿ 𝑢𝐾
+                                    𝑄ˆ𝐾 “            𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑥𝜎 ´ 𝑥𝐾 q .
+                                           𝜎Pℱ
+                                                 |𝐾|
+                                                         𝐾
+
+
+We begin by establishing that
+                      ˜                              ¸1{2
+                         ÿ
+                            || ´ 𝜆𝑢∇𝑏 ´ ˆ    2
+                                        𝑄𝐾 ||𝐿2 p𝐾q2      ď 𝐶 maxpℎ, 𝛾pℎqq1{2 ||𝑢||𝐻 1 pΩq .                                         (6.8)
+                            𝐾P𝒯
+
+Indeed, we have:
+       ż            ż                         ż                      ÿ ż
+          𝜆𝐾 B𝜉 𝑏 “   𝜆𝐾 ∇𝑏∇ p𝑥𝑖 ´ 𝑥𝐾,𝑖 q “ ´   𝜆𝐾 ∆𝑏 p𝑥𝑖 ´ 𝑥𝐾,𝑖 q `     𝜆𝐾 ∇𝑏 ¨ 𝑛𝐾,𝜎 p𝑥𝑖 ´ 𝑥𝐾,𝑖 q .
+         𝐾             𝐾                                     𝐾                              𝜎Pℱ𝐾   𝜎
+
+Using again the consistency estimate of Proposition 4.5 for the fluxes, we get:
+      ˇ                                         ˙            ˇ
+      ˇ ÿ ż ˆ                     1                          ˇ
+                ´𝜆𝐾 ∇𝑏 ¨ 𝑛𝐾,𝜎 ´      𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑥𝑖 ´ 𝑥𝐾,𝑖 qˇ ď 𝐶|𝜎|card pℱ𝐾 q ℎ2𝐾 ||𝜆||𝑊 1,8 pΩq ||𝑏||𝑊 2,8 pΩq .
+      ˇ                                                      ˇ
+      ˇ
+      ˇ𝜎Pℱ 𝜎                     |𝜎|                         ˇ
+             𝐾
+
+
+And thus, using assumption (A1) we get that:
+                      ˇ            ż             ˇ
+                      ˇ´𝑢𝐾 𝜆𝐾 1              ˆ
+                      ˇ                          ˇ
+                                      ∇𝑏 ´   𝑄 𝐾 ˇ ď 𝐶ℎ𝐾 ||𝜆||𝑊 1,8 pΩq ||𝑏||𝑊 2,8 pΩq |𝑢𝐾 |.
+                                                 ˇ
+                      ˇ        |𝐾| 𝐾
+Using the triangle inequality:
+    || ´ 𝜆𝑢∇𝑏 ´ ˆ
+                𝑄𝐾 ||2𝐿2 p𝐾q2 ď || p𝜆 ´ 𝜆𝐾 q 𝑢∇𝑏||2𝐿2 p𝐾q2 ` ||𝜆𝐾 p𝑢 ´ 𝑢𝐾 q ∇𝑏||2𝐿2 p𝐾q2
+                                            ˆ             ż     ˙                           ż
+                                                       1                                  1         ˆ ||2 2 2 .
+                                 ` ||𝜆𝐾 𝑢𝐾 ∇𝑏 ´              ∇𝑏 ||2𝐿2 p𝐾q2 ` || ´ 𝜆𝐾 𝑢𝐾        ∇𝑏 ´ 𝑄 𝐾 𝐿 p𝐾q
+                                                     |𝐾| 𝐾                               |𝐾| 𝐾
+1942                                                          J. COATLÉVEN
+
+
+Poincare–Wirtinger’s inequality applied component by component (see [7]) gives:
+                                           ż
+                                         1
+                                 ||∇𝑏 ´       ∇𝑏||𝐿2 p𝐾q2 ď 𝐶𝑃 ℎ𝐾 ||𝑏||𝐻 2 p𝐾q
+                                        |𝐾| 𝐾
+where 𝐶𝑃 ą 0 is independent on ℎ under assumption (A1), and (6.8) follows from Proposition 6.1 and the above
+estimate. To conclude, it suffices to remark that by definition:
+                      ´             ¯            ÿ
+                  |𝐾| 𝑄 ˆ ´𝑄                                  p𝑢𝐾 ´ 𝑢𝐿 q p𝑥𝜎 ´ 𝑥𝐾 q 𝐹𝐾,𝜎 p𝐵 𝜎 q
+                          𝐾       𝐾 “
+                                                𝜎Pℱ𝐾 Xℱint ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                                                                  ÿ
+                                                `                                 𝑢𝐾 p𝑥𝜎 ´ 𝑥𝐾 q 𝐹𝐾,𝜎 p𝐵 𝜎 q .
+                                                      𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+
+Thus applying Cauchy–Schwarz inequality, we get:
+                                   ¨
+            ÿ      ˇ
+                   ˇˆ
+                             ˇ2      ÿ                                ÿ     ||𝑥𝜎 ´ 𝑥𝐾 ||2
+               |𝐾| ˇ𝑄 𝐾 ´ 𝑄𝐾 ˇ ď 2
+                             ˇ     ˝                                                       |𝐹𝐾,𝜎 p𝐵 𝜎 q|
+              𝐾P𝒯                            𝐾P𝒯 𝜎Pℱ𝐾 Xℱint ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                                                                                 |𝐾|
+                                                                                                       ˛
+                                             ÿ            ÿ                ||𝑥𝜎 ´ 𝑥𝐾 ||2
+                                           `                                              |𝐹𝐾,𝜎 p𝐵 𝜎 q|‚||𝑢||ℎ,˚
+                                             𝐾P𝒯 𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+                                                                                |𝐾|
+                                            ¨                                 ˛
+                                                                            2
+                                              ÿ          ÿ             |𝜎|ℎ 𝐾‚
+                                          ď𝐶˝                                   ď 𝐶ℎ|Ω|||𝑢||ℎ,˚
+                                              𝐾P𝒯
+                                                                        |𝐾|
+                                                          𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+
+using the bound on the flux from the proof of Proposition 6.1, and where:
+                  1 ÿ               ÿ                                        1 ÿ                ÿ                                2
+    ||𝑢||2ℎ,˚ “                                       𝐹𝐾,𝜎 p𝐵 𝜎 q |𝑢𝐾 |2 ´                                  𝐹𝐾,𝜎 p𝐵 𝜎 q p𝑢𝐾 ´ 𝑢up
+                                                                                                                               𝜎 q .
+                  2 𝐾P𝒯                                                      2 𝐾P𝒯
+                          𝜎Pℱ𝐾 Xℱext ,𝐹𝐾,𝜎 p𝐵 𝜎 qą0                                   𝜎Pℱ𝐾 ,𝐹𝐾,𝜎 p𝐵 𝜎 qă0
+
+From (6.7) we know that, still denoting 𝑢 the cellwise constant function of 𝐿2 pΩq taking the value 𝑢𝐾 in cell 𝐾:
+                                                                   ÿ ÿ
+                            ||𝑢||2ℎ,˚ ď ||𝑓 ||𝐿2 pΩq ||𝑢||𝐿2 pΩq ´     𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑢2𝐾 .
+                                                                           𝐾P𝒯 𝜎Pℱ𝐾
+
+However, one has
+                                                             ˜ż                              ¸
+                    ÿ      ÿ                           ÿ                  ÿ                              ÿ ż
+                                𝐹𝐾,𝜎 p𝐵 𝜎 q 𝑢2𝐾 “                  ∆𝑏 `           𝐹𝐾,𝜎 p𝐵 𝜎 q    𝑢2𝐾 ´             ∆𝑏𝑢2𝐾 .
+                   𝐾P𝒯 𝜎Pℱ𝐾                           𝐾P𝒯      𝐾          𝜎Pℱ𝐾                           𝐾P𝒯   𝐾
+
+
+Using Stokes’ formula, the consistency of the flux (4.5) and assumption (A1), we get:
+           ˇż                        ˇ ˇ                    ż            ˇ
+           ˇ          ÿ              ˇ ˇ ÿ                               ˇ     ÿ
+           ˇ ∆𝑏 `         𝐹𝐾,𝜎 p𝐵 𝜎 qˇ “ ˇ     𝐹𝐾,𝜎 p𝐵 𝜎 q ` 𝜆∇𝑏 ¨ 𝑛𝐾,𝜎 ˇ ď 𝐶       |𝜎|ℎ𝐾 ď 𝐶|𝐾|.
+           ˇ                         ˇ ˇ                                 ˇ
+           ˇ 𝐾       𝜎Pℱ
+                                     ˇ ˇ𝜎Pℱ                  𝜎           ˇ    𝜎Pℱ
+                               𝐾                         𝐾                                                𝐾
+
+
+Thus, we have ||𝑢||2ℎ,˚ ď ||𝑓 ||𝐿2 pΩq ||𝑢||𝐿2 pΩq ` 𝐶||𝑢||2𝐿2 pΩq , and using the triangle inequality ||𝑢||𝐿2 pΩq ď ||𝑢 ´
+𝑢||𝐿2 pΩq ` ||𝑢||𝐿2 pΩq , we get that:
+                           ´                     ¯´                 ´                   ¯          ¯
+            ||𝑢||2ℎ,˚ ď 𝐶 1 ` maxpℎ, 𝛾pℎqq1{2 ||𝑓 ||𝐿2 pΩq ` 1 ` maxpℎ, 𝛾pℎqq1{2 ||𝑢||𝐻 1 pΩq ||𝑢||𝐻 1 pΩq
+
+which concludes the proof.                                                                                                             
+                                  SOME MULTIPLE FLOW DIRECTION ALGORITHMS                                        1943
+
+
+
+
+           Figure 3. Example of meshes for the 2dDelaunay and 2dDualDelaunay mesh sequences.
+
+
+                                       7. Numerical exploration
+   To assess the asymptotic behavior of the method, we use a very simple analytical solution on which the positiv-
+ity of the Laplacian is guaranteed (contrary to typical geological applications).
+                                                                    ´             Let us consider
+                                                                                             ¯    the square domain
+                                                                              2            2
+Ω “s0, 𝐿rˆs0, 𝐿r associated with the topography 𝑏p𝑥, 𝑦q “ 𝑏0 ´ 𝛿 p𝑥 ´ 𝑥0 q ` p𝑦 ´ 𝑦0 q where 𝑥0 “ 𝑦0 “ 𝐿{2,
+                                                                                    ´     ´                       ¯¯
+                                                                                                    2           2
+for which ´∆𝑏 “ 4𝛿. Consider the water height 𝑢 defined by 𝑢p𝑥, 𝑦q “ 𝑢0 exp ´𝛼 p𝑥 ´ 𝑥0 q ` p𝑦 ´ 𝑦0 q                .
+                                                                             ´       ´                       ¯¯
+                                                                                               2           2
+Defining 𝜆p𝑥, 𝑦q “ 1, we obtain ´divp𝜆𝑢∇𝑏q “ 𝑓 with 𝑓 p𝑥, 𝑦q “ 4𝛿𝑢p𝑥, 𝑦q 1 ´ 𝛼 p𝑥 ´ 𝑥0 q ` p𝑦 ´ 𝑦0 q           . The
+corresponding water discharge 𝑞 “ ||𝜆𝑢∇𝑏|| is given by
+                                                  ´                        ¯1{2
+                                                            2            2
+                                     𝑞 “ 2𝛿𝑢p𝑥, 𝑦q p𝑥 ´ 𝑥0 q ` p𝑦 ´ 𝑦0 q        .
+
+In practice we take 𝑢0 “ 1, 𝛼 “ 2, 𝛿 “ 1{2, 𝑏0 “ 2 and 𝐿 “ 1. We consider seven types of mesh sequences. The
+first sequence consists in classical Delaunay meshes (2dDelaunay). The second one (2dDualDelaunay) is obtained
+by considering the dual meshes of a sequence of Delaunay meshes (Fig. 3). The third sequence (2dVoronoi ) is
+made of Voronoi meshes, possessing the mesh orthogonality property. The fourth sequence (2dKershawBox ) is
+a sequence of Kershaw meshes, while the fifth one (2dCheckerBoardBox ) is a sequence of checkerboard meshes.
+These two sequences have only quadrangular cells which are distorted for the sequence 2dKershawBox, while
+the sequence 2dCheckerBoardBox allows to test the behavior of the method in presence of non conformities.
+The sixth sequence, named 2dSquareCart, is simply a uniform cartesian mesh with square cells, while the
+seventh one named 2dRectCart is a uniform cartesian mesh with rectangular cells. These two last sequences are
+mainly intended to serve as reference. For the generalized MFD algorithm, we consider two consistent gradient
+reconstructions coming from finite volumes: the first one is the hybrid finite volume gradient operator of [12],
+that uses faces values for the topography 𝑏, while the second one is the vertex based finite volume gradient
+operator (VVM) of [5].
+   As it is the quantity of practical interest, we will express our convergence results directly in terms of the water
+discharge 𝑞 instead of using the water height. Let us begin by some results for sequences 2dSquareCart, 2dRect-
+Cart and 2dVoronoi. Being the only ones that satisfy the mesh orthogonality requirement (see Figs. 4 and 5),
+we expect that the TPFA scheme will also converge on those sequences. The corresponding results are displayed
+on Figures 6 and 7, while the associated approximate convergence orders for each scheme are given in Table 1.
+1944                                              J. COATLÉVEN
+
+
+
+
+            Figure 4. Example of meshes for the 2dVoronoi and 2dKershawBox mesh sequences.
+
+
+
+
+        Figure 5. Example of meshes for the 2dCheckerBoardBox and 2dRectCart mesh sequences.
+
+
+   Clearly, on the basic cartesian cases 2dSquareCart and 2dRectCart, all the schemes give identical results. A
+closer look at our generalized flux formula immediately reveals that this is perfectly normal as the flux 𝐹𝐾,𝜎
+degenerate into the two-point flux formula on those cartesian meshes where the barycenter of each internal face
+is exactly the intersection point between the face and the segment joining the cell centers on each side of the
+face (see [12]). Moreover, Table 1 reveals that all the methods are superconvergent on the three orthogonal mesh
+sequences. In [20] it is indeed established in the case of exact fluxes that the approximation of the water height
+superconverges at least on rectangular meshes, which explains that this observed superconvergence is probably
+not anomalous. Next, we turn to the other mesh sequences, for which we cannot expect convergence for the
+TPFA scheme. The corresponding results are displayed on Figures 8 and 9, while the associated approximate
+convergence orders for each scheme are given in Table 2.
+   As expected, the TPFA scheme does not converge anymore, however the generalized MFD algorithm is
+converging for both the hybrid and virtual volume (VVM) gradients. The results for those two variants are in
+fact relatively close to each other. In particular, the behavior of the method on sequence 2dCheckerBoardBox
+confirms its ability to deal with non conformities and thus local mesh refinement. Remark that superconvergence
+                     SOME MULTIPLE FLOW DIRECTION ALGORITHMS                             1945
+
+
+
+
+      Figure 6. Convergence curves for sequences 2dSquareCart and 2dRectCart.
+
+Table 1. Approximate orders of convergence for the three schemes on orthogonal meshes.
+
+                             2dSquareCart   2dRectCart   2dVoronoi
+                    TPFA     0.943          0.942        1.147
+                    Hybrid   0.943          0.942        1.061
+                    VVM      0.943          0.942        1.061
+
+
+
+
+                Figure 7. Convergence curves for sequence 2dVoronoi.
+1946                                      J. COATLÉVEN
+
+
+
+
+          Figure 8. Convergence curves for sequences 2dDelaunay and 2dDualDelaunay.
+
+
+
+
+       Figure 9. Convergence curves for sequences 2dKershawBox and 2dCheckerBoardBox.
+
+       Table 2. Approximate orders of convergence for the three schemes on general meshes.
+
+                     2dDelaunay   2dDualDelaunay   2dKershawBox    2dCheckerBoardBox
+            Hybrid   0.991        1.081            0.941           1.032
+            VVM      0.971        1.084            1.213           1.032
+                                  SOME MULTIPLE FLOW DIRECTION ALGORITHMS                                       1947
+
+
+
+
+        Figure 10. Comparison between influx and water discharge for the TPFA scheme on orthog-
+        onal meshes (exact water discharge is bottom right).
+
+
+is also achieved again on those test cases. To conclude, on Figure 10, we represent on the bottom-right the correct
+water discharge, while the top-left figure is the water influx 𝑞r𝐾 for sequence 2dSquareCart, the top-right figure is
+the water influx for sequence 2dRectCart and the bottom-left figure is the water influx for sequence 2dVoronoi.
+These very basic examples illustrate our point on the water influx 𝑞r𝐾 : it is clearly a mesh dependent quantity,
+that cannot be expected to reproduce the behavior of the discharge correctly, even on those very simple cases. If
+one does not consider the Manning–Strickler framework, one of the tricky features of 𝑞r𝐾 is that on very common
+cartesian mesh sequences such as 2dSquareCart and 2dRectCart it has a relatively nice qualitative behavior.
+It even seems to converge, although to a mesh sequence dependent quantity. This explains why it has been
+used inadvertently in the hydrogeology community, despite of its mesh dependent nature: on the widely used
+cartesian meshes, it has an acceptable behavior that cannot be easily discarded without a reference continuous
+model, in particular for complex topographies. However, on more general meshes, the situation is very different,
+even for the TPFA scheme as the case of sequence 2dVoronoi reveals. We display on Figure 11 the water influx
+𝑞r𝐾 for the four other mesh sequences, in the case of the hybrid gradient. It is completely obvious on those
+sequences that 𝑞r𝐾 should not be considered as a physically relevant quantity.
+
+                                                8. Conclusion
+  We have established the equivalence between a classical family of multiple flow direction algorithms and the
+TPFA scheme applied to a family of stationary Manning–Strickler models. From this equivalence we have pro-
+posed an improvement of the derivation of the discrete water discharge based on a consistent flux reconstruction
+1948                                                       J. COATLÉVEN
+
+
+
+
+         Figure 11. Water influx for hybrid gradient on meshes 2dDelaunay, 2dDualDelaunay, 2dKer-
+         shawBox and 2dCheckerBoardBox.
+
+rather than directly using the water influx intermediate unknown that is not only non convergent in general, but
+does not approximate the water discharge in any case. Then, using more advanced flux reconstruction schemes,
+we have proposed a multiple flow direction algorithm adapted to general meshes. A convergence theory that
+covers both cases was developed, and numerical experiments illustrate the good behavior of the method. Remark
+that the extension to the case of Manning–Strickler tensors rather than coefficients is straightforward, as would
+be the extension of the present analysis to multiple flow direction models that use powers of the topographic
+slope.
+
+Acknowledgements. The author would like to thank G. Enchéry and L. Agélas for our numerous discussions on the
+contents of this article.
+
+                                                         References
+[1] C. Bardos, Problèmes aux limites pour les équations aux dérivées partielles du premier ordre à coefficients réels; théorèmes
+    d’approximation; application à l’équation de transport. Ann. Sci. Ec. Norm. Sup. Ser. 4 3 (1970) 185–233.
+[2] H. Beirão Da Veiga, Existence results in Sobolev spaces for a stationary transport equation. Ricerche Mat. Suppl. XXXVI
+    (1987) 173–184.
+[3] S. Brenner and R. Scott, The Mathematical Theory of Finite Element Methods, 3rd ed. Springer (2008).
+[4] J. Coatléven, Semi hybrid method for heterogeneous and anisotropic diffusion problems on general meshes. ESAIM: M2AN
+    49 (2015) 1063–1084.
+[5] J. Coatléven, A virtual volume method for heterogeneous and anisotropic diffusion-reaction problems on general meshes.
+    ESAIM: M2AN 51 (2017) 797–824.
+[6] B. Cockburn, B. Dong and J. Guzmán, Optimal convergence of the original DG method for the transport-reaction equation
+    on special meshes. SIAM J. Numer. Anal. 46 (2008) 1250–1265.
+                                      SOME MULTIPLE FLOW DIRECTION ALGORITHMS                                                  1949
+
+ [7] D.A. Di Pietro and A. Ern, Mathematical Aspects of Discontinuous Galerkin Methods. Springer (2012).
+ [8] R.J. DiPerna and P.L. Lions, Ordinary differential equations, transport theory and Sobolev spaces. Invent. Math. 98 (1989)
+     511–547.
+ [9] R.H. Erskine, T.R. Green, J.A. Ramirez and L.H. MacDonald, Comparison of grid-based algorithms for computing upslope
+     contributing area. Water Resour. Res. 42 (2006) W09416.
+[10] R. Eymard, T. Gallouët and R. Herbin, Finite volume methods, edited by P.G. Ciarlet and J.-L. Lions. In: Handbook of
+     Numerical Analysis: Techniques of Scientific Computing, Part III. North-Holland, Amsterdam (2000) 713–1020.
+[11] R. Eymard, T. Gallouët and R. Herbin, A new finite volume scheme for anisotropic diffusion problems on general grids:
+     convergence analysis. C. R. Math. Acad. Sci. Paris 344 (2007) 403–406.
+[12] R. Eymard, T. Gallouët and R. Herbin, Discretisation of heterogeneous and anisotropic diffusion problems on general noncon-
+     forming meshes SUSHI: a scheme using stabilisation and hybrid interfaces. IMA J. Numer. Anal. 30 (2010) 1009–1043.
+[13] R. Eymard, C. Guichard and R. Herbin, Benchmark 3D: the vag scheme. In: Vol. 2 of Springer Proceedings in Mathematics,
+     FVCA6, Prague (2011) 213–222.
+[14] R. Eymard, C. Guichard and R. Herbin, Small-stencil 3D schemes for diffusive flows in porous media. ESAIM: M2AN 46
+     (2011) 265–290.
+[15] E. Fernández-Cara, F. Guillén and R.R. Ortega, Mathematical modeling and analysis of visco-elastic fluids of the oldroyd kind,
+     edited by P.G. Ciarlet and J.L. Lions. In: Vol. VIII of Handbook of Numerical Analysis: Numerical Methods for Fluids, Part
+     2. North-Holland, Amsterdam (2002) 543–661.
+[16] T.G. Freeman, Calculating catchment area with divergent flow based on a regular grid. Comput. Geosci. 17 (1991) 413–422.
+[17] V. Girault and L. Tartar, 𝑙𝑝 and 𝑤1,𝑝 regularity of the solution of a steady transport equation. C. R. Acad. Sci. Paris, Ser. I
+     348 (2010) 885–890.
+[18] P. Holmgren, Multiple flow direction algorithms for runoff modelling in grid based elevation models: an empirical evaluation.
+     Hydrol. Process. 8 (1994) 327–334.
+[19] C. Johnson and J. Pitkäranta, An analysis of the discontinuous Galerkin method for a scalar hyperbolic equation. Math.
+     Comput. 46 (1986) 1–26.
+[20] P. Lesaint and P.A. Raviart, On a finite element method for solving the neutron transport equation. Publ. Math. Inf. Rennes
+     S4 (1974) 1–40.
+[21] C. Qin, A.-X. Zhu, T. Pei, B. Li, C. Zhou and L. Yang, An adaptive approach to selecting a flow-partition exponent for a
+     multiple-flow-direction algorithm. Int. J. Geog. Inf. Sci. 21 (2007) 443–458.
+[22] P. Quinn, K. Beven, P. Chevallier and O. Planchon, The prediction of hillslope flow paths for distributed hydrological modelling
+     using digital terrain models. Hydrol. Process. 5 (1991) 59–79.
+[23] A. Richardson, C.N. Hill and J.T. Perron, IDA: an implicit, parallelizable method for calculating drainage area. Water Resour.
+     Res. 50 (2013) 4110–4130.
+[24] J. Seibert and B.L. McGlynn, A new triangular multiple flow direction algorithm for computing upslope areas from gridded
+     digital elevation models. Water Resour. Res. 43 (2007) W04501.
+[25] D.G. Tarboton, A new method for the determination of flow directions and upslope areas in grid digital elevation models.
+     Water Resour. Res. 33 (1997) 309–319.
+[26] D.M. Wolock and G.J. McCabe Jr., Comparison of single and multiple flow direction algorithms for computing topographic
+     parameters in topmodel. Water Resour. Res. 31 (1995) 1315–1324.
+[27] Q. Zhou, P. Pilesjö and Y. Chen, Estimating surface flow paths on a digital elevation model using a triangular facet network.
+     Water Resour. Res. 47 (2011) W07522.
+

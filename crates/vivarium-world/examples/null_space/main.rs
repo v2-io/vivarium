@@ -12,7 +12,7 @@
 //! > indicates the unstable mode**."*
 //!
 //! Run: `cargo run --release -p vivarium-world --example null_space`
-//! Writes figures + a machine log to `msc/spike-null-space/`.
+//! Writes figures + a machine log to `.super-archive/from-msc/spike-null-space/`.
 //!
 //! ## The two forms of "meets no resistance", and why they are one statement
 //!
@@ -38,7 +38,7 @@ use water_op::{Geom, Guards, PipeParams};
 
 fn outdir() -> PathBuf {
     // examples run with CWD = workspace root
-    let d = PathBuf::from("msc/spike-null-space/fig");
+    let d = PathBuf::from("target/null-space-fig");
     std::fs::create_dir_all(&d).unwrap();
     d
 }
@@ -212,7 +212,7 @@ fn main() {
     rule("§5  THE PAYOFF — staggered vs collocated shallow water, same points, same grid");
     staggering_probe(&dir);
 
-    println!("\n\x1b[1;36m── figures written to msc/spike-null-space/fig/ ──\x1b[0m");
+    println!("\n\x1b[1;36m── figures written to .super-archive/from-msc/spike-null-space/fig/ ──\x1b[0m");
 }
 
 /// Rayleigh quotient of the checkerboard `(−1)^{i+j}` — "what does this operator

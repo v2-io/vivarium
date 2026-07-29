@@ -1,0 +1,2155 @@
+     A post-processing to restore numerical consistency for
+      the most classical multiple flow direction algorithms
+                               Julien Coatléven, Benoit Chauveau
+
+
+
+      To cite this version:
+    Julien Coatléven, Benoit Chauveau. A post-processing to restore numerical consistency for the most
+    classical multiple flow direction algorithms. 2024. �hal-04734436�
+
+
+
+
+                                   HAL Id: hal-04734436
+                         https://hal.science/hal-04734436v1
+                                 Preprint submitted on 14 Oct 2024
+
+
+
+
+    HAL is a multi-disciplinary open access               L’archive ouverte pluridisciplinaire HAL, est
+archive for the deposit and dissemination of sci-     destinée au dépôt et à la diffusion de documents
+entific research documents, whether they are pub-     scientifiques de niveau recherche, publiés ou non,
+lished or not. The documents may come from            émanant des établissements d’enseignement et de
+teaching and research institutions in France or       recherche français ou étrangers, des laboratoires
+abroad, or from public or private research centers.   publics ou privés.
+Preprint
+
+
+
+
+A post-processing to restore numerical consistency for the most classical multiple
+                            flow direction algorithms
+
+                                Julien Coatléven ∗†, Benoit Chauveau ∗
+
+
+      Abstract. In a recent paper, a consistency correction for the water flux using multiple flow direction
+      (MFD) algorithms that account for exchanges between a cell and its neighbors was proposed, thanks to a
+      reinterpretation of the MFD as a well chosen discretization of the Gauckler-Manning-Strickler continuous
+      equation. Building on those results, we introduce here a general framework allowing to derive consistent
+      expressions of the water flux for the most commonly used multiple/single flow direction (MFD/SFD) water
+      flow routines, including versions in which water is flowing from a node to its neighbors. This general
+      framework is shown to be sufficiently general to encompass the alternative continuous definition of the unit
+      catchment area of the literature. Numerical examples illustrate the consistency and convergence of the
+      proposed water flux reconstructions.
+
+
+                                                     Introduction
+A wide variety of mathematical models describing the flow of water could be used in landscape evolution
+models (LEMs), depending on the prominent space and time scales considered. The most complete model is
+undoubtedly the Navier-Stokes model which allows for very precise but prohibitively costly simulations. The
+shallow-water approximation is sometimes used to solve rivers system (e.g. [2]) or to simulate glacial dynamics
+[18]. Despite a reduced computational cost compared to the Navier-Stokes model, this model has not often been
+explicitly deployed in LEMs. Probably one of the reasons is that computationally efficient water flow routing
+algorithms have been developed during the last decades. Those algorithms are built assuming that the water
+flow follows the direction of steepest descent (e.g. [33, 22, 20, 41, 28, 42, 40]), and are able to simulate relatively
+complex water flow networks despite this inherent simplicity. Multiple flow direction (MFD) and single flow
+direction (SFD) algorithms are among the most known water-flow routing families implemented in reference
+LEMs such as in SIBERIA([54, 55, 53]), CAESAR-Lisflood ([5, 14]), FastScape ([9]), eSCAPE ([44]), CIDRE
+([10]), EROS ([15]) or BadLand ([45]), or in stratigraphic models such as DionisosFlow ([27]). This list being not
+exhaustive, the reader is referred to [49, 51, 50, 1, 32] for a complete review. Following the terminology of [1], we
+consider two different families of water flow algorithms, based on their representation of the discretized domain.
+These are referred to as cell-to-cell and node-to-node algorithms, respectively. The first category includes all
+models that only consider interactions between a cell and its neighboring cells, while the second includes those
+that focus on interactions between a node and its neighboring nodes. The main differences between the various
+algoritms inside each family lie in their representation of the discretized domain (cell-to-cell or node-to-node)
+and by the empirical choice made to distribute water among the mesh elements.
+The empirical foundations of the MFD/SFD water flow routing and their lack of mathematical framework make
+them very difficult to validate. A first behavior known since a long time is not very encouraging: the water flow
+distribution Qw is mesh dependent. This is probably the most documented problem of the LEM community
+since more than twenty years (e.g. [46, 35, 1]) and one that still disturbs current models. Smart solutions have
+been published to minimize this effect without making it completely vanish ([38, 35]). An alternative definition
+of the specific catchment area often used as a proxy for water flow was proposed in [24, 8], through the discrete
+  ∗ IFP Énergies nouvelles, 1 et 4 avenue de Bois-Préau, 92852 Rueil-Malmaison, France
+  † julien.coatleven@ifpen.fr
+
+
+
+
+                                                               1
+ A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                           algorithms
+
+
+
+solution of an abstract uniform flow equation, which effectively solves the anomalous mesh dependency issue.
+Independently and following another path, in [11] the simplest cell-to-cell MFD algorithms family has been
+proved to coincide on Cartesian meshes with a classical discretization of the water mass conservation Gauckler-
+Manning-Strickler model (GMS). The output of the MFD algorithms is shown to correspond exactly to a
+mesh-dependent mean of the water flux associated with the discrete GMS model. This result not only explains
+the mesh and numerical dependency since the output of the MFD does not fulfill the consistency criteria, but it
+also provides a way to correct it in a post-processing step leading to a consistent discrete approximation of the
+GMS water flux. This new discrete water flow is then as mesh independent as possible, in the usual numerical
+analysis sense of convergence when the mesh size goes to zero.
+The main purpose of this paper is to extend this result to a wider range of classical MFD/SFD algorithms,
+including the node-to-node versions. Generalizing the results of [11], they can in fact all be corrected in a post-
+processing step, finally solving the grid dependency issue while keeping the diversity of approaches considered in
+the literature. To do so, we will need to consider a more general GMS model than that of [11]. This generalized
+GMS model being also a generalization of the model proposed in [24, 8], this finally closes the loop between MFD
+algorithms and the specific catchment area defined in [24, 8]. We believe that the resulting easy to implement
+post-processing step could benefit to numerous existing water flow models built from MFD/SFD algorithms.
+The paper will thus be organized as follows: in a first section we recall the continuous specific catchment area
+model of [24, 8] and introduce our general GMS model, emphasizing their link. Next, we generalize the results
+of [11] detailing the link between the general GMS model and a wider range of cell-to-cell MFD algorithms, and
+explain how this allows their correction in a post-processing step. The recovered consistency is then illustrated
+through numerical examples. In a third section, we extend those results to node-to-node MFD algorithms,
+and again illustrate on numerical examples how the simple post-processing step we propose allows to recover
+consistency. We conclude by some remarks on the applicability domain of the GMS model.
+
+
+      1    Gauckler-Manning-Strickler models and multiple flow direction
+                                   algorithms
+In principle, the output of a MFD algorithm is the historically loosely defined “local discharge of water” Qw .
+The practical computation of Qw , when not carefully conducted, is the weak point of many models causing
+them to lose any hope of consistency in the mathematical sense of the term. This is one of the main reasons
+why we observe mesh dependency is some LEMs. We recall in this section how to define a physically based
+“local discharge of water” that maintains consistency. More details can be found in [11, 24, 8]. This discussion
+was essentially already conducted in [12], thus no true originality is claimed here. We have chosen to recall this
+in full details for the reader’s convenience, as well as to fix some vocabulary and notions. Notice that in [12],
+it was furthermore been shown that an inadequate treatment of the coupling between water flow and sediment
+transport leads to another kind of artificial mesh dependencies than those we consider here.
+Classically, Qw is computed directly from the so-called drainage or catchment area CA (also referred as the
+contributing area). For a given outlet of the topography, it corresponds to the area of the projection on Ω of the
+part of the topography from which the water flows to the considered outlet ([31, 30, 8]). Despite being a very
+intuitive notion, it has evaded for a long time a precise mathematical definition and was only obtained through
+some algorithmic procedure. Classical multiple flow direction (MFD) algorithms precisely aim at providing
+a practical way to compute a discrete approximation CA pKq of the catchment area CA for a mesh cell K
+(where  stands for the mesh precision), and in this way a discrete approximation QK of Qw for cell K. As
+is well documented ([16, 35, 36, 39]) the classical algorithms provide a discrete catchment area CA pKq that
+depends on the cell size, geometry and orientation with respect to the flow. Several attempts can be found in
+the literature to reduce this mesh dependency, defining the discrete water flow discharge QK associated to a
+mesh cell K as QK “ pCA pKq{wpKqq, where wpKq is a normalization factor related to a geometric property
+of the cell (cf [16]) or to an estimate of the flow width ([35]) defining the so-called (discrete approximation of
+
+
+                                                        2
+                                           J. Coatléven and B. Chauveau
+
+
+
+the) specific or unit catchment area (SCA/UCA).
+
+
+                               z
+
+
+
+
+                     hs + hw
+                          hs
+
+                                                      hw
+
+
+
+
+                                       y
+                                                                Ω
+                                   x
+
+                                                                               ∂Ω
+
+
+                  Figure 1: Notations for the topography hs , water height hw and domain Ω
+
+
+Recently, a new definition of the specific catchment area a at the continuous level was proposed in [24, 8] in a
+more modern mathematical way. It consists in solving an abstract uniform flow equation:
+                                              ˆ           ˙
+                                                   ∇hs
+                                      ˇ
+                                      ˇ ´div a              “ 1 in Ω,
+                                      ˇ
+                                      ˇ          ||∇hs ||
+                                                                                                             (1)
+                                      ˇ
+                                      ˇ
+                                      ˇ a ∇hs ¨ n “ 0
+                                      ˇ
+                                      ˇ ||∇h ||                 on BΩin ,
+                                               s
+
+where the considered fixed geographical region (see figure 1) is modeled by means of a bounded connected
+domain Ω P R2 , hs : Ω ÝÑ R is the function describing the topography , BΩin “ tx P BΩ | ∇hs ¨ n ą 0u is the
+part of the boundary that is in going and n denotes the outward normal to Ω. Setting Qw “ a at the continuous
+level, this finally leads to compute a consistent discrete approximation aK of a for a mesh cell K. The mesh
+dependency of aK is thus reduced to the usual consistency errors of numerical schemes.
+Solving (1) instead of resorting to one of the classical MFD algorithms could seem a very different approach at
+first sight. Indeed, considering for instance the classical cell-to-cell algorithms of [22, 23, 28], one can see that
+the main principle underlying those MFD algorithms is simply to distribute a fictitious water flow of a mesh cell
+to the neighboring cells with lower elevation proportionally to a function of the slope, as illustrated in Fig. 2.
+The main result of [11] is that such a distributing scheme is in fact unexpectedly closely related to a well-chosen
+
+
+                                                           3
+ A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                           algorithms
+
+
+
+discretization of a water flow model. A full proof is given for the most classical cell-to-cell MFD algorithms (for
+instance those of [22, 23, 28]) for the following water flow model:
+                                       ˇ
+                                       ˇ ´div pkm hm ∇hs q “ Sw in Ω,
+                                                   w
+                                                                                                                (2)
+                                       ˇ
+                                             w ∇hs ¨ n “ Bw         on BΩin ,
+                                       ˇ km hm
+                                       ˇ
+
+where hw is the water height, m a model parameter, Sw is the domain source, and Bw the boundary influx.
+The coefficient km can be thought of as the inverse of a roughness coefficient. It is established in [11] that the
+discrete quantity distributed by MFD algorithms is a non-consistent mean of the discrete water flux associated
+with a finite volume approximation of (2), as we detail in next section.
+To completely close the gap between MFD algorithms and (1) as well as to encompass a wider range of MFD
+models of the literature, in the present paper we consider the following generalization of (2), which amounts to
+a stationary water mass conservation equation with Gauckler-Manning-Strickler (GMS) flux modeling:
+                           ˇ      ´                                     ¯
+                           ˇ ´div km hw ηw phw qs´p       ||∇hs ||pw ∇hs “ Sw in Ω,
+                           ˇ                           w
+                                                    ref
+                           ˇ                                                                                 (3)
+                           ˇ km hw ηw phw qs´p   ||∇h   ||pw
+                                                             ∇h   ¨ n “ B     on BΩ    ,
+                           ˇ                   w
+                                            ref       s         s         w         in
+
+where hw is the water height, sref = 1 m.km-1 the reference slope, pw a model parameter and ηw the water
+mobility function. For simplicity we assume here that the mobility function has no dimension and is a function
+of hw only, and that the domain source Sw is given in m3 .s-1 km-2 such that its integral over a 2d area measured
+in km2 coincides with a discharge in m3 .s-1 . The boundary influx Bw is measured in m3 .s-1 km-1 . The coefficient
+km can be thought of as the Strickler coefficient or the inverse of the Gauckler-Manning coefficient up to a change
+of unit (strictly speaking, this identification is truly valid for channels and if the mobility function ηw is equal to
+a dimensionless hydraulic radius). For this choice of unit for Sw , km has the unit m.s-1 of a speed. Comparing
+(3) with (1), we see that (1) corresponds to the particular case where km “ 1, pw “ ´1 and a “ hw ηw phw q,
+while comparing (3) and (2) we recover (2) by choosing ηw phw q “ hw        m´1
+                                                                                 and pw “ 0. In this sense the GMS
+model (3) is a generalization of (1) and (2) that allows to include the classical ingredients (non linear slope
+dependency and some spatial heterogeneity) of the MFD literature. Closely following [11], we explain in the
+remaining of the paper how model (3) can be related to most of the MFD algorithms of the literature and how
+it allows to correct them through a simple post-processing step.
+Remark 1.1. To say that this model uses Strickler coefficients or the inverse of Gauckler-Manning coeffi-
+cients does not necessarily mean that its scope of application is limited to channels: it depends to the specific
+choice made on the model parameter values. Steady state analysis ([26, 7]) for channels suggests to use values
+ηw phw q “ phw {href q1{2 and pw “ ´1{2, while the classical Gauckler-Manning-Strickler formula would coincide
+with ηw phw q “ pRh phw q{href q2{3 with Rh phw q the hydraulic radius and again pw “ ´1{2. When applied to
+large time and space scales landscape evolution models, these calibrations are no more valid and at this stage
+we suggest considering ηw and pw as modeling parameters that can be tuned for each considered problem.
+
+         2    Obtaining consistent cell-to-cell MFD algorithms through a
+                            discretization of the GMS model
+As mentioned above, the results of this section are mostly a quite straightforward generalization of the results
+of [11] on (2) to the more general GMS model (3). We believe that the node-to-node version will be easier to
+understand after detailing the simpler cell-to-cell one, which is the main motivation for this section.
+
+2.1    Mesh description and the classical cell-to-cell MFD algorithms
+To make precise statements and establish the correspondence with MFD algorithms, we need to introduce
+quite a few notations for describing our meshes. Assume that Ω is a polyhedral bounded connected domain
+
+                                                          4
+                                       J. Coatléven and B. Chauveau
+
+
+
+of R2 , whose boundary is denoted BΩ “ ΩzΩ. We recall the usual finite volume notations describing a mesh
+M “ pT , Fq of Ω. The set of the cells of the mesh T is a finite family of connected open disjoint polygonal
+subsets of Ω, such that Ω “ YKPT K. For any K P T , we denote by |K| the measure of K, by BK “ KzK
+the boundary of K, by ρK its diameter and by xK its barycenter. The set of faces of the mesh F is a finite
+family of disjoint subsets of R2 included in Ω such that, for all σ P F, its measure is denoted |σ|, its diameter
+hσ and its barycenter xσ . For any K P T , the faces of cells K corresponds to the subset FK of F such that
+BK “ YσPFK σ. Then, for any face σ P F, we denote by Tσ “ tK P T | σ P FK u the cells of which σ is a
+face. Next, for all cell K P T and all face σ P FK of cell K, we denote by nK,σ the unit normal vector to
+σ outward to K, and dK,σ “ |xσ ´ xK |. The set of boundary faces is denoted Fext , while interior faces are
+denoted Fint . Finally for any σ P Fint , whenever the context is clear we will denote by K and L the two cells
+forming Tσ “ tK, Lu, as well as dKL “ |xK ´ xL |. This for instance allows when looping over the faces σ of cell
+K to denote by L the other face of σ without resorting to a too heavy notation. To avoid any confusion with
+the water height and the topography,  “ maxKPT ρK will denote the mesh size. For any continuous quantity
+u, its discrete counterpart will be denoted uT “ ppuK qKPT , puσ qσPFext q where for any K P T uK is the constant
+approximation of u in cell K while for any σ P Fext uσ is the constant approximation of u over face σ.
+In the following we will assume that the mesh is orthogonal, i.e. there exists a family of centroids pxK qKPT
+such that:
+                                            xL ´ xK
+                 xK P K̊ @K P T      and              “ nK,σ for σ P Fint , σ “ tK, Lu                     (4)
+                                           |xL ´ xK |
+and let us denote xσ the orthogonal projection of xK to the hyperplane containing σ for any σ P FK and any
+K P T with dK,σ “ |xK ´ xσ |, as well as dKL “ |xK ´ xL |. Then, one can use a two-point finite volume scheme
+to discretize diffusion operators with scalar diffusion coefficients (no tensors).
+In the literature, multiple flow direction algorithms are often considered as purely algorithmic ways of dis-
+
+
+
+
+Figure 2: Basic principle of the simplest cell-to-cell MFD algorithm: water is distributed to lower neighboring
+cells proportionally to the slope (reproduced from [11])
+
+
+tributing water from one region to another. Thus, they are generally described in a purely algorithmic fashion,
+although they admit a reformulation as a linear system (first mentioned by [43] although without exhibiting an
+
+
+                                                       5
+ A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                           algorithms
+
+
+
+explicit formula). Here, we have chosen to introduce the most classical MFD algorithm illustrated on figure (2)
+following the algebraic formulation of [11] where it is detailed how to obtain it from its algorithmic description.
+Denoting hs,K “ hs pxK q for any K P T and hs,σ “ hs pxσ q for any σ P Fext , from [11] we know that this
+cell-to-cell MFD algorithm is equivalent to solving the following linear system for the unknown pr  qK qKPT
+                                                    ÿ                |σ|r
+                                                                        qL
+                      qrK “ |K|Sw,K `                                      phs,L ´ hs,K q   @K P T             (5)
+                                           σPFK XFint ,hs,K ăhs,L
+                                                                    dKL sL
+
+using an ordering for the cells of T based on decreasing topography hs,K and a lower triangular solver, where
+Sw,K is the source term in cell K, the discrete slope sKL is given by
+
+                                                    |σ|
+                                           sKL “        phs,K ´ hs,L q “ ´sLK
+                                                   dKL
+and the total positive slope sK of cell K is given by
+                                                     ÿ               |σ|
+                                   sK “                                  phs,K ´ hs,L q
+                                           σPFK XFint ,hs,K ěhs,L
+                                                                    dKL
+
+Indeed, the principle of the most classical distribution formula is simply to distribute the “flow” qrL in cell L
+to the lower, neighouring cells K proportionally to the ratio sKL {sL of the discrete slope sLK between the
+high cell L and the low cell K regarding the total positive slope sL of the high cell L. This is precisely the
+meaning of formula (5) but in a reverse fashion, since it says that the total “flow” qrK in cell K is equal to
+the local source terms and the flow coming from the higher neighboring cells L. Notice that in many cases of
+the literature, since the MFD algorithm is applied on a uniform Cartesian mesh with the same space step in
+each direction, the face measure |σ| is simply omitted (see for instance [22, 23, 28]), with no effect on the ratio
+sKL {sK . It is not difficult to generalize the algebraic formulation (5) to more advanced MFD algorithms, for
+instance those using a power of the slope. Here we recover such generalizations through the equivalence with
+a discretization of the general GMS model. When the water source Sw,K is chosen constant equal to one, the
+unknown qrK of the MFD algorithms is used to defined a discrete catchment area CA pKq for cell K by setting
+CA pKq “ qrK . As explained in the previous section, the discrete “local discharge of water” QK associated is
+computed by normalizing as qrK i.e. setting QK “ qrK {wpKq, where wpKq is a normalization factor. Two very
+common normalizations are the diameter of the cell wpKq “ ρK ([16]) or the effective flow length in the cell,
+which is defined as the length of segment defined by the intersection between the cell and the line going through
+the center of the cell and oriented following the slope ∇hs ([35]).
+
+
+
+2.2    Cell-to-cell MFD algorithms and the GMS model
+The starting point of a finite volume discretization is to integrate equation (3) over each cell K:
+                                ż     ´                                  ¯ ż
+                                                       ´pw        pw
+                              ´    div km hw ηw phw qsref ||∇hs || ∇hs “         Sw .
+                                   K                                                 K
+
+Denoting Sw,K “ Sw pxK q and using Stokes’ formula, this leads to:
+                           ÿ ż
+                       ´         km hw ηw phw qs´p          pw
+                                                ref ||∇hs || ∇hs ¨ nK,σ “ |K|Sw,K .
+                                                   w
+
+
+                            σPFK       σ
+
+
+To handle boundary terms, if one further assumes that hs,σ ě hs,K for any σ P Fext and K P Tσ which
+amounts to assuming that water cannot leave the computational domain and is generally what is done in usual
+
+
+                                                             6
+                                               J. Coatléven and B. Chauveau
+
+
+
+presentation of MFD algorithms, then for σ P FK Fext we get:
+                             ż
+                                              ´pw
+                            ´ km hw ηw phw qsref  ||∇hs ||pw ∇hs ¨ n « ´|σ|Bw,σ ,
+                                          σ
+
+              1
+with Bw,σ “ |σ| σ Bw if hs,σ ą hs,K and 0 otherwise. Choosing a finite volume scheme then simply amounts to
+                ş
+
+choosing how to approximate each term appearing in the face integrals. The most natural and classical finite
+volume scheme consists in choosing constant approximate values km,σ and Gs,σ for km and ||∇hs ||pw along each
+face σ and to use an upwind scheme hup w,σ for the true unknown hw ηw phw q:
+                  ż                                                                        ż
+                                                                     ´pw
+                ´ km hw ηw phw qs´p
+                                  ref
+                                     w
+                                       ||∇h s || pw
+                                                    ∇hs ¨ n « ´k    s
+                                                                 m,σ ref ||G s,σ || pw up
+                                                                                      hw,σ   ∇hs ¨ n.
+                     σ                                                                                σ
+
+    Finally, thanks to our hypothesis on mesh orthogonality we can use the two-point flux approximation (TPFA)
+to compute σ ∇hs ¨ n. The TPFA consists in noticing that for a linear function hs , the gradient being constant
+             ş
+
+and satisfying ∇hs ¨ nK,σ “ d 1 phs pxL q ´ hs pxK qq, the following formula:
+                                     KL
+
+
+                                                                        |σ|
+                                     ż                        ż
+                                 ´        ∇hs ¨ n “ ´∇hs ¨        n“        phs pxK q ´ hs pxL qq,
+                                      σ                       σ        dKL
+
+is exact since d 1 pxL ´ xK q “ nK,σ and will thus be a first order approximation of the flux. More precisely,
+                KL
+denoting hw,K for any K P T the discrete water height value associated to cell K, for any K P T the proposed
+finite volume scheme rewrites:
+                      ÿ                                                 ÿ
+                            τKL hup
+                                 w,σ phs,K ´ hs,L q “ |K|Sw,K `                     |σ|Bw,σ ,
+                    σPFK XFint                                               σPFK XFext ,hs,K ăhs,σ
+
+
+                                    up “ hw,K ηw phw,K q if hs,K ě hs,L and hup “ hw,L ηw phw,L q if hs,K ă hs,L ,
+                                                                             w,σ
+where the upwind value is given by hw,σ
+the transmissivity τKL is given by:
+                                                  |σ|km,σ
+                                         τKL “              ||Gs,σ ||pw ,
+                                                dKL s´p
+                                                      ref
+                                                         w
+
+
+
+and where Gs,σ “ 21 pGs,K ` Gs,L q and Gs,K is a discrete approximation of the gradient of hs in cell K. If the
+gradient is known, we can simply take:
+                                             Gs,K “ ∇hs pxK q
+If only the pointwise values of hs are known, we use a discrete reconstruction of the gradient. To derive it, we
+use:                                           ÿ
+                                         Id “      |σ|pxσ ´ xK qnK,σ ,                                        (6)
+                                                       σPFK
+
+with Id the identity matrix in dimension d, leading to
+                                              ÿ
+                                   Gs,K “         |σ|Gs,K ¨ nK,σ pxσ ´ xK q,
+                                                      σPFK
+
+and thus on the orthogonal meshes we consider here as by consistency |σ|Gs,K ¨ nK,σ « σ ∇hs ¨ nK,σ , Gs,K is
+                                                                                     ş
+
+naturally given by:
+                                     1      ÿ       |σ|
+                            Gs,K “                      phs,L ´ hs,K qpxσ ´ xK q
+                                    |K| σPF XF dKL
+                                           K   int
+
+
+                                          1     ÿ        |σ|
+                                     `                       phs,σ ` bσ ´ hs,K qpxσ ´ xK q.
+                                         |K| σPF XF     dKσ
+                                                K   ext
+
+
+
+
+                                                                  7
+ A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                           algorithms
+
+
+
+From the mathematical point of view, a natural choice for the face value km,σ is the harmonic mean:
+                                                                                                ż
+                             dKL km,K km,L                                                 1
+                km,σ “                                   with for instance       km,K “               km @ K P T ,
+                          km,K dL,σ ` km,L dK,σ                                           |K|     K
+
+but many other choices are possible. Let us now recall the elementary proof given in [11]: gathering the faces
+by upwinding kind, we get:
+                                    ÿ
+                                               τKL hw,K ηw phw,K q phs,K ´ hs,L q ´
+                                   σPFK XFint ,hs,K ěhs,L
+
+                    ÿ                                                                                 ÿ
+                                   τKL hw,L ηw phw,L q phs,L ´ hs,K q “ |K|Sw,K `                                   |σ|Bw,σ .   (7)
+          σPFK XFint ,hs,K ăhs,L                                                        σPFK XFext ,hs,K ăhs,σ
+
+Setting                                                  ÿ
+                                        sK “                            τKL phs,K ´ hs,L q ,
+                                               σPFK XFint ,hs,K ěhs,L
+
+and noticing that sL ą 0 as soon as there exists σ P FL X Fint such that hs,L ą hs,K , we see that equation (7)
+can be rewritten:
+                                          ÿ
+              sK hw,K ηw phw,K q ´                    τKL hw,L ηw phw,L q phs,L ´ hs,K q “ |K|Sw,K .
+                                         σPFK XFint ,hs,K ăhs,L
+
+
+Defining the water outflux by qrK “ sK hw,K ηw phw,K q, we thus obtain:
+                             ÿ                     qrL                                   ÿ
+            qrK ´                            τKL       phs,L ´ hs,K q “ |K|Sw,K `                                 |σ|Bw,σ .     (8)
+                                                   sL                             σPF XF
+                    σPFK XFint ,hs,K ăhs,L                                                ,h
+                                                                                          K     ext   s,K ăhs,σ
+
+
+
+Using the definition of τKL , we clearly recover (5) if we choose km “ 1, pw “ 0 and Bw “ 0, and this shows the
+equivalence between the MFD algorithms and the GMS model is established.
+This equivalence between the classical MFD and the two-point flux approximation of the GMS allows to give a
+continuous interpretation and generalization CApOq for any region O of the discrete CA pKq that is computed
+by MFD algorithms only for mesh cells K. Indeed, from qrK “ sK hw,K ηw phw,K q and the consistency of the
+two-point formula, we see that qrK approximates:
+                                       ÿ ż              ´                               ¯`
+                                                              ´pw
+                    CA pKq “ qrK «          hw ηw phw q ´km sref ||∇hs ||pw ∇hs ¨ nK,σ    .
+                                             σPFK    σ
+
+
+This naturally leads us to define a continuous catchment area CApOq for any region O by setting:
+                                      ż              ´                              ¯`
+                            CApOq “       hw ηw phw q ´km s´p
+                                                           ref
+                                                              w
+                                                                ||∇hs || pw
+                                                                            ∇h s ¨ n   ,                                        (9)
+                                               BO
+
+where hw is the solution of (3) with Sw “ 1 and where we have denoted v ` the positive part of v (i.e.
+v ` “ maxp0, vq). As a by-product, we see that we can indeed interpret the discrete catchment area CA pKq
+computed through the classical cell-to-cell MFD algorithms as the total flux leaving cell K of a fictitious water
+flow with a uniform water source Sw “ 1. Unfortunately, we also see that even at the continuous level, CApOq
+strongly depends on the geometry of O and its orientation with respect to the flow. As a result when the
+discrete catchment area CA pKq computed from MFD algorithms computing is used to estimate the discrete
+“local discharge of water” QK , it produces cell and thus mesh dependency in the simulated surface water
+distribution. To overcome this mesh dependency, since CApOq is the total flux leaving O, it is natural to
+
+
+                                                                  8
+                                          J. Coatléven and B. Chauveau
+
+
+
+try to define a specific catchment area (SCA) by rescaling the CA. The correct scaling would be to set the
+normalization factor w to the length of the portion of BO along which the fictitious water flow is leaving O. A
+corrected definition of the specific catchment at the continuous level in the spirit of [16, 35, 36] area would thus
+be to use:
+                      ˆż                                  ˙´1 ż            ´                            ¯`
+         SCApOq “           χ´km s´pw ||∇hs ||pw ∇hs ¨ną0       hw ηw phw q ´km s´p          pw
+                                                                                 ref ||∇hs || ∇hs ¨ n
+                                                                                    w
+                                                                                                           ,    (10)
+                                  ref
+                        BO                                       BO
+
+where χ is the indicator function (i.e. the function with value 1 when the condition is satisfied and 0 otherwise).
+Depending on the orientation of the flow, the discrete counterpart
+                                                  ¨                            ˛´1
+                                                                 ÿ
+                                  SCA pKq “ ˝                               |σ|‚    qrK ,
+                                                    σPFK XFint ,hs,K ěhs,L
+
+
+of such a normalization will sometimes match the choices of [16] or [35, 36] explaining their partial success. This
+continuous SCA scales as an approximation of the continuous water flux magnitude:
+
+                                        qw “ |km hw ηw phw q| s´p
+                                                               ref ||∇hs ||
+                                                                  w        pw `1
+                                                                                 ,                             (11)
+
+(in m3 s-1 km-1 ) but is not equal to it. The SCA defined by (10) is in fact a mean of qw along the outflow portion
+of BO, and thus still retains some dependency in the geometry of O and its orientation with respect to the flow.
+Thus, to obtain a mesh independent quantity it is much simpler and more natural to consider directly the water
+flow magnitude qw rather than the SCA. This is precisely the consistency correction proposed in [11]: to use a
+discrete version of qw instead o CA pKq or SCA pKq. Another strong argument for doing so is to notice that
+the specific catchment area a of model (1) can be reinterpreted through (3) as computing qw since:
+
+                          qw “ |km hw ηw phw q| s´p
+                                                 ref ||∇hs ||
+                                                    w         pw `1
+                                                                    “ |a| ||∇hs ||´1`1 “ a,
+
+as we have set a “ hw ηw phw q ě 0, pw “ ´1, km “ 1 and sref “ 1 to merge (1) inside (3). In this way, the
+consistency correction of [11] for MFD algorithms is another path to recover the conclusions of (1), since qw is
+a generalization of a to more complex water flow models.
+The MFD formulation allows in turn some interesting observations for the Gauckler-Manning-Strickler model:
+it is indeed clear that the choice of the water mobility function ηw has no influence on the water flux strength
+qw , as it appears nowhere in (8) and (12). In the same way, only the contrasts of the coefficient km will impact
+qw , as only ratios τKL {sK are appearing in (8) and (12).
+
+2.3    Consistency post-processing for cell-to-cell MFD algorithms
+To effectively compute an accurate discrete water flux magnitude qK for each cell K P T , from [11] we know
+that we can reconstruct cellwise the water flux vector using (6) by setting:
+                                             ÿ             τKL qrK
+                          QK “                                     phs,K ´ hs,L qpxσ ´ xK q´
+                                  σPFK XFint ,hs,K ąhs,L
+                                                           |K|sK
+
+                                         ÿ              τKL qrL
+                                                                phs,L ´ hs,K qpxσ ´ xK q,                      (12)
+                               σPFK XFint ,hs,K ăhs,L
+                                                        |K|sL
+
+and simply deduce a consistent water flux magnitude by setting
+
+                                                      qK “ ||QK ||.                                            (13)
+
+
+                                                             9
+ A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                           algorithms
+
+
+
+The convergence of the consistent water flux magnitude qK was rigorously established and illustrated in [11] for
+the simpler model (2), up to providing error estimates. A straightforward although rather involved adaptation
+of the proof in [11] would undoubtedly provide the convergence of qK to the continuous flux when the mesh size
+ε goes to zero. In the present paper we limit ourselves to numerical confirmations of the convergence of qK in
+the general setting.
+We believe that the use of qrK or its approximately normalized versions instead of qK in the literature is the
+main reason why such a strong mesh dependency was observed, without any significant improvement with mesh
+refinement. Thus, it is important to use qK instead of qrK as is the correct output of a MFD algorithm, i.e.
+using QK “ qK and not qrK or qrK {wpKq. Notice that from (12) and (13), it is obvious that computing qK can
+certainly be considered as a post-processing consistency correction for qrK , that should be easy to implement in
+legacy software.
+For completeness let us finally mention that the assumption that hs,σ “ hs,K for any σ P Fext and K P Tσ
+is not mandatory and was done only to exactly match the MFD linear system and simplify the presentation.
+For open boundaries, since this assumption corresponds to assuming that water cannot leave the computational
+domain, it suffices to modify the value of sK :
+                            ÿ                                     ÿ
+             sK “                       τKL phs,K ´ hs,L q `                 τKσ phs,K ´ hs,σ q ,
+                    σPFK XFint ,hs,K ěhs,L                           σPFK XFext ,hs,K ěhs,σ
+
+as well as the definition of QK :
+                                                ÿ              τKL qrK
+                            QK “                                       phs,K ´ hs,L qpxσ ´ xK q
+                                      σPFK XFint ,hs,K ąhs,L
+                                                               |K|sK
+
+                                             ÿ               τKσ qrK
+                                `                                    phs,K ´ hs,σ qpxσ ´ xK q
+                                    σPFK XFext ,hs,K ąhs,σ
+                                                             |K|sK
+                                             ÿ               τKL qrL
+                                ´                                    phs,L ´ hs,K qpxσ ´ xK q,                (14)
+                                    σPFK XFint ,hs,K ăhs,L
+                                                             |K|sL
+
+with of course in both cases:
+                                                          |σ|km,σ
+                                                 τKσ “             ||Gs,σ ||pw .
+                                                         dKσ s´p
+                                                              ref
+                                                                 w
+
+
+
+
+2.4    Numerical results for the corrected cell-to-cell MFD algorithms
+The consistency post-processing (12)-(13) for MFD algorithms precisely coincides with the replacement of the
+computation of qrK or qrK {wpKq for a mesh cell K by a consistent discrete reconstruction qK of qw in each cell K.
+Thus, apart from the usual discretization error no anomalous mesh dependency should remain in qK in practice,
+contrary to what is observed for qrK {wpKq (i.e. SCA pKq) given by MFD algorithms. On the contrary, since the
+quantity qrK approximates the outflux of a cell it is proportional to the perimeter of a cell, the only convergence
+that can be expected for qrK is to zero, while the behavior of qrK {wpKq will strongly depend on the choice of
+the normalization wpKq. The main purpose of this subsection is to illustrate the behavior of those quantities
+through some easy to analyze numerical examples. Since it has no impact on the water flux qw which is the
+main target of MFD algorithms, for simplicity we consider only the case of constant water mobility ηw phw q “ 1.
+We consider two reference configurations. On the first one we focus on the consistency and convergence of qK
+while illustrating that qrK even rescaled by the attempted values of wpKq from the literature cannot be a good
+approximation of the flux. Simultaneously, we show that the method can easily handle heterogeneous speed
+coefficients km . The second configuration allows us to assess the robustness of the method even when the slope
+is non-linear (pw ą 0). To study the mesh dependency of the results, we consider three sequences of meshes,
+
+
+                                                                10
+                                         J. Coatléven and B. Chauveau
+
+
+
+all satisfying the orthogonality requirement (4). Namely we use two sequences of Cartesian meshes, the first
+one with square cells and the second one with rectangular cells, and a sequence of Voronoı̈ meshes. Those three
+sequences are illustrated on figure 3.
+
+
+
+
+  (a) Cartesian mesh: square cells     (b) Cartesian mesh: rectangular cells            (c) Voronoi mesh
+
+Figure 3: Three sequences of meshes designed to study the mesh dependency within the numerical analyses
+presented in section 2.4
+
+
+
+2.4.1    First test configuration: Gaussian topography and Gaussian water height
+The domain Ω is the square Ω “s0, Lrˆs0, Lr, the exact topography is given by
+
+                             hs px, yq “ hs,0 exp ´δ px ´ x0 q2 ` py ´ y0 q2
+                                                 ` `                         ˘˘
+
+where x0 “ y0 “ L{2 and the exact water height is given by
+
+                             hw px, yq “ hw,0 exp ´α px ´ x0 q2 ` py ´ y0 q2
+                                                 `    `                      ˘˘
+
+In practice we will set L “ 1, hs,0 “ 1 and hw,0 “ 1. For this first configuration, we will consider three different
+values of the speed coefficient km , with increasing order of difficulty. The first one is simply the constant case
+km “ 1, the second one is a sinusoidal case:
+
+                                          km “ 1 ` β sinpωπxq sinpωπyq
+
+with β “ 0.1 and ω “ 3, and the final one is a Perlin noise perturbation :
+
+                                                km “ 1 ` β θpx, yq
+
+where the function θpx, yq is a Perlin noise [37] and the resulting coefficient km is depicted on figure 4. Since
+qw depends on km , using these heterogeneous speed coefficients is a simple way to obtain not overly simplistic
+values for the water flux magnitude qw . Finally, we fix the slope exponent pw to zero for this configuration.
+
+From [11], we know that qK should converge towards qw in L2 norm. We display on figure 5 the corresponding
+convergence curves, which confirm that we recover the expected convergence. To further emphasize the interest
+of using qK instead of qrK {wpKq, on figures 6 to 14 we display for each combination of mesh sequence and value
+
+
+                                                        11
+     A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                               algorithms
+
+
+
+
+                     (a)                                             (b)
+
+
+
+
+                                     Sinusoidal km                                Perlin noise km
+
+                             Figure 4: The sinusoidal and perlin noised-based speed coefficients km
+
+
+
+                           Constant km                          Sinusoidal km                               Perlin km
+              −3
+                                                     −4                                      −3
+              −4
+
+
+log ||qK − qw ||L2
+                                                     −5
+              −5                                                                             −4
+              −6                                     −6
+                                                                                             −5
+              −7                                     −7
+                                                                                             −6
+                                     Square                                  Square                                  Square
+              −8                   Rectangular       −8                    Rectangular                             Rectangular
+                                    Voronoı̈                                Voronoı̈         −7                     Voronoı̈
+              −9                                     −9
+               −5    −4    −3 −2         −1      0    −5   −4    −3 −2          −1       0        −5   −4   −3 −2       −1       0
+                            log                                  log                                       log 
+
+Figure 5: Convergence curves for qK towards qw for the first test configuration, for each mesh sequence and
+each choice for km
+
+
+
+of km , the exact water flux magnitude qw , the discrete water flux magnitude qK , and qrK {wpKq for the two
+choices of normalization wpKq. We display those four values for the finest mesh of each sequence.
+We clearly see that qK is a good approximation of qw . However, the mesh dependency of qrK {wpKq appears
+on each of those example. The normalization wpKq “ ρK leads to the correct value range for qrK {wpKq when
+compared to qK or qw . The effective length normalization gives the correct order of magnitude, but not exactly
+the correct value range. The normalization wpKq “ ρK leads to a very strong mesh dependency, and a value
+
+
+                                                                12
+                                       J. Coatléven and B. Chauveau
+
+
+
+
+       (a)                                                 (b)
+
+
+
+
+       (c)                                                 (d)
+
+
+
+
+Figure 6: Water flux (top view) obtained for constant km on the finest Cartesian mesh with square cells. (a) -
+Exact solution - (b) - Simulated water flux qK - (c) - Simulated normalized water outflux qrK {wpKq with wpKq
+equal to the cell diameter - (d) - Simulated normalized water outflux qrK {wpKq with wpKq equal to the effective
+flow length in the cell.
+
+
+
+
+qrK {wpKq very far from the correct one. On the two Cartesian mesh sequences for each value of km (figures
+
+
+                                                      13
+ A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                           algorithms
+
+
+
+
+       (a)                                                 (b)
+
+
+
+
+       (c)                                                 (d)
+
+
+
+
+Figure 7: Water flux (top view) obtained for constant km on the finest Cartesian mesh with rectangular cells.
+(a) - Exact solution - (b) - Simulated water flux qK - (c) - Simulated normalized water outflux qrK {wpKq with
+wpKq equal to the cell diameter - (d) - Simulated normalized water outflux qrK {wpKq with wpKq equal to the
+effective flow length in the cell.
+
+
+
+
+6, 7, 9, 10, 12, 13), we see that qrK {wpKq is strongly biased in the main directions of the mesh (the two axis
+
+
+                                                      14
+                                      J. Coatléven and B. Chauveau
+
+
+
+
+       (a)                                                (b)
+
+
+
+
+       (c)                                                (d)
+
+
+
+
+Figure 8: Water flux (top view) obtained for constant km on the finest Voronoı̈ mesh. (a) - Exact solution -
+(b) - Simulated water flux qK - (c) - Simulated normalized water outflux qrK {wpKq with wpKq equal to the cell
+diameter - (d) - Simulated normalized water outflux qrK {wpKq with wpKq equal to the effective flow length in
+the cell.
+
+
+
+
+x and y), and comparing the two sequences we clearly obtain different solutions despite the fact that the two
+
+
+                                                     15
+ A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                           algorithms
+
+
+
+
+       (a)                                                  (b)
+
+
+
+
+       (c)                                                  (d)
+
+
+
+
+Figure 9: Water flux (top view) obtained for sinusoidal km on the finest Cartesian mesh with square cells. (a) -
+Exact solution - (b) - Simulated water flux qK - (c) - Simulated normalized water outflux qrK {wpKq with wpKq
+equal to the cell diameter - (d) - Simulated normalized water outflux qrK {wpKq with wpKq equal to the effective
+flow length in the cell.
+
+
+
+
+mesh sequences only slightly differ by the shape of the cells. On the Voronoı̈ mesh sequence (figures 8, 11, 14),
+
+
+                                                       16
+                                       J. Coatléven and B. Chauveau
+
+
+
+
+       (a)                                                 (b)
+
+
+
+
+       (c)                                                 (d)
+
+
+
+
+Figure 10: Water flux (top view) obtained for sinusoidal km on the finest Cartesian mesh with rectangular cells.
+(a) - Exact solution - (b) - Simulated water flux qK - (c) - Simulated normalized water outflux qrK {wpKq with
+wpKq equal to the cell diameter - (d) - Simulated normalized water outflux qrK {wpKq with wpKq equal to the
+effective flow length in the cell.
+
+
+
+
+since the mesh is much less biased towards any specific direction, we start to see the correct solution shape
+
+
+                                                      17
+ A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                           algorithms
+
+
+
+
+       (a)                                                 (b)
+
+
+
+
+       (c)                                                 (d)
+
+
+
+
+Figure 11: Water flux (top view) obtained for sinusoidal km on the finest Voronoı̈ mesh. (a) - Exact solution -
+(b) - Simulated water flux qK - (c) - Simulated normalized water outflux qrK {wpKq with wpKq equal to the cell
+diameter - (d) - Simulated normalized water outflux qrK {wpKq with wpKq equal to the effective flow length in
+the cell.
+
+
+
+
+appear, however qrK {wpKq is very noisy and influenced by the mesh cells shape, and in any case it is not a good
+
+
+                                                      18
+                                      J. Coatléven and B. Chauveau
+
+
+
+
+       (a)                                                (b)
+
+
+
+
+       (c)                                                (d)
+
+
+
+
+Figure 12: Water flux (top view) obtained for Perlin noised km on the finest Cartesian mesh with square cells.
+(a) - Exact solution - (b) - Simulated water flux qK - (c) - Simulated normalized water outflux qrK {wpKq with
+wpKq equal to the cell diameter - (d) - Simulated normalized water outflux qrK {wpKq with wpKq equal to the
+effective flow length in the cell.
+
+
+
+
+approximation of qw or any continuous quantity. The observations are almost the same for the other choice of
+
+
+                                                     19
+ A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                           algorithms
+
+
+
+
+       (a)                                                 (b)
+
+
+
+
+       (c)                                                 (d)
+
+
+
+
+Figure 13: Water flux (top view) obtained for Perlin noised km on the finest Cartesian mesh with rectangular
+cells. (a) - Exact solution - (b) - Simulated water flux qK - (c) - Simulated normalized water outflux qrK {wpKq
+with wpKq equal to the cell diameter - (d) - Simulated normalized water outflux qrK {wpKq with wpKq equal to
+the effective flow length in the cell.
+
+
+
+
+normalization where wpKq is the effective length, with the main difference that one Cartesian meshes, qrK {wpKq
+
+
+                                                      20
+                                       J. Coatléven and B. Chauveau
+
+
+
+
+       (a)                                                 (b)
+
+
+
+
+       (c)                                                 (d)
+
+
+
+
+Figure 14: Water flux (top view) obtained for Perlin noised km on the finest Voronoı̈ mesh. (a) - Exact solution
+- (b) - Simulated water flux qK - (c) - Simulated normalized water outflux qrK {wpKq with wpKq equal to the
+cell diameter - (d) - Simulated normalized water outflux qrK {wpKq with wpKq equal to the effective flow length
+in the cell.
+
+
+
+
+is much less biased towards the Cartesian directions. Those experiments confirm our theoretical observation
+
+
+                                                      21
+ A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                           algorithms
+
+
+
+on qrK {wpKq and qK : the former cannot be a good discrete approximation since it is strongly mesh dependent,
+while the later is a consistent approximation of qw , which converges well to qw even on Voronoı̈ meshes for the
+difficult case of the Perlin noised speed coefficient.
+
+
+2.4.2    Second test configuration: perturbed mono-dimensional topography
+
+
+
+
+     rs = 1, ps = 0                        rs = 3/2, ps = 1                           rs = 2, ps = 0
+
+                    Figure 15: The three topographies hs of the second test configuration
+
+
+   The domain Ω is the rectangle Ω “s0, Lx rˆs0, Ly r with Lx “ 1 and Ly “ 5, and the topography hs and
+water height hex
+              w take the form:
+                                ˇ
+                                                          Nb
+                                                                  x ´ xp y ´ yp
+                                ˇ                        ÿ      ˆ               ˙
+                                ˇ hs px, yq “ hs,x pxq `     gb         ,         ,
+                                ˇ
+                                ˇ                        p“1
+                                                                    δx     δy
+                                ˇ
+                                ˇ hex px, yq “ hw,x pxq,
+                                   w
+
+
+The topography hs incorporates Nb small smooth bumps randomly positioned at points pxp , yp q chosen such
+that they do not interfere with the boundaries of the domain, with the smooth bump function given by:
+                                          ˇ
+                                                          ´γ
+                                          ˇ           ˆ        ˙
+                                          ˇ Hpert exp            exppγq   for r2 “ x2 ` y 2 ď 1,
+                   gb px, yq “ gb pr2 q “ ˇ
+                                          ˇ             1 ´ r2
+                                          ˇ
+                                          ˇ 0                             otherwise .
+
+In we use practice Nb = 8, Hpert = 0.03, γ = 10 and δx =δy = 0.25. For the mono-dimensional functions
+phs,x , hw,x q we have chosen to re-use some of the stationary solutions proposed in [12]. Those functions are
+parametrized by six parameters rs , ps , kg , kw , Ss,x and Sw,x . In the following test case, we will restrict
+ourselves to the configuration kg “ kw “ 5 as well as Ss,x “ 10 and Sw,x “ 1, while the couple prs , ps q
+will take the values p1, 0q, p3{2, 1q and p2, 0q to change the curvature of the topography. The corresponding
+mono-dimensional functions hs,x are such that hs,x p´x, yq “ hs,x px, yq, and they are given for x ě 0 by:
+
+
+                                                         22
+                                                        J. Coatléven and B. Chauveau
+
+
+
+              . In the case prs , ps q “ p1, 0q:
+                                                          ˆ                                                   ˙
+                                                                 x       kg                        kg
+                                hs,x “ hs,x p0q ´ Ss,x                ´ 2 2 ln |kg ` kw Sw,x x| ` 2 2 ln |kg | ,
+                                                              kw Sw,x  kw Sw,x                   kw Sw,x
+
+
+              . In the case prs , ps q “ p3{2, 1q:
+                                                                      1
+                                                      ps ` 1 Ss,x
+                                                               ps `1
+                                                                                     rs ps {pps `1q
+                                    hs,x “ hs,x p0q ´                           rs
+                                                                  rs ppkg ` kw Sw,x x q             ´ kgps {pps `1q q
+                                                       ps rs kw Sw,x
+
+
+              . In the case prs , ps q “ p2, 0q:
+
+                                                                     Ss,x                2
+                                               hs,x “ hs,x p0q ´            pln kg ` kw Sw,x x2 ´ ln pkg qq.
+                                                                               `               ˘
+                                                                        2
+                                                                   2kw Sw,x
+
+
+In all cases the value for hs,x p0q is such that hs,x pLx{2q “ 0. To avoid some numerical truncation errors for
+higher values of pw , for the water height we do not exactly follow [12] and use instead the simpler function:
+                                                                                              pw `1
+                                                     hw,x “ pSw,x xqpkg ` kw pSw,x xqrs q ps `1 ,
+
+For this second configuration, we consider the three values 0, 1 and 2 for the slope exponent pw . We restrict
+ourselves to the case of a constant speed coefficient km “ 1 and the Cartesian mesh sequence with square cells.
+
+                              rs = 1, ps = 0                              rs = 3/2, ps = 1                          rs = 2, ps = 0
+                     4                                                                                 4
+
+                     2                                        0                                        2
+
+
+log ||qK − qw ||L2
+                     0                                                                                 0
+                                                           −2
+              −2                                                                                      −2
+                                                           −4
+                                               pw = 0                                        pw = 0   −4                             pw = 0
+              −4                               pw = 1                                        pw = 1                                  pw = 1
+                                               pw = 2                                        pw = 2                                  pw = 2
+                                                           −6                                         −6
+                         −4    −3 −2            −1                   −4     −3 −2            −1                −4    −3 −2           −1
+                                 log                                         log                                     log 
+
+Figure 16: Convergence curves for qK towards qw for the second test configuration, for each value of pw and for
+each value of the couple prs , ps q
+
+
+On figure 16, we show the convergence curves for this second test configuration for each value of pw and each
+choice of the couple prs , ps q. We clearly recover the expected convergence, confirming the ability of qk to
+approximate qw for various values of pw .
+
+
+                                                                          23
+ A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                           algorithms
+
+
+
+ 3    A consistency post-processing for the classical node-to-node MFD/SFD
+                                    algorithms
+
+The objective of this section is to explain how to recover consistency by a simple post-processing step for the
+most classical node-to-node flow routing algorithms, again through establishing a link with a discretization of
+the continuous Gauckler-Manning-Strickler model. Such an explicit interpretation seems to be absent from the
+literature, so at least to the author’s knowledge the results of this section are completely new. For simplicity
+we restrict ourselves in this section to uniform Cartesian meshes, and we adopt the usual Cartesian index pi, jq
+notation for designating its nodes (see Fig. 17) as well as ∆x and ∆y for the Cartesian cell side lengths. This is
+by no means a restriction but simply a more convenient way to explain how to link node-to-node flow routing
+with Gauckler-Manning-Strickler models.
+
+
+3.1    Node-to node MFD/SFD algorithms and the GMS model
+In order to reinterpret the node-to-node flow routing algorithms as finite volume schemes, we must associate a
+volume to each node. The easiest way to do so is to consider the dual mesh, formed by joining the centers of
+the cells of the primal mesh (see again Fig. 17, where the dual mesh corresponds to the dashed lines). On the
+dual mesh, the node pi, jq of the primal mesh becomes the center of the dual cell Ki,j .
+
+
+
+
+                    Figure 17: The Cartesian mesh (plain lines) and its dual (dashed lines)
+
+In Fig. 18, we propose a decomposition of the boundary of the dual Cartesian cell Ki,j centered on the primal
+                                                                                                     i˘1
+internal node pi, jq into 12 faces pσl q1ďlď12 . The faces σj˘1 are of length γx ∆x , and the faces σj˘1 of length
+1´γx                                                                          j˘1           1´γy
+  2 ∆x. In the same way, faces σi˘1 are of length γy ∆y and the faces σi˘1 of length          2 ∆y. Using those
+
+
+                                                       24
+                                            J. Coatléven and B. Chauveau
+
+
+
+
+                     Figure 18: Decomposition and notations for the dual Cartesian cell boundaries
+
+notations, we integrate (3) over the dual cell Ki,j to get:
+                           12 ż
+                                  km hw ηw phw qs´p
+                           ÿ
+                                                             pw
+                        ´                        ref ||∇hs || ∇hs ¨ nKi,j “ |Ki,j |Sw,Ki,j .
+                                                    w
+
+
+                               l“1 σl
+
+On the four faces σi´1 , σi`1 , σj´1 and σj`1 , we use the same finite volume discretization than before:
+     ż
+                                                        γx ∆x
+           km hw ηw phw qs´p           pw
+                           ref ||∇hs || ∇hs ¨ nKi,j « pw
+                              w
+                                                               km,σj´1 ||Gs,σj´1 ||pw hup
+                                                                                       w,σj´1 phs,i,j´1 ´ hs,i,j q,
+      σj´1                                             sref ∆y
+and
+      ż
+                                                              γy ∆y
+                 km hw ηw phw qs´p          pw
+                                ref ||∇hs || ∇hs ¨ nKi,j «
+                                   w
+                                                                      km,σi´1 ||Gs,σi´1 ||pw hup
+                                                                                              w,σi´1 phs,i´1,j ´ hs,i,j q,
+          σi´1                                               spref
+                                                                w
+                                                                   ∆x
+and
+      ż
+                                                              γx ∆x
+                 km hw ηw phw qs´p          pw
+                                ref ||∇hs || ∇hs ¨ nKi,j «
+                                   w
+                                                                      km,σj`1 ||Gs,σj`1 ||pw hup
+                                                                                              w,σj`1 phs,i,j`1 ´ hs,i,j q,
+        σj`1                                                 spref
+                                                                w
+                                                                   ∆y
+and
+      ż
+                                                              γy ∆y
+                 km hw ηw phw qs´p          pw
+                                ref ||∇hs || ∇hs ¨ nKi,j «
+                                   w
+                                                                      km,σi`1 ||Gs,σi´1 ||pw hup
+                                                                                              w,σi`1 phs,i`1,j ´ hs,i,j q,
+          σi`1                                               spref
+                                                                w
+                                                                   ∆x
+while for the remaining height cells, we gather the faces to form the corners illustrated in Fig. (18). More
+precisely, we denote:
+                                                         j´1
+                                           σ i´1,j´1 “ σ i´1 Y σ i´1
+                                                                 j´1 ,
+
+
+                                                              25
+ A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                           algorithms
+
+
+                                                             j`1
+                                               σ i´1,j`1 “ σ i´1 Y σ i´1
+                                                                     j`1 ,
+
+                                                             j´1
+                                               σ i`1,j´1 “ σ i`1 Y σ i`1
+                                                                     j´1 ,
+
+                                                             j`1
+                                               σ i`1,j`1 “ σ i`1 Y σ i`1
+                                                                     j`1 ,
+
+those four corners, σi˘1,j˘1 thus being the corner corresponding to the neighboring cell Ki˘1,j˘1 . On those
+corners, we perform the same discretization than before considering the whole corner as if it was a single face:
+in other words we use constant values km,σ and ||Gs,σ ||pw for km and ||∇hs ||pw along the corner, an upwind
+scheme for the unknown hw ηw phw q and the a two-point flux formula for in the average normal direction to the
+corner. Denoting p∇hs qσi˘1,j˘1 the equivalent constant gradient exact for linear function underlying the TFPA
+along the corner, this leads to the following approximation:
+                                ż
+                                         km hw ηw phw qs´p          pw
+                                                        ref ||∇hs || ∇hs ¨ nKi,j «
+                                                           w
+
+                                  σi˘1,j˘1
+
+                                                                                      ż
+                     km,σi˘1,j˘1 s´p                  pw up
+                                  ref ||Gs,σi˘1,j˘1 || hw,σi˘1,j˘1 p∇hs qσi˘1,j˘1 ¨
+                                     w
+                                                                                                  nKi,j .
+                                                                                       σi˘1,j˘1
+
+where along each σi˘1,j˘1 we have again used a constant approximate value km,σi˘1,j˘1 and Gs,σi˘1,j˘1 for km
+and ||∇hs ||pw along each face σ and to use an upwind scheme hup  w,σi˘1,j˘1 for the true unknown hw ηw phw q. By
+construction, we have:
+                                                   p1 ´ γy q        p1 ´ γx q
+                               ż
+                                         nKi,j “ ˘           ∆yex ˘           ∆xey .
+                                σi˘1,j˘1              2                 2
+Denoting
+                                                    p1 ´ γx q      p1 ´ γy q
+                                    |σi˘1,j˘1 | “             ∆x `           ∆y “ δ,
+                                                        2             2
+we seek γx and γy such that:
+
+                       p1 ´ γx q           ∆y                     p1 ´ γx q           ∆x
+                                 ∆x “                      and              ∆y “                 ,
+                          2δ          p∆2x ` ∆2y q1{2                2δ          p∆2x ` ∆2y q1{2
+
+leading to:
+                                           2δ∆y {∆x                            2δ∆x {∆y
+                              γx “ 1 ´                      and γy “ 1 ´                     ,              (15)
+                                         p∆2x ` ∆2y q1{2                     p∆2x ` ∆2y q1{2
+which can be achieved with γx ě 0 and γy ě 0 provided δ satisfies:
+                                               ˆ         ˙
+                                         1       ∆x ∆y
+                                 0 ď δ ď min        ,      p∆2x ` ∆2y q1{2 .                                (16)
+                                         2       ∆ y ∆x
+
+With this choice for γx and γy , for all δ satisfying (16) we get that
+
+                                                      ˘∆x                ˘∆y
+                             ż
+                                        nKi,j “                 ex `                ey ,
+                               σi˘1,j˘1          p∆x ` ∆y q
+                                                    2     2 1{2      p∆x ` ∆2y q1{2
+                                                                       2
+
+
+and thus the average normal at the corner σi˘1,j˘1 is precisely pointing from xKi,j to xKi˘1,j˘1 . Thus it is
+natural to use the two point flux formula:
+                                        ż
+                                                                δ
+                       p∇hs qσi˘1,j˘1 ¨           nKi,j «                phs,i˘1,j˘1 ´ hs,i q.
+                                         σi˘1,j˘1         p∆ 2 ` ∆2 q1{2
+                                                             x    y
+
+
+                                                            26
+                                            J. Coatléven and B. Chauveau
+
+
+
+The upwinding is done exactly as before, following the sign of the difference in elevation hs ` b between the two
+value forming the TPFA. This gives for the non-corners:
+                                     ˇ
+                                     ˇ hw,i,j ηw phw,i,j q      if hs,i,j ě hs,i˘1,j ,
+                            up
+                           hw,σi˘1 “ ˇ
+                                     ˇ
+                                     ˇ hw,i˘1,j ηw phw,i˘1,j q if hs,i,j ă hs,i˘1,j ,
+                                      ˇ
+                                      ˇ hw,i,j ηw phw,i,j q     if hs,i,j ě hs,i,j˘1 ,
+                            up
+                           hw,σj˘1 “ ˇ
+                                      ˇ
+                                      ˇ hw,i,j˘1 ηw phw,i,j˘1 q if hs,i,j ă hs,i,j˘1 ,
+and for the corners:
+                                         ˇ
+                                         ˇ hw,i,j ηw phw,i,j q              if hs,i,j ě hs,i˘1,j˘1 ,
+                          hup
+                           w,σi˘1,j˘1 “ ˇ
+                                        ˇ
+                                         ˇ hw,i˘1,j˘1 ηw phw,i˘1,j˘1 q      if hs,i,j ă hs,i˘1,j˘1 .
+
+For the gradient, we use for the non-corners:
+                                 1                                               1
+                    Gs,σi˘1 “      pGs,Ki˘1,j ` Gs,Ki,j q        and Gs,σj˘1 “     pGs,Ki,j˘1 ` Gs,Ki,j q
+                                 2                                               2
+and for the corners:
+                                                  1
+                                                    pGs,Ki˘1,j˘1 ` Gs,Ki,j q
+                                        Gs,σi˘1,j˘1 “
+                                                  2
+In the same way, for the face value of km we use the following harmonic means for the non-corners:
+
+                                        dKi,j Ki˘1,j km,Ki,j km,Ki˘1,j                2km,Ki,j km,Ki˘1,j
+                    km,σi˘1 “                                                    “
+                                 km,Ki,j dKi˘1,j ,σi˘1 ` km,Ki˘1,j dKi,j ,σi˘1       km,Ki,j ` km,Ki˘1,j
+
+and
+                                        dKi,j Ki,j˘1 km,Ki,j km,Ki,j˘1                2km,Ki,j km,Ki,j˘1
+                    km,σj˘1 “                                                    “
+                                 km,Ki,j dKi,j˘1 ,σj˘1 ` km,Ki,j˘1 dKi,j ,σj˘1       km,Ki,j ` km,Ki,j˘1
+and for the corners:
+                                       dKi,j Ki˘1,j˘1 km,Ki,j km,Ki˘1,j˘1                    2km,Ki,j km,Ki˘1,j˘1
+            km,σi˘1,j˘1 “                                                               “
+                            km,Ki,j dKi˘1,j˘1 ,σi˘1,j˘1 ` km,Ki˘1,j˘1 dKi,j ,σi˘1,j˘1       km,Ki,j ` km,Ki˘1,j˘1
+                       b
+where dKi,j ,σi˘1,j˘1 “ ∆2x ` ∆2y is the distance between Ki,j and the corner point belonging to σi˘1,j˘1 . To
+get more compact notations, let us denote
+
+                       N pi, jq “ tpm, nq P ti ´ 1, i, i ` 1u ˆ tj ´ 1, j, j ` 1u | pm, nq ď pi, jqu ,
+
+the neighbors of node pi, jq, and define the transmissivities:
+                  ˇ γx ∆x
+                  ˇ
+                            k        ||Gs,σj˘1 ||pw                         if pm, nq “ pi, j ´ 1q or pi, j ` 1q,
+                  ˇ sref ∆y m,σj˘1
+                  ˇ pw
+                  ˇ
+                  ˇ γy ∆y
+           m,n
+          τi,j “ ˇ pw
+                  ˇ          km,σi˘1 ||Gs,σi˘1 ||pw                         if pm, nq “ pi ´ 1, jq or pi ` 1, jq,
+                  ˇ sref ∆x
+                              δ
+                  ˇ
+                                                                  pw
+                  ˇ s p∆2x ` ∆2y q1{2 km,σi˘1,j˘1 ||Gs,σi˘1,j˘1 ||
+                  ˇ
+                  ˇ pw                                                      otherwise,
+                     ref
+
+assuming for simplicity that the gradients Gs,σ are obtained on the dual mesh in the same way as in the
+cell-to-cell case (of course, a reconstruction formula using also the diagonal neighbors is possible). Using those
+
+
+                                                                 27
+ A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                           algorithms
+
+
+
+notations, we get gathering by upwind kind as in the case of the cell-to-cell flow routing the following expression
+for the proposed finite volume scheme on the dual mesh:
+                                             ¨                                            ˛
+                                                    ÿ              m,n
+                         hw,i,j ηw phw,i,j q ˝                    τi,j  phs,i,j ´ hs,m,n q‚
+                                                   pm,nqPN pi,jq,hs,i,j ąhs,m,n
+
+                   ¨                                                                                       ˛
+                                   ÿ                   m,n
+                  ´˝                                  τi,j hw,m,n ηw phw,m,n qphs,m,n ´ hs,i,j q‚ “ |Ki,j |Sw,i,j .
+                    pm,nqPN pi,jq,hs,i,j ăhs,m,n
+
+Proceeding as in the cell-to-cell case, denoting:
+                              ÿ               m,n
+            si,j “                          τi,j  phs,i,j ´ hs,m,n q                      and     qri,j “ hw,i,j ηw phw,i,j qsi,j ,
+                       pm,nqPN pi,jq,hs,i,j ąhs,m,n
+
+we finally get:               ¨                                                                       ˛
+                                             ÿ                         m,n    qrm,n
+                       qri,j ´ ˝                                      τi,j          phs,m,n ´ hs,i,j q‚ “ |Ki,j |Sw,i,j .             (17)
+                                                                              sm,n
+                                pm,nqPN pi,jq,hs,i,j ăhs,m,n
+
+The flow sharing formula common to all flow routing algorithms of the literature identifies in this context with
+the ratios:
+                                           1 m,n
+                                              τ   phs,m,n ´ hs,i,j q,
+                                         sm,n i,j
+for pm, nq P N pi, jq, hs,i,j ă hs,m,n , which expresses how node pi, jq receives water from other nodes. Reversing
+the point of view, it rewrites in probably more familiar fashion by expressing how node pi, jq distributes water
+                                                                       m,n
+to its neighbors through the flow sharing formula (noticing that τi,j      “ τm,n
+                                                                               i,j
+                                                                                   ):
+                                                    m,n
+                                                   τi,j maxp0, hs,i,j ´ hs,m,n q
+                                               ÿ                  1       1                           .                               (18)
+                                                            m ,n
+                                                           τi,j  maxp0, hs,i,j ´ hs,m1 ,n1 q
+                                         m1 ,n1 PN pi,jq
+
+Notice that several attempts of the literature at improving the behavior of the flow routing consider powers q
+of the two point slope instead of the slope in the flow sharing formula, which with our notations rewrites:
+                                                   m,n
+                                                  τi,j maxp0, hs,i,j ´ hs,m,n qq
+                                              ÿ               1       1                                .                              (19)
+                                                            m ,n
+                                                           τi,j  maxp0, hs,i,j ´ hs,m1 ,n1 qq
+                                         m1 ,n1 PN pi,jq
+
+Another important consequence of the formal identification of cell-to-cell flow routing algorithms with a numer-
+ical scheme for the stationary Gauckler-Manning-Strickler model is the fact that if one wants to incorporate
+powers of the slope in the flow distribution procedure, then one should not use powers of the directional slope
+  1
+dKL
+      phs,L ´ hs,K q but rather use powers of ||Gs,σ || to remain consistent with a continuous model incorporating
+powers of ||∇hs ||. Otherwise, the consistency of the flow routing algorithm will be lost again. In [42] it is even
+suggested to choose different values of q for different grid sizes, emphasizing this non-consistency. However, the
+sought flow concentration effect can be achieved in a consistent manner by (18) through the use of pw with value
+pw “ q ´1: the full gradient and not only the directional gradient being used this way, this does not compromise
+consistency and a value independent of the mesh should be chosen according to physical considerations. An
+option that we do not consider here is to make the value of pw spatially variable, as was suggested in [40] but
+still on the non-consistent formulation (19).
+
+
+                                                                              28
+                                         J. Coatléven and B. Chauveau
+
+
+
+Although (19) clearly leads to some non consistency, this expression is useful to derive a classification of the
+most prominent flow routing algorithms of the literature. To exactly match the definitions of most node-to-
+node flow routing schemes of the literature, we now consider the special ?
+                                                                         case of square cartesian cells for which
+∆x “ ∆y “ ∆xy . In this case we get from (15) that γx “ γy “ 1 ´ p2δq{p 2∆xy q. It remains to choose a value
+for δ. The most natural choice is choose to enforce δ “ γx ∆x “ γy ∆y and thus balance the contribution to each
+neighbor. This immediately leads to:
+                                        ?                               ?
+                                          2                               2
+                                  δ“      ?   ∆xy and γx “ γy “           ? ,
+                                      2` 2                            2` 2
+implying that:
+                                                               ?                           ?
+                      δ            1                 γ x ∆x      2               γ y ∆y      2
+                               “    ?         and           “    ?       and            “    ? ,
+                 p∆x ` ∆y q
+                   2    2  1{2
+                                 2` 2                  ∆y     2` 2                ∆x      2` 2
+                                                                                     ?
+thus the diagonal transmissivities differ from the non-diagonal ones by the factor 1{ 2 which corresponds to
+the D8, Rho8 and most MFD algorithms. To recover the FD8/TOPMODEL noticing that the       ?
+                                                                                              L1 and L2 non
+diagonal and diagonal “face measures” of this MFD algorithm satisfy L1 “ ∆xy {2 and L2 “ 42 ∆xy , we recover
+the same weighting within our notations by setting
+                                            ?
+                                              2                       1
+                                       δ“       ∆xy and γx “ γy “ ,
+                                             4                        2
+which is compatible with (15) as in this case:
+
+                      p1 ´ γx q      p1 ´ γy q       1      ∆x               ∆y
+                                ∆x “           ∆y “ ? “                “                .
+                         2δ             2δ            2 p∆x ` ∆y q
+                                                          2    2   1{2   p∆x ` ∆2y q1{2
+                                                                           2
+
+
+Finally denoting:
+                                          m,n
+                                        ∆Hi,j “ maxp0, hs,i,j ´ hs,m,n q,
+in table 1 we recast the most classical MFD algorithms using our notations, with pw “ 0 for all the presented
+methods. For the Rho8 method ([20]), the ρ8 parameter is a random number generated for each face, while for
+the MFD-md ([40]), the parameter e is the maximum downslope gradient and f peq “ 8.9 minpe, 1q ` 1.1.
+
+We see from table 1 that many classical MFD/SFD schemes can be reinterpreted in the context of the GMS
+model. In particular, the MFD (Freeman 1989) and the FD8 algorithms exactly correspond to the quantity qrK
+obtained from a coherent discretization of the GMS model, since they set q “ 1. Meanwhile, notice that MFD
+(Freeman 1991) and MFD (Holmgren 1994) are attempts to correct qri,j obtained given by (Freeman 1989) by
+using a value of q not equal to one, and the same holds for TOPMODEL and MFD-md with respect to FD8.
+For those scheme, before reconstructing qi,j from qri,j as we will detail in next subsection, one must first go back
+to the correct value q “ 1 to recover a consistent approximation of qw . The sought flow concentration effect of
+those schemes can be recovered in a consistent fashion by increasing the value of pw instead of introducing q.
+Finally, it is clear that the chosen value for km,σ should be a discretization of an inverse of a continuous
+roughness with a more or less physical interpretation. Apart from the unavoidable sampling induced by the
+mesh, it should be as mesh independent as possible and in particular should not depend on cell orientations.
+The single flow direction D8 and Rho8 methods reinterpreted this way introduce a coefficient km,σ that is clearly
+mesh dependent and not the discretization of a continuous coefficient. This will consequently increase the mesh
+dependency of the overall method. Again, to recover the flow concentration/monodirectional effect sought by
+SFD algorithm, on should instead resort to a continuous speed coefficient map km that presents high contrasts
+with narrow zone with high values. The flow will then preferentially follow those regions creating the desired
+
+
+                                                        29
+ A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                           algorithms
+
+
+
+
+                           Table 1: A possible classification of MFD algorithms using (19)
+
+ Method                                      δ{∆xy    γx “ γy        q                       km,σm,n
+                                                                                ˇ
+                                               ?         ?                                                m,n
+                                                                                ˇ 1    σm,n has largest ∆Hi,j
+                                                                                ˇ
+                                                ?2        ?2
+ D8 (O’Callaghan et al. 1984 [33])            2` 2      2` 2
+                                                                     1          ˇ
+                                                                                ˇ 0    otherwise
+                                               ?         ?
+                                                ?2        ?2
+ MFD (Freeman 1989 [22])                      2` 2      2` 2
+                                                                     1                            1
+                                               ?         ?
+                                                ?2        ?2
+ MFD (Freeman 1991 [23])                      2` 2      2` 2
+                                                                     1.1                          1
+                                                                               ˇ
+                                               ?         ?                                                  m,n
+                                                                               ˇ 1    σm,n has largest ρ8 ∆Hi,j
+                                                                               ˇ
+                                                ?2        ?2
+ Rho8 (Fairfield 1991 [20])                   2` 2      2` 2
+                                                                     1         ˇ
+                                                                               ˇ 0    otherwise
+                                               ?
+                                                 2        1
+ FD8 (Quinn et al. 1991 [41])                   4         2          1                            1
+                                               ?         ?
+                                                 2         2
+ MFD (Holmgren 1994 [28])                       ?
+                                              2` 2
+                                                          ?
+                                                        2` 2
+                                                                  P r1, 8r                        1
+                                               ?
+                                                 2       1
+ TOPMODEL (Quinn et al. 1995 [42])              4        2       P r1 ´ 100s                      1
+                                               ?
+                                                 2       1
+ MFD-md (Qin et al. 2007 [40])                  4        2          f peq                         1
+
+
+
+
+channelization effect (see [12]).
+The two point şflux approximation (TPFA) is of course not the only possible approximation for the terms
+p∇hs qσi˘1,j˘1 ¨ σi˘1,j˘1 n. In particular, if one reconstructs an approximation Ĝs,σ of the full topographic
+gradient along each face σ, then it can be used to compute an approximation of the flux. We denote it Ĝs,σ to
+distinguish it from the reconstruction Gs,σ used to approximate the non-linear dependency in the slope, as the
+two can be different. In this case, (19) becomes:
+                                   m,n q
+                                                                     ˜                       ¸
+                      |σm,n |p∆Hi,j    q
+                                                                                  ż
+                                                          m,n
+                   ÿ                       1 1   and ∆Hi,j “ max 0, Ĝs,σm,n ¨          nKi,j .           (20)
+                                         m ,n q
+                           |σm1 ,n1 |p∆Hi,j    q                                   σm,n
+
+               m1 ,n1 PN pi,jq
+
+Then, more flow routing algorithms of the literature can be rewritten this way. In particular, choosing γx “
+γy “ 0 or 1 we can easily recover the flux decomposition method (Desmet et al. 1996 [16]) and a variation of the
+MD8 method (Seibert et al. 2007 [47]). The flux decomposition method chooses a single value for Ĝs,Ki,j for
+each cell, and then loop over cells and set Ĝs,σ “ Ĝs,Ki,j for the faces of the current cell that have not already
+been handled through a previous cell in the loop. The MD8 methods computes Ĝs,σ for each face using a
+triangular reconstruction of the slope: to be precise, with our notations Ĝs,σ is for face σm,n half the sum of
+the two triangular gradients computed in [47] that can contribute to σm,n . We refer to this as a variation of
+[47] as it is unclear whether they use the normal component of the gradient as we do here or the full norm of
+the gradient in their flow sharing formula.
+
+Other flow routing algorithms that do not easily fit into this mathematical framework are also available in the
+literature. We mention in particular the ANSWERS ([6]), DEMON ([13]) and Lea’s method ([29]), that are
+all based on a local planar approximation of the topography and use either a multiple or single direction flow
+sharing formula based on purely geometric considerations. The D8 method (Tarboton 1997 [48]) strongly looks
+
+
+                                                         30
+                                            J. Coatléven and B. Chauveau
+
+
+
+
+                     Table 2: A classification of some flow routing algorithms using (20)
+                 Method                                                     δ{∆xy      γx “ γy      q   km,σl
+                 Flux decomposition (Desmet et al. 1996 [16])                  0           1        1      1
+                                                                              ?           ?
+                                                                               ?2          ?2
+                 MD8 (Seibert et al. 2007, [47])                             2` 2        2` 2
+                                                                                                    1      1
+
+
+
+like the SFD method at first sight, however because the flow sharing formula used when the steepest direction is
+not aligned with mesh direction is based on angular considerations similar to those of ANSWERS and DEMON,
+it is not immediately obvious how to relate the D8 method to a continuous model. Finally, let us mention that
+many variations around the classical algorithms have been explored since their first publications leading for
+instance to some generalization to triangular meshes [3, 57]. We refer the reader to [19, 56, 34] and references
+therein for a broader review on flow routing algorithms and their numerical behavior.
+
+3.2      Consistency post-processing for node-to-node MFD algorithms
+The node-to-node situation is no better than the cell-to-cell one: qri,j will be as non consistent, non convergent
+and thus strongly mesh dependent than its cell-to-cell counterpart. The node-to-node routing is indeed simply
+a cell-to-cell routing on a dual mesh, with a more involved cell boundary decomposition. Again, the quantity
+qri,j should not be used to couple with sediment evolution, one should instead reconstruct a consistent water
+flux vector Qi,j for instance by setting:
+                                                              m,n
+                                         ÿ                   τi,j qri,j
+                    Qi,j “                                              phs,i,j ´ hs,m,n qpxm,n
+                                                                                            i,j ´ xKi,j q´
+                                                            |Ki,j |si,j
+                             pm,nqPN pi,jq,hs,i,j ąhs,m,n
+
+                                                         m,n
+                                     ÿ                  τi,j qrm,n
+                                                                   phs,m,n ´ hs,i,j qpxm,n
+                                                                                       i,j ´ xKi,j q                          (21)
+                                                       |Ki,j |sm,n
+                        pm,nqPN pi,jq,hs,i,j ăhs,m,n
+
+where:
+             ˇ 1
+             ˇ
+             ˇ pxKi,j ` xKm,n q                                if pm, nq P tpi, j ´ 1q, pi, j ` 1q, pi ´ 1, jq, pi ` 1, jqu
+             ˇ 2
+      xm,n
+       i,j “ ˇ
+             ˇ        1       ` n            m
+             ˇ |σ n | ` |σ m | |σm |xσm
+                                      n ` |σ
+                                            n |xσn
+                                                   ˘
+             ˇ                                   m             otherwise
+                 m        n
+
+and then use
+                                                         qi,j “ ||Qi,j ||                                                     (22)
+which again can be considered as an easy to implement post-processing consistency correction step. Again, this
+should be done in conjunction with q “ 1 and a mesh independent km map.
+
+3.3      Boundary terms
+For the sake of completeness, let us briefly and graphically explain how to handle boundary terms. One first
+needs to distinguish between corner boundary points and other boundary points. For a corner boundary point
+pi, jq, we use the decomposition of the boundary of the dual cell presented on figure 19 while for a non corner
+boundary point pi, jq we use the decomposition of the boundary of the dual cell presented on figure 20. The
+principle is exactly the same as for an interior node pi, jq, but with a reduced set of neighbors and with a
+
+
+                                                                31
+ A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                           algorithms
+
+
+
+                           pi, jq        σi`1            pi ` 1, jq         pi ` 2, jq
+                                                 j´1
+                                    σj´1        σi`1
+                                          i`1
+                                         σj´1
+
+
+
+                       pi, j ´ 1q                        pi ` 1, j ´ 1q     pi ` 2, j ´ 1q
+
+
+
+
+                       pi, j ´ 2q                        pi ` 1, j ´ 2q     pi ` 2, j ´ 2q
+
+
+
+
+            Figure 19: Decomposition and notations for the dual corner cartesian cell boundaries
+
+
+
+
+                           pi, j ` 1q                      pi ` 1, j ` 1q   pi ` 2, j ` 1q
+                                            i`1
+                                           σj`1
+                                        σj`1       j`1
+                                                  σi`1
+
+                                           σi`1
+                               pi, jq                      pi ` 1, jq       pi ` 2, jq
+                                                   j´1
+                                        σj´1      σi`1
+                                            i`1
+                                           σj´1
+
+
+
+                       pi ´ 1, j ´ 1q                      pi ` 1, j ´ 1q   pi ` 2, j ´ 1q
+
+
+
+
+             Figure 20: Decomposition and notations for the non-corner cartesian cell boundaries
+
+                                               m,n
+half reduction of the face length and thus of τi,j for non-diagonal neighbors. For the source terms associated
+with those cells, one must also reduce by one fourth the magnitude of the cell size for a corner boundary point
+
+
+                                                         32
+                                       J. Coatléven and B. Chauveau
+
+
+
+and on half for a non corner boundary point, and those sources should be taken at the center of mass of the
+corresponding boundary dual cells. Finally, one needs to add to the source term the integral of Bw along the
+part of the boundary of the cells that belong to BΩin .
+
+3.4    Numerical results for the corrected node-to-node MFD algorithms
+
+                       (a)                              (b)
+
+
+
+
+                              MFD Freeman 1989                        FD8
+      (c)                               (d)                             (e)
+
+
+
+
+             MFD Freeman 1991                 MFD Holmgren 1994                 MFD TOPMODEL
+
+Figure 21: Results for constant km on the finest Cartesian mesh with square cells sequence for the node-to-node
+MFD algorithms
+
+
+We consider the same two test configurations than in the cell-to-cell case, and only the Cartesian mesh sequence
+with square cells. For the first test configuration, we start by presenting on figure 21 in the case of constant
+km the reconstruction qij for five MFD schemes: MFD (Freeman 1989), FD8, MFD (Freeman 1991), MFD
+(Holmgren 1994) and TOPMODEL, chossing a value q “ 10 for MFD (Holmgren 1994) and TOPMODEL. As
+expected, the two schemes with q “ 1, namely MFD (Freeman 1989) and FD8 lead to the correct solution. For
+the three others, because q ‰ 1 we see that we do not get the expected result, thus confirming our theoretical
+observations. Of course, the same can be observed for the sinusoidal km or the Perlin noised km . Since MFD
+(Freeman 1991), MFD (Holmgren 1994) are identical to MFD (Freeman 1989) and TOPMODEL and MFD-md
+are identical to FD8 if we take q “ 1, for our remaining experiments we restrict ourselves to MFD (Freeman
+
+
+                                                      33
+    A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                              algorithms
+
+
+
+1989) and FD8.
+
+                       Constant km                           Sinusoidal km                           Perlin km
+
+
+          −3                                    −3                                     −2
+
+          −4                                    −4                                     −3
+
+log || · ||L2
+          −5                                    −5                                     −4
+          −6                                    −6                                     −5
+          −7                     MFD 1989       −7                      MFD 1989       −6                        MFD 1989
+                                   FD8                                    FD8                                      FD8
+          −8                                    −8
+                 −4    −3 −2         −1     0          −4    −3 −2           −1    0         −4    −3 −2           −1       0
+                         log                                  log                                  log 
+
+         Figure 22: Convergence curves for qi,j towards qw for the first test configuration, for each choice for km
+
+
+On figure 22, we present the convergence curves for those two schemes on the first test configuration for the
+three choices of speed coefficient km . We clearly recover the expected convergence, confirming the quality of
+the post-processing qi,j for node-to-node algorithms.
+On figure 23, we present the convergence curves for those two schemes on the second test configuration for the
+three values of pw and the three choices of couple prs , ps q. Again, those curves confirm the good behavior of qi,j .
+Notice that the convergence curves are almost impossible to distinguish for this second test case configuration
+between the two schemes, indicating that they produce almost identical results.
+
+
+                                     4    Limitations of the GMS model
+The application domain of the GMS model is limited by some additional requirements on the topography hs .
+Because of the equivalence of MFD algorithms with the GMS model, they will suffer from the same limitations.
+Mathematically, systems (1) and (3) are stationary transport problems for a or hw . Their well-posedness,
+i.e. existence and uniqueness in a suitable function space and continuity with respect to data, is rigorously
+established only under some condition on the topography, all introducing some positivity requirement in the
+zero order part of the differential operators applied to a or hw (see [11, 4, 52, 17, 21, 25]). In particular, among
+the possible assumptions on the topography the simplest ones are undoubtedly:
+                                                        ´                       ¯
+                              ´∆hs ą 0 or        ´ div km s´p             pw
+                                                              ref ||∇hs || ∇hs ą 0,
+                                                                 w
+                                                                                                                 (23)
+
+They both ensure that model (3) is well-posed by enforcing that a downflow direction exists everywhere, at
+the price of introducing quite stringent restrictions on the admissible topographies. Moreover, the convergence
+theory of [11] is established assuming such a condition on the topography. Notice that they are sufficient con-
+ditions, and not necessary ones: this implies that solutions to (1) and (3) can still exist for some topographies
+not fulfilling one of the sufficient conditions, and numerical convergence of the consistent water flux can still
+be observed. In particular, saddle-point or valley-like topographies will not easily fulfill those conditions, while
+it seems reasonable to assume that a solution will exist in such configurations since water can find a downflow
+direction. This being said, those probably too strong mathematical requirement should act as a warning, as it
+
+
+                                                            34
+                                                        J. Coatléven and B. Chauveau
+
+
+
+                                                                 MFD Freeman 1989
+                              rs = 1, ps = 0                         rs = 3/2, ps = 1                      rs = 2, ps = 0
+
+
+
+                     2                                                                            2
+                                                           0
+
+
+log ||qK − qw ||L2
+                     0                                                                            0
+                                                         −2
+              −2                                                                                 −2
+                                                         −4
+                                               pw = 0                                   pw = 0                              pw = 0
+              −4                               pw = 1
+                                                                                                 −4                         pw = 1
+                                                                                        pw = 1
+                                               pw = 2    −6                             pw = 2                              pw = 2
+
+                         −4    −3 −2           −1               −4     −3 −2            −1            −4    −3 −2           −1
+                                 log                                    log                                 log 
+
+
+                                                                          FD8
+                              rs = 1, ps = 0                         rs = 3/2, ps = 1                      rs = 2, ps = 0
+
+
+
+                     2                                                                            2
+                                                           0
+
+
+log ||qK − qw ||L2
+                     0                                                                            0
+                                                         −2
+              −2                                                                                 −2
+                                                         −4
+                                               pw = 0                                   pw = 0                              pw = 0
+              −4                               pw = 1                                   pw = 1
+                                                                                                 −4                         pw = 1
+                                               pw = 2    −6                             pw = 2                              pw = 2
+
+                         −4    −3 −2           −1               −4     −3 −2            −1            −4    −3 −2           −1
+                                 log                                    log                                 log 
+
+Figure 23: Convergence curves for qi,j towards qw for the second test configuration, for each value of pw and
+for each value of the couple prs , ps q
+
+
+
+clearly reveals that not all topographies may be admissible for model (1) and its generalization (3).
+Using the notations of section 2.2, this is reflected at the discrete level by the cancellation of sK for certain con-
+figurations. Coefficient sK will cancel for a cell K such that all its neighboring cells L are such that hs,L ě hs,K .
+Since sK “ 0, it prevents us from distributing water outside of K. For such a cell K, the MFD will lead to an
+abrupt stop of the water flow in cell K. Moreover this prevents to recompute a correct approximation of hw,K
+from the intermediate unknown qrK used in MFD algorithms, since we cannot invert qrK “ sK hw,K ηw phw,K q.
+Such configurations correspond mostly to flat areas as well as accumulation areas. We can infer that this is a
+discrete indicator of what could be the weakest theoretical requirements on the topography for models (1) and
+
+
+                                                                     35
+ A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                           algorithms
+
+
+
+(3) to be well posed: the absence of flat or accumulation areas. One way to circumvent those limitations is to
+resort to more involved non-linear water flow models such as the one proposed in [12].
+
+                                                     Conclusion
+After introducing a general Gauckler-Manning-Strickler model, we have generalized the results of [11] to a larger
+family of cell-to-cell MFD algorithms showing that their output coincides to an intermediate discrete quantity
+qrK occurring when applying the TPFA finite volume scheme to discretize the GMS model. Thanks to this
+reinterpretation, we have shown that following the idea of [11] one can reconstruct a consistent discrete water
+flux magnitude qK from this intermediate quantity in a post-processing step. Numerical examples illustrate
+that the discrete water flux magnitude is as mesh independent as one could hope for and successfully converges
+to the continuous water flux magnitude. This discrete water flux magnitude qK should thus be considered as
+the correct output of a MFD algorithm, instead of qrK or normalized versions of it. Then, we have extended
+those results to node-to-node MFD algorithms, presenting a classification of most classical algorithms of the
+literature using the GMS model as basis. The same post-processing correction was presented and numerical
+example illustrate that it again successfully solve the anomalous mesh dependency issues. Finally, we have
+recalled the main limitations of the GMS model, emphasizing in particular through our reinterpretation of the
+MFD algorithms that flat or accumulation areas require special treatments beyond the MFD algorithms. We
+believe that the post-processing correction presented here can benefit existing software/models relying on MFD
+algorithms.
+
+                                                     References
+ [1] J. J. Armitage. Short communication: flow as distributed lines within the landscape. Earth Surface Dynamics,
+     7(1):67–75, 2019.
+
+ [2] E. Audusse, F. Bouchut, M.-O. Bristeau, R. Klein, and B. Perthame. A fast and stable well-balanced scheme with
+     hydrostatic reconstruction for shallow water flows. SIAM Journal on Scientific Computing, 25(6):2050–2065, 2004.
+
+ [3] D. Banninger. Technical note: Water flow routing on irregular meshes. Hydrol. Earth Syst. Sci., Vol. 11, pp.
+     1243-1247, 2007.
+
+ [4] C. Bardos. Problèmes aux limites pour les équations aux dérivées partielles du premier ordre à coefficients réels ;
+     théorèmes d’approximation ; application à l’équation de transport. Ann. Sci. Ec. Norm. Sup. Ser. 4, Vol. 3, pp.
+     185-233, 1970.
+
+ [5] P. D. Bates, M. S. Horritt, and T. J. Fewtrell. A simple inertial formulation of the shallow water equations for
+     efficient two-dimensional flood inundation modelling. Journal of Hydrology, 387(1):33–45, 2010.
+
+ [6] D . B. Beasley, L. F. Huggins, and E. J. Monke. Answers: A model for watershed planning. Transactions of the
+     ASAE, Vol. 23(4), pp. 938-944, 1980.
+
+ [7] B. Birnir, T. R. Smith, and G. E. Merchant. The scaling of fluvial landscapes. Comput. Geosci., 27(10):1189–1216,
+     2001.
+
+ [8] S. Bonetti, A. D. Bragg, and A. Porporato. On the theory of drainage area for regular and non-regular points. Proc.
+     R. Soc. A 474: 20170693, 2018.
+
+ [9] J. Braun and S. D. Willett. A very efficient o(n), implicit and parallel method to solve the stream power equation
+     governing fluvial incision and landscape evolution. Geomorphology, 180-181:170–179, 2013.
+
+[10] S. Carretier, L. Guerit, R. Harries, V. Regard, P. Maffre, and S. Bonnet. The distribution of sediment residence
+     times at the foot of mountains and its implications for proxies recorded in sedimentary basins. Earth and Planetary
+     Science Letters, 546:116448, 2020.
+
+
+                                                             36
+                                          J. Coatléven and B. Chauveau
+
+
+
+[11] J. Coatléven. Some multiple flow direction algorithms for overland flow on general meshes. ESAIM: Mathematical
+     Modelling and Numerical Analysis, Vol. 54 (6), pp. 1917-1949, 2020.
+
+[12] J. Coatléven and B. Chauveau. Large structure simulation for landscape evolution models. Earth Surface Dynamics,
+     12(5):995–1026, 2024.
+
+[13] M. C. Costa-Cabral and S. J. Burge. Digital elevation model networks (demon): A model of flow over hillslopes for
+     computation of contributing and dispersal areas. Water resources research, Vol. 30(6), pp. 1681-1692, 1994.
+
+[14] T. J. Coulthard, J. C. Neal, P. D. Bates, J. Ramirez, G. A. M. de Almeida, and G. R. Hancock. Integrating the
+     lisflood-fp 2d hydrodynamic model with the caesar model: implications for modelling landscape evolution. Earth
+     Surface Processes and Landforms, 38(15):1897–1906, 2013.
+
+[15] P. Davy, T. Croissant, and D. Lague. A precipiton method to calculate river hydrodynamics, with applications to
+     flood prediction, landscape evolution models, and braiding instabilities. Journal of Geophysical Research: Earth
+     Surface, 122(8):1491–1512, 2017.
+
+[16] P. J. J. Desmet and G. Govers. Comparison of routing algorithms for digital elevation models and their implication
+     for predicting ephemeral gullies. Int. J. Geo. Inf. Syst., Vol. 10(3), pp. 311-331, 1996.
+
+[17] R.J. DiPerna and P.L. Lions. Ordinary differential equations, transport theory and sobolev spaces. Invent. Math.
+     98, 511-547, 1989.
+
+[18] David L. Egholm, Mads F. Knudsen, Chris D. Clark, and Jerome E. Lesemann. Modeling the flow of glaciers in
+     steep terrains: The integrated second-order shallow ice approximation (isosia). Journal of Geophysical Research:
+     Earth Surface, 116(F2), 2011.
+
+[19] R. H. Erskine, T. R. Green, J. A. Ramirez, and L. H. MacDonald. Comparison of grid-based algorithms for
+     computing upslope contributing area. Water Resour. Res., Vol. 42, W09416, 2006.
+
+[20] J. Fairfield and P. Leymarie. Drainage networks from grid digital elevation model. Water resources research, Vol.
+     27(5), pp. 709-717, 1991.
+
+[21] E. Fernández-Cara, F. Guillén, and R.R. Ortega. Mathematical modeling and analysis of visco-elastic fluids of the
+     oldroyd kind. P.G. Ciarlet, J.L. Lions (Eds.), Numerical Methods for Fluids, Part 2, in: Handbook of Numerical
+     Analysis, vol. VIII, North-Holland, Amsterdam, pp. 543–661, 2002.
+
+[22] T. G. Freeman. Drainage with divergent flow over a regular grid. Proc. 8th Biennial Conf. Simulation Society of
+     Australia, Canberra, pp. 160-165, 1989.
+
+[23] T. G. Freeman. Calculating catchment area with divergent flow based on a regular grid. Computers & Geosciences
+     Vol. 17(3), pp. 413-422, 1991.
+
+[24] J. C. Gallant and M. F. Hutchinson. A differential equation for specific catchment area. Water resources research,
+     Vol. 47, W05535, 2011.
+
+[25] V. Girault and L. Tartar. lp and w1,p regularity of the solution of a steady transport equation. C. R. Acad. Sci.
+     Paris, Ser. I, Vol. 348, pp. 885-890, 2010.
+
+[26] W. H. Graf and M. S. Altinakar. Hydraulique fluviale: Ecoulement et phénomènes de transport dans les canaux à
+     géométrie simple. Traité de génie civil, vol. 16, Presses polytechniques et universitaires romandes, 2000.
+
+[27] D. Granjeon. 3D forward modelling of the impact of sediment transport and base level cycles on continental margins
+     and incised valleys, chapter 16, pages 453–472. 2014.
+
+[28] P. Holmgren. Multiple flow direction algorithms for runoff modelling in grid based elevation models: an empirical
+     evaluation. Hydrological processes, Vol. 8, pp. 327-334, 1994.
+
+[29] N. L. Lea. An aspect driven kinematic routing algorithm. In A. J. Parsons and A.D. Abrahams, editors, Overland
+     Flow: Hydraulics and Erosion Mechanics, chapter 16. Chapman and Hall, New York, 1992.
+
+
+                                                          37
+ A post-processing to restore numerical consistency for the most classical multiple flow direction
+                                           algorithms
+
+
+
+[30] L. B. Leopold, M. G. Wolman, and J. P. Miller. Fluvial Processes in Geomorphology. W. H. Freeman, San Francisco,
+     California, 1964.
+
+[31] J. C. Maxwell. On hills and dales. Philos. Mag. J. Sci., Vol. 4/40(269), pp. 421-427, 1870.
+
+[32] M. Nones. On the main components of landscape evolution modelling of river systems. Acta Geophys. Vol 68, pp
+     459–475, 2020.
+
+[33] J. F. O’Callaghan and D. M. Mark. The extraction of drainage networks from digital elevation data. Computer
+     vision, graphics and image processing, Vol. 28, pp. 323-344, 1984.
+
+[34] S. Orlandini and G. Moretti. Determination of surface flow paths from gridded elevation data. Water Resour. Res.,
+     Vol. 45, W03417, 2009.
+
+[35] J. D. Pelletier. Minimizing the grid-resolution dependence of flow-routing algorithms for geomorphic applications.
+     Geomorphology, Vol. 122 , pp. 91-98, 2010.
+
+[36] J.D. Pelletier. 2.3 fundamental principles and techniques of landscape evolution modeling. In John F. Shroder,
+     editor, Treatise on Geomorphology, pages 29–43. Academic Press, San Diego, 2013.
+
+[37] K. Perlin. An image synthesizer. ACM SIGGRAPH Computer Graphics, 19(3):287–296, 1985.
+
+[38] J. T. Perron, J. W. Kirchner, and W. E. Dietrich. Formation of evenly spaced ridges and valleys. Nature, Vol. 460,
+     pp. 502-505, 2009.
+
+[39] A. Porporato. Hydrology without dimensions. Hydrol. Earth Syst. Sci., Vol. 26, pp. 355-374, 2022.
+
+[40] C. Qin, A.-X. Zhu, T. Pei, B. Li, C. Zhou, and L. Yang. An adaptive approach to selecting a flow-partition exponent
+     for a multiple-flow-direction algorithm. International Journal of Geographical Information Science Vol. 21(4), pp.
+     443-458, 2007.
+
+[41] P. Quinn, K. Beven, P. Chevallier, and O. Planchon. The prediction of hillslope flow paths for distributed hydrological
+     modelling using digital terrain models. Hydrological processes, Vol. 5, pp. 59-79, 1991.
+
+[42] P. Quinn, K. Beven, and R. Lamb. The lnpa tan βq index : how to calculate it and how to use it within the topmodel
+     framework. Hydrological processes, Vol. 9, pp. 161-182, 1995.
+
+[43] A. Richardson, C. N. Hill, and J. T. Perron. Ida: An implicit, parallelizable method for calculating drainage area.
+     Water Resour. Res. Vol. 50, pp. 4110-4130, 2014.
+
+[44] T. Salles. escape: parallel global-scale landscape evolution model. Journal of Open Source Software, 3(30):964,
+     2018.
+
+[45] T. Salles, N. Flament, and D. Müller. Influence of mantle flow on the drainage of eastern australia since the jurassic
+     period. Geochemistry, Geophysics, Geosystems, 18(1):280–305, 2017.
+
+[46] J. M. Schoorl, M. P. W. Sonneveld, and A. Veldkamp. Three-dimensional landscape process modelling: the effect
+     of dem resolution. Earth Surface Processes and Landforms, Vol 25(9), pp 1025-1034, 2000.
+
+[47] J. Seibert and B. L. McGlynn. A new triangular multiple flow direction algorithm for computing upslope areas from
+     gridded digital elevation models. Water Resour. Res., Vol. 43, W04501, 2007.
+
+[48] D. G. Tarboton. A new method for the determination of flow directions and upslope areas in grid digital elevation
+     models. Water resources research, Vol. 33(2), pp. 309-319, 1997.
+
+[49] G. E. Tucker and G. R. Hancock. Modelling landscape evolution. Earth Surface Processes and Landforms, 35(1):28–
+     50, 2010.
+
+[50] D. Valters. Modelling Geomorphic Systems: Landscape Evolution, page 6.5.12. 05 2016.
+
+
+                                                            38
+                                          J. Coatléven and B. Chauveau
+
+
+
+[51] P. A. Van der Beek. Environmental Modelling: Finding Simplicity in Complexity, pages 309–332. 2nd Edition (eds.
+     J. Wainwright and M. Mulligan), Wiley, Chichester, 2013.
+
+[52] H. Beirão Da Veiga. Existence results in sobolev spaces for a stationary transport equation. Ricerche Mat. Suppl.
+     XXXVI pp. 173-184, 1987.
+
+[53] G. Willgoose. User manual for SIBERIA (Version 8.30). 2005.
+
+[54] G. Willgoose, R.L. Bras, and I. Rodriguez-Iturbe. A physically based channel networkand catchment evolution model.
+     PhD thesis, TR 322, Ralph M. Parsons Laboratory, Dept. ofCivil Engineering, MIT, Boston, M, 1989.
+
+[55] Garry Willgoose, Rafael L. Bras, and Ignacio Rodriguez-Iturbe. A coupled channel network growth and hillslope
+     evolution model: 1. theory. Water Resources Research, 27(7):1671–1684, 1991.
+
+[56] J. P. Wilson, G. Aggett, Y. Deng, and C. S. Lam. Water in the Landscape: A Review of Contemporary Flow Routing
+     Algorithms, pages 213–236. Qiming Zhou and Brian Lees and Guo-an Tang. Springer Berlin Heidelberg, Springer
+     Berlin, Heidelberg, 2008.
+
+[57] Q. Zhou, P. Pilesjö, and Y. Chen. Estimating surface flow paths on a digital elevation model using a triangular
+     facet network. Water Resour. Res., Vol. 47, W07522, 2011.
+
+
+
+
+                                                          39
+

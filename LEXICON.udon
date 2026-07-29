@@ -183,7 +183,7 @@
       Principle (Joseph): never paint sub-simulation detail the physics did not produce; the finest SIMULATED tier is authoritative and painted coordinate-noise detail yields to any simulated field overlapping it.
 
     |term[modified-equation] :status settled :since 2026-07-29
-      The PDE a discrete scheme actually solves — the stated equation plus the leading truncation terms the scheme adds (numerical diffusion, dispersion, anisotropy). The Prime Question (#disc-prime-question) is modified-equation analysis; a kernel's honesty is stated against ITS modified equation, not the textbook one. Adopted from the numerical-analysis literature verbatim (DECISIONS[the-project-rediscovered-a-major-numerical-analysis-subfield] impact; council-accepted).
+      The PDE a discrete scheme actually solves — the stated equation plus the leading truncation terms the scheme adds (numerical diffusion, dispersion, anisotropy). The Prime Question (#disc-prime-question) is modified-equation analysis; a kernel's honesty is stated against ITS modified equation, not the textbook one. Adopted from the numerical-analysis literature verbatim (DECISIONS[structure-preserving-is-a-rediscovery-adopt-the-field] impact; council-accepted).
       |rel :to backward-error-analysis :kind instance-of
 
     |term[backward-error-analysis] :status settled :since 2026-07-29

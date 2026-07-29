@@ -6,7 +6,7 @@
 //! corrected drainage router**, identical in everything else, and report whether the
 //! channel network differs. A genuine "no meaningful difference" is a first-class result.
 //!
-//! Predictions were written first: `msc/spike-router-pricing/PREDICTIONS.md`.
+//! Predictions were written first: `.super-archive/from-msc/spike-router-pricing/PREDICTIONS.md`.
 //!
 //! ## What is faithful and what is swapped
 //!
@@ -698,7 +698,7 @@ fn main() {
     let (oi_ctr, oj_ctr) = (n / 2 - nx as u32 / 2, n / 2 - nx as u32 / 2);
 
     println!("############ ROUTING PRICING EXPERIMENT ############");
-    println!("Prices DECISIONS[routing-violates-the-potential-identity-and-the-replacement-does-not-fix-it] severity. Predictions: msc/spike-router-pricing/PREDICTIONS.md");
+    println!("Prices DECISIONS[routing-violates-the-potential-identity-and-the-replacement-does-not-fix-it] severity. Predictions: .super-archive/from-msc/spike-router-pricing/PREDICTIONS.md");
 
     // ---- P0: bit-match anchor, run 3x (determinism) ----
     // localize divergence epoch

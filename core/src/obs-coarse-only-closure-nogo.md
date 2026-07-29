@@ -68,7 +68,7 @@ coarse-routed drainage can supply it (measured $R^2 \le 0.36$, two seeds).
 ## Epistemic Status
 
 **Max attainable: robust-qualitative.** The $R^2 \le 0.36$ ceiling is empirical
-(two seeds, six tile$\times$depth cells each; `msc/spike-nonlocal-closure/`
+(two seeds, six tile$\times$depth cells each; `.super-archive/from-msc/spike-nonlocal-closure/`
 PROBE 6/8, deterministic). The structural claim — the trunk depends on sub-grid
 channel position, which is independent of coarse per-cell state — is argued from
 the measurement and from the routing mechanism, not yet derived; a derivation

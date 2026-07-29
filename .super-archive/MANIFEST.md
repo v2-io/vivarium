@@ -2,6 +2,20 @@
 
 *Present-tense index of graduated substrate. Not claim law. Newest batches first.*
 
+## 2026-07-29 batch 11 — the msc spike sweep (adjudicated, red-teamed, meat landed first)
+
+| Path | Note |
+|------|------|
+| `from-msc/spike-cross-face-seam/` | Least-absorbed spike (5/6 findings uncarried). Meat → `#form-cellid-chunk-patch` FE(4), `#form-same-level-halo-exchange` ES (cube-edge scope), `#form-face-flux-register` ES. |
+| `from-msc/spike-curl-probe/` · `spike-router-pricing/` · `spike-corrected-scheme-cost/` · `spike-principled-router/` | Absorbed in `#obs-routing-curl-spiral` + four council-accepted DECISIONS entries; pits/flats + h^½/Def-4.2 + q≠1-no-save landed before graduation. Paper-of-record PDFs relocated to `ref/research/pdfs/` (not iced — the owed FE(6c) work needs them). |
+| `from-msc/spike-nonlocal-closure/` | Integration drafts landed verbatim; red-team caught the depth-1 trunk over-correction + power-mean refutation, both landed. Spike no longer compiles (planned rebase); frozen record. `target/` deleted. |
+| `from-msc/spike-null-space{,-probe}/` | Absorbed (DECISIONS council-accepted + ASSUMPTIONS + segments); gate wired into `bin/check`; example fig-output moved off the graduated path. |
+| `from-msc/redteam-discretisation/` | All eight probes absorbed/superseded; θ GS-vs-Jacobi deviation declared in ASSUMPTIONS before graduation. |
+| `from-msc/audit-onboarding/` · `harness-reconciliation-2026-07-24/` · `design-convictable-declarations/` · `claim-channel-cleanup-2026-07-23.md` · `promotion-mine-2026-07-23-continuity.md` | Records; Tier-1 residue landed first (store-as-save FE(8), builder restart/fork-pool, source-derived truth, rock-mass grain-split, census rows, FORMAT OQ1 pointer, coriolis pointer, DECISIONS authority notes). |
+| `from-msc/agent-briefs/` (nine 07-23/24 records) | Closed adjudication briefs/reports; live `msc/agent-briefs/` dir continues for coordination. Two core citations re-pointed. |
+
+Evidence trail: `msc/spike-adjudication-2026-07-29/` (four slice reports + two red-teams + merge README). Kept live with reasons: `spike-wavelet-store` (cited instrument + parts-shelf), `research-structure-preserving` (designated survey layer), `research-lem-sota`, `agent-briefs/`, `reflections/`.
+
 ## 2026-07-29 batch 10 — quick sweep: landed findings and closed correspondence
 
 | Path | Note |

@@ -9,8 +9,8 @@
 //!
 //! The identity as it must ACTUALLY be stated, the operator, and why its control cannot fail:
 //! see `curl.rs`'s module docs — that reasoning is the load-bearing part of this spike.
-//! Predictions were committed BEFORE the first run: `msc/spike-curl-probe/PREDICTIONS.md`.
-//! Findings: `msc/spike-curl-probe/FINDINGS.md`.
+//! Predictions were committed BEFORE the first run: `.super-archive/from-msc/spike-curl-probe/PREDICTIONS.md`.
+//! Findings: `.super-archive/from-msc/spike-curl-probe/FINDINGS.md`.
 
 mod curl;
 mod fan;
