@@ -97,6 +97,8 @@ coarse state.
 - **Regression guard:** do not re-propose a pointwise recalibration of
   $A_{\text{coarse}}$ (scale, power-law, value-quantile) as the closure — the
   $R^2 \le 0.36$ ceiling excludes the whole family, measured on two seeds.
-- **Instrument:** `Fluvial::drainage_override` / `drainage_recalibrate`
-  (spike-only, default-inert) are diagnostics, not kernel candidates — the
-  override consumes fine info, the recalibrate is this no-go.
+- **Instrument (frozen):** `Fluvial::drainage_override` / `drainage_recalibrate`
+  were spike-only, default-inert diagnostics, not kernel candidates — the
+  override consumed fine info, the recalibrate was this no-go. The planned
+  rebase removed them from the crate; the spike no longer compiles against
+  main and is a frozen record, not a runnable instrument.

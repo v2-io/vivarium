@@ -182,6 +182,20 @@
     |term[detail-must-be-earned] :status settled
       Principle (Joseph): never paint sub-simulation detail the physics did not produce; the finest SIMULATED tier is authoritative and painted coordinate-noise detail yields to any simulated field overlapping it.
 
+    |term[modified-equation] :status settled :since 2026-07-29
+      The PDE a discrete scheme actually solves — the stated equation plus the leading truncation terms the scheme adds (numerical diffusion, dispersion, anisotropy). The Prime Question (#disc-prime-question) is modified-equation analysis; a kernel's honesty is stated against ITS modified equation, not the textbook one. Adopted from the numerical-analysis literature verbatim (DECISIONS[the-project-rediscovered-a-major-numerical-analysis-subfield] impact; council-accepted).
+      |rel :to backward-error-analysis :kind instance-of
+
+    |term[backward-error-analysis] :status settled :since 2026-07-29
+      Reading a computed result as the EXACT solution of a nearby problem, then judging the scheme by how near that problem is. The frame that makes "what equation did we actually solve" a well-posed question; modified-equation analysis is its PDE instance.
+
+    |term[mimetic-discretisation] :status settled :since 2026-07-29
+      A discretisation built so discrete operators satisfy the same identities as their continuous counterparts (div∘curl = 0, discrete conservation, adjointness) — also "compatible" in the literature. What #form-declared-structure-tradeoff prices: which identities are purchased, which sacrificed, declared per scheme.
+      |rel :to commutation-relation :kind preserves
+
+    |term[commutation-relation] :status settled :since 2026-07-29
+      An identity of the form restrict∘operate = operate∘restrict across scales or surfaces (e.g. cell-restriction ∘ divergence = divergence ∘ face-restriction, #form-face-flux-register FE(3)). The seam-linearity law is a commutation statement; breaking one silently is how a seam manufactures physics.
+
     |term[canonical-frame] :status open :since 2026-07-10
       The CellId $2^n$ space-time grid with columns/strata: the universal causal coordinate map every system must be QUERYABLE in, and the reducibility mechanism (parent = bit-shift). It is NOT the mandated internal representation.
       |rel :to native-representation :kind projection-target-of

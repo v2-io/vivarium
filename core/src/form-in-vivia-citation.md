@@ -30,7 +30,7 @@ A citable *in vivia* result names a complete world-artifact key: seed, generator
 **Currently `conditional`.** The register definition is settled ( #def-in-vivia; Joseph 2026-07-04 on the *in vivia* idea). The four-part recipe is the operational meaning carried from the ASF bridge integration program. **Honest gaps that block claiming bit-perfect citation infrastructure today:**
 
 1. **Generator-pinning** is open as a dictionary term and practice ( #lexicon/term/generator-pinning).
-2. **Hand-stamped nomos versions** remain present practice; source-derived versions are the target remedy ( #form-complete-content-addressed-key known incomplete surfaces).
+2. **Nomos versions are source-derived** — the build-time whole-crate digest is folded into every world-law key ( #form-complete-content-addressed-key FE(4), probed both directions); the hand-stamped version string survives in the key stem as the legible era label, no longer load-bearing for correctness.
 3. **Enforcement layer** for cone-fold / regula-style citation was sketched (`#detail-regula-design`) and is not this segment's claim that it is built.
 
 Stage `draft`. Do not assert that every `cargo run` example is already a citable vivium.

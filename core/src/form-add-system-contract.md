@@ -27,7 +27,7 @@ To add a world-system and have the machine compose it, declare its place in the 
 
 3. **Execution class and timescale band.** So coupling treats it quasi-static or time-averaged (batch-deep / relaxation / procedural-tight; #form-scale-separation-directional · #form-kernel-imperative-boundary · NomosDecl `ExecutionClass` / `Timescale`).
 
-4. **Determinism in keyed inputs**, with declared nomos-version (hand-stamped today; source-derived is the target under #form-complete-content-addressed-key ).
+4. **Determinism in keyed inputs**, with declared nomos-version (source-derived and folded into every key since 2026-07-24 — #form-complete-content-addressed-key FE(4); the hand-stamped string is the legible era label).
 
 5. **Nomotheke declaration** ( #form-nomotheke-registry ): epistemic tags, deps (weakest-link fold), promises with conservation + statistic/exactness, assumption anchors into `ASSUMPTIONS.md`, structure/geometry/unphysical-term boxes as fields allow. Declaration mints store keys — undeclared nomos cannot reach world-law.
 

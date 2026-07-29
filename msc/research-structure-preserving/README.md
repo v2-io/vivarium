@@ -2,7 +2,7 @@
 
 *Written 2026-07-13 against the governing principle adopted the same day
 (`DECISIONS[preserve-the-structure-declare-the-sacrifice]`) and the structure table in
-[`doc/theory/discretisation-and-information.md`](../../doc/theory/discretisation-and-information.md) §4.1.
+[`.super-archive/from-theory/discretisation-and-information.md`](../../.super-archive/from-theory/discretisation-and-information.md) §4.1.
 The brief: **find out whose principle this actually is, what the mature form looks like, and where our
 version is naive.***
 

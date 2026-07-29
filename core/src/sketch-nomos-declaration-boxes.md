@@ -33,4 +33,3 @@ depends:
 - Earning-procedure shape + full defect map + failure-gallery seeds: #detail-nomos-defect-anatomy (not iced NOMOS-CONTRACT).
 - Promote (or split per-box) toward `formulation` when procedures exist as core peels. Fields without procedures invite confident wrong content.
 - Open: "conflicts-with" surface on box ④; ordinum reachability (keeper range vs promise predicate).
-- **Sweep breadcrumb (self-destructs).** `msc/design-convictable-declarations/` — the design work behind boxes ②–⑤. Likely primary absorbing segment: this one; the mapping is asserted from session memory, not verified — at the msc graduation sweep, *verify* the residue is fully absorbed here (or land what is missing, or re-point this note if the mapping is wrong), then graduate the residue to `.super-archive/` and **delete this note** (integration-is-replacement: the note's disappearance is the done-signal).

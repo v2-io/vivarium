@@ -144,6 +144,12 @@
       |promise[coriolis].capability :from spin :unlocks modern-weather
         Spin bequeaths Coriolis — the skeleton of every future wind belt and
         ocean gyre.
+        ; no :kept-by and no |predicate yet (an honest GLOSS per the maturity
+        ; ladder). The only existing keeper design — zero-spin-control
+        ; predicate, proposal-grade, 07-13-era codebase — is the archived atmo
+        ; sketch: .super-archive/from-msc/audit-onboarding/
+        ; nomos-design-sketch-atmospheric-circulation.md (pointer landed
+        ; 2026-07-29 so the design is mined, not re-derived).
       |promise[insolation-gradient].capability :kept-by planet :from insolation-rhythm :unlocks biogeochemical-cycles
         The latitudinal insolation gradient — the skeleton of all climate zones.
 

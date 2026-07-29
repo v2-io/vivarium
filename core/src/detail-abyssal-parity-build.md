@@ -33,7 +33,7 @@ Build sequence toward the first playable milestone: an ethereal explorer roaming
 
 4. **Six phases.**
    - **0 Run-modes carve** — convention-only canon-root guard + provisional banner until first graduation; complete-key always enforced; causal vs iterating isolation orthogonal to Realized/Deployed release axis (names open; OUTLINE run-modes gap).
-   - **1 Store + nomos layer** — objects/roots/manifest; source-derived nomos-versions target; probe: edit kernel invalidates only dependent cone.
+   - **1 Store + nomos layer** — objects/roots/manifest; source-derived nomos-versions **live** (whole-crate digest — an edit anywhere in the lib invalidates the whole store *by design*; per-cone invalidation is a measured no-go, #form-complete-content-addressed-key Known-incomplete (3), so the old "edit kernel invalidates only dependent cone" probe is retired, not owed).
    - **2 Coarse global spine** — macro erosion + hydro equilibrium per-face, memoized; outputs elevations + **drainage dependency map** + equilibrium seed; first visible win = conservation-honest fBm land/water low-A/low-B ( #detail-drainage-dependency-planning ).
    - **3 Flux-BC tile nomos** — parameterize edge policy; composability = seam fix; $z$-consistent timesteps from quadtree level ( #sketch-dynamic-exponent-seams ); probe: `seam_ridge` bounded; river carries spine discharge.
    - **4 Query front-end** — hit/miss recurse; telescope = policy not state-owner; walk and return = same history.

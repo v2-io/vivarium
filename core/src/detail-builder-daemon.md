@@ -23,7 +23,7 @@ Unbuilt operational design for multi-process builder/explorer coordination. Thin
 
 2. **Four pieces.**
    - **Vivium spec** — identity (in every key; change = fork), label (never keyed), demand (target phase, **beacons**, watchpoints — change build *order*, never the world under #form-depend-by-key-never-latest ).
-   - **Builder daemon** — owns *scheduling*, never truth: demand frontier (beacons → causal cones → work queue), puts memos, log, status; lockfile-attach (second build attaches, does not fail); pause cheap (completed tiles already in store).
+   - **Builder daemon** — owns *scheduling*, never truth: demand frontier (beacons → causal cones → work queue), puts memos, log, status; lockfile-attach (second build attaches, does not fail); pause cheap (completed tiles already in store). Nix-style iteration on a spec edit: keys change, and the builder offers **restart-in-place** (recompute exactly the invalidated cone) or **fork** (new spec) — and forks may share **one object pool**, because the seed is in every key so two worlds' artifacts cannot alias: cross-fork dedup for free.
    - **Explorers** — any number, read-only; Hit or instant prior; miss drops **demand file** to spool builder sweeps; work with no builder (coarse); never block.
    - **Instruments** — fidelity pyramid (histogram roots by level×stage); watchpoints (declared place/level/stage snapshots); telemetry by construction (intermediates immutable).
 
