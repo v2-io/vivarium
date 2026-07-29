@@ -1354,6 +1354,11 @@ fn take_pending_shot(mut commands: Commands, mut pending: ResMut<PendingShot>, m
 /// looking at its output has not verified anything ( #norm-declaration-must-convict
 /// applied to the author rather than the code). Pair with `VIVARIUM_STAGE=<i>`
 /// and `--paint MODE` to shoot a specific lens.
+///
+/// Optional `VIVARIUM_SHOT_DELAY=<secs>` (default **4.0**): settle after the first
+/// frame before shooting. The first landed `Frame` can still be a black viewport
+/// while the GPU mesh is one frame behind the pull; 1.2 s was not enough on
+/// Metal (2026-07-29 black-capture specimen).
 fn autoshot(
     time: Res<Time>,
     ex: Res<Explorer>,
@@ -1365,6 +1370,11 @@ fn autoshot(
     let Some(path) = std::env::var_os("VIVARIUM_SHOT") else {
         return;
     };
+    let delay = std::env::var("VIVARIUM_SHOT_DELAY")
+        .ok()
+        .and_then(|s| s.parse::<f32>().ok())
+        .unwrap_or(4.0)
+        .max(0.5);
     let t = time.elapsed_secs();
     if armed_at.is_none() && ex.frame.is_some() {
         *armed_at = Some(t);
@@ -1372,12 +1382,15 @@ fn autoshot(
     let Some(t0) = *armed_at else {
         return;
     };
-    if !*shot && t > t0 + 1.2 {
-        eprintln!("[explore] SHOT {}", PathBuf::from(&path).display());
+    if !*shot && t > t0 + delay {
+        eprintln!(
+            "[explore] SHOT {} (settled {delay:.1}s after first frame)",
+            PathBuf::from(&path).display()
+        );
         commands.spawn(Screenshot::primary_window()).observe(save_to_disk(PathBuf::from(path)));
         *shot = true;
     }
-    if *shot && t > t0 + 2.8 {
+    if *shot && t > t0 + delay + 1.6 {
         exit.write(AppExit::Success);
     }
 }
