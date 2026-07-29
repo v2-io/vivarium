@@ -2113,6 +2113,32 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
     }
 
+    /// The explorer's water read is a scan (a view cannot construct the
+    /// `bed=` token); it must find bed-keyed memos, prefer the halo-bed depth
+    /// over the edge-sink one at the same coordinates, and never compute.
+    #[test]
+    fn water_tile_hit_finds_bed_keyed_memos_and_prefers_halo() {
+        let dir = tmpdir("water-hit-bed");
+        let face = Face::from_index(2);
+        let (level, nx, eepochs, steps) = (8u8, 16usize, 12u32, 40u32);
+        let s = Store::open(&dir).unwrap();
+        let w = World::new(&s, 41);
+        assert!(w.water_tile_hit(face, level, 0, 0, nx, eepochs, steps).is_none());
+        let (plain, _) = w.water_tile(face, level, 0, 0, nx, eepochs, steps, BedArticle::EdgeSink);
+        let schedule = HaloSchedule { depth: 4, cadence: 4, cone_rho: 0 };
+        let region = HaloRegion { oi: 0, oj: 0, tiles_i: 2, tiles_j: 2 };
+        let bed = BedArticle::Halo { schedule, region };
+        let (halo, _) = w.water_tile(face, level, 0, 0, nx, eepochs, steps, bed);
+        let (hit, src) = w.water_tile_hit(face, level, 0, 0, nx, eepochs, steps).unwrap();
+        assert_eq!(src, Source::Hit);
+        assert!(
+            hit.iter().zip(halo.iter()).all(|(a, b)| a.to_bits() == b.to_bits()),
+            "view scan must prefer the halo-bed depth"
+        );
+        let _ = plain;
+        let _ = fs::remove_dir_all(&dir);
+    }
+
     #[test]
     fn epoch_reduction_hit_equals_recompute_byte_identical() {
         // The staleness/purity conviction for the epoch-reduction store citizen
