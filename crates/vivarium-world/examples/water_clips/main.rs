@@ -244,9 +244,36 @@ fn main() {
         println!("    source available with every reservoir stage switched off.)\n");
     }
 
-    // ── (B) Transcription census — the clips with no parameter. ─────────────
+    // ── (A3) The live instrument. ───────────────────────────────────────────
+    // `WaterSim::clips()` landed 2026-07-29 under Joseph's re-key grant. Before
+    // it, the clips with no parameter could only be counted in the pinned
+    // transcription (B). Now the real kernel counts its own, and (B) becomes a
+    // cross-check on the transcription rather than the only source.
     {
-        println!("── (B) TRANSCRIPTION — the clips (A) cannot reach ────────────────");
+        println!("── (A3) REAL KERNEL, self-counted (`WaterSim::clips`) ────────────");
+        let mut w = seeded(&bed);
+        println!("   step   rectifier   dry-sill   breaking   outflow-clamp   positivity");
+        for s in 1..=400 {
+            w.step(&p);
+            if s == 1 || s % 100 == 0 {
+                let c = w.clips();
+                let pc = |n: usize, d: usize| 100.0 * n as f64 / d.max(1) as f64;
+                println!(
+                    "   {s:4}   {:8.3}%   {:7.3}%   {:7.3}%   {:12.3}%   {:9.3}%",
+                    pc(c.rectifier, c.pipes),
+                    pc(c.dry_sill, c.pipes),
+                    pc(c.breaking, c.pipes),
+                    pc(c.outflow_clamp, c.cells),
+                    pc(c.positivity, c.cells),
+                );
+            }
+        }
+        println!();
+    }
+
+    // ── (B) Transcription census — cross-check against (A3). ────────────────
+    {
+        println!("── (B) TRANSCRIPTION — cross-check on (A3) ───────────────────────");
         let bed64: Vec<f64> = bed.iter().map(|&b| b as f64).collect();
         let geom = water_op::Geom::ClosedBox { nx: NX, bed: bed64 };
         let pp = water_op::PipeParams::kernel_default(CELL_M as f64);

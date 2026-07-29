@@ -188,9 +188,60 @@ impl Default for WaterParams {
     }
 }
 
+/// Activation counts for the kernel's one-sided guards, captured INSIDE the
+/// last step. Same idiom, and the same reason, as [`WaterSim::froude`]: these
+/// cannot be recomputed from outside afterwards, because the state they acted
+/// on no longer exists by the time the step returns.
+///
+/// `DECISIONS[water-runs-outside-its-published-validity-envelope]` names the
+/// one-sided clips as **bias by construction** (a sign-definite operation
+/// cannot average out) and says of the positivity clamp: *"a positivity clamp
+/// is a silent MASS SOURCE if it fires. Unprobed."* This is the instrument that
+/// probes them. Counts are per-step; `pipes` and `cells` are the denominators.
+///
+/// Note what the raw `rectifier` rate means before reading a bias into it: the
+/// face between `i` and `i+1` carries **two** pipes (`fr[i]` and `fl[i+1]`) and
+/// water crosses it one way, so one of every opposed pair is rectified by
+/// construction. ~50% is the design, not a defect (measured 50.000% at step 1
+/// on a symmetric start). What the rectifier does cost is **momentum memory** —
+/// a decelerating pipe's stored flux is zeroed rather than handed to its
+/// partner — and that is a separate, untested claim.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Clips {
+    /// `hflow < 1e-4` — no conveyance over the sill, pipe forced to zero.
+    pub dry_sill: usize,
+    /// `(f + dt·g·hflow·head).max(0.0)` clipped a negative accelerated flux.
+    pub rectifier: usize,
+    /// The Froude breaking cap bound (`f.min(froude_cap·√(g·h)·h·l)`).
+    pub breaking: usize,
+    /// The outflow clamp fired (a cell tried to ship more than it holds).
+    pub outflow_clamp: usize,
+    /// ⚠ `depth = (…).max(0.0)` fired — the silent mass source.
+    pub positivity: usize,
+    /// Pipes evaluated this step (denominator for the first three).
+    pub pipes: usize,
+    /// Cells updated this step (denominator for the last two).
+    pub cells: usize,
+}
+
+/// Which guards fired inside one [`pipe_step`]. Returned alongside the flux so
+/// the counting cannot perturb the arithmetic that produces it.
+#[derive(Clone, Copy, Default)]
+struct PipeGuards {
+    dry_sill: bool,
+    rectifier: bool,
+    breaking: bool,
+}
+
 /// The pipe-model state over one face region (same footprint idiom as
 /// [`crate::erosion::Fluvial`]). Bed is OWNED here and refreshed from the
 /// erosion tier by the caller — the §4 quasi-static coupling point.
+///
+/// `Clone` is derived so a trajectory's STATE can be branched (the flux arrays
+/// are private and carry momentum between steps, so a caller cannot rebuild
+/// one). Probes that difference two futures of the same state — "what does this
+/// clamp change, right here, right now" — need it.
+#[derive(Clone)]
 pub struct WaterSim {
     pub nx: usize,
     pub cell_m: f32,
@@ -233,6 +284,8 @@ pub struct WaterSim {
     /// the same sill depths the breaking cap used (post-step recomputation
     /// against drained depths read as Fr 10+ on capped flow — twice).
     last_froude: (f32, f32),
+    /// Guard activation counts from INSIDE the last step — see [`Clips`].
+    last_clips: Clips,
     // Outgoing flux per axial pipe (m³/s), kept between steps: momentum.
     fl: Vec<f32>,
     fr: Vec<f32>,
@@ -278,6 +331,7 @@ impl WaterSim {
             atmosphere: atmosphere_m * (nx * nx) as f64,
             ocean: 0.0,
             last_froude: (0.0, 0.0),
+            last_clips: Clips::default(),
             initial_total: 0.0,
             fl: z.clone(),
             fr: z.clone(),
@@ -399,16 +453,42 @@ impl WaterSim {
         // the same term. (Corrected 2026-07-13 after two independent probes; see
         // ASSUMPTIONS.md and DECISIONS[theta-is-lax-friedrichs-not-rhie-chow].)
         //
-        // ⚠ AND DO NOT SIMPLY DELETE IT. Measured: θ does not remove the unstable mode —
-        // it damps and RELOCATES it (still unstable at θ=0.5), because a low-pass filter
-        // has no grip on a long wave. What it is suppressing is partly REAL: the blobs
-        // below are ROLL WAVES (Vedernikov; real above Fr≈1.5), which the local-inertial
-        // momentum equation can RESOLVE but cannot SATURATE, because it drops the very
-        // advective term ∂(q²/h)/∂x that makes them steepen into breaking bores. The
-        // authors say so too: the oscillations "arise as a result of the nonlinearity …
-        // (i.e., shocks)." The principled retirement is therefore NOT a tuned θ — it is
-        // an entropy-stable / shock-capturing momentum stage. A scheme that resolves
-        // roll waves correctly is a DIFFERENT SCHEME, not a different θ.
+        // ⚠ AND DO NOT SIMPLY DELETE IT — this conclusion is firmer than ever; only the
+        // REASON for it has changed. Measured: θ does not remove the unstable mode, it
+        // damps and RELOCATES it (still unstable at θ=0.5; the peak wavelength moves
+        // 9.1 → 16.0 cells between θ=0.7 and θ=0.5), because a low-pass filter has no
+        // grip on a long wave.
+        //
+        // ⚠ WHAT θ IS SUPPRESSING IS NOT ROLL WAVES. This comment used to say the mode
+        // was the Vedernikov instability, "real above Fr≈1.5", which the local-inertial
+        // equation can RESOLVE but cannot SATURATE. Measured 2026-07-29
+        // (`examples/roll_wave` §9; θ=1, no cap, no Jarrett, converged dt): with the
+        // θ-smoothing OFF the scheme grows at EVERY Froude number tested — 0.174 to
+        // 6.66. Growth at Fr 0.174 is deeply subcritical, where no roll-wave criterion
+        // of any kind permits an instability. And at MATCHED Froude two roughnesses
+        // disagree by 3× (Fr 1.129 → ρ 1.000420 against Fr 1.093 → ρ 1.001186), while
+        // Vedernikov's `Ve = (β−1)·Fr` is a statement about the Froude number and
+        // nothing else. So the growing mode has NO Froude threshold and is not that
+        // instability. Turn θ back on (0.8) at the same points and the scheme is stable
+        // through Fr 2.43 — i.e. θ is not holding back physics, it is the artificial
+        // viscosity that makes an otherwise-unstable discretisation stand up, which is
+        // exactly what its own authors call it ("artificial numerical diffusion").
+        //
+        // ⚠ STATUS: PENDING ADJUDICATION, not settled law. That measurement supersedes
+        // the roll-wave reading in
+        // DECISIONS[our-kernels-have-no-null-space-the-solitons-were-roll-waves]
+        // and the council's "the instability it damps is partly REAL"
+        // qualifier on DECISIONS[theta-is-lax-friedrichs-not-rhie-chow] — BOTH
+        // council-accepted, and the superseding entry is `:status proposed` and awaits
+        // the council. Until it is adjudicated, treat the roll-wave identification as
+        // REFUTED-BY-MEASUREMENT and the replacement account as PROPOSED. What is not
+        // in question either way: do not delete θ, and the mode is real (it survives
+        // grid refinement at low roughness). What the replacement account owes is a
+        // POSITIVE identification — the honest next instrument is a modified-equation
+        // analysis of the two-variable (f, h) step, which nobody has run on this kernel.
+        // Standing hypothesis, unmeasured: the pipe's flux memory is damped only by
+        // friction (rate ∝ n²) and by θ, with no advective coupling — which would put
+        // the mode in the discretisation and explain the absent Froude threshold.
         //
         // Without it, a local-inertial scheme on steep slopes
         // organises the flux field into travelling solitons decoupled from the
@@ -438,28 +518,44 @@ impl WaterSim {
         // local-inertial literature (h_flow).
         #[inline]
         #[allow(clippy::too_many_arguments)]
-        fn pipe_step(f: f32, eta_i: f32, eta_j: f32, b_i: f32, b_j: f32, dt: f32, g: f32, n_base: f32, l: f32, jarrett_slope: f32, jarrett_n_cap: f32, froude_cap: f32) -> f32 {
+        fn pipe_step(f: f32, eta_i: f32, eta_j: f32, b_i: f32, b_j: f32, dt: f32, g: f32, n_base: f32, l: f32, jarrett_slope: f32, jarrett_n_cap: f32, froude_cap: f32) -> (f32, PipeGuards) {
+            let mut guards = PipeGuards::default();
             let hflow = eta_i.max(eta_j) - b_i.max(b_j);
             if hflow < 1e-4 {
-                return 0.0; // no conveyance over the sill
+                guards.dry_sill = true;
+                return (0.0, guards); // no conveyance over the sill
             }
             let head = eta_i - eta_j;
             // Slope-dependent roughness (Jarrett 1984, linearized): steep
             // reaches are rough — this is what holds torrents to nature's
             // 2–4 m/s instead of Manning-lowland's 10+.
             let n = (n_base + jarrett_slope * (head.max(0.0) / l)).min(jarrett_n_cap);
-            let accel = (f + dt * g * hflow * head).max(0.0);
+            let raw = f + dt * g * hflow * head;
+            guards.rectifier = raw < 0.0;
+            let accel = raw.max(0.0);
             let v = accel / (hflow * l);
             let f = accel / (1.0 + dt * g * n * n * v / hflow.powf(4.0 / 3.0));
             // Breaking limit: natural steep streams self-organise to Fr ≈ 1
             // (Grant 1997) — surge fronts that outrun ~2× critical BREAK and
-            // shed momentum as turbulence. Without this loss the roll waves a
-            // deluge excites grow unbounded (Joseph's multi-metre travelling
+            // shed momentum as turbulence. Without this loss the travelling
+            // waves a deluge excites grow unbounded (Joseph's multi-metre
             // blobs; probe: near-dry gaps between 3 m lumps).
-            f.min(froude_cap * (g * hflow).sqrt() * hflow * l)
+            //
+            // ⚠ MEASURED 2026-07-29, and it bounds what this cap can be credited
+            // with: it is INVISIBLE TO LINEAR STABILITY. Removing it leaves the
+            // growth rate bit-identical at every slope on the shipped ladder
+            // (`examples/roll_wave` §1, `no-cap` column). Whatever it does, it
+            // does at FINITE amplitude only. It also fires rarely and not where
+            // the folklore said: 0.05–0.21% of wet cells, and on THIN water
+            // (⟨depth⟩ 0.28–0.93 m against a 2.00 m mean), NOT on steep ground
+            // (`examples/water_clips`; `WaterSim::clips`).
+            let cap = froude_cap * (g * hflow).sqrt() * hflow * l;
+            guards.breaking = f > cap;
+            (f.min(cap), guards)
         }
         let n_base = p.manning_n;
         let (mut fr_max, mut fr_wet, mut fr_sup) = (0.0f32, 0u32, 0u32);
+        let mut clips = Clips::default();
         for y in 0..nx {
             for x in 0..nx {
                 let i = y * nx + x;
@@ -471,24 +567,38 @@ impl WaterSim {
                         cell_fr = cell_fr.max(f / (hflow * l) / (p.gravity * hflow).sqrt());
                     }
                 };
+                fn tally(g: PipeGuards, c: &mut Clips) {
+                    c.pipes += 1;
+                    c.dry_sill += g.dry_sill as usize;
+                    c.rectifier += g.rectifier as usize;
+                    c.breaking += g.breaking as usize;
+                }
                 if x > 0 {
                     let j = i - 1;
-                    self.fl[i] = pipe_step(self.fl[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l, p.jarrett_slope, p.jarrett_n_cap, p.froude_cap);
+                    let (f, g) = pipe_step(self.fl[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l, p.jarrett_slope, p.jarrett_n_cap, p.froude_cap);
+                    self.fl[i] = f;
+                    tally(g, &mut clips);
                     probe(self.fl[i], self.bed[j] + self.depth[j], self.bed[j]);
                 }
                 if x < nx - 1 {
                     let j = i + 1;
-                    self.fr[i] = pipe_step(self.fr[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l, p.jarrett_slope, p.jarrett_n_cap, p.froude_cap);
+                    let (f, g) = pipe_step(self.fr[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l, p.jarrett_slope, p.jarrett_n_cap, p.froude_cap);
+                    self.fr[i] = f;
+                    tally(g, &mut clips);
                     probe(self.fr[i], self.bed[j] + self.depth[j], self.bed[j]);
                 }
                 if y > 0 {
                     let j = i - nx;
-                    self.ft[i] = pipe_step(self.ft[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l, p.jarrett_slope, p.jarrett_n_cap, p.froude_cap);
+                    let (f, g) = pipe_step(self.ft[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l, p.jarrett_slope, p.jarrett_n_cap, p.froude_cap);
+                    self.ft[i] = f;
+                    tally(g, &mut clips);
                     probe(self.ft[i], self.bed[j] + self.depth[j], self.bed[j]);
                 }
                 if y < nx - 1 {
                     let j = i + nx;
-                    self.fb[i] = pipe_step(self.fb[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l, p.jarrett_slope, p.jarrett_n_cap, p.froude_cap);
+                    let (f, g) = pipe_step(self.fb[i], eta_i, self.bed[j] + self.depth[j], bi, self.bed[j], dt, p.gravity, n_base, l, p.jarrett_slope, p.jarrett_n_cap, p.froude_cap);
+                    self.fb[i] = f;
+                    tally(g, &mut clips);
                     probe(self.fb[i], self.bed[j] + self.depth[j], self.bed[j]);
                 }
                 drop(probe);
@@ -502,7 +612,9 @@ impl WaterSim {
                 // Clamp: a cell cannot ship more water than it holds. THIS is
                 // the conservation/stability guarantee of the pipe method.
                 let out = (self.fl[i] + self.fr[i] + self.ft[i] + self.fb[i]) * dt;
+                clips.cells += 1;
                 if out > self.depth[i] * area {
+                    clips.outflow_clamp += 1;
                     let scale = self.depth[i] * area / out;
                     self.fl[i] *= scale;
                     self.fr[i] *= scale;
@@ -522,9 +634,14 @@ impl WaterSim {
                     + (if y > 0 { self.fb[i - nx] } else { 0.0 })
                     + (if y < nx - 1 { self.ft[i + nx] } else { 0.0 });
                 let outflow = self.fl[i] + self.fr[i] + self.ft[i] + self.fb[i];
-                self.depth[i] = (self.depth[i] + (inflow - outflow) * dt / area).max(0.0);
+                let raw = self.depth[i] + (inflow - outflow) * dt / area;
+                if raw < 0.0 {
+                    clips.positivity += 1;
+                }
+                self.depth[i] = raw.max(0.0);
             }
         }
+        self.last_clips = clips;
 
         // 4b. SEDIMENT: capacity ∝ |v| (velocity from pipe throughput); erode
         //     the bed toward capacity, settle above it, then advect the load
@@ -766,6 +883,21 @@ impl WaterSim {
     /// gauge lied twice (Fr 100+, then 18+) — do not move it back out.
     pub fn froude(&self) -> (f32, f32) {
         self.last_froude
+    }
+
+    /// Guard activation counts from INSIDE the last step — see [`Clips`].
+    ///
+    /// ⚠ The Froude gauge above and this one answer different questions and
+    /// were conflated for a fortnight. `max Fr` reads a bit-identical
+    /// `froude_cap` whenever any pipe is capped — **by algebra**, since a capped
+    /// pipe's `f/(h·l)/√(g·h)` IS `froude_cap` exactly. Reading that as a flow
+    /// measurement is how "we run 5.7% supercritical" came to stand in for
+    /// "the clamp fires": measured 2026-07-29, the cap fires on **0.05–0.21%**
+    /// of wet cells (`examples/water_clips`). Use `froude()` for the regime and
+    /// `clips()` for what the guards are doing; neither substitutes for the
+    /// other.
+    pub fn clips(&self) -> Clips {
+        self.last_clips
     }
 
     pub fn stable_dt(&self, gravity: f32) -> f32 {
