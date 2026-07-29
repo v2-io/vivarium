@@ -81,6 +81,7 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | discussion | Model Critical | [#disc-algorithms-disguise-physics](src/disc-algorithms-disguise-physics.md) | Port the physical claim, not the paper costume | draft |
 | normative | Model Critical | [#norm-physics-not-knobs](src/norm-physics-not-knobs.md) | The real physical term over the magic-knob proxy: faster, similar size, terminal | draft |
 | discussion | Ops Critical | [#disc-check-the-ladder](src/disc-check-the-ladder.md) | Check the phase ladder before modern-Earth priors | draft |
+| discussion | Ops | [#disc-known-active-hotspots](src/disc-known-active-hotspots.md) | Maintained list of molten code regions — era-volatile ground for measured claims; name which seam | draft |
 | | | | *(#gap) Epistemology ladder / weak-tier-in-canon* | missing |
 | | | | *(#gap) Strengthen-before-soften as vivarium segment* | missing |
 | | | | *(#gap) Full ETHICS segmentation (harm triple, redeemer, …) — incl. the three BDD stress-test gaps with no live carrier (Joseph, 2026-07-29): exo-governance vs exo-access split; mourning-at-Adaptive-tier; the truth-death safety account. Ice: `.super-archive/from-archive/taxonomy-bdd-stress-test.md`* | missing |
