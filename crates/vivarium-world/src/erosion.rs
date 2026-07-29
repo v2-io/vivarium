@@ -252,6 +252,47 @@ pub enum EdgeContract {
     NoFluxWall,
 }
 
+/// Jacobi halo-exchange schedule for a same-level tile seam
+/// (`#form-same-level-halo-exchange`).
+///
+/// A tile of `n²` interior cells is carved on an `(n+2d)²` window; every `σ`
+/// epochs each tile's halo is overwritten from one **frozen** assembly of all
+/// interiors in the region (Jacobi / additive Schwarz). The three fields are
+/// **identity**: different `(d, σ, ρ)` produce different beds and must fold into
+/// the complete key (`#form-complete-content-addressed-key` FE(6)).
+///
+/// This is the third boundary-contract value named in
+/// `#form-declared-boundary-contract` FE(6) — `Halo{d, σ, ρ}` — carried as its
+/// own type so the kernel's two single-tile outlet policies stay a clean enum
+/// while the multi-tile schedule keys as a descriptor, not a payload.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct HaloSchedule {
+    /// Halo depth in cells (`d`). The window is `(n + 2d)²`; only the interior
+    /// `n²` is kept.
+    pub depth: u16,
+    /// Exchange cadence in epochs (`σ`). Must be ≥ 1. Cadence is the cheap dial
+    /// measured at the beacon (`#obs-exchange-repairs-the-seam-and-overlap-does-not`
+    /// FE(7)); when exchange is on, `σ` is identity and equals the stage stride
+    /// (`#form-same-level-halo-exchange` FE(7)).
+    pub cadence: u32,
+    /// Cone truncation radius in **tiles** (`ρ`). Beyond `ρ` tiles from a
+    /// demand pull, halo values fall back to the prior. `0` means no truncation
+    /// inside a swept region (outside the built block, the prior is still used).
+    /// Unmeasured as a cost lever; present so the key shape is complete.
+    pub cone_rho: u16,
+}
+
+impl HaloSchedule {
+    /// Values that put seam step and mean elevation on the single-field carve at
+    /// the beacon grain in `#obs-exchange-repairs-the-seam-and-overlap-does-not`
+    /// FE(7) (`d=16`, `σ=10`). Not law — a measured operating point.
+    pub const MEASURED_BEACON: Self = Self { depth: 16, cadence: 10, cone_rho: 0 };
+
+    pub fn depth_usize(self) -> usize {
+        self.depth as usize
+    }
+}
+
 /// A square fluvial simulation field over one face region — the frame's port of
 /// core's `Heightfield`. Heights in metres above the bedrock datum.
 pub struct Fluvial {
@@ -1927,6 +1968,41 @@ mod fluvial_tests {
         assert!(rel > 0.05, "precip weight moved the trunk by only {:.3}% — is it wired?", 100.0 * rel);
     }
 
+    /// Jacobi exchange is order-independent by construction: every tile erodes
+    /// against one frozen snapshot. Re-running the same block twice must agree
+    /// bit-for-bit (`#form-same-level-halo-exchange` FE(3);
+    /// `#form-depend-by-key-never-latest`).
+    #[test]
+    fn jacobi_exchange_is_deterministic() {
+        let seed = 7u64;
+        let face = Face::from_index(2);
+        let level = 8u8;
+        let (tile_n, epochs) = (12usize, 8u32);
+        let schedule = HaloSchedule { depth: 3, cadence: 2, cone_rho: 0 };
+        let mk = |oi: i64, oj: i64, nx: usize| {
+            let oi_u = oi.max(0) as u32;
+            let oj_u = oj.max(0) as u32;
+            let mut f = Fluvial::from_surface(seed, face, level, oi_u, oj_u, nx, |c| {
+                gen::initial_topography_m(seed, c, level)
+            });
+            f.set_uplift_rate(crate::uplift::uplift_rate_tile(seed, face, level, oi_u, oj_u, nx));
+            f
+        };
+        let prior = |i: i64, j: i64| {
+            let c = CellId::from_face_ij(face, i.max(0) as u32, j.max(0) as u32, level);
+            gen::initial_topography_m(seed, c, level) as f32
+        };
+        let a = carve_region_jacobi_exchange(32, 48, tile_n, 2, 2, epochs, schedule, mk, prior);
+        let b = carve_region_jacobi_exchange(32, 48, tile_n, 2, 2, epochs, schedule, mk, prior);
+        assert_eq!(a.len(), 4);
+        for (x, y) in a.iter().zip(b.iter()) {
+            assert!(
+                x.h.iter().zip(y.h.iter()).all(|(p, q)| p.to_bits() == q.to_bits()),
+                "Jacobi region carve must be bit-identical across runs"
+            );
+        }
+    }
+
     /// The boundary contract must be **inferred exactly as it was before it had a
     /// name**, or naming it silently rekeys every world — `#form-declared-boundary-contract`
     /// FE(2), whose whole point is that the honest first state of a declaration is
@@ -2238,6 +2314,150 @@ mod fluvial_tests {
         assert!(max_d > 50.0 * cell_area, "no channel network formed (max {max_d})");
         assert!(f.h.iter().all(|v| v.is_finite()), "heights blew up");
     }
+}
+
+/// One tile's kept interior after a Jacobi halo-exchange region carve
+/// (`#form-same-level-halo-exchange` FE(2)).
+#[derive(Clone, Debug)]
+pub struct ExchangedTile {
+    pub oi: u32,
+    pub oj: u32,
+    /// Interior side length `n` (not the enlarged window).
+    pub nx: usize,
+    pub h: Vec<f32>,
+}
+
+/// Carve a rectangular block of same-level tiles under **Jacobi** halo exchange.
+///
+/// Every `schedule.cadence` epochs, all tile interiors are assembled into one
+/// frozen snapshot and every tile's halo is refilled from that snapshot
+/// (falling back to `prior` outside the block). Tile order cannot affect the
+/// result (`#form-depend-by-key-never-latest`); the probe that measured this is
+/// `examples/halo_exchange_probe`.
+///
+/// Each tile is an `(n+2d)²` window under [`EdgeContract::BaseLevelSink`] on the
+/// *window* perimeter (the measured operating form); only the interior `n²` is
+/// returned. This is the production path the probe was the instrument for —
+/// still region-scoped (not a single-tile pull with a dependency cone).
+///
+/// `mk_window(oi, oj, nx)` must return a fully driven [`Fluvial`] (surface,
+/// uplift, precip) whose origin is `(oi, oj)` and side `nx`. Origins may be
+/// slightly negative after halo expansion; the maker is responsible for
+/// clamping cell samples the way the shipped path does.
+pub fn carve_region_jacobi_exchange(
+    region_oi: i64,
+    region_oj: i64,
+    tile_n: usize,
+    tiles_i: usize,
+    tiles_j: usize,
+    epochs: u32,
+    schedule: HaloSchedule,
+    mut mk_window: impl FnMut(i64, i64, usize) -> Fluvial,
+    prior: impl Fn(i64, i64) -> f32,
+) -> Vec<ExchangedTile> {
+    assert!(tile_n > 0 && tiles_i > 0 && tiles_j > 0, "region must be non-empty");
+    assert!(schedule.cadence >= 1, "HaloSchedule.cadence must be ≥ 1 (exchange on)");
+    let d = schedule.depth_usize();
+    let n_tiles = tiles_i * tiles_j;
+    let span_i = tile_n * tiles_i;
+    let span_j = tile_n * tiles_j;
+    let win = tile_n + 2 * d;
+
+    let mut tiles: Vec<Fluvial> = Vec::with_capacity(n_tiles);
+    for tj in 0..tiles_j {
+        for ti in 0..tiles_i {
+            let oi = region_oi + (ti * tile_n) as i64 - d as i64;
+            let oj = region_oj + (tj * tile_n) as i64 - d as i64;
+            tiles.push(mk_window(oi, oj, win));
+        }
+    }
+
+    let mut assembled = vec![0.0f32; span_i * span_j];
+    let publish = |assembled: &mut [f32], t: usize, f: &Fluvial| {
+        let (ti, tj) = (t % tiles_i, t / tiles_i);
+        for j in 0..tile_n {
+            for i in 0..tile_n {
+                assembled[(tj * tile_n + j) * span_i + (ti * tile_n + i)] =
+                    f.h[(d + j) * win + (d + i)];
+            }
+        }
+    };
+    let refill = |assembled: &[f32], t: usize, f: &mut Fluvial| {
+        let (ti, tj) = (t % tiles_i, t / tiles_i);
+        // Cone truncation: beyond ρ tiles from this tile, treat as outside.
+        let rho = schedule.cone_rho as i32;
+        let bi = (ti * tile_n) as i64 - d as i64;
+        let bj = (tj * tile_n) as i64 - d as i64;
+        for j in 0..win {
+            for i in 0..win {
+                if i >= d && i < d + tile_n && j >= d && j < d + tile_n {
+                    continue; // interior is owned
+                }
+                let gx = bi + i as i64;
+                let gy = bj + j as i64;
+                let in_block = gx >= 0
+                    && gy >= 0
+                    && (gx as usize) < span_i
+                    && (gy as usize) < span_j;
+                let in_cone = if rho == 0 {
+                    true
+                } else {
+                    // Chebyshev distance in tile units from this tile's index.
+                    let (gti, gtj) = (
+                        (gx.div_euclid(tile_n as i64)) as i32,
+                        (gy.div_euclid(tile_n as i64)) as i32,
+                    );
+                    let di = (gti - ti as i32).abs();
+                    let dj = (gtj - tj as i32).abs();
+                    di.max(dj) <= rho
+                };
+                f.h[j * win + i] = if in_block && in_cone {
+                    assembled[gy as usize * span_i + gx as usize]
+                } else {
+                    prior(region_oi + gx, region_oj + gy)
+                };
+            }
+        }
+    };
+
+    let mut done = 0u32;
+    while done < epochs {
+        let k = schedule.cadence.min(epochs - done);
+        for f in tiles.iter_mut() {
+            f.erode(&FluvialParams { epochs: k, ..Default::default() });
+        }
+        done += k;
+        // Assemble the frozen snapshot every tile will read.
+        for (t, f) in tiles.iter().enumerate() {
+            publish(&mut assembled, t, f);
+        }
+        // Exchange after each chunk except when the settle is finished.
+        if done < epochs {
+            for (t, f) in tiles.iter_mut().enumerate() {
+                refill(&assembled, t, f);
+            }
+        }
+    }
+
+    let mut out = Vec::with_capacity(n_tiles);
+    for tj in 0..tiles_j {
+        for ti in 0..tiles_i {
+            let t = tj * tiles_i + ti;
+            let mut h = vec![0.0f32; tile_n * tile_n];
+            for j in 0..tile_n {
+                for i in 0..tile_n {
+                    h[j * tile_n + i] = tiles[t].h[(d + j) * win + (d + i)];
+                }
+            }
+            out.push(ExchangedTile {
+                oi: (region_oi + (ti * tile_n) as i64).max(0) as u32,
+                oj: (region_oj + (tj * tile_n) as i64).max(0) as u32,
+                nx: tile_n,
+                h,
+            });
+        }
+    }
+    out
 }
 
 /// A finished erosion run, sampleable at ANY finer level: within the region, a

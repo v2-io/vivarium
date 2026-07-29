@@ -41,34 +41,35 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
    Related as "the sphere is real at seams"; **different repairs.** Rows below say which.
 
-5. **Highest-leverage next — dated 2026-07-29** (outside reader / Grok, after the water-wave seal `12f7758`). Ideation rank only.
+5. **Highest-leverage next — dated 2026-07-29** (revised same day after halo thin vertical). Ideation rank only.
 
    | Rank | Action | Why high leverage | Not this instead |
    | --- | --- | --- | --- |
-   | **1** | **Cross-tile base level / same-level datum+flux** ( #form-same-level-halo-exchange , #obs-tile-outlets-grade-away-the-basins ) — thin vertical: $\sigma$ into the key when exchange is on; keyed contract/halo schedule; one region build under Jacobi exchange; convict with structural stats; name **flux half** and **spill-level scalar** as explicit follow-ons | Geography spine: starved incision, fine-grain seam pits, χ form discrimination, basins the bed can keep but tiles grade away. Era **chain-carried** multiplies rekey if this lands second. Exchange already measured (Jacobi good, overlap worse); debt is keyed build, not more diagnosis | Does not by itself put water in basins; does not adopt the router |
+   | **1** | **Wire exchange into the shipped build + view cohort** ( #form-same-level-halo-exchange ) — default / beacon region sweeps call `erosion_region_exchanged` (or equivalent); views select the `edge=halo` key cohort; re-measure beacon structural stats under the production path; then **flux half** and **spill-level scalar** | Thin vertical **landed**: `HaloSchedule` in the key, Jacobi library carve, store-backed region API, tripwires. Geography still ships edge-sink tiles until the builder uses the path. Starved driver / seam pits / χ form discrimination remain blocked on *adoption*, not on more diagnosis of the datum half | Not another probe-only re-measure of exchange vs overlap |
    | **2** | **Water settle path on the corrected kernel** — longer / cell-aware settle, or declared analytic init; re-run cheap probes so post-friction numbers are the only ones quoted ( #obs-water-fill-never-settles ; ASSUMPTIONS friction / $\theta$ rows) | Highest *user-visible* payoff: bed can hold lakes; fill repaired; friction now dt-free at steady state; still ~40 s of world time at builder scale. "Lake anyone can see" lives here | Does not fix multi-tile geography; weaker if tiles remain artificial sea-edges |
    | **3** | **Router adoption decision + one cheap land** — ship diagonal-kill + transmissivity under probes, *or* explicitly park Coatléven as later consistency work ( #obs-routing-curl-spiral FE(6)(c) priced) | FE(6c) is priced; another pricing sweep without adopt/decline is low leverage. Cheap arm wins CUBE; reconstruction still owns the one-vector claim | Not the basin/lake spine |
    | **4** | **One cold-stage stage-parallel carve** ( #form-erosion-at-a-cooling-stage , #obs-the-erodible-world-is-down-the-cooling-chain ) | Target measured; design clear; answers "what does the other world look like?" without ledger-fork (B). Prefer after or carefully independent of rank 1 | Not chain-carried; not freeboard calibration |
    | **5** | **χ instrument path** — sediment budget + hillslope-off + **post-fill** G-sweep ( #obs-chi-shape-is-erosions-criterion ; steepening no-go in `msc/research-lem-sota/chi-steepening-derivation-2026-07-28.md` ) | Rate half is a known continuous no-go; closes convergence honesty when someone would declare a threshold or relocate epoch counts | Does not unlock basins or lakes; fill already landed — open is the re-run |
    | demote | Demand spool; store-backed nav; panel-seam metric-freeze (good secondary for structure people); ML surrogate expansion; full CONSOLIDATION lede rewrite; Caspian census; re-opening msc residual dirs | Real, lower multiplier than 1–2 right now | — |
 
-   **How to choose 1 vs 2:** honest planet / χ / drainage → **1**; something true on screen that looks like standing water → **2**; both → **1 first** for structure, **2 in parallel only if** it does not steal the only people who can land keyed exchange. They compound: a lake in a tile that is still an artificial sea-edge is a weaker victory than a lake in a basin that can cross a seam.
+   **How to choose 1 vs 2:** honest planet / χ / drainage → **1** (now: *wire* exchange, not invent it); something true on screen that looks like standing water → **2**; both → **1 first** for structure. They compound: a lake in a tile that is still an artificial sea-edge is a weaker victory than a lake in a basin that can cross a seam.
 
-6. **Molten ground (era-volatile code) — supporting half, same date.** Not the purpose of the segment, but part of "what is hot": before quoting a measured emergent statistic, check whether its ground is warm; if so, carry the era or re-measure ( `DECISIONS[kernel-era-keys-and-the-probe-registry]` is the mechanization program; this list covers the gap until that ships). Before briefing an agent into a warm region, say it is warm and who else is in it.
+6. **Molten ground (era-volatile code) — supporting half, same date (halo path added).** Not the purpose of the segment, but part of "what is hot": before quoting a measured emergent statistic, check whether its ground is warm; if so, carry the era or re-measure ( `DECISIONS[kernel-era-keys-and-the-probe-registry]` is the mechanization program; this list covers the gap until that ships). Before briefing an agent into a warm region, say it is warm and who else is in it.
 
    | Region | State | Era note |
    | --- | --- | --- |
+   | **`query.rs` / `erosion.rs` (halo path)** | **Just landed, warm** | `HaloSchedule`, `carve_region_jacobi_exchange`, `erosion_region_exchanged`; default `erosion_tile` key shape unchanged; SRC_HASH moves with any lib touch. |
    | **`water.rs`** | Wave **landed, still warm** | `77b1f5a` implicit friction; `de4c6c4` Jarrett static + $\theta$ relabel; wrap `12f7758`. Froude-threshold result re-verified post-fix and sealed (`2f22edf`). Still pre-fix / not re-run: §5 cap-off sweep ("stable through Fr 2.43"). |
    | **`measure.rs::cell_solid_angle`** | Just re-keyed | `72ca39a` VOS difference-form; area-consuming stats changed era 2026-07-29. |
    | **Erosion / generator** | Post-fill-restore + craton-nucleation band | ~12-commit band that expired the coarse-only no-go; drainage-emergent stats measured before it are suspect until re-run. |
    | **Router remedy stack** | Step (b) pending | Diagonal-kill + transmissivity is the measured CUBE winner; fan curl/spiral numbers predate it by declared scope. |
-   | **Cold this week** | Store/key machinery; isostasy column + cooling chain; stage-chain instrument | Claims grounded there are not era-volatile for ordinary quotes. |
+   | **Cold this week** | Isostasy column + cooling chain; stage-chain instrument (no-exchange path) | Claims grounded there are not era-volatile for ordinary quotes. |
 
 ## Epistemic Status
 
 **Max attainable: discussion-grade** as maintained ideation — completeness is impossible; honesty about dated judgment is the bar.
 
-**Currently `discussion-grade`.** Joseph 2026-07-29 asked for a home for *active work* (not geographic hotspots); a prior draft over-weighted "molten code for measurement era" and under-weighted **evolving TODO with rationale** — this body corrects that. Leverage rank (FE(5)) and molten table (FE(6)) dated **2026-07-29**, post water seal; outside-reader rank not Joseph-ratified. Stage `draft`.
+**Currently `discussion-grade`.** Joseph 2026-07-29 asked for a home for *active work* (not geographic hotspots); a prior draft over-weighted "molten code for measurement era" and under-weighted **evolving TODO with rationale** — this body corrects that. Leverage rank (FE(5)) and molten table (FE(6)) dated **2026-07-29**, revised after halo thin vertical (keyed region path landed; rank 1 is now *wire the shipped build*). Outside-reader rank not Joseph-ratified. Stage `draft`.
 
 ## Discussion
 

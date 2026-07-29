@@ -23,7 +23,7 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::erosion::{self, ErodedRegion, Fluvial, FluvialParams};
+use crate::erosion::{self, ErodedRegion, ExchangedTile, Fluvial, FluvialParams, HaloSchedule};
 use crate::gen;
 use crate::nomotheke::{
     CLIMATE, EROSION, HYDROSPHERE, INITIAL_TOPOGRAPHY, ISOSTASY, LITHOSPHERE, MANTLE_THERMAL, UPLIFT,
@@ -306,8 +306,24 @@ impl<'s> World<'s> {
     /// identities (§12): the initial-topography surface it carves, the uplift field it carves
     /// against, and the climate precipitation that drives its discharge. If any
     /// changes, this key changes and the tile recomputes.
-    fn erosion_key(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize, epochs: u32) -> Key {
-        EROSION
+    ///
+    /// When `halo` is `Some`, the schedule descriptor `(d, σ, ρ)` is identity
+    /// (`#form-same-level-halo-exchange` FE(4)/(7); `#form-complete-content-addressed-key`
+    /// FE(6)) — a tile carved under Jacobi exchange is not the same article as
+    /// the shipped edge-sink tile at the same coordinates. The default path
+    /// (`None`) keeps the historical key shape so every existing world stays
+    /// addressable.
+    fn erosion_key(
+        &self,
+        face: Face,
+        level: u8,
+        oi: u32,
+        oj: u32,
+        nx: usize,
+        epochs: u32,
+        halo: Option<HaloSchedule>,
+    ) -> Key {
+        let mut k = EROSION
             .key()
             .field("seed", self.seed)
             .field("face", face.index())
@@ -315,8 +331,16 @@ impl<'s> World<'s> {
             .field("oi", oi)
             .field("oj", oj)
             .field("nx", nx)
-            .field("epochs", epochs)
-            .with_dep_versions(&EROSION)
+            .field("epochs", epochs);
+        if let Some(s) = halo {
+            // Descriptor, not payload: O(1), pure function of the schedule.
+            k = k
+                .field("edge", "halo")
+                .field("d", s.depth)
+                .field("sigma", s.cadence)
+                .field("rho", s.cone_rho);
+        }
+        k.with_dep_versions(&EROSION)
     }
 
     /// System #2 — the fluvial-erosion tier, *composed on the initial-topography through the
@@ -335,7 +359,7 @@ impl<'s> World<'s> {
         nx: usize,
         epochs: u32,
     ) -> (Vec<f32>, Source) {
-        let key = self.erosion_key(face, level, oi, oj, nx, epochs);
+        let key = self.erosion_key(face, level, oi, oj, nx, epochs, None);
         if let Some(bytes) = self.store.get(&key) {
             return (decode_f32(&bytes), self.hit_source(&key));
         }
@@ -370,6 +394,131 @@ impl<'s> World<'s> {
         let eroded = f.h.clone();
         self.put_memo(&key, &encode_f32(&eroded));
         (eroded, Source::Computed)
+    }
+
+    /// Carve a rectangular block of tiles under **Jacobi halo exchange** and
+    /// memoize each interior under its complete key (schedule in the key —
+    /// `#form-same-level-halo-exchange` FE(4)).
+    ///
+    /// This is the first production path for the cross-tile base-level repair:
+    /// the exchange that `examples/halo_exchange_probe` measured now writes the
+    /// store. A single-tile pull cannot do this alone (the dependency cone is a
+    /// scheduling cost, FE(5)); a **region sweep** is the honest unit of work.
+    ///
+    /// Returns one [`ExchangedTile`] per tile in row-major order `(ti, tj)`, plus
+    /// [`Source::Computed`] if any tile missed and [`Source::Hit`] if every tile
+    /// was already present under the schedule's keys.
+    ///
+    /// **Not yet:** flux half of the seam, spill-level scalar for straddling
+    /// basins, demand-driven single-tile cone with `ρ`, stage-chain composition
+    /// under exchange (`σ` as stage stride identity).
+    pub fn erosion_region_exchanged(
+        &self,
+        face: Face,
+        level: u8,
+        region_oi: u32,
+        region_oj: u32,
+        tile_n: usize,
+        tiles_i: usize,
+        tiles_j: usize,
+        epochs: u32,
+        schedule: HaloSchedule,
+    ) -> (Vec<ExchangedTile>, Source) {
+        assert!(schedule.cadence >= 1, "exchange requires cadence ≥ 1");
+        // All-hit short path: every interior key present ⇒ no recompute.
+        let mut all_hit = true;
+        let mut hits: Vec<ExchangedTile> = Vec::with_capacity(tiles_i * tiles_j);
+        for tj in 0..tiles_j {
+            for ti in 0..tiles_i {
+                let oi = region_oi + (ti * tile_n) as u32;
+                let oj = region_oj + (tj * tile_n) as u32;
+                let key = self.erosion_key(face, level, oi, oj, tile_n, epochs, Some(schedule));
+                if let Some(bytes) = self.store.get(&key) {
+                    hits.push(ExchangedTile {
+                        oi,
+                        oj,
+                        nx: tile_n,
+                        h: decode_f32(&bytes),
+                    });
+                } else {
+                    all_hit = false;
+                    break;
+                }
+            }
+            if !all_hit {
+                break;
+            }
+        }
+        if all_hit {
+            return (hits, Source::Hit);
+        }
+
+        // Shared rain mean across the whole block so per-tile renormalization
+        // cannot confound the seam comparison (matches `halo_exchange_probe`).
+        let span_i = tile_n * tiles_i;
+        let span_j = tile_n * tiles_j;
+        let rain_mean = {
+            let mut sum = 0.0f64;
+            let mut n = 0usize;
+            for j in 0..span_j {
+                for i in 0..span_i {
+                    let cell =
+                        CellId::from_face_ij(face, region_oi + i as u32, region_oj + j as u32, level);
+                    sum += crate::climate::precip_jitter_factor(self.seed, cell);
+                    n += 1;
+                }
+            }
+            (sum / n.max(1) as f64) as f32
+        };
+
+        let seed = self.seed;
+        let mk_window = |oi: i64, oj: i64, nx: usize| -> Fluvial {
+            let oi_u = oi.max(0) as u32;
+            let oj_u = oj.max(0) as u32;
+            let surf = |cell: CellId| -> f64 { gen::initial_topography_m(seed, cell, level) };
+            let mut f = Fluvial::from_surface(seed, face, level, oi_u, oj_u, nx, surf);
+            // Uplift / precip over the window in face coords (clamp origin; for
+            // negative oi the window samples via gen, so rates use the clamped
+            // origin's field — same compromise the halo probe makes).
+            f.set_uplift_rate(crate::uplift::uplift_rate_tile(seed, face, level, oi_u, oj_u, nx));
+            let mut w = Vec::with_capacity(nx * nx);
+            for j in 0..nx as i64 {
+                for i in 0..nx as i64 {
+                    let cell = CellId::from_face_ij(
+                        face,
+                        (oi + i).max(0) as u32,
+                        (oj + j).max(0) as u32,
+                        level,
+                    );
+                    let p = crate::climate::precip_jitter_factor(seed, cell) as f32;
+                    w.push(if rain_mean > 0.0 { p / rain_mean } else { 1.0 });
+                }
+            }
+            f.set_precip_weight(w);
+            f
+        };
+        let prior = |i: i64, j: i64| -> f32 {
+            let cell = CellId::from_face_ij(face, i.max(0) as u32, j.max(0) as u32, level);
+            gen::initial_topography_m(seed, cell, level) as f32
+        };
+
+        let tiles = erosion::carve_region_jacobi_exchange(
+            region_oi as i64,
+            region_oj as i64,
+            tile_n,
+            tiles_i,
+            tiles_j,
+            epochs,
+            schedule,
+            mk_window,
+            prior,
+        );
+
+        for t in &tiles {
+            let key = self.erosion_key(face, level, t.oi, t.oj, t.nx, epochs, Some(schedule));
+            self.put_memo(&key, &encode_f32(&t.h));
+        }
+        (tiles, Source::Computed)
     }
 
     /// The sibling key for one stage's measured residual — the mean $|\Delta h|$
@@ -425,13 +574,18 @@ impl<'s> World<'s> {
     /// stage $n$ by complete key, and "the start of the third stage" becomes a
     /// key rather than a description).
     ///
-    /// **Stage stride is demand, not identity** ( #form-manifest-prescribes-vivium
-    /// FE(5)): a stage at `epochs=k` holds byte-identical heights whether it was
-    /// built as a chain rung or as a one-shot run to `k` — the per-epoch step is
-    /// a pure function of the height field plus keyed inputs, so chaining is
-    /// exactly the one-shot computation with intermediate states persisted. The
-    /// test `staged_chain_is_bit_identical_to_one_shot` convicts this; if it ever
-    /// breaks, the stride has become identity and MUST move into the key.
+    /// **Stage stride is demand, not identity** on the default (no-exchange)
+    /// path ( #form-manifest-prescribes-vivium FE(5)): a stage at `epochs=k`
+    /// holds byte-identical heights whether it was built as a chain rung or as
+    /// a one-shot run to `k` — the per-epoch step is a pure function of the
+    /// height field plus keyed inputs, so chaining is exactly the one-shot
+    /// computation with intermediate states persisted. The test
+    /// `staged_chain_is_bit_identical_to_one_shot` convicts this.
+    ///
+    /// **Under Jacobi exchange the cadence `σ` is identity**
+    /// (`#form-same-level-halo-exchange` FE(7)) and enters the key via
+    /// [`HaloSchedule`]; staged exchange composition is not yet wired here —
+    /// use [`Self::erosion_region_exchanged`] for the endpoint under a schedule.
     ///
     /// The walk is over the fixed ladder `stride, 2·stride, …, epochs` (the
     /// ladder is a function of the arguments, never of store contents —
@@ -467,7 +621,7 @@ impl<'s> World<'s> {
         let mut reached = 0u32;
         let mut computed_any = false;
         for &k in &ladder {
-            let key = self.erosion_key(face, level, oi, oj, nx, k);
+            let key = self.erosion_key(face, level, oi, oj, nx, k, None);
             if let Some(bytes) = self.store.get(&key) {
                 heights = Some(decode_f32(&bytes));
                 reached = k;
@@ -521,7 +675,7 @@ impl<'s> World<'s> {
         if computed_any {
             (h, Source::Computed)
         } else {
-            let last = self.erosion_key(face, level, oi, oj, nx, epochs);
+            let last = self.erosion_key(face, level, oi, oj, nx, epochs, None);
             (h, self.hit_source(&last))
         }
     }
@@ -537,6 +691,9 @@ impl<'s> World<'s> {
     /// **Note:** this hits one complete key `(oi,oj,nx,epochs)`. The builder
     /// sweeps many 64×64 tiles; for a whole-face or free-roam view that must
     /// see *all* of them, use [`load_eroded_regions`] + [`assemble_surface_tile`].
+    /// Halo-exchanged tiles (keys with `edge=halo|…`) are **not** selected here
+    /// yet — views still see the default edge-sink cohort until a read path
+    /// chooses the schedule.
     pub fn surface_prefer_eroded(
         &self,
         face: Face,
@@ -546,7 +703,7 @@ impl<'s> World<'s> {
         nx: usize,
         epochs: u32,
     ) -> (Vec<f32>, Source, bool) {
-        let key = self.erosion_key(face, level, oi, oj, nx, epochs);
+        let key = self.erosion_key(face, level, oi, oj, nx, epochs, None);
         if let Some(bytes) = self.store.get(&key) {
             return (decode_f32(&bytes), Source::Hit, true);
         }
@@ -1379,6 +1536,91 @@ mod tests {
         let (e2, src2) = w.erosion_tile(face, 19, 1000, 2000, nx, epochs);
         assert_eq!(src2, Source::Hit);
         assert_eq!(e1, e2, "a hit returns exactly the eroded bytes it computed");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// Production path for `#form-same-level-halo-exchange`: a region carved
+    /// under Jacobi exchange memoizes each interior under a key that carries the
+    /// schedule, and a second pull is a pure hit. A different schedule is a
+    /// different article of law (descriptor in the key, not a silent retune).
+    #[test]
+    fn exchanged_region_memoizes_under_schedule_keys() {
+        let dir = tmpdir("halo-exchange");
+        let face = Face::from_index(1);
+        let (level, tile_n, epochs) = (8u8, 16usize, 12u32);
+        let (oi, oj) = (64u32, 64u32);
+        let schedule = HaloSchedule { depth: 4, cadence: 4, cone_rho: 0 };
+        let s = Store::open(&dir).unwrap();
+        let w = World::new(&s, 17_425_063_241_017_297_386);
+
+        let (tiles, src) = w.erosion_region_exchanged(face, level, oi, oj, tile_n, 2, 2, epochs, schedule);
+        assert_eq!(src, Source::Computed);
+        assert_eq!(tiles.len(), 4);
+        assert!(tiles.iter().all(|t| t.h.len() == tile_n * tile_n && t.h.iter().all(|v| v.is_finite())));
+
+        let (again, src2) = w.erosion_region_exchanged(face, level, oi, oj, tile_n, 2, 2, epochs, schedule);
+        assert_eq!(src2, Source::Hit, "second region pull must be all-hit");
+        for (a, b) in tiles.iter().zip(again.iter()) {
+            assert!(
+                a.h.iter().zip(b.h.iter()).all(|(x, y)| x.to_bits() == y.to_bits()),
+                "hit returns the same interior bytes"
+            );
+        }
+
+        // Different σ ⇒ different keys ⇒ compute, not a silent overwrite of the first.
+        let other = HaloSchedule { depth: 4, cadence: 6, cone_rho: 0 };
+        let (alt, src_alt) =
+            w.erosion_region_exchanged(face, level, oi, oj, tile_n, 2, 2, epochs, other);
+        assert_eq!(src_alt, Source::Computed, "a different schedule must miss");
+        // First schedule still hits (keys did not collide).
+        assert_eq!(
+            w.erosion_region_exchanged(face, level, oi, oj, tile_n, 2, 2, epochs, schedule)
+                .1,
+            Source::Hit
+        );
+        let _ = alt;
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// Tripwire: the production exchange path is **not** a re-key of plain
+    /// tiling. At unit-test grain the beacon FE(7) "closer to single-field"
+    /// table is not reproducible cheaply (that table is `halo_exchange_probe`'s
+    /// job at L13/300 epochs). What must hold here: exchanged interiors differ
+    /// from independently carved edge-sink tiles at the same coordinates, so a
+    /// schedule key that silently aliased the plain path would fail.
+    #[test]
+    fn exchanged_region_is_not_a_plain_tiling_alias() {
+        let dir = tmpdir("halo-vs-plain");
+        let face = Face::from_index(1);
+        let seed = 17_425_063_241_017_297_386u64;
+        let (level, tile_n, epochs) = (8u8, 16usize, 24u32);
+        let (oi, oj) = (128u32, 128u32);
+        let schedule = HaloSchedule { depth: 4, cadence: 4, cone_rho: 0 };
+        let s = Store::open(&dir).unwrap();
+        let w = World::new(&s, seed);
+
+        let (ex, _) = w.erosion_region_exchanged(face, level, oi, oj, tile_n, 2, 2, epochs, schedule);
+        let mut differed = 0usize;
+        let mut cells = 0usize;
+        for t in &ex {
+            let (plain, _) = w.erosion_tile(face, level, t.oi, t.oj, tile_n, epochs);
+            for (a, b) in t.h.iter().zip(plain.iter()) {
+                cells += 1;
+                if a.to_bits() != b.to_bits() {
+                    differed += 1;
+                }
+            }
+        }
+        assert!(
+            differed * 10 > cells,
+            "exchange must move a substantial fraction of cells vs plain edge-sink \
+             tiling at the same keys' coordinates ({differed}/{cells} differ) — \
+             otherwise the schedule is a no-op alias"
+        );
+        // And the plain key must still be a different article: pulling plain
+        // after exchange is a Hit on the no-halo key, not the halo key.
+        let (_, plain_src) = w.erosion_tile(face, level, oi, oj, tile_n, epochs);
+        assert_eq!(plain_src, Source::Hit);
         let _ = fs::remove_dir_all(&dir);
     }
 
