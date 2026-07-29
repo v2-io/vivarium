@@ -633,3 +633,58 @@
       :name Biological systems are differentiators / prediction-error detectors
 
       Not absolute-level meters: boiling-frog, homeostatic bands, habituation, spike-frequency adaptation, slow-change-blindness — one principle at many scales. Too-fast -> fuse; in-band -> couple/track; too-slow/steady -> adapt away and spot-check at boundaries. The ~2 Hz band is where a system COUPLES; a segmentation boundary is where it UPDATES ITS MODEL. EST event-boundary <-> AAT Aporia <-> Goal-Update-Coupling is the candidate unification (test, don't assert); and MEMORY IS CORE-TO-AGENCY, not a knob — derive it from the AAT trajectory ($M_t$/$O_t$ IS memory; consolidation = where prediction-error forces a re-anchor). See memory-as-core-to-agency.md.
+
+  ; ==========================================================================
+  |section[joins] :num 9
+    :name Joins — the seam families, each with its own headword
+    :seeded 2026-07-29
+
+    ; Seeded after "seam" was measured overloaded in live use: one screenshot
+    ; (2026-07-29) carried three families all answering to the same word, and
+    ; #form-seam-families exists precisely because merged vocabulary aims the
+    ; wrong instrument at the right symptom. Register per DECISIONS
+    ; naming-by-layer: literature terms for the scientific rows (the subfield
+    ; already named them), plain-English lived terms where the object is ours.
+    ; All :open entries carry candidates loosely held — Joseph adjudicates.
+
+    |term[seam] :status settled
+      The GENUS: any coupling surface where the sphere must be real at a join — spatial, spectral, or store-identity. Bare "seam" is under-specified in briefs, ranks, and repair claims; name the family (the terms below, table at #form-seam-families FE(2)).
+      |not a single object with a single repair; not always geometric (the store-cohort family is identity, not space).
+      |rel :to seam-linearity :kind disciplined-by
+      |source core/src/form-seam-families.md
+
+    |term[abutment] :status open
+      CANDIDATE headword for the SAME-LEVEL TILE family: the matching-cell boundary where two equal tiles of one nomos meet at one level. The defect class is a tile treating the shared boundary as its own outer wall (edge-sink base level); the repair is the Jacobi halo datum + the still-open flux half. Candidates: abutment (recommended — two equals bearing against each other; standalone-citable) · party wall (carries the design insight that the wall is SHARED and both sides owe it obligations; more whimsy) · tile interface (domain-decomposition literature register, zero invention).
+      |not a hanging node; not a cube-panel edge; not the chart selvage.
+      |rel :to seam :kind family-of
+      |source core/src/form-same-level-halo-exchange.md
+
+    |term[refinement-boundary] :status open
+      CANDIDATE (adopt-from-literature, recommended settle as-is) for the GRAIN / HANGING-NODE family: where a coarse face meets its 2^k finer sub-faces. AMR literature already calls this the refinement boundary / coarse-fine interface; the defect is double-counted flux, the repair the single-valued face flux register.
+      |not a same-level join of equals; a halo of raw heights has no honest restriction across it.
+      |rel :to seam :kind family-of
+      |source core/src/form-face-flux-register.md
+
+    |term[panel-edge] :status open
+      CANDIDATE (adopt-from-literature, recommended settle as-is) for the CUBE PANEL family: the conforming boundary between two cube-sphere charts, where the two-point flux defect lives O(1/h) on the edge ring. Cubed-sphere literature calls the six charts panels; the repair is a panel-aware operator, not any tile exchange.
+      |not the tile abutment (which is interior to one panel); not the selvage (which is a sampling margin, not an operator defect).
+      |rel :to seam :kind family-of
+      |source core/src/obs-the-two-point-defect-lives-on-the-panel-seam.md
+
+    |term[selvage] :status open
+      CANDIDATE headword for the CHART-EDGE HALO family: the margin where a multi-cell halo (depth >= 2) asks for cells beyond one face's chart. Etymology is the recommendation: selvage = "self-edge," the fabric's self-finished border that stops unraveling — and production's declared deficiency is exactly the chart finishing itself (off-chart samples CLAMP to the face: the "selvage clamp"). The principled repair — declared resampling in the key — retires the clamp, and the word survives as the name of the margin itself.
+      |not the panel-edge operator defect; not tile-interior exchange.
+      |rel :to seam :kind family-of
+      |source core/src/obs-chart-edge-halo-clamps-to-the-face.md
+
+    |term[chimera] :status open
+      CANDIDATE defect-noun for the STORE-COHORT family's signature fault: a rendered or censused surface assembled from memos of different cohorts (stale src mixed with current; plain mixed with halo) — a terrain nobody built. Three independent readers manufactured one on 2026-07-28 before cohort-merging defaults were removed. The family's healthy vocabulary stays cohort / cohort pin / prefer-halo-on-view-reads; chimera names the artifact when the discipline fails.
+      |not a physics defect — no kernel produced a chimera; a reader did.
+      |rel :to seam :kind family-of
+      |source core/src/form-seam-families.md
+
+    |term[carve-front] :status open
+      CANDIDATE for the VIEW-LEVEL boundary between fluvially carved tiles and the uncarved prior in a drawn frame — the straight square edges visible in shelf water on whole-globe views (the HUD's "N% of drawn cells fall back to the uncarved prior" is its measure). Not yet a #form-seam-families row: it is honest display of build progress, not a defect — it earns a row only if a repair (blending, masking) is ever proposed, at which point the depiction law applies.
+      |not a physics seam; not owed a repair; the front MOVING is the builder working.
+      |rel :to seam :kind adjacent-to
+      |source core/src/obs-coarse-view-draws-the-uncarved-prior.md

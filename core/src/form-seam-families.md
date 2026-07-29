@@ -52,3 +52,4 @@ The 2026-07-29 adoption of same-level Jacobi exchange did not invent the chart-e
 
 - **Next family candidates if they reappear as load-bearing:** time-multirate bands (already gestured in #form-seam-flux-exchange FE(4)); pour-grain ↔ tile-grain freeboard ( #form-isostasy-column FE(9) ); view coverage vs build level ( #obs-coarse-view-draws-the-uncarved-prior ). Add a row only when a defect or repair needs a home, not as a speculative catalog.
 - **Hotspot FE(4)** should stay a short pointer here, not a second taxonomy.
+- **Naming (2026-07-29):** candidate headwords per family live in LEXICON §9 (`joins`), all `:status open` — abutment / refinement-boundary / panel-edge / selvage / chimera / carve-front — awaiting Joseph's adjudication. When settled, FE(2)'s rows adopt the headwords; until then this table's descriptive labels remain the citable names.

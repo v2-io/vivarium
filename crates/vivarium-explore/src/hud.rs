@@ -321,22 +321,28 @@ pub fn census(frame: &Frame, cov: &Coverage) -> String {
     );
     let _ = writeln!(
         s,
-        "       standing water: {} cells wet, {} of them INLAND  ({}/{} water tiles readable at this source hash{})  |  view writes refused: {}",
+        "       standing water: {} cells wet, {} of them INLAND  ({}/{} water tiles readable at this source hash at L{}, the census level{})  |  view writes refused: {}",
         f.water_cells,
         f.inland_water_cells,
         f.water_loaded,
         f.water_requested,
+        cov.level,
         if f.water_loaded < f.water_requested { " -- STALE, rerun vivarium build" } else { "" },
         f.refused_writes
     );
-    let _ = writeln!(
-        s,
-        "       face-seam dh: cross {:.0}/{:.0} m mean/max | within {:.0}/{:.0} m -- healthy is cross ~= within",
-        frame.seam.cross_mean(),
-        frame.seam.cross_max,
-        frame.seam.within_mean(),
-        frame.seam.within_max
-    );
+    if frame.seam.n == 0 {
+        let _ = writeln!(s, "       face-seam dh: no chart-seam edges measured this frame");
+    } else {
+        let _ = writeln!(
+            s,
+            "       face-seam dh: cross {:.0}/{:.0} m mean/max | within {:.0}/{:.0} m over {} edges -- healthy is cross ~= within",
+            frame.seam.cross_mean(),
+            frame.seam.cross_max,
+            frame.seam.within_mean(),
+            frame.seam.within_max,
+            frame.seam.n
+        );
+    }
     s
 }
 

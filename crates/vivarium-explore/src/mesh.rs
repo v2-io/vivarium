@@ -152,6 +152,14 @@ fn seam_stats(
         let h = v(ic.0, ic.1);
         let d_cross = (h - v(gc.0, gc.1)).abs();
         let d_within = (h - v(wc.0, wc.1)).abs();
+        // An edge with a non-finite sample was not measured. Folding it in
+        // poisons the sums (the HUD printed "within NaN" on a live world,
+        // 2026-07-29), and the cross ~= within health check only means
+        // something when both means run over the same measured edge set.
+        if !(d_cross.is_finite() && d_within.is_finite()) {
+            return;
+        }
+        st.n += 1;
         st.cross_max = st.cross_max.max(d_cross);
         st.within_max = st.within_max.max(d_within);
         st.cross_sum += d_cross as f64;
@@ -180,7 +188,6 @@ fn seam_stats(
             edge((n - 1, ki), (n, ki), (n - 2, ki), (nx, k), (nx, k + 1));
         }
     }
-    st.n = nx * [on_lo_i, on_hi_i, on_lo_j, on_hi_j].iter().filter(|b| **b).count();
     (st, excess)
 }
 
