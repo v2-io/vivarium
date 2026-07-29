@@ -19,7 +19,7 @@ Deterministic constructed worlds (cube-sphere planet) for play and for *in vivia
 
 [`ASF.md`](ASF.md) is a thin historical router only — **not** claim canon; do not cite its old section numbers as law.
 
-Big-picture residual / ice vs segment intuition (not law): [`CONSOLIDATION-STATUS.md`](CONSOLIDATION-STATUS.md).
+**What's next (judgment, not law):** `#disc-known-active-hotspots` — evolving next-work ideation with rationale (and which code is still warm to quote). Open inventory without rank: `#disc-open-problem-census`. Big-picture residual intuition: [`CONSOLIDATION-STATUS.md`](CONSOLIDATION-STATUS.md) (core wins on conflict).
 
 ## Run (instruments, not canon)
 

@@ -18,7 +18,7 @@ A deterministic constructed-world laboratory (and sim game) in the RimWorld / DF
 
 | Job | Read |
 |---|---|
-| **Any session (Level A)** | This file · [`core/OUTLINE.md`](core/OUTLINE.md) · [`FORMAT.md`](FORMAT.md) · `#scope-moratorium-endogenous-emergence` / [`ETHICS.md`](ETHICS.md) · `#scope-asf-reading-gates` |
+| **Any session (Level A)** | This file · [`core/OUTLINE.md`](core/OUTLINE.md) · [`FORMAT.md`](FORMAT.md) · `#scope-moratorium-endogenous-emergence` / [`ETHICS.md`](ETHICS.md) · `#scope-asf-reading-gates` · **what's next:** `#disc-known-active-hotspots` (evolving leverage ideation with rationale — not claim law; not geography) |
 | **Write or review a segment** | [`FORMAT.md`](FORMAT.md) (incl. §5.2 cross-member `#asf/…` refs) · the segment's `depends` · [`LEXICON.udon`](LEXICON.udon) for every term (a grep is not a read) |
 | **Who decided what** | [`DECISIONS.decision-log.udon`](DECISIONS.decision-log.udon) — `:by us` means Joseph decided; `:status council-accepted` = recommendation carried under a delegated grant, Joseph supported — deliberate, but not inviolable law (`#norm-decision-authority`) |
 | **Term meanings** | [`LEXICON.udon`](LEXICON.udon) |
@@ -30,6 +30,7 @@ A deterministic constructed-world laboratory (and sim game) in the RimWorld / DF
 | **Seeing a world** | `vivarium explore` (`crates/vivarium-explore/`) — the 3D instrument; `vivarium watch` is the same reader in the terminal. Both bound by `#norm-no-depiction-without-referent` as well as `#form-core-view-wall`: the wall owns *authority*, that norm owns *depiction*, and a view can satisfy one and violate the other |
 | **Pending audits** | [`audits/`](audits/) — integrate per `#ops-audit-integration`; `.integrated/` only when done |
 | **Landing user-facing change** | [`changelog/`](changelog/) — the outcome-altitude acceptance check (`#ops-changelog-is-the-acceptance-check`): frozen captured entries; pre-register the expected entry before building; an unwritable entry queues the work *or* the missing instrument |
+| **What's next / hotspots** | `#disc-known-active-hotspots` — living next-work rank with rationale + molten-code notes (**discussion-grade**, not law). Open inventory without rank: `#disc-open-problem-census` |
 | **Consolidation intuition** | [`CONSOLIDATION-STATUS.md`](CONSOLIDATION-STATUS.md) — big-picture residual estimate (**not** claim canon; core wins on conflict) |
 | **Residual mine** | [`.archive/`](.archive/) residual ledger only; live `doc/` is essentially **PROCESS.udon** (+ empty design/theory/plan dirs). Claim meat lives in `core/` |
 | **Fully integrated / superseded** | [`.super-archive/`](.super-archive/) — graduated from archive *or* doc; do not re-mine as claim source; see `MANIFEST.md` |
