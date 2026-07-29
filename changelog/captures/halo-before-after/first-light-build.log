@@ -1,0 +1,32 @@
+START FIRST-LIGHT BUILD 2026-07-29T15:30:13Z
+world  /Users/josephwecker-v2/.cache/vivarium/globe-world
+       (default — no dir given and $VIVARIUM_WORLD unset; the same world the explorer opens)
+[t+1785339013] builder v0 on vivium "first-light" (seed 17425063241017297386, order terrestris, target phase 4) — initial-topography sweep L9, 64x64 tiles/face-row, erosion 40 epochs (stage every 5), 60 frames
+[t+1785339013] initial-topography: face 0 done (64/384 tiles, 64 computed this run)
+[t+1785339013] initial-topography: face 1 done (128/384 tiles, 128 computed this run)
+[t+1785339013] initial-topography: face 2 done (192/384 tiles, 192 computed this run)
+[t+1785339013] initial-topography: face 3 done (256/384 tiles, 256 computed this run)
+[t+1785339013] initial-topography: face 4 done (320/384 tiles, 320 computed this run)
+[t+1785339014] initial-topography: face 5 done (384/384 tiles, 384 computed this run)
+[t+1785339014] initial-topography: swept 384 tiles in 670.4ms (384 computed, 0 were hits)
+[t+1785339014] erosion: Jacobi halo d=16 σ=5 ρ=0 (schedule in key; face-at-a-time region carve)
+[t+1785339018] erosion: face 0 done (64/384 tiles, 64 computed this run) [Computed]
+[t+1785339023] erosion: face 1 done (128/384 tiles, 128 computed this run) [Computed]
+[t+1785339028] erosion: face 2 done (192/384 tiles, 192 computed this run) [Computed]
+[t+1785339032] erosion: face 3 done (256/384 tiles, 256 computed this run) [Computed]
+[t+1785339037] erosion: face 4 done (320/384 tiles, 320 computed this run) [Computed]
+[t+1785339042] erosion: face 5 done (384/384 tiles, 384 computed this run) [Computed]
+[t+1785339042] erosion: swept 384 tiles in 28.1s (384 computed, 0 were hits)
+[t+1785339129] water: face 0 done (64/384 tiles, 64 computed this run)
+[t+1785339219] water: face 1 done (128/384 tiles, 128 computed this run)
+[t+1785339307] water: face 2 done (192/384 tiles, 192 computed this run)
+[t+1785339397] water: face 3 done (256/384 tiles, 256 computed this run)
+[t+1785339486] water: face 4 done (320/384 tiles, 320 computed this run)
+[t+1785339576] water: face 5 done (384/384 tiles, 384 computed this run)
+[t+1785339576] water: swept 384 tiles in 534.1s (384 computed, 0 were hits)
+[t+1785339576] --frames 60 is not a nested count; using 81 cooling stages (refinement 4) so existing reductions still hit
+[t+1785339604] cooling stages: 81 materialized (81 computed, 0 were hits) in 28.0s — fresh processes warm every stage from the store, no cold pour
+[t+1785339604] beacon: f1 L13 (640,5376) 4x4 tiles — erosion 300 epochs, stage every 10, Jacobi halo d=16 σ=10
+[t+1785339615] beacon: swept 16 tiles at L13 in 11.0s (16 computed, 0 were hits) [Computed]
+[t+1785339615] build complete — the store is the save; explorers see everything already.
+END FIRST-LIGHT BUILD exit=0 2026-07-29T15:40:15Z

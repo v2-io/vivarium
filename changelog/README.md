@@ -2,7 +2,7 @@
 
 Dated, **frozen** entries for the end-user perspective: what the world can show and do now that it couldn't before. Each entry is a snapshot of a date, append-only — an entry is *history the moment it lands*, so it cannot go stale (the failure mode that killed the hand-maintained front doors on 2026-07-13 was *maintained* docs cited as current law; these are deliberately the opposite).
 
-**The entry bar:** the external perspective moved. New things visible in `vivarium explore` / `watch` / `info`, new commands or interactions, world behavior a user would notice. Internal commits that don't move the external view need no entry — that's fine and good, not a gap.
+**The entry bar:** the external perspective moved. New things visible in `vivarium explore` / `watch` / `info`, new commands or interactions, world behavior a user would notice. Internal commits that don't move the external view need no entry — that's fine and good, not a gap. **If the bar fires, the entry is written in the same cycle** — not deferred to “when asked” (`#ops-changelog-is-the-acceptance-check` FE(7) checklist).
 
 **The entry is the acceptance check** (Joseph, 2026-07-28): all the physics and code in the world isn't useful if the rendered world still shows fBm circles passed off as rising land. So an entry is behavior-driven development's bottom line applied to a planet — *show the world doing the new thing, from the store, reproducibly*. Two practices make this a mechanism rather than a hope:
 
@@ -16,12 +16,11 @@ An agent's *interpretation* of a render can still be off — the entry doesn't r
 **The rules, few and load-bearing:**
 
 - **Every shot has a referent** ( `#norm-no-depiction-without-referent` extends to documents): an ASCII render, screenshot, or number names its **seed, source cohort (`src=`), and the command that produced it** — so any reader can re-derive it, and no image is a mock-up.
-- **Before/after pairs are the ideal form.** When landing a **changelog-owed** change that rebuilds the world (same bar as the entry: external perspective moved — `#ops-changelog-is-the-acceptance-check` FE(1)/(5)), **commit the vivium store** (first-light: `~/.cache/vivarium/globe-world`) before and after the rebuild so the model can be restored. Capture via:
-  1. **World-directory git** — checkout a committed rev, capture, checkout back (local only; see that dir's `README.md` and `#form-store-as-save`).
-  2. **In-store cohort** — explorer opens a non-current `src=` while the store still holds it (HUD names the previous source).
-  Shallow binary compatibility on old checkouts (`src=`). Where no visible tell exists yet, a ` ```udon ` snippet of the new reality stands in.
+- **Before/after pairs are the ideal form.** When landing a **changelog-owed** change that rebuilds the world (`#ops-changelog-is-the-acceptance-check` FE(1)/(5)), **commit the vivium store** (first-light: `~/.cache/vivarium/globe-world`) before and after the rebuild. Capture via world-dir git checkout and/or in-store non-current `src=`. Shallow binary compatibility on old checkouts.
+- **Entry body must include** (FE(6)): seed/world path; `src=` before/after; **world-dir git rev(s)** (or explicit “not snapshotted”); exact commands; **embeds** `![[captures/<set>/<name>.png]]` plus relative `[](captures/…)` links for GitHub.
 - **Entries are frozen.** Errata get a dated postscript, never an edit. History lives here and in git; current truth lives in `core/`.
 - **Filename:** `DATE-NN-slug.md`, NN ordering multiple entries per date.
+- **Captures live under** `changelog/captures/<topic>/` and are committed with the entry on the vivarium source repo.
 - Meta and depth are welcome when they serve the reader; the gravity is toward *what you can see and do*.
 
 Who reads this: Joseph, catching up on what changed at the level he actually experiences it; future sessions, wanting the user-visible arc without archaeology; and eventually anyone the project is shown to.

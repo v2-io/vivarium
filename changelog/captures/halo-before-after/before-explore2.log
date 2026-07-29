@@ -1,0 +1,10 @@
+[explore] vivium "first-light" (seed 0xf1d242b21d8d89ea) at /Users/josephwecker-v2/.cache/vivarium/globe-world -- 89308 roots, 0 tiles at L13, ladder 161 stages (0 built)
+[explore] erosion settle history: 30 materialized stages, epochs [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300], 16 tiles at L13, src 12ea45e5 -- NOT this binary's source (b129b27c). A previous world's history; the HUD says so on every frame.
+[explore]   press E to scrub it, 5 for the change paint. This chain is materialized-only: its
+[explore]   density is what the builder ran, and no view flag can add to it.
+2026-07-29T15:29:46.744689Z  INFO bevy_diagnostic::system_information_diagnostics_plugin::internal: SystemInfo { os: "macOS 26.5.2", kernel: "25.5.0", cpu: "Apple M4 Max", core_count: "16", memory: "48.0 GiB" }
+2026-07-29T15:29:46.773335Z  INFO bevy_render::renderer: AdapterInfo { name: "Apple M4 Max", vendor: 0, device: 0, device_type: IntegratedGpu, driver: "", driver_info: "", backend: Metal }
+2026-07-29T15:29:47.033385Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-07-29T15:29:47.050973Z  INFO bevy_winit::system: Creating new window vivarium explore -- first-light (0v0)
+[explore] SHOT changelog/captures/halo-before-after/before-l13-beacon-e300.png (settled 6.0s after first frame)
+2026-07-29T15:29:58.541811Z  INFO bevy_render::view::window::screenshot: Screenshot saved to changelog/captures/halo-before-after/before-l13-beacon-e300.png

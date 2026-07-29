@@ -1,0 +1,27 @@
+world  /tmp/vivarium-halo-smoke
+       (given on the command line)
+[t+1785338918] builder v0 on vivium "halo-smoke" (seed 13191799764632262178, order terrestris, target phase 4) — initial-topography sweep L6, 64x64 tiles/face-row, erosion 8 epochs (stage every 4), 6 frames (--allow-unmet)
+[t+1785338918] initial-topography: face 0 done (1/6 tiles, 1 computed this run)
+[t+1785338918] initial-topography: face 1 done (2/6 tiles, 2 computed this run)
+[t+1785338918] initial-topography: face 2 done (3/6 tiles, 3 computed this run)
+[t+1785338918] initial-topography: face 3 done (4/6 tiles, 4 computed this run)
+[t+1785338918] initial-topography: face 4 done (5/6 tiles, 5 computed this run)
+[t+1785338918] initial-topography: face 5 done (6/6 tiles, 6 computed this run)
+[t+1785338918] initial-topography: swept 6 tiles in 213.0ms (6 computed, 0 were hits)
+[t+1785338918] erosion: Jacobi halo d=16 σ=4 ρ=0 (schedule in key; face-at-a-time region carve)
+[t+1785338918] erosion: face 0 done (1/6 tiles, 1 computed this run) [Computed]
+[t+1785338918] erosion: face 1 done (2/6 tiles, 2 computed this run) [Computed]
+[t+1785338918] erosion: face 2 done (3/6 tiles, 3 computed this run) [Computed]
+[t+1785338918] erosion: face 3 done (4/6 tiles, 4 computed this run) [Computed]
+[t+1785338918] erosion: face 4 done (5/6 tiles, 5 computed this run) [Computed]
+[t+1785338918] erosion: face 5 done (6/6 tiles, 6 computed this run) [Computed]
+[t+1785338918] erosion: swept 6 tiles in 246.6ms (6 computed, 0 were hits)
+[t+1785338918] water: face 0 done (1/6 tiles, 1 computed this run)
+[t+1785338918] water: face 1 done (2/6 tiles, 2 computed this run)
+[t+1785338918] water: face 2 done (3/6 tiles, 3 computed this run)
+[t+1785338919] water: face 3 done (4/6 tiles, 4 computed this run)
+[t+1785338919] water: face 4 done (5/6 tiles, 5 computed this run)
+[t+1785338919] water: face 5 done (6/6 tiles, 6 computed this run)
+[t+1785338919] water: swept 6 tiles in 476.7ms (6 computed, 0 were hits)
+[t+1785338920] cooling stages: 6 materialized (6 computed, 0 were hits) in 1.7s — fresh processes warm every stage from the store, no cold pour
+[t+1785338920] build complete — the store is the save; explorers see everything already.

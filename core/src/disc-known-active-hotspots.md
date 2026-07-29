@@ -70,7 +70,7 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
 7. **Instrument / ops notes (same date, supporting).** Not leverage rank — so concurrent minds do not lose them:
    - **World VCS:** first-light under local git; **commit with every changelog-owed rebuild** ( #ops-changelog-is-the-acceptance-check FE(5) ), not "when interesting." Checkout → explore older models (non-current `src=`).
-   - **Changelog stock (halo):** captures under `changelog/captures/halo-before-after/` (old-cohort L13 surface, current-src L13 surface + change paint showing tile lattice); numeric bed Δ and seam ratio 0.61→1.04. **Entry still owed** for the Jacobi production landing — not deferred to taste.
+   - **Changelog (halo):** entry `2026-07-29-01-cross-tile-beds-under-jacobi-still-tiled-to-the-eye` frozen; residual tile lattice + flux/spill still open work (not entry debt).
 
 ## Epistemic Status
 

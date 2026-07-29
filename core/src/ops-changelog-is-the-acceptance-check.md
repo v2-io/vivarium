@@ -23,17 +23,36 @@ User-facing change lands with a **frozen, dated entry** in [`changelog/`](../../
 
 4. **Pre-register the expected entry** ( `#norm-caught-disciplines-become-mechanisms` FE(4) at outcome altitude): before building, one sentence of "when this lands, an entry can show X" — recorded in a frozen entry or DECISIONS, adjudicated at landing. A landed build whose pre-registered entry cannot be written has measurably not reached the end of the row.
 
-5. **World-store snapshot is part of the landing, not optional taste.** When FE(1) is owed and the path to the visible change **rebuilds** the default (or named) vivium store, commit that store's local git **as part of the same procedure** — typically: commit (or tag) the pre-rebuild tree for a reproducible *before*, rebuild, commit the post-rebuild tree for *after*, then capture. first-light's home is `~/.cache/vivarium/globe-world` ( #form-store-as-save FE(2) ). This is not a second save format and not vivarium source git; it freezes whole-directory model state so before/after does not depend on memory or on an accidental multi-`src` pile. Checkout then capture is as valid as dual-cohort capture under one live store. The git rev is extra provenance beside seed/`src=`/command, not a substitute for the capture. **Skip only when FE(1) skips** (internal-only work that does not move the external perspective) — not when the rebuild "doesn't feel important enough."
+5. **World-store snapshot is part of the landing, not optional taste.** When FE(1) is owed and the path to the visible change **rebuilds** the default (or named) vivium store, commit that store's local git **as part of the same procedure** — typically: commit (or tag) the pre-rebuild tree for a reproducible *before*, rebuild, commit the post-rebuild tree for *after*, then capture. first-light's home is `~/.cache/vivarium/globe-world` ( #form-store-as-save FE(2) ). This is not a second save format and not vivarium source git; it freezes whole-directory model state so before/after does not depend on memory or on an accidental multi-`src` pile. Checkout then capture is as valid as dual-cohort capture under one live store. **Skip only when FE(1) skips** — not when the rebuild "doesn't feel important enough."
 
-6. **The two-diagnosis clause.** An unwritable entry queues the *work* or the *instrument*; "built, currently invisible, because no view reaches X" is a valid entry and a direct instrument requisition (first exercise: the CLI region-render gap, entry 01).
+6. **The frozen entry carries provenance in the body, not only in chat.** Required fields when FE(1) lands (a landing without them is incomplete — same as an unwritable capture):
 
-7. **Out of bounds.** Entry prose as a claim source (segments own claims); entries as marketing (the eye they serve is a calibrated instrument, `#norm-no-depiction-without-referent` FE on decalibration).
+   | Field | Content |
+   | --- | --- |
+   | Seed + world name/path | e.g. first-light, seed, `~/.cache/vivarium/globe-world` |
+   | `src=` (or dual before/after) | kernel era of the captured surface(s) |
+   | World-dir git rev(s) | pre- and/or post-rebuild commits when FE(5) applied; if missing, **say so** (specimen: 2026-07-29-01) |
+   | Commands | exact explorer/build/probe lines that produced the shots |
+   | Captures | **embedded** as Obsidian wikilinks `![[captures/…/name.png]]` under `changelog/`, plus relative markdown links for GitHub |
+
+7. **Landing checklist (agent must not soft-skip).** When FE(1) is owed, finish **all** of the following in the same cycle or leave an explicit incomplete queue — do not claim the work "landed" on segments/code alone:
+
+   1. Pre-register the expected entry sentence (FE(4)).
+   2. If rebuilding: **commit world store** (FE(5)) pre-rebuild; rebuild; **commit** post-rebuild.
+   3. Capture before/after (or one-shot + named residual) into `changelog/captures/…`.
+   4. Write `changelog/DATE-NN-slug.md` with FE(6) fields + embeds; freeze.
+   5. Commit captures + entry on the **vivarium source** repo.
+   6. Clear “entry owed” language from hotspots / working notes.
+
+8. **The two-diagnosis clause.** An unwritable entry queues the *work* or the *instrument*; "built, currently invisible, because no view reaches X" is a valid entry and a direct instrument requisition (first exercise: the CLI region-render gap, entry 01).
+
+9. **Out of bounds.** Entry prose as a claim source (segments own claims); entries as marketing (the eye they serve is a calibrated instrument, `#norm-no-depiction-without-referent` FE on decalibration).
 
 ## Epistemic Status
 
 **Max attainable: robust-qualitative** — a working norm; its evidence is whether entries keep getting written and whether pre-registrations keep getting adjudicated.
 
-**Currently `robust-qualitative`, one day old:** charter and first entry landed 2026-07-28 with three pre-registrations pending adjudication. Ratified in intent by Joseph (the framing is his); the mechanics are `:by claude, proposed`. Stage `draft`.
+**Currently `robust-qualitative`:** charter 2026-07-28; FE(5)–(7) tightened 2026-07-29 after an agent soft-skipped world-git + entry until asked (specimen entry `2026-07-29-01`). Ratified in intent by Joseph; mechanics `:by claude, proposed`. Stage `draft`.
 
 ## Discussion
 
@@ -43,4 +62,4 @@ The practice closes a measured failure: a day of defensible layer-beneath work o
 
 - Operational detail (capture commands, filename convention, entry form): [`changelog/README.md`](../../changelog/README.md) — the README is the manual; this segment is the law.
 - The standing instrument requisition from entry 01: a CLI-level region render (named window, named stage, relief/discharge ASCII) to make before/after pairs one command each.
-- **first-light world VCS (2026-07-29):** default store `~/.cache/vivarium/globe-world` is under local git (baseline `28cb20d` post-Jacobi). FE(5): commit with every changelog-owed rebuild, not "when someone cares." Ops detail in that dir's `README.md`.
+- **first-light world VCS (2026-07-29):** default store `~/.cache/vivarium/globe-world` is under local git (baseline `28cb20d` post-Jacobi). FE(5)–(7): commit + entry fields + checklist. Ops detail in that dir's `README.md`.

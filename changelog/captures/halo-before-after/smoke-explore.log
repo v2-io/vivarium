@@ -1,0 +1,10 @@
+[explore] vivium "halo-smoke" (seed 0xb712affe26fcd622) at /tmp/vivarium-halo-smoke -- 37 roots, 6 tiles at L6, ladder 161 stages (6 built)
+[explore] erosion settle history: 2 materialized stages, epochs [4, 8], 6 tiles at L6, src b129b27c (this binary's source)
+[explore]   press E to scrub it, 5 for the change paint. This chain is materialized-only: its
+[explore]   density is what the builder ran, and no view flag can add to it.
+2026-07-29T15:29:15.909859Z  INFO bevy_diagnostic::system_information_diagnostics_plugin::internal: SystemInfo { os: "macOS 26.5.2", kernel: "25.5.0", cpu: "Apple M4 Max", core_count: "16", memory: "48.0 GiB" }
+2026-07-29T15:29:15.952117Z  INFO bevy_render::renderer: AdapterInfo { name: "Apple M4 Max", vendor: 0, device: 0, device_type: IntegratedGpu, driver: "", driver_info: "", backend: Metal }
+2026-07-29T15:29:16.572421Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-07-29T15:29:16.597089Z  INFO bevy_winit::system: Creating new window vivarium explore -- halo-smoke (0v0)
+[explore] SHOT changelog/captures/halo-before-after/smoke-present.png (settled 5.0s after first frame)
+2026-07-29T15:29:22.263095Z  INFO bevy_render::view::window::screenshot: Screenshot saved to changelog/captures/halo-before-after/smoke-present.png
