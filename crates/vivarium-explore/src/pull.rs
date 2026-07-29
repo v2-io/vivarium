@@ -271,14 +271,14 @@ pub fn spawn(
             };
 
             let regions = match req.lens {
-                Lens::Present => world.load_current_eroded_regions(),
+                Lens::Present => world.observe().load_current_eroded_regions(),
                 Lens::Stage(_) => Vec::new(),
                 // One world-moment: this cohort's source tree, this exact epoch.
                 // Both fields are required — the epoch alone would assemble
                 // stages from two different kernels into one surface, and the
                 // source alone is the whole settle history at once.
                 Lens::Erosion(i) => match chain.stage_predicate(i) {
-                    Some((src, lvl, epoch)) => world.load_eroded_regions_where(|k| {
+                    Some((src, lvl, epoch)) => world.observe().load_eroded_regions_where(|k| {
                         watch::key_field(k, "src") == Some(src.as_str())
                             && watch::key_field(k, "level").and_then(|v| v.parse::<u8>().ok())
                                 == Some(lvl)
@@ -292,10 +292,10 @@ pub fn spawn(
                         landings = watch::landings(&dir).unwrap_or_default();
                     }
                     let keys: BTreeSet<String> = crate::lens::replay_key_set(&landings, n);
-                    world.load_eroded_regions_where(|k| keys.contains(k))
+                    world.observe().load_eroded_regions_where(|k| keys.contains(k))
                 }
             };
-            let census = world.eroded_region_census();
+            let census = world.observe().eroded_region_census();
 
             // The ghost ring lies on neighbouring faces, so it must come from the
             // same law the in-face tile came from, or the seam instrument would
@@ -370,7 +370,7 @@ pub fn spawn(
                                     }
                                     t
                                 }
-                                _ => world.assemble_surface_tile(face, level, oi, oj, nx, regions).0,
+                                _ => world.observe().assemble_surface_tile(face, level, oi, oj, nx, regions).0,
                             };
 
                             // Every per-cell query below is asked in FACE cells,

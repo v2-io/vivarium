@@ -302,7 +302,7 @@ pub fn landings(dir: &Path) -> io::Result<Vec<Landing>> {
         let object = lines.next().unwrap_or("").trim().to_string();
         let key = lines.next().unwrap_or("").trim().to_string();
         let provisional = lines.any(|l| l.trim() == "provisional");
-        out.push(Landing { root: RootEntry { key, object, provisional }, at });
+        out.push(Landing { root: RootEntry { key, object, provisional, deps: None }, at });
     }
     out.sort_by(|a, b| a.at.cmp(&b.at).then_with(|| a.root.key.cmp(&b.root.key)));
     Ok(out)
@@ -591,7 +591,7 @@ mod tests {
     use super::*;
 
     fn root(key: &str) -> RootEntry {
-        RootEntry { key: key.into(), object: "o".into(), provisional: false }
+        RootEntry { key: key.into(), object: "o".into(), provisional: false, deps: None }
     }
 
     #[test]

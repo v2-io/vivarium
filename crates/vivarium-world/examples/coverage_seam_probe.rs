@@ -54,7 +54,7 @@ fn main() {
     // The ribbon-fault probe NEEDS the cross-cohort read it convicts — the
     // sharp predicate path expresses it explicitly (the convenient merging
     // loader is gone; #norm-caught-disciplines-become-mechanisms FE(2)(a)).
-    let regions = world.load_eroded_regions_where(|_| true);
+    let regions = world.observe().load_eroded_regions_where(|_| true);
     println!(
         "[assemble] cross-cohort predicate returned {} regions (NO src filter — stale included, deliberately)",
         regions.len()
@@ -70,7 +70,7 @@ fn main() {
 
     for f in 0..6u8 {
         let face = Face::from_index(f);
-        let (tile, _any) = world.assemble_surface_tile(face, level, 0, 0, nx, &regions);
+        let (tile, _any) = world.observe().assemble_surface_tile(face, level, 0, 0, nx, &regions);
         // coverage mask in one pass
         let mut covered = vec![false; nx * nx];
         for j in 0..nx {

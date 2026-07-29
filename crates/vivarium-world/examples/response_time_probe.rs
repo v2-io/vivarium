@@ -131,7 +131,8 @@ fn main() {
                 for src in srcs.iter().take(3) {
                     let tag = if src == cur { "CURRENT" } else { "stale-src" };
                     let mut regions = world
-                        .load_eroded_regions_where(|k| vivarium_world::watch::key_field(k, "src") == Some(src));
+                        .observe()
+        .load_eroded_regions_where(|k| vivarium_world::watch::key_field(k, "src") == Some(src));
                     // Landiest tiles first — the network census is about land.
                     regions.sort_by_key(|r| std::cmp::Reverse(r.h.iter().filter(|&&h| h > sea).count()));
                     println!("cohort src={src} ({tag}):");
@@ -175,7 +176,7 @@ fn main() {
         let (store, spec) = spec;
         let world = World::new(&store, spec.seed);
         // Current cohort if present, else the first cohort found — never merged.
-        let mut regions = world.load_current_eroded_regions();
+        let mut regions = world.observe().load_current_eroded_regions();
         if regions.is_empty() {
             let roots = store.roots().unwrap_or_default();
             if let Some(src) = roots.iter().find_map(|r| {
@@ -183,7 +184,7 @@ fn main() {
                     .then(|| vivarium_world::watch::key_field(&r.key, "src"))
                     .flatten()
             }) {
-                regions = world.load_eroded_regions_cohort(src);
+                regions = world.observe().load_eroded_regions_cohort(src);
             }
         }
         let sea = vivarium_world::sea_level::derived_sea_level_m(spec.seed) as f32;

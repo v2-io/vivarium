@@ -86,7 +86,7 @@ impl WaterField {
         for (&(f, oi, oj), &(eepochs, steps)) in &cov.watered {
             let face = Face::from_index(f);
             let Some((depth, _src)) =
-                world.water_tile_hit(face, cov.level, oi, oj, cov.nx, eepochs, steps)
+                world.observe().water_tile_hit(face, cov.level, oi, oj, cov.nx, eepochs, steps)
             else {
                 continue; // not settled under the current source — stale, not shown
             };

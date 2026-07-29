@@ -173,13 +173,14 @@ fn main() {
     );
 
     // Which stages exist for the beacon patch, and under which source hash.
-    let all = world.load_eroded_regions_where(|k| key_field(k, "level") == Some("13"));
+    let all = world.observe().load_eroded_regions_where(|k| key_field(k, "level") == Some("13"));
     if all.is_empty() {
         println!("(no L13 tiles in this store — the beacon has not been built)");
         return;
     }
     let cur = vivarium_world::nomotheke::SRC_HASH;
     let fresh = world
+        .observe()
         .load_eroded_regions_where(|k| key_field(k, "level") == Some("13") && key_field(k, "src") == Some(cur))
         .len();
     if fresh == 0 {
@@ -227,7 +228,7 @@ fn main() {
         // Every stage key for this one tile.
         let want = (target.oi, target.oj);
         for e in (0..=1000u32).step_by(10) {
-            let got = world.load_eroded_regions_where(|k| {
+            let got = world.observe().load_eroded_regions_where(|k| {
                 key_field(k, "level") == Some("13")
                     && key_field(k, "epochs").and_then(|v| v.parse::<u32>().ok()) == Some(e)
                     && key_field(k, "oi").and_then(|v| v.parse::<u32>().ok()) == Some(want.0)
@@ -246,7 +247,7 @@ fn main() {
     );
     for e in &stages {
         let want = (target.oi, target.oj);
-        let got = world.load_eroded_regions_where(|k| {
+        let got = world.observe().load_eroded_regions_where(|k| {
             key_field(k, "level") == Some("13")
                 && key_field(k, "epochs").and_then(|v| v.parse::<u32>().ok()) == Some(*e)
                 && key_field(k, "oi").and_then(|v| v.parse::<u32>().ok()) == Some(want.0)
@@ -270,7 +271,7 @@ fn main() {
         span as f64 * cell_km
     );
     println!("   Builder tiles route independently: every tile edge is an outlet, so a basin cannot cross one.");
-    let (assembled, any) = world.assemble_surface_tile(face, BEACON_LEVEL, o_i, o_j, span, &all);
+    let (assembled, any) = world.observe().assemble_surface_tile(face, BEACON_LEVEL, o_i, o_j, span, &all);
     if !any {
         println!("   (assembly found no eroded coverage — skipping)");
         return;
@@ -365,7 +366,7 @@ fn main() {
     // fill on it. Whether inland water can stand at all is first a question about
     // that bed's closed depressions, before it is a question about the fill.
     println!("\n-- Part 7: the L9 tiles — the bed `water-tile` settles on --");
-    let l9 = world.load_eroded_regions_where(|k| key_field(k, "level") == Some("9"));
+    let l9 = world.observe().load_eroded_regions_where(|k| key_field(k, "level") == Some("9"));
     if l9.is_empty() {
         println!("   (no L9 tiles in this store)");
         return;

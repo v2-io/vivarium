@@ -24,7 +24,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::erosion::{
-    self, BedArticle, ErodedRegion, ExchangedTile, Fluvial, FluvialParams, HaloRegion, HaloSchedule,
+    self, BedArticle, ExchangedTile, Fluvial, FluvialParams, HaloRegion, HaloSchedule,
 };
 use crate::gen;
 use crate::nomotheke::{
@@ -125,6 +125,27 @@ pub struct RegionCensus {
 /// (with the law) IS its identity (LEXICON §4; `#detail-vivium-lifecycle / #disc-unlawfulness-budget`
 /// Stage 0). Construct via [`World::new`] — normally from a loaded manifest
 /// (`spec::WorldSpec`), the one place a bare seed is handled.
+// Open compute frames on this thread: `(own key, witnessed reads)`, innermost
+// last. See `World::compute_frame` / `World::note_dep` — the under-keyed-
+// dependency mechanism ( #form-depend-by-key-never-latest FE(4)(b); third live
+// instance 2026-07-29 motivated it).
+thread_local! {
+    static READ_FRAMES: std::cell::RefCell<Vec<(String, std::collections::BTreeSet<String>)>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// RAII guard for one compute frame; popping on drop keeps frames balanced
+/// even when a compute path returns early.
+struct ReadFrameGuard;
+
+impl Drop for ReadFrameGuard {
+    fn drop(&mut self) {
+        READ_FRAMES.with_borrow_mut(|frames| {
+            frames.pop();
+        });
+    }
+}
+
 pub struct World<'s> {
     store: &'s Store,
     seed: u64,
@@ -149,6 +170,18 @@ impl<'s> World<'s> {
     }
 
     /// The world-seed (read-only — identity is set at construction).
+    /// The observe-only facade: store-scanning, cohort-preferring readers for
+    /// views ([`crate::observe::Observatory`]). A compute path has no business
+    /// calling through this — the `.observe()` in source is the greppable
+    /// tell (`#form-depend-by-key-never-latest` FE(4)(b)).
+    pub fn observe(&self) -> crate::observe::Observatory<'_, 's> {
+        crate::observe::Observatory { w: self }
+    }
+
+    pub(crate) fn store_ref(&self) -> &'s Store {
+        self.store
+    }
+
     pub fn seed(&self) -> u64 {
         self.seed
     }
@@ -159,12 +192,47 @@ impl<'s> World<'s> {
         self.provisional_writes.store(provisional, Ordering::Relaxed);
     }
 
+    /// Record `key` as a dependency read into the innermost open compute frame
+    /// on this thread (no-op outside a frame). Compute methods call this on
+    /// entry — before their own hit check — so the parent's witnessed read-set
+    /// is identical whether the dependency was a hit or a fresh compute.
+    fn note_dep(&self, key: &Key) {
+        READ_FRAMES.with_borrow_mut(|frames| {
+            if let Some((own, reads)) = frames.last_mut() {
+                if own != key.as_str() {
+                    reads.insert(key.as_str().to_string());
+                }
+            }
+        });
+    }
+
+    /// Open a read-recording frame for the compute of `key`. The frame lives
+    /// until the guard drops; [`Self::put_memo`] for the same key harvests the
+    /// witnessed read-set into the root's `deps` lines. Thread-local, so
+    /// parallel pulls on separate threads record independently.
+    fn compute_frame(&self, key: &Key) -> ReadFrameGuard {
+        READ_FRAMES.with_borrow_mut(|frames| {
+            frames.push((key.as_str().to_string(), std::collections::BTreeSet::new()));
+        });
+        ReadFrameGuard
+    }
+
     fn put_memo(&self, key: &Key, value: &[u8]) {
+        // Harvest the witnessed read-set from this key's open frame, if the
+        // writing path is wired for recording ( `None` = unwired, honest).
+        let deps: Option<Vec<String>> = READ_FRAMES.with_borrow(|frames| {
+            frames
+                .iter()
+                .rev()
+                .find(|(own, _)| own == key.as_str())
+                .map(|(_, reads)| reads.iter().cloned().collect())
+        });
         let _ = self.store.put_with(
             key,
             value,
             PutOpts {
                 provisional: self.provisional_writes.load(Ordering::Relaxed),
+                deps,
             },
         );
     }
@@ -177,6 +245,7 @@ impl<'s> World<'s> {
     /// ante-mundane constants — but keyed by seed for uniformity and future variation.)
     pub fn hydrosphere(&self) -> (crate::hydrosphere::Hydrosphere, Source) {
         let key = HYDROSPHERE.key().field("seed", self.seed);
+        self.note_dep(&key);
         if let Some(bytes) = self.store.get(&key) {
             if let Some(h) = crate::hydrosphere::Hydrosphere::from_bytes(&bytes) {
                 return (h, self.hit_source(&key));
@@ -227,9 +296,11 @@ impl<'s> World<'s> {
         nx: usize,
     ) -> (Vec<f32>, Source) {
         let key = self.initial_topography_key(face, level, oi, oj, nx);
+        self.note_dep(&key);
         if let Some(bytes) = self.store.get(&key) {
             return (decode_f32(&bytes), self.hit_source(&key));
         }
+        let _frame = self.compute_frame(&key);
         let tile = self.compute_initial_topography(face, level, oi, oj, nx);
         self.put_memo(&key, &encode_f32(&tile));
         (tile, Source::Computed)
@@ -254,9 +325,11 @@ impl<'s> World<'s> {
     /// swappable, memoized thing.
     pub fn uplift_tile(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> (Vec<f32>, Source) {
         let key = self.uplift_key(face, level, oi, oj, nx);
+        self.note_dep(&key);
         if let Some(bytes) = self.store.get(&key) {
             return (decode_f32(&bytes), self.hit_source(&key));
         }
+        let _frame = self.compute_frame(&key);
         let tile = crate::uplift::uplift_rate_tile(self.seed, face, level, oi, oj, nx);
         self.put_memo(&key, &encode_f32(&tile));
         (tile, Source::Computed)
@@ -284,9 +357,11 @@ impl<'s> World<'s> {
     /// rung; for now every cell shares the mean.
     pub fn climate_tile(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> (Vec<f32>, Source) {
         let key = self.climate_key(face, level, oi, oj, nx);
+        self.note_dep(&key);
         if let Some(bytes) = self.store.get(&key) {
             return (decode_f32(&bytes), self.hit_source(&key));
         }
+        let _frame = self.compute_frame(&key);
         let (h, _) = self.hydrosphere();
         let mean = crate::climate::mean_precip_m_per_yr(h.atmosphere_m_we(&crate::planet::Planet::EARTH));
         // Fated, mean-preserving, low-frequency jitter about the mean: uniform rain
@@ -376,9 +451,11 @@ impl<'s> World<'s> {
         // retreated same day). Views that want "the best bed built" read
         // through [`Self::surface_prefer_eroded`] / the region loaders.
         let key = self.erosion_key(face, level, oi, oj, nx, epochs, None);
+        self.note_dep(&key);
         if let Some(bytes) = self.store.get(&key) {
             return (decode_f32(&bytes), self.hit_source(&key));
         }
+        let _frame = self.compute_frame(&key);
         // Dependencies, all pulled (memoized — recurse into their nomos): the
         // initial-topography surface it carves, the uplift field it carves against, and the
         // climate precipitation that drives its discharge.
@@ -608,94 +685,6 @@ impl<'s> World<'s> {
         (tiles, Source::Computed)
     }
 
-    /// Observe-only, **view half only**: the best eroded memo at this tile —
-    /// halo preferred over plain edge-sink when both exist at the same
-    /// coordinates and epochs ( #form-same-level-halo-exchange adoption). Ties
-    /// inside a rank break by lexicographically smallest key, so what a view
-    /// shows never depends on store iteration order. `None` if nothing stored.
-    ///
-    /// This must never feed a memoized computation: a compute path that reads
-    /// "the best bed in the store" makes its own bytes a function of build
-    /// order (`#form-depend-by-key-never-latest` FE(4)(b)). Consumers name
-    /// their bed by key ([`BedArticle`]); only views read through here.
-    fn store_eroded_at(
-        &self,
-        face: Face,
-        level: u8,
-        oi: u32,
-        oj: u32,
-        nx: usize,
-        epochs: u32,
-    ) -> Option<(Vec<f32>, Source)> {
-        let Ok(roots) = self.store.roots() else {
-            return None;
-        };
-        let face_s = face.index().to_string();
-        let level_s = level.to_string();
-        let oi_s = oi.to_string();
-        let oj_s = oj.to_string();
-        let nx_s = nx.to_string();
-        let epochs_s = epochs.to_string();
-        let seed_s = self.seed.to_string();
-        // (rank, key, provisional, h) — higher rank wins; inside a rank the
-        // lexicographically smallest key wins (deterministic across stores).
-        let mut best: Option<(u8, &str, bool, Vec<f32>)> = None;
-        for r in &roots {
-            if !r.key.starts_with("erosion-tile@") {
-                continue;
-            }
-            if key_field(&r.key, "aspect").is_some() {
-                continue;
-            }
-            if key_field(&r.key, "face") != Some(face_s.as_str()) {
-                continue;
-            }
-            if key_field(&r.key, "level") != Some(level_s.as_str()) {
-                continue;
-            }
-            if key_field(&r.key, "oi") != Some(oi_s.as_str()) {
-                continue;
-            }
-            if key_field(&r.key, "oj") != Some(oj_s.as_str()) {
-                continue;
-            }
-            if key_field(&r.key, "nx") != Some(nx_s.as_str()) {
-                continue;
-            }
-            if key_field(&r.key, "epochs") != Some(epochs_s.as_str()) {
-                continue;
-            }
-            if key_field(&r.key, "seed") != Some(seed_s.as_str()) {
-                continue;
-            }
-            let rank = if key_field(&r.key, "edge") == Some("halo") { 1u8 } else { 0 };
-            if best
-                .as_ref()
-                .is_some_and(|(br, bk, _, _)| *br > rank || (*br == rank && *bk <= r.key.as_str()))
-            {
-                continue;
-            }
-            let Some(bytes) = self.store.object_bytes(&r.object) else {
-                continue;
-            };
-            let h = decode_f32(&bytes);
-            if h.len() != nx * nx {
-                continue;
-            }
-            best = Some((rank, r.key.as_str(), r.provisional, h));
-        }
-        best.map(|(_, _, provisional, h)| {
-            (
-                h,
-                if provisional {
-                    Source::HitProvisional
-                } else {
-                    Source::Hit
-                },
-            )
-        })
-    }
-
     /// The sibling key for one stage's measured residual — the mean $|\Delta h|$
     /// (m) of the stage's final epoch, recorded so the honesty travels with the
     /// stage instead of living in a process's transient `last_delta_m`
@@ -855,209 +844,6 @@ impl<'s> World<'s> {
         }
     }
 
-    /// View-facing surface pull: **prefer a store-hit eroded tile**, else fall
-    /// back to initial topography. Never triggers a cold erosion compute —
-    /// views must not invent work the builder has not done; they only *show*
-    /// what the store already holds (core/view wall: peers that query).
-    ///
-    /// Returns `(heights, source, eroded)` where `eroded` is true iff the
-    /// surface came from a memoized fluvial tile at `epochs`.
-    ///
-    /// **Note:** this hits one complete key `(oi,oj,nx,epochs)`. The builder
-    /// sweeps many 64×64 tiles; for a whole-face or free-roam view that must
-    /// see *all* of them, use [`load_eroded_regions`] + [`assemble_surface_tile`].
-    /// Prefers a halo-exchanged memo when present (same rule as
-    /// [`Self::erosion_tile`]'s store half).
-    pub fn surface_prefer_eroded(
-        &self,
-        face: Face,
-        level: u8,
-        oi: u32,
-        oj: u32,
-        nx: usize,
-        epochs: u32,
-    ) -> (Vec<f32>, Source, bool) {
-        if let Some((h, src)) = self.store_eroded_at(face, level, oi, oj, nx, epochs) {
-            return (h, src, true);
-        }
-        let (tile, src) = self.initial_topography(face, level, oi, oj, nx);
-        (tile, src, false)
-    }
-
-    /// Census of `erosion-tile` roots by **source-hash freshness** — the loud
-    /// signal a view needs so silent staleness stops masquerading as geography.
-    ///
-    /// Every nomos key folds the build-time whole-crate source digest
-    /// ([`crate::nomotheke::SRC_HASH`], `#form-complete-content-addressed-key`).
-    /// A root whose `src=` field differs from the current binary's hash was
-    /// carved under a **different source tree** — its bytes are matured, but not
-    /// this world's *current* surface. `load_eroded_regions` (below) does NOT
-    /// filter on this, so a stale tile is loaded and shown as if current unless
-    /// the caller consults this census / uses [`Self::load_current_eroded_regions`].
-    pub fn eroded_region_census(&self) -> RegionCensus {
-        let Ok(roots) = self.store.roots() else {
-            return RegionCensus::default();
-        };
-        let mut c = RegionCensus::default();
-        for r in &roots {
-            if !r.key.starts_with("erosion-tile@") {
-                continue;
-            }
-            if key_field(&r.key, "aspect").is_some() {
-                continue; // stage-residual siblings are metadata, not surfaces
-            }
-            c.total += 1;
-            if key_field(&r.key, "src") == Some(crate::nomotheke::SRC_HASH) {
-                c.fresh += 1;
-            } else {
-                c.stale += 1;
-            }
-        }
-        c
-    }
-
-    /// Materialize one **cohort's** `erosion-tile` roots as [`ErodedRegion`]s —
-    /// the tiles carved under exactly the source tree `src`. Observe-only, pure
-    /// store census; order is coarse → fine by level (required by
-    /// [`erosion::surface_at`]).
-    ///
-    /// This is the cohort-safe convenient path ( `#norm-caught-disciplines-`
-    /// `become-mechanisms` FE(2)(a)): a store holds beds carved under many
-    /// source trees, and a reader that merges cohorts censuses a terrain nobody
-    /// built — a fault class three independent readers hit on 2026-07-28 before
-    /// the merging default was removed. Choosing the cohort is now part of the
-    /// read. `watch::erosion_cohorts` enumerates what a store holds.
-    pub fn load_eroded_regions_cohort(&self, src: &str) -> Vec<ErodedRegion> {
-        self.load_eroded_regions_where(|key| key_field(key, "src") == Some(src))
-    }
-
-    /// [`Self::load_eroded_regions_cohort`] at the current binary's
-    /// [`crate::nomotheke::SRC_HASH`] — the observe-only honest surface: a tile
-    /// counts as *this* world's eroded state only if it was carved under the
-    /// source now running. Stale tiles are dropped (loudly, via
-    /// [`Self::eroded_region_census`]), never silently blended into the surface.
-    pub fn load_current_eroded_regions(&self) -> Vec<ErodedRegion> {
-        let cur = crate::nomotheke::SRC_HASH;
-        self.load_eroded_regions_where(|key| key_field(key, "src") == Some(cur))
-    }
-
-    /// Load exactly the `erosion-tile` roots whose complete key `keep` accepts.
-    ///
-    /// Public because **replay needs it**: replaying a build in any renderer
-    /// means assembling the surface from the roots that had landed by frame *n*,
-    /// which is a key-set predicate and nothing more
-    /// ( #form-time-indexed-stage-chains FE(5) — the live path and the replay
-    /// path must be the same mechanism, and they are only the same mechanism if
-    /// replay assembles through this function rather than through a private
-    /// second loader). Callers that want the ordinary honest surface should use
-    /// [`Self::load_current_eroded_regions`].
-    ///
-    /// **This is the sharp path, and cohort honesty is the caller's burden
-    /// here**: a predicate that ignores `src=` merges beds carved under
-    /// different source trees into a terrain nobody built (the fault class the
-    /// removed no-filter loader made convenient — `#norm-caught-disciplines-`
-    /// `become-mechanisms` FE(2)(a)). Replay predicates should pin a cohort
-    /// alongside their landing cut, as the explorer's do.
-    ///
-    /// **One region per tile, the latest stage among accepted roots.** A staged
-    /// build leaves *many* roots per tile — the settle history — and a surface
-    /// is one moment, not a blend of moments. Per `(face, level, oi, oj, nx)`
-    /// the highest-`epochs` accepted root wins; at equal epochs a **halo**
-    /// schedule key beats a plain edge-sink key (exchange adoption).
-    /// Stage-residual siblings (`aspect=` roots) are metadata and are skipped.
-    pub fn load_eroded_regions_where(&self, keep: impl Fn(&str) -> bool) -> Vec<ErodedRegion> {
-        let Ok(roots) = self.store.roots() else {
-            return Vec::new();
-        };
-        // Tile identity → (epochs, halo_rank, region); BTree for deterministic order.
-        type TileAt = (u8, u8, u32, u32, usize); // (face, level, oi, oj, nx)
-        let mut latest: std::collections::BTreeMap<TileAt, (u32, u8, ErodedRegion)> =
-            std::collections::BTreeMap::new();
-        for r in roots {
-            if !r.key.starts_with("erosion-tile@") {
-                continue;
-            }
-            if key_field(&r.key, "aspect").is_some() {
-                continue;
-            }
-            if !keep(&r.key) {
-                continue;
-            }
-            let Some(face_i) = key_field(&r.key, "face").and_then(|v| v.parse::<u8>().ok()) else {
-                continue;
-            };
-            let Some(level) = key_field(&r.key, "level").and_then(|v| v.parse::<u8>().ok()) else {
-                continue;
-            };
-            let Some(oi) = key_field(&r.key, "oi").and_then(|v| v.parse::<u32>().ok()) else {
-                continue;
-            };
-            let Some(oj) = key_field(&r.key, "oj").and_then(|v| v.parse::<u32>().ok()) else {
-                continue;
-            };
-            let Some(nx) = key_field(&r.key, "nx").and_then(|v| v.parse::<usize>().ok()) else {
-                continue;
-            };
-            let epochs = key_field(&r.key, "epochs").and_then(|v| v.parse::<u32>().ok()).unwrap_or(0);
-            let rank = if key_field(&r.key, "edge") == Some("halo") { 1u8 } else { 0 };
-            let at = (face_i, level, oi, oj, nx);
-            if let Some((have_ep, have_rank, _)) = latest.get(&at) {
-                if *have_ep > epochs || (*have_ep == epochs && *have_rank >= rank) {
-                    continue;
-                }
-            }
-            let Some(bytes) = self.store.object_bytes(&r.object) else {
-                continue;
-            };
-            let h = decode_f32(&bytes);
-            if h.len() != nx * nx {
-                continue;
-            }
-            let region = ErodedRegion {
-                face: Face::from_index(face_i),
-                level,
-                oi,
-                oj,
-                nx,
-                h,
-                seed: self.seed,
-            };
-            latest.insert(at, (epochs, rank, region));
-        }
-        // BTreeMap order is (face, level, …); assembly requires coarse → fine.
-        let mut out: Vec<ErodedRegion> = latest.into_values().map(|(_, _, r)| r).collect();
-        out.sort_by_key(|r| (r.level, r.face.index(), r.oi, r.oj));
-        out
-    }
-
-    /// Assemble an `nx×nx` height tile at `(face, level, oi, oj)` from loaded
-    /// store regions + fated prior. **Observe-only:** no erosion compute, no
-    /// store write. `any_eroded` is true if any cell was covered by a region.
-    pub fn assemble_surface_tile(
-        &self,
-        face: Face,
-        level: u8,
-        oi: u32,
-        oj: u32,
-        nx: usize,
-        regions: &[ErodedRegion],
-    ) -> (Vec<f32>, bool) {
-        let mut tile = Vec::with_capacity(nx * nx);
-        let mut any_eroded = false;
-        for j in 0..nx as u32 {
-            for i in 0..nx as u32 {
-                let cell = CellId::from_face_ij(face, oi + i, oj + j, level);
-                if erosion::tier_at(cell, regions).is_some() {
-                    any_eroded = true;
-                }
-                tile.push(erosion::surface_at(self.seed, cell, regions) as f32);
-            }
-        }
-        (tile, any_eroded)
-    }
-
-    /// The complete key for a water tile — upstream identity folded in through
-    /// both dependency versions plus the erosion run length its bed came from.
     /// The `bed` article is identity: water settled on a halo-exchanged bed is
     /// not the water settled on the edge-sink bed at the same coordinates, so
     /// the bed's complete identity folds into this key as one canonical token
@@ -1111,6 +897,9 @@ impl<'s> World<'s> {
             BedArticle::Halo { schedule, region } => {
                 let key =
                     self.erosion_key(face, level, oi, oj, nx, erosion_epochs, Some((schedule, region)));
+                // The bed is a real dependency read of the water frame on both
+                // the hit and the carve path — witness it.
+                self.note_dep(&key);
                 if let Some(bytes) = self.store.get(&key) {
                     return decode_f32(&bytes);
                 }
@@ -1162,9 +951,11 @@ impl<'s> World<'s> {
         bed: BedArticle,
     ) -> (Vec<f32>, Source) {
         let key = self.water_key(face, level, oi, oj, nx, erosion_epochs, steps, bed);
+        self.note_dep(&key);
         if let Some(bytes) = self.store.get(&key) {
             return (decode_f32(&bytes), self.hit_source(&key));
         }
+        let _frame = self.compute_frame(&key);
         let bed = self.bed_for_water(face, level, oi, oj, nx, erosion_epochs, bed);
         let (precip, _) = self.climate_tile(face, level, oi, oj, nx);
         let cell_m = crate::sample::cell_size_m(level, crate::planet::Planet::EARTH.radius_m) as f32;
@@ -1201,77 +992,6 @@ impl<'s> World<'s> {
         let depth = sim.depth.clone();
         self.put_memo(&key, &encode_f32(&depth));
         (depth, Source::Computed)
-    }
-
-    /// The **store-only** half of [`Self::water_tile`]: `Some` iff this exact
-    /// water tile is already settled in the store. Never runs the fill kernel.
-    ///
-    /// A view must have this. `water_tile` on a miss runs `steps` iterations of
-    /// the shallow-water kernel and, over a whole-globe census, that is minutes
-    /// of cold evolution on whatever thread asked — exactly the
-    /// `#form-builder-admission` FE(4) never-block clause, and it fires on the
-    /// completely ordinary occasion of a source edit having moved every key's
-    /// source hash. The honest view behaviour is to find no current water,
-    /// display none, and say the tiles are stale; the dishonest one is to spend
-    /// four minutes silently re-settling the planet so the picture looks the
-    /// same as yesterday.
-    /// Observe-only scan (a view cannot construct the exact key: the `bed=`
-    /// token is the builder's knowledge, not the viewer's). Among matches the
-    /// preference is deterministic: a halo-bed depth over an edge-sink one,
-    /// then the lexicographically smallest key — never store iteration order.
-    #[allow(clippy::too_many_arguments)]
-    pub fn water_tile_hit(
-        &self,
-        face: Face,
-        level: u8,
-        oi: u32,
-        oj: u32,
-        nx: usize,
-        erosion_epochs: u32,
-        steps: u32,
-    ) -> Option<(Vec<f32>, Source)> {
-        let roots = self.store.roots().ok()?;
-        let want = [
-            ("seed", self.seed.to_string()),
-            ("face", face.index().to_string()),
-            ("level", level.to_string()),
-            ("oi", oi.to_string()),
-            ("oj", oj.to_string()),
-            ("nx", nx.to_string()),
-            ("eepochs", erosion_epochs.to_string()),
-            ("steps", steps.to_string()),
-            // The exact-key path matched src implicitly; the scan must too, or
-            // a stale cohort's water would render as current.
-            ("src", crate::nomotheke::SRC_HASH.to_string()),
-        ];
-        let mut best: Option<(u8, &str, bool, &str)> = None; // rank, key, provisional, object
-        for r in &roots {
-            if !r.key.starts_with("water-tile@") {
-                continue;
-            }
-            if want.iter().any(|(n, v)| key_field(&r.key, n) != Some(v.as_str())) {
-                continue;
-            }
-            let rank = if key_field(&r.key, "bed").is_some_and(|b| b.starts_with("halo")) {
-                1u8
-            } else {
-                0
-            };
-            if best
-                .as_ref()
-                .is_some_and(|(br, bk, _, _)| *br > rank || (*br == rank && *bk <= r.key.as_str()))
-            {
-                continue;
-            }
-            best = Some((rank, r.key.as_str(), r.provisional, r.object.as_str()));
-        }
-        let (_, _, provisional, object) = best?;
-        let bytes = self.store.object_bytes(object)?;
-        let h = decode_f32(&bytes);
-        if h.len() != nx * nx {
-            return None;
-        }
-        Some((h, if provisional { Source::HitProvisional } else { Source::Hit }))
     }
 
     /// The complete key for an epoch reduction at mantle temperature `tp_c`.
@@ -1357,7 +1077,7 @@ impl<'s> World<'s> {
     }
 }
 
-fn encode_f32(v: &[f32]) -> Vec<u8> {
+pub(crate) fn encode_f32(v: &[f32]) -> Vec<u8> {
     let mut b = Vec::with_capacity(v.len() * 4);
     for &x in v {
         b.extend_from_slice(&x.to_le_bytes());
@@ -1365,14 +1085,14 @@ fn encode_f32(v: &[f32]) -> Vec<u8> {
     b
 }
 
-fn decode_f32(b: &[u8]) -> Vec<f32> {
+pub(crate) fn decode_f32(b: &[u8]) -> Vec<f32> {
     b.chunks_exact(4)
         .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
         .collect()
 }
 
 /// Pull `name=value` from a canonical complete-key string.
-fn key_field<'a>(key: &'a str, name: &str) -> Option<&'a str> {
+pub(crate) fn key_field<'a>(key: &'a str, name: &str) -> Option<&'a str> {
     let pfx = format!("{name}=");
     key.split('|').find_map(|f| f.strip_prefix(&pfx))
 }
@@ -1625,15 +1345,15 @@ mod tests {
         let w = World::new(&s, 7);
         let (_h, src) = w.erosion_tile(face, level, 0, 0, nx, epochs);
         assert_eq!(src, Source::Computed);
-        let regions = w.load_current_eroded_regions();
+        let regions = w.observe().load_current_eroded_regions();
         assert_eq!(regions.len(), 1);
         assert_eq!(regions[0].nx, nx);
         assert_eq!(regions[0].level, level);
-        let (tile, any) = w.assemble_surface_tile(face, level, 0, 0, nx, &regions);
+        let (tile, any) = w.observe().assemble_surface_tile(face, level, 0, 0, nx, &regions);
         assert!(any, "assembled tile must report eroded coverage");
         assert_eq!(tile.len(), nx * nx);
         // Pure prior path (no regions) still works and does not claim eroded.
-        let (_prior, none) = w.assemble_surface_tile(face, level, 0, 0, nx, &[]);
+        let (_prior, none) = w.observe().assemble_surface_tile(face, level, 0, 0, nx, &[]);
         assert!(!none);
         let _ = fs::remove_dir_all(&dir);
     }
@@ -1663,9 +1383,9 @@ mod tests {
 
         // A genuine, current-source eroded tile.
         assert_eq!(w.erosion_tile(face, level, 0, 0, nx, epochs).1, Source::Computed);
-        let c0 = w.eroded_region_census();
+        let c0 = w.observe().eroded_region_census();
         assert_eq!((c0.total, c0.fresh, c0.stale), (1, 1, 0), "one fresh tile, no stale");
-        assert_eq!(w.load_current_eroded_regions().len(), 1);
+        assert_eq!(w.observe().load_current_eroded_regions().len(), 1);
 
         // A hand-forged tile carved under a DIFFERENT source tree: identical
         // coordinates, but src = a hash that is not the current binary's.
@@ -1682,12 +1402,12 @@ mod tests {
         // The merging default is GONE (the mechanism): only an explicit
         // predicate can still express a cross-cohort read, and it costs the
         // predicate — which is the point.
-        assert_eq!(w.load_eroded_regions_where(|_| true).len(), 2, "the sharp path can merge, explicitly");
+        assert_eq!(w.observe().load_eroded_regions_where(|_| true).len(), 2, "the sharp path can merge, explicitly");
 
         // The instruments separate them.
-        let c1 = w.eroded_region_census();
+        let c1 = w.observe().eroded_region_census();
         assert_eq!((c1.total, c1.fresh, c1.stale), (2, 1, 1), "census surfaces the stale tile");
-        let current = w.load_current_eroded_regions();
+        let current = w.observe().load_current_eroded_regions();
         assert_eq!(current.len(), 1, "current-only loader drops the stale tile");
         assert!(current.iter().all(|r| !(r.oi == 128 && r.h.iter().all(|&h| h == 1234.0))), "stale bytes excluded");
 
@@ -1728,7 +1448,7 @@ mod tests {
             );
             // The interior is addressable: every ladder rung is a store citizen.
             for &k in &interior {
-                let (_h, _src, eroded) = wb.surface_prefer_eroded(face, level, 0, 0, nx, k);
+                let (_h, _src, eroded) = wb.observe().surface_prefer_eroded(face, level, 0, 0, nx, k);
                 assert!(eroded, "interior stage epochs={k} must be a keyed citizen");
                 let r = wb.erosion_stage_residual(face, level, 0, 0, nx, k);
                 assert!(
@@ -1737,7 +1457,7 @@ mod tests {
                 );
             }
             // ...and the one-shot world has none — endpoint only, no interior.
-            let (_h, _src, eroded) = wa.surface_prefer_eroded(face, level, 0, 0, nx, interior[0]);
+            let (_h, _src, eroded) = wa.observe().surface_prefer_eroded(face, level, 0, 0, nx, interior[0]);
             assert!(!eroded, "a one-shot build has no interior to show");
 
             let _ = fs::remove_dir_all(&dir_a);
@@ -1775,7 +1495,7 @@ mod tests {
         assert_eq!(src, Source::Hit, "a fully materialized chain walks for free");
 
         // Readers: three stage roots, ONE region, and it is the latest stage.
-        let regions = w.load_current_eroded_regions();
+        let regions = w.observe().load_current_eroded_regions();
         assert_eq!(regions.len(), 1, "one region per tile — a surface is one moment");
         assert!(
             regions[0].h.iter().zip(endpoint.iter()).all(|(a, b)| a.to_bits() == b.to_bits()),
@@ -1907,7 +1627,7 @@ mod tests {
         // stays pure on the plain key and must not be satisfied by it —
         // otherwise memoized consumers become functions of build order
         // (`#form-depend-by-key-never-latest` FE(4)(b)).
-        let (shown, _, eroded) = w_ex.surface_prefer_eroded(face, level, oi, oj, tile_n, epochs);
+        let (shown, _, eroded) = w_ex.observe().surface_prefer_eroded(face, level, oi, oj, tile_n, epochs);
         assert!(eroded, "view half must see the halo bed");
         assert!(
             shown.iter().zip(ex[0].h.iter()).all(|(a, b)| a.to_bits() == b.to_bits()),
@@ -1999,6 +1719,25 @@ mod tests {
             "same water key must mean the same bytes under both demand orders"
         );
 
+        // The witnessed read-set is order-independent too: both cohorts'
+        // water roots record the same dependency keys (the bed article and the
+        // climate tile), whether the bed was carved on demand or pre-built.
+        let deps_of = |st: &Store| -> Vec<String> {
+            st.roots()
+                .unwrap()
+                .into_iter()
+                .find(|r| r.key.starts_with("water-tile@") && key_field(&r.key, "bed").is_some())
+                .and_then(|r| r.deps)
+                .expect("water root must carry a witnessed read-set")
+        };
+        let (da, db) = (deps_of(&s_a), deps_of(&s_b));
+        assert_eq!(da, db, "witnessed read-set must not depend on demand order");
+        assert!(
+            da.iter().any(|k| k.starts_with("erosion-tile@") && key_field(k, "edge") == Some("halo")),
+            "water must witness its halo bed read"
+        );
+        assert!(da.iter().any(|k| k.starts_with("climate@")), "water must witness its climate read");
+
         // The edge-sink water is its own article: different key (it computes
         // rather than hitting the halo-bed water), and on this terrain the
         // depths need not agree — nothing may silently alias them.
@@ -2029,7 +1768,7 @@ mod tests {
         let schedule = HaloSchedule { depth: 2, cadence: 4, cone_rho: 0 };
         let (ex, _) = w.erosion_region_exchanged(face, level, 0, 0, nx, 1, 1, epochs, schedule);
         assert_eq!(ex.len(), 1);
-        let regions = w.load_current_eroded_regions();
+        let regions = w.observe().load_current_eroded_regions();
         assert_eq!(regions.len(), 1);
         // Loaded heights must match the halo tile, not the plain one.
         assert!(
@@ -2072,7 +1811,7 @@ mod tests {
 
         // Re-mark the same key provisional (what a waived build writes).
         let key = w.initial_topography_key(face, 19, 1000, 2000, nx);
-        s.put_with(&key, &encode_f32(&t1), PutOpts { provisional: true }).unwrap();
+        s.put_with(&key, &encode_f32(&t1), PutOpts { provisional: true, deps: None }).unwrap();
         assert!(s.is_provisional(&key));
 
         let (t2, src2) = w.initial_topography(face, 19, 1000, 2000, nx);
@@ -2113,6 +1852,45 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
     }
 
+    /// The witnessed read-set mechanism: an erosion tile's root records exactly
+    /// the three dependency pulls its key already names (initial topography,
+    /// uplift, climate) — no more (nothing unkeyed was read: the FE(4)(b)
+    /// tripwire), no fewer (the witness is not silently lossy). Nested frames
+    /// attribute correctly: climate's own hydrosphere pull lands in climate's
+    /// read-set, not erosion's.
+    #[test]
+    fn erosion_witnesses_exactly_its_keyed_reads() {
+        let dir = tmpdir("read-witness");
+        let face = Face::from_index(1);
+        let (level, nx, epochs) = (8u8, 16usize, 6u32);
+        let s = Store::open(&dir).unwrap();
+        let w = World::new(&s, 7);
+        let _ = w.erosion_tile(face, level, 32, 32, nx, epochs);
+        let roots = s.roots().unwrap();
+        let er = roots
+            .iter()
+            .find(|r| r.key.starts_with("erosion-tile@"))
+            .expect("erosion root exists");
+        let deps = er.deps.as_ref().expect("erosion root carries a witnessed read-set");
+        let heads: Vec<&str> =
+            deps.iter().map(|k| k.split('@').next().unwrap_or("")).collect();
+        assert_eq!(
+            heads,
+            ["climate", "initial-topography", "uplift-tile"],
+            "witnessed reads are exactly the keyed dependencies (sorted)"
+        );
+        let cl = roots
+            .iter()
+            .find(|r| r.key.starts_with("climate@"))
+            .expect("climate root exists");
+        let cdeps = cl.deps.as_ref().expect("climate root carries a read-set");
+        assert!(
+            cdeps.iter().any(|k| k.starts_with("hydrosphere@")),
+            "climate witnesses its hydrosphere pull in its own frame"
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
     /// The explorer's water read is a scan (a view cannot construct the
     /// `bed=` token); it must find bed-keyed memos, prefer the halo-bed depth
     /// over the edge-sink one at the same coordinates, and never compute.
@@ -2123,13 +1901,13 @@ mod tests {
         let (level, nx, eepochs, steps) = (8u8, 16usize, 12u32, 40u32);
         let s = Store::open(&dir).unwrap();
         let w = World::new(&s, 41);
-        assert!(w.water_tile_hit(face, level, 0, 0, nx, eepochs, steps).is_none());
+        assert!(w.observe().water_tile_hit(face, level, 0, 0, nx, eepochs, steps).is_none());
         let (plain, _) = w.water_tile(face, level, 0, 0, nx, eepochs, steps, BedArticle::EdgeSink);
         let schedule = HaloSchedule { depth: 4, cadence: 4, cone_rho: 0 };
         let region = HaloRegion { oi: 0, oj: 0, tiles_i: 2, tiles_j: 2 };
         let bed = BedArticle::Halo { schedule, region };
         let (halo, _) = w.water_tile(face, level, 0, 0, nx, eepochs, steps, bed);
-        let (hit, src) = w.water_tile_hit(face, level, 0, 0, nx, eepochs, steps).unwrap();
+        let (hit, src) = w.observe().water_tile_hit(face, level, 0, 0, nx, eepochs, steps).unwrap();
         assert_eq!(src, Source::Hit);
         assert!(
             hit.iter().zip(halo.iter()).all(|(a, b)| a.to_bits() == b.to_bits()),

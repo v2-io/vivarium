@@ -15,7 +15,7 @@ fn main() {
         for ti in 0..b.tiles {
             let (oi, oj) = (b.oi + ti * 64, b.oj + tj * 64);
             let at = |ep: u32| {
-                let rs = world.load_eroded_regions_where(|k| {
+                let rs = world.observe().load_eroded_regions_where(|k| {
                     key_field(k, "level") == Some(&b.level.to_string())
                         && key_field(k, "oi") == Some(&oi.to_string())
                         && key_field(k, "oj") == Some(&oj.to_string())

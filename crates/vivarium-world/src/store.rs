@@ -90,12 +90,21 @@ impl Key {
 
 /// Options for a memo put. Flags are **root metadata**, not key inputs: the same
 /// complete key may be lawful or provisional depending on builder admission.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct PutOpts {
     /// Written under waived flux admission (`--allow-unmet`). Census and status
     /// must surface this; provisional roots are not lawful *in vivia* evidence
     /// ( #form-builder-admission · #form-flux-web ).
     pub provisional: bool,
+    /// The **witnessed read-set**: the complete keys this memo's compute pulled
+    /// as dependencies, recorded by the compute frame ( `query::World`, the
+    /// under-keyed-dependency mechanism). `None` = the compute path is not yet
+    /// wired for recording (pre-mechanism, or a path documented as unwired);
+    /// `Some(vec![])` = recorded and genuinely read nothing. Root metadata,
+    /// never a key input — two runs of a lawful compute record the same set,
+    /// and an audit that finds two cohorts disagreeing on a read-set has found
+    /// an under-keyed dependency ( #form-depend-by-key-never-latest FE(4)(b) ).
+    pub deps: Option<Vec<String>>,
 }
 
 /// One store root as the census instruments see it.
@@ -107,6 +116,9 @@ pub struct RootEntry {
     pub object: String,
     /// True when written under waived flux admission — not lawful evidence.
     pub provisional: bool,
+    /// Witnessed read-set ([`PutOpts::deps`]): `None` if the writing path did
+    /// not record one.
+    pub deps: Option<Vec<String>>,
 }
 
 /// A filesystem-backed content-addressed store.
@@ -217,10 +229,14 @@ impl Store {
     /// ```text
     /// <object-hash>
     /// <canonical key string>
-    /// [provisional]   # optional third line when PutOpts.provisional
+    /// [provisional]     # optional, when PutOpts.provisional
+    /// [deps-recorded]   # optional, when PutOpts.deps is Some
+    /// [dep <key>]*      # one per witnessed dependency read
     /// ```
-    /// Line 2 makes the store *enumerable by meaning*. Line 3 is the honesty
-    /// bit for waived admission ( #form-builder-admission residual A/B ).
+    /// Line 2 makes the store *enumerable by meaning*. `provisional` is the
+    /// honesty bit for waived admission ( #form-builder-admission residual A/B ).
+    /// The `deps` lines are the witnessed read-set — telemetry for the
+    /// under-keyed-dependency audit, never identity.
     pub fn put_with(&self, key: &Key, value: &[u8], opts: PutOpts) -> io::Result<()> {
         if self.read_only {
             // Refuse loudly in the return value and countably in the handle. The
@@ -240,6 +256,13 @@ impl Store {
         let mut root = format!("{obj_name}\n{}", key.as_str());
         if opts.provisional {
             root.push_str("\nprovisional");
+        }
+        if let Some(deps) = &opts.deps {
+            root.push_str("\ndeps-recorded");
+            for d in deps {
+                root.push_str("\ndep ");
+                root.push_str(d);
+            }
         }
         write_atomic(&self.roots.join(hex(key.hash())), root.as_bytes())
     }
@@ -265,11 +288,23 @@ impl Store {
             let mut lines = text.lines();
             let object = lines.next().unwrap_or("").trim().to_string();
             let key = lines.next().unwrap_or("").trim().to_string();
-            let provisional = lines.any(|l| l.trim() == "provisional");
+            let mut provisional = false;
+            let mut deps: Option<Vec<String>> = None;
+            for l in lines {
+                let l = l.trim();
+                if l == "provisional" {
+                    provisional = true;
+                } else if l == "deps-recorded" {
+                    deps.get_or_insert_with(Vec::new);
+                } else if let Some(d) = l.strip_prefix("dep ") {
+                    deps.get_or_insert_with(Vec::new).push(d.to_string());
+                }
+            }
             out.push(RootEntry {
                 key,
                 object,
                 provisional,
+                deps,
             });
         }
         Ok(out)
@@ -411,7 +446,7 @@ mod tests {
         let dir = tmpdir("provisional");
         let s = Store::open(&dir).unwrap();
         let k = Key::new("erosion-tile", "v0").field("level", 7);
-        s.put_with(&k, b"waived", PutOpts { provisional: true }).unwrap();
+        s.put_with(&k, b"waived", PutOpts { provisional: true, deps: None }).unwrap();
         assert!(s.is_provisional(&k));
         let roots = s.roots().unwrap();
         assert_eq!(roots.len(), 1);

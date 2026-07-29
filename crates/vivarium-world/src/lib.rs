@@ -39,6 +39,7 @@ pub mod measure;
 pub mod source_hash;
 pub mod store;
 pub mod query;
+pub mod observe;
 pub mod spec;
 pub mod flux;
 pub mod nomotheke;
