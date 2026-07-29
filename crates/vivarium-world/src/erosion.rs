@@ -308,6 +308,52 @@ impl HaloSchedule {
     }
 }
 
+/// The **exchange domain** of a Jacobi region carve: which block of tiles
+/// exchanged together. Region membership is identity exactly as `(d, σ, ρ)`
+/// is: over repeated exchanges, information crosses the whole block, so a tile
+/// carved as part of a 1×1 region and the same tile carved inside a 24×24 face
+/// sweep hold different interiors. The region therefore folds into the
+/// complete key beside the schedule (`#form-same-level-halo-exchange` FE(4);
+/// `#form-depend-by-key-never-latest` FE(1) — two demand shapes must never
+/// mint two worlds under one key).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct HaloRegion {
+    /// Region origin in cells (face coordinates at the carve level).
+    pub oi: u32,
+    pub oj: u32,
+    /// Block extent in tiles.
+    pub tiles_i: usize,
+    pub tiles_j: usize,
+}
+
+/// The complete identity of the eroded bed a consumer settles on — the article
+/// a `water-tile` (or any future bed consumer) names in its own key, so the
+/// consumer's bytes stay a pure function of its key rather than of whichever
+/// bed cohort happened to be in the store at compute time
+/// (`#form-depend-by-key-never-latest` FE(4)(b)).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum BedArticle {
+    /// The historical single-tile carve: base-level sink on the tile perimeter.
+    /// Keys as the absent field, so every existing world stays addressable.
+    EdgeSink,
+    /// A tile from a Jacobi halo-exchange region carve.
+    Halo { schedule: HaloSchedule, region: HaloRegion },
+}
+
+impl BedArticle {
+    /// Canonical single-field key token, `None` for the historical shape.
+    /// One field rather than eight so consumer keys stay legible in a census.
+    pub fn key_token(&self) -> Option<String> {
+        match self {
+            BedArticle::EdgeSink => None,
+            BedArticle::Halo { schedule: s, region: r } => Some(format!(
+                "halo,d{},s{},r{},o{}+{},t{}x{}",
+                s.depth, s.cadence, s.cone_rho, r.oi, r.oj, r.tiles_i, r.tiles_j
+            )),
+        }
+    }
+}
+
 /// A square fluvial simulation field over one face region — the frame's port of
 /// core's `Heightfield`. Heights in metres above the bedrock datum.
 pub struct Fluvial {

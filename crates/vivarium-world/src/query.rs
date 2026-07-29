@@ -23,7 +23,9 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::erosion::{self, ErodedRegion, ExchangedTile, Fluvial, FluvialParams, HaloSchedule};
+use crate::erosion::{
+    self, BedArticle, ErodedRegion, ExchangedTile, Fluvial, FluvialParams, HaloRegion, HaloSchedule,
+};
 use crate::gen;
 use crate::nomotheke::{
     CLIMATE, EROSION, HYDROSPHERE, INITIAL_TOPOGRAPHY, ISOSTASY, LITHOSPHERE, MANTLE_THERMAL, UPLIFT,
@@ -307,12 +309,15 @@ impl<'s> World<'s> {
     /// against, and the climate precipitation that drives its discharge. If any
     /// changes, this key changes and the tile recomputes.
     ///
-    /// When `halo` is `Some`, the schedule descriptor `(d, σ, ρ)` is identity
-    /// (`#form-same-level-halo-exchange` FE(4)/(7); `#form-complete-content-addressed-key`
-    /// FE(6)) — a tile carved under Jacobi exchange is not the same article as
-    /// the shipped edge-sink tile at the same coordinates. The default path
-    /// (`None`) keeps the historical key shape so every existing world stays
-    /// addressable.
+    /// When `halo` is `Some`, the schedule descriptor `(d, σ, ρ)` **and the
+    /// exchange region** are identity (`#form-same-level-halo-exchange`
+    /// FE(4)/(7); `#form-complete-content-addressed-key` FE(6)) — a tile carved
+    /// under Jacobi exchange is not the same article as the shipped edge-sink
+    /// tile at the same coordinates, and the same tile carved inside two
+    /// different blocks holds two different interiors (information crosses the
+    /// whole block through repeated exchanges), so the region folds in beside
+    /// the schedule. The default path (`None`) keeps the historical key shape
+    /// so every existing world stays addressable.
     fn erosion_key(
         &self,
         face: Face,
@@ -321,7 +326,7 @@ impl<'s> World<'s> {
         oj: u32,
         nx: usize,
         epochs: u32,
-        halo: Option<HaloSchedule>,
+        halo: Option<(HaloSchedule, HaloRegion)>,
     ) -> Key {
         let mut k = EROSION
             .key()
@@ -332,13 +337,17 @@ impl<'s> World<'s> {
             .field("oj", oj)
             .field("nx", nx)
             .field("epochs", epochs);
-        if let Some(s) = halo {
-            // Descriptor, not payload: O(1), pure function of the schedule.
+        if let Some((s, r)) = halo {
+            // Descriptor, not payload: O(1), pure function of schedule + region.
             k = k
                 .field("edge", "halo")
                 .field("d", s.depth)
                 .field("sigma", s.cadence)
-                .field("rho", s.cone_rho);
+                .field("rho", s.cone_rho)
+                .field("roi", r.oi)
+                .field("roj", r.oj)
+                .field("rti", r.tiles_i)
+                .field("rtj", r.tiles_j);
         }
         k.with_dep_versions(&EROSION)
     }
@@ -359,12 +368,17 @@ impl<'s> World<'s> {
         nx: usize,
         epochs: u32,
     ) -> (Vec<f32>, Source) {
-        // Prefer a halo-exchanged memo when the builder wrote one under a
-        // schedule key; else the plain edge-sink key; else compute plain.
-        if let Some(hit) = self.store_eroded_at(face, level, oi, oj, nx, epochs) {
-            return hit;
-        }
+        // Pure: this is the plain edge-sink article and nothing else. It must
+        // NOT prefer a halo memo that happens to be in the store — this
+        // function feeds memoized computations (water), so a store-contents
+        // preference here makes downstream bytes a function of build order
+        // (`#form-depend-by-key-never-latest` FE(4)(b), violated 2026-07-29 and
+        // retreated same day). Views that want "the best bed built" read
+        // through [`Self::surface_prefer_eroded`] / the region loaders.
         let key = self.erosion_key(face, level, oi, oj, nx, epochs, None);
+        if let Some(bytes) = self.store.get(&key) {
+            return (decode_f32(&bytes), self.hit_source(&key));
+        }
         // Dependencies, all pulled (memoized — recurse into their nomos): the
         // initial-topography surface it carves, the uplift field it carves against, and the
         // climate precipitation that drives its discharge.
@@ -463,6 +477,17 @@ impl<'s> World<'s> {
     ) -> (Vec<ExchangedTile>, Source) {
         assert!(schedule.cadence >= 1, "exchange requires cadence ≥ 1");
         assert!(epochs >= 1, "exchange settle needs at least one epoch");
+        // When staging, the exchange cadence and the stage stride must be the
+        // same number ( #form-same-level-halo-exchange FE(7) ). A mismatch
+        // writes rungs the ladder never asks for, so the all-hit walk misses
+        // forever and every call recomputes — better refused than latent.
+        assert!(
+            stage_stride == 0 || stage_stride >= epochs || schedule.cadence == stage_stride,
+            "staged exchange requires cadence == stage_stride (got σ={}, stride={})",
+            schedule.cadence,
+            stage_stride
+        );
+        let region = HaloRegion { oi: region_oi, oj: region_oj, tiles_i, tiles_j };
 
         let ladder: Vec<u32> = if stage_stride == 0 || stage_stride >= epochs {
             vec![epochs]
@@ -481,7 +506,8 @@ impl<'s> World<'s> {
                 for ti in 0..tiles_i {
                     let oi = region_oi + (ti * tile_n) as u32;
                     let oj = region_oj + (tj * tile_n) as u32;
-                    let key = self.erosion_key(face, level, oi, oj, tile_n, k, Some(schedule));
+                    let key =
+                        self.erosion_key(face, level, oi, oj, tile_n, k, Some((schedule, region)));
                     if let Some(bytes) = self.store.get(&key) {
                         if k == epochs {
                             endpoint.push(ExchangedTile {
@@ -562,29 +588,36 @@ impl<'s> World<'s> {
             |k, interiors| {
                 if ladder_set.contains(&k) {
                     for t in interiors {
-                        let key =
-                            self.erosion_key(face, level, t.oi, t.oj, t.nx, k, Some(schedule));
+                        let key = self
+                            .erosion_key(face, level, t.oi, t.oj, t.nx, k, Some((schedule, region)));
                         self.put_memo(&key, &encode_f32(&t.h));
                     }
                 }
             },
         );
-        // Endpoint is always a ladder member; ensure it is written even if the
-        // last chunk size did not land exactly on a cadence boundary that was
-        // in the set (carve always rungs the final `epochs`).
+        // With cadence == stride (asserted above) every ladder rung lands on a
+        // cadence boundary, so the endpoint was written by the hook; this is a
+        // cheap belt against that invariant drifting.
         for t in &tiles {
-            let key = self.erosion_key(face, level, t.oi, t.oj, t.nx, epochs, Some(schedule));
+            let key =
+                self.erosion_key(face, level, t.oi, t.oj, t.nx, epochs, Some((schedule, region)));
             if self.store.get(&key).is_none() {
                 self.put_memo(&key, &encode_f32(&t.h));
             }
         }
-        let _ = ladder;
         (tiles, Source::Computed)
     }
 
-    /// Observe-only: the best eroded memo at this tile — **halo preferred** over
-    /// plain edge-sink when both exist at the same coordinates and epochs
-    /// ( #form-same-level-halo-exchange adoption). `None` if nothing is stored.
+    /// Observe-only, **view half only**: the best eroded memo at this tile —
+    /// halo preferred over plain edge-sink when both exist at the same
+    /// coordinates and epochs ( #form-same-level-halo-exchange adoption). Ties
+    /// inside a rank break by lexicographically smallest key, so what a view
+    /// shows never depends on store iteration order. `None` if nothing stored.
+    ///
+    /// This must never feed a memoized computation: a compute path that reads
+    /// "the best bed in the store" makes its own bytes a function of build
+    /// order (`#form-depend-by-key-never-latest` FE(4)(b)). Consumers name
+    /// their bed by key ([`BedArticle`]); only views read through here.
     fn store_eroded_at(
         &self,
         face: Face,
@@ -604,7 +637,9 @@ impl<'s> World<'s> {
         let nx_s = nx.to_string();
         let epochs_s = epochs.to_string();
         let seed_s = self.seed.to_string();
-        let mut best: Option<(u8, bool, Vec<f32>)> = None; // rank, provisional, h
+        // (rank, key, provisional, h) — higher rank wins; inside a rank the
+        // lexicographically smallest key wins (deterministic across stores).
+        let mut best: Option<(u8, &str, bool, Vec<f32>)> = None;
         for r in &roots {
             if !r.key.starts_with("erosion-tile@") {
                 continue;
@@ -634,7 +669,10 @@ impl<'s> World<'s> {
                 continue;
             }
             let rank = if key_field(&r.key, "edge") == Some("halo") { 1u8 } else { 0 };
-            if best.as_ref().is_some_and(|(br, _, _)| *br >= rank) {
+            if best
+                .as_ref()
+                .is_some_and(|(br, bk, _, _)| *br > rank || (*br == rank && *bk <= r.key.as_str()))
+            {
                 continue;
             }
             let Some(bytes) = self.store.object_bytes(&r.object) else {
@@ -644,9 +682,9 @@ impl<'s> World<'s> {
             if h.len() != nx * nx {
                 continue;
             }
-            best = Some((rank, r.provisional, h));
+            best = Some((rank, r.key.as_str(), r.provisional, h));
         }
-        best.map(|(_, provisional, h)| {
+        best.map(|(_, _, provisional, h)| {
             (
                 h,
                 if provisional {
@@ -1020,8 +1058,24 @@ impl<'s> World<'s> {
 
     /// The complete key for a water tile — upstream identity folded in through
     /// both dependency versions plus the erosion run length its bed came from.
-    fn water_key(&self, face: Face, level: u8, oi: u32, oj: u32, nx: usize, erosion_epochs: u32, steps: u32) -> Key {
-        WATER
+    /// The `bed` article is identity: water settled on a halo-exchanged bed is
+    /// not the water settled on the edge-sink bed at the same coordinates, so
+    /// the bed's complete identity folds into this key as one canonical token
+    /// (`#form-depend-by-key-never-latest` — the key, not the store contents at
+    /// compute time, decides which bed the depth field means). [`BedArticle::EdgeSink`]
+    /// keys as the absent field, preserving the historical shape.
+    fn water_key(
+        &self,
+        face: Face,
+        level: u8,
+        oi: u32,
+        oj: u32,
+        nx: usize,
+        erosion_epochs: u32,
+        steps: u32,
+        bed: BedArticle,
+    ) -> Key {
+        let mut k = WATER
             .key()
             .field("seed", self.seed)
             .field("face", face.index())
@@ -1030,8 +1084,59 @@ impl<'s> World<'s> {
             .field("oj", oj)
             .field("nx", nx)
             .field("eepochs", erosion_epochs)
-            .field("steps", steps)
-            .with_dep_versions(&WATER)
+            .field("steps", steps);
+        if let Some(token) = bed.key_token() {
+            k = k.field("bed", token);
+        }
+        k.with_dep_versions(&WATER)
+    }
+
+    /// Pull the bed this water names — **by the bed article's exact key**, never
+    /// "the best bed in the store." On a miss the named article is computed:
+    /// the edge-sink tile directly, a halo tile by carving its named region
+    /// (the region is part of the article's identity, so the compute is
+    /// well-defined from the key alone).
+    fn bed_for_water(
+        &self,
+        face: Face,
+        level: u8,
+        oi: u32,
+        oj: u32,
+        nx: usize,
+        erosion_epochs: u32,
+        bed: BedArticle,
+    ) -> Vec<f32> {
+        match bed {
+            BedArticle::EdgeSink => self.erosion_tile(face, level, oi, oj, nx, erosion_epochs).0,
+            BedArticle::Halo { schedule, region } => {
+                let key =
+                    self.erosion_key(face, level, oi, oj, nx, erosion_epochs, Some((schedule, region)));
+                if let Some(bytes) = self.store.get(&key) {
+                    return decode_f32(&bytes);
+                }
+                let (tiles, _) = self.erosion_region_exchanged(
+                    face,
+                    level,
+                    region.oi,
+                    region.oj,
+                    nx,
+                    region.tiles_i,
+                    region.tiles_j,
+                    erosion_epochs,
+                    schedule,
+                );
+                tiles
+                    .into_iter()
+                    .find(|t| t.oi == oi && t.oj == oj)
+                    .map(|t| t.h)
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "bed article names tile ({oi},{oj}) outside its own region \
+                             {region:?} — the water key is malformed"
+                        )
+                    })
+            }
+        }
     }
 
     /// System #3 — conserved shallow water settled on the eroded bed, *composed
@@ -1044,6 +1149,7 @@ impl<'s> World<'s> {
     /// (the property that retires the old testbench's re-fill-on-movement).
     /// Rain/evaporation carry the documented ~10× cycle fudge (ASSUMPTIONS.md
     /// "rain rate" / "water fill steps").
+    #[allow(clippy::too_many_arguments)]
     pub fn water_tile(
         &self,
         face: Face,
@@ -1053,12 +1159,13 @@ impl<'s> World<'s> {
         nx: usize,
         erosion_epochs: u32,
         steps: u32,
+        bed: BedArticle,
     ) -> (Vec<f32>, Source) {
-        let key = self.water_key(face, level, oi, oj, nx, erosion_epochs, steps);
+        let key = self.water_key(face, level, oi, oj, nx, erosion_epochs, steps, bed);
         if let Some(bytes) = self.store.get(&key) {
             return (decode_f32(&bytes), self.hit_source(&key));
         }
-        let (bed, _) = self.erosion_tile(face, level, oi, oj, nx, erosion_epochs);
+        let bed = self.bed_for_water(face, level, oi, oj, nx, erosion_epochs, bed);
         let (precip, _) = self.climate_tile(face, level, oi, oj, nx);
         let cell_m = crate::sample::cell_size_m(level, crate::planet::Planet::EARTH.radius_m) as f32;
         // Rain is now the climate nomos's PRINCIPLED rate — the conserved
@@ -1108,6 +1215,10 @@ impl<'s> World<'s> {
     /// display none, and say the tiles are stale; the dishonest one is to spend
     /// four minutes silently re-settling the planet so the picture looks the
     /// same as yesterday.
+    /// Observe-only scan (a view cannot construct the exact key: the `bed=`
+    /// token is the builder's knowledge, not the viewer's). Among matches the
+    /// preference is deterministic: a halo-bed depth over an edge-sink one,
+    /// then the lexicographically smallest key — never store iteration order.
     #[allow(clippy::too_many_arguments)]
     pub fn water_tile_hit(
         &self,
@@ -1119,9 +1230,48 @@ impl<'s> World<'s> {
         erosion_epochs: u32,
         steps: u32,
     ) -> Option<(Vec<f32>, Source)> {
-        let key = self.water_key(face, level, oi, oj, nx, erosion_epochs, steps);
-        let bytes = self.store.get(&key)?;
-        Some((decode_f32(&bytes), self.hit_source(&key)))
+        let roots = self.store.roots().ok()?;
+        let want = [
+            ("seed", self.seed.to_string()),
+            ("face", face.index().to_string()),
+            ("level", level.to_string()),
+            ("oi", oi.to_string()),
+            ("oj", oj.to_string()),
+            ("nx", nx.to_string()),
+            ("eepochs", erosion_epochs.to_string()),
+            ("steps", steps.to_string()),
+            // The exact-key path matched src implicitly; the scan must too, or
+            // a stale cohort's water would render as current.
+            ("src", crate::nomotheke::SRC_HASH.to_string()),
+        ];
+        let mut best: Option<(u8, &str, bool, &str)> = None; // rank, key, provisional, object
+        for r in &roots {
+            if !r.key.starts_with("water-tile@") {
+                continue;
+            }
+            if want.iter().any(|(n, v)| key_field(&r.key, n) != Some(v.as_str())) {
+                continue;
+            }
+            let rank = if key_field(&r.key, "bed").is_some_and(|b| b.starts_with("halo")) {
+                1u8
+            } else {
+                0
+            };
+            if best
+                .as_ref()
+                .is_some_and(|(br, bk, _, _)| *br > rank || (*br == rank && *bk <= r.key.as_str()))
+            {
+                continue;
+            }
+            best = Some((rank, r.key.as_str(), r.provisional, r.object.as_str()));
+        }
+        let (_, _, provisional, object) = best?;
+        let bytes = self.store.object_bytes(object)?;
+        let h = decode_f32(&bytes);
+        if h.len() != nx * nx {
+            return None;
+        }
+        Some((h, if provisional { Source::HitProvisional } else { Source::Hit }))
     }
 
     /// The complete key for an epoch reduction at mantle temperature `tp_c`.
@@ -1753,12 +1903,114 @@ mod tests {
              tiling at the same coordinates ({differed}/{cells} differ) — \
              otherwise the schedule is a no-op alias"
         );
-        // Prefer-halo: after exchange, erosion_tile in the exchange store hits
-        // the halo cohort without recomputing plain.
+        // The VIEW half prefers the halo memo; the COMPUTE half (erosion_tile)
+        // stays pure on the plain key and must not be satisfied by it —
+        // otherwise memoized consumers become functions of build order
+        // (`#form-depend-by-key-never-latest` FE(4)(b)).
+        let (shown, _, eroded) = w_ex.surface_prefer_eroded(face, level, oi, oj, tile_n, epochs);
+        assert!(eroded, "view half must see the halo bed");
+        assert!(
+            shown.iter().zip(ex[0].h.iter()).all(|(a, b)| a.to_bits() == b.to_bits()),
+            "view shows the halo article's bytes"
+        );
         let (_, src) = w_ex.erosion_tile(face, level, oi, oj, tile_n, epochs);
-        assert_eq!(src, Source::Hit, "halo memo must satisfy erosion_tile's store half");
+        assert_eq!(
+            src,
+            Source::Computed,
+            "erosion_tile is the plain article and must compute it, not borrow the halo memo"
+        );
         let _ = fs::remove_dir_all(&dir_ex);
         let _ = fs::remove_dir_all(&dir_plain);
+    }
+
+    /// Conviction for region-in-the-key: the same tile carved as a 1×1 block
+    /// and as a member of a 2×2 block holds different interiors (the exchange
+    /// imports real neighbours in one case and the prior in the other), so the
+    /// two must live under different keys. Before 2026-07-29 the halo key
+    /// carried only `(d, σ, ρ)` and the second carve would silently HIT the
+    /// first's memo — one key, two worlds
+    /// (`#form-depend-by-key-never-latest` FE(1)).
+    #[test]
+    fn halo_key_carries_the_exchange_region() {
+        let dir = tmpdir("halo-region-key");
+        let face = Face::from_index(1);
+        let (level, tile_n, epochs) = (8u8, 16usize, 24u32);
+        let (oi, oj) = (64u32, 64u32);
+        let schedule = HaloSchedule { depth: 4, cadence: 4, cone_rho: 0 };
+        let s = Store::open(&dir).unwrap();
+        let w = World::new(&s, 17_425_063_241_017_297_386);
+
+        let (solo, _) =
+            w.erosion_region_exchanged(face, level, oi, oj, tile_n, 1, 1, epochs, schedule);
+        let (block, src_block) =
+            w.erosion_region_exchanged(face, level, oi, oj, tile_n, 2, 2, epochs, schedule);
+        assert_eq!(
+            src_block,
+            Source::Computed,
+            "the 2×2 carve is a different article and must not all-hit off the 1×1 memo"
+        );
+        let same_tile = &block[0];
+        assert_eq!((same_tile.oi, same_tile.oj), (oi, oj));
+        assert!(
+            solo[0].h.iter().zip(same_tile.h.iter()).any(|(a, b)| a.to_bits() != b.to_bits()),
+            "1×1 and 2×2 interiors must differ — if they ever agree bit-for-bit, \
+             the physical premise of region identity needs re-examination"
+        );
+        // Both articles remain addressable: each re-pull hits its own bytes.
+        let (solo2, s1) =
+            w.erosion_region_exchanged(face, level, oi, oj, tile_n, 1, 1, epochs, schedule);
+        let (block2, s2) =
+            w.erosion_region_exchanged(face, level, oi, oj, tile_n, 2, 2, epochs, schedule);
+        assert_eq!((s1, s2), (Source::Hit, Source::Hit));
+        assert!(solo[0].h.iter().zip(solo2[0].h.iter()).all(|(a, b)| a.to_bits() == b.to_bits()));
+        assert!(block[0].h.iter().zip(block2[0].h.iter()).all(|(a, b)| a.to_bits() == b.to_bits()));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// Conviction for the water half of `#form-depend-by-key-never-latest`
+    /// FE(1): the same water key yields the same bytes whether water was
+    /// demanded before or after the erosion phase ran — and the two bed
+    /// articles' waters are distinct keys, so neither shadows the other.
+    #[test]
+    fn water_bytes_are_a_function_of_the_key_not_build_order() {
+        let face = Face::from_index(2);
+        let seed = 41u64;
+        let (level, nx, eepochs, steps) = (8u8, 16usize, 12u32, 40u32);
+        let schedule = HaloSchedule { depth: 4, cadence: 4, cone_rho: 0 };
+        let region = HaloRegion { oi: 0, oj: 0, tiles_i: 2, tiles_j: 2 };
+        let bed = BedArticle::Halo { schedule, region };
+
+        // Order A: water demanded cold — it must compute its named bed itself.
+        let dir_a = tmpdir("water-order-a");
+        let s_a = Store::open(&dir_a).unwrap();
+        let w_a = World::new(&s_a, seed);
+        let (depth_a, src_a) = w_a.water_tile(face, level, 0, 0, nx, eepochs, steps, bed);
+        assert_eq!(src_a, Source::Computed);
+
+        // Order B: erosion phase first (the builder's order), then water.
+        let dir_b = tmpdir("water-order-b");
+        let s_b = Store::open(&dir_b).unwrap();
+        let w_b = World::new(&s_b, seed);
+        let _ = w_b.erosion_region_exchanged(face, level, 0, 0, nx, 2, 2, eepochs, schedule);
+        let (depth_b, _) = w_b.water_tile(face, level, 0, 0, nx, eepochs, steps, bed);
+
+        assert!(
+            depth_a.iter().zip(depth_b.iter()).all(|(a, b)| a.to_bits() == b.to_bits()),
+            "same water key must mean the same bytes under both demand orders"
+        );
+
+        // The edge-sink water is its own article: different key (it computes
+        // rather than hitting the halo-bed water), and on this terrain the
+        // depths need not agree — nothing may silently alias them.
+        let (_, src_plain) =
+            w_a.water_tile(face, level, 0, 0, nx, eepochs, steps, BedArticle::EdgeSink);
+        assert_eq!(
+            src_plain,
+            Source::Computed,
+            "edge-sink-bed water must not hit the halo-bed water's memo"
+        );
+        let _ = fs::remove_dir_all(&dir_a);
+        let _ = fs::remove_dir_all(&dir_b);
     }
 
     /// Load path prefers a halo memo over a plain edge-sink memo at the same
@@ -1844,7 +2096,8 @@ mod tests {
         let (nx, eepochs, steps) = (32usize, 20u32, 60u32);
         let s = Store::open(&dir).unwrap();
         let w = World::new(&s, 0);
-        let (d1, src1) = w.water_tile(face, 19, 2000, 3000, nx, eepochs, steps);
+        let (d1, src1) =
+            w.water_tile(face, 19, 2000, 3000, nx, eepochs, steps, BedArticle::EdgeSink);
         assert_eq!(src1, Source::Computed);
         assert_eq!(d1.len(), nx * nx);
         assert!(d1.iter().all(|x| x.is_finite() && *x >= 0.0), "depths finite + non-negative");
@@ -1853,7 +2106,8 @@ mod tests {
         assert_eq!(w.erosion_tile(face, 19, 2000, 3000, nx, eepochs).1, Source::Hit);
         assert_eq!(w.initial_topography(face, 19, 2000, 3000, nx).1, Source::Hit);
         // Re-pull hits and is byte-identical (deterministic bounded fill):
-        let (d2, src2) = w.water_tile(face, 19, 2000, 3000, nx, eepochs, steps);
+        let (d2, src2) =
+            w.water_tile(face, 19, 2000, 3000, nx, eepochs, steps, BedArticle::EdgeSink);
         assert_eq!(src2, Source::Hit);
         assert_eq!(d1, d2);
         let _ = fs::remove_dir_all(&dir);

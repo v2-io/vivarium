@@ -142,9 +142,12 @@ pub fn render(
             let elev = match st {
                 BuildState::Watered | BuildState::Eroded => {
                     let epochs = *cov.erosion.get(&(f, oi, oj)).unwrap_or(&0);
+                    // View read: show the best bed the store holds (halo
+                    // preferred), fall back to initial topography — never a
+                    // cold erosion compute inside a render (core/view wall).
                     let tile = eroded_cache
                         .entry((f, oi, oj))
-                        .or_insert_with(|| world.erosion_tile(face, level, oi, oj, nx, epochs).0);
+                        .or_insert_with(|| world.surface_prefer_eroded(face, level, oi, oj, nx, epochs).0);
                     let (di, dj) = ((ci - oi) as usize, (cj - oj) as usize);
                     tile.get(dj * nx + di).copied().unwrap_or(sea as f32) as f64
                 }

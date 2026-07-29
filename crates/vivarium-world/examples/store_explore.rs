@@ -62,7 +62,18 @@ fn main() -> std::io::Result<()> {
     let path = [(2000u32, 3000u32), (2048, 3000), (2000, 3000)];
     for (n, &(oi, oj)) in path.iter().enumerate() {
         let (tile, src) = world.erosion_tile(face, level, oi, oj, nx, epochs);
-        let (water, _) = world.water_tile(face, level, oi, oj, nx, epochs, steps);
+        // This walk probes the plain single-tile path; the bed article is the
+        // edge-sink carve the erosion_tile line above produced.
+        let (water, _) = world.water_tile(
+            face,
+            level,
+            oi,
+            oj,
+            nx,
+            epochs,
+            steps,
+            vivarium_world::erosion::BedArticle::EdgeSink,
+        );
         let tag = match src {
             Source::Computed => "COMPUTED fresh (miss → eroded → memoized)",
             Source::Hit => "HIT — served from the store (persisted, no re-seed)",

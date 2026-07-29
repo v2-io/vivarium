@@ -562,19 +562,37 @@ fn cmd_build(rest: &[String]) -> i32 {
                             "initial-topography" => {
                                 world.initial_topography(face, level, oi, oj, TILE_NX).1
                             }
-                            // Water pulls the preferred eroded bed (halo when the
-                            // erosion phase wrote one) via erosion_tile's store half.
-                            _ => world
-                                .water_tile(
-                                    face,
-                                    level,
-                                    oi,
-                                    oj,
-                                    TILE_NX,
-                                    epochs,
-                                    spec.demand.water_steps,
-                                )
-                                .1,
+                            // Water names its bed by key: the face-region Jacobi
+                            // article the erosion phase built. Both articles are
+                            // pure functions of the manifest, so the water bytes
+                            // are a function of the key, never of build order.
+                            _ => {
+                                use vivarium_world::erosion::{BedArticle, HaloRegion, HaloSchedule};
+                                let bed = BedArticle::Halo {
+                                    schedule: HaloSchedule::for_build(
+                                        spec.demand.erosion_stage_stride,
+                                        epochs,
+                                    ),
+                                    region: HaloRegion {
+                                        oi: 0,
+                                        oj: 0,
+                                        tiles_i: per_face,
+                                        tiles_j: per_face,
+                                    },
+                                };
+                                world
+                                    .water_tile(
+                                        face,
+                                        level,
+                                        oi,
+                                        oj,
+                                        TILE_NX,
+                                        epochs,
+                                        spec.demand.water_steps,
+                                        bed,
+                                    )
+                                    .1
+                            }
                         };
                         done += 1;
                         if src == Source::Computed {

@@ -60,7 +60,7 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
    | Region | State | Era note |
    | --- | --- | --- |
-   | **`query.rs` / `erosion.rs` / builder (halo path)** | **Adopted, warm** | Schedule keys + region Jacobi + `vivarium build` face/beacon sweeps; load prefers halo; SRC_HASH moves with any lib touch. Rebuild required for new worlds. |
+   | **`query.rs` / `erosion.rs` / builder (halo path)** | **Adopted, warm — keys completed 2026-07-29 (late)** | Exchange region now in the halo key; `water_tile` takes a `BedArticle` folded into the water key; `erosion_tile` pure (plain article only); store-preference is view-half only, deterministic. SRC_HASH moved again — worlds built this morning need one more rebuild. `DECISIONS[compute-names-its-article-water-bed-and-exchange-region-into-the-key]`. |
    | **`water.rs`** | Wave **landed, still warm** | `77b1f5a` implicit friction; `de4c6c4` Jarrett static + $\theta$ relabel; wrap `12f7758`. Froude-threshold result re-verified post-fix and sealed (`2f22edf`). Still pre-fix / not re-run: §5 cap-off sweep ("stable through Fr 2.43"). |
    | **`measure.rs::cell_solid_angle`** | Just re-keyed | `72ca39a` VOS difference-form; area-consuming stats changed era 2026-07-29. |
    | **Erosion / generator** | Post-fill-restore + craton-nucleation band | ~12-commit band that expired the coarse-only no-go; drainage-emergent stats measured before it are suspect until re-run. |
@@ -68,7 +68,9 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
    | **Cold this week** | Isostasy column + cooling chain; stage-chain instrument (no-exchange path) | Claims grounded there are not era-volatile for ordinary quotes. |
    | **first-light store** | **Local git baseline** | `~/.cache/vivarium/globe-world` under local revision control (commit after post-Jacobi rebuild; README in-tree). Checkout = whole previous store for explore; shallow binary compatibility ( #form-store-as-save FE(2) ). Not vivarium source git. |
 
-7. **Instrument / ops notes (same date, supporting).** Not leverage rank — so concurrent minds do not lose them:
+7. **Named mechanism candidate (2026-07-29, not designed): dependency-tracked keys.** Three under-keyed-dependency instances in one week — stage-stride (near-miss, caught by its own tripwire test), exchange region, water bed — share one structural cause: keys are hand-assembled field-by-field and nothing forces a compute path to declare what it read. The candidate mechanization: the store records every `get()` a compute performs and folds (or checks) those keys into the consumer's key, making "forgot to key a dependency" unrepresentable; a cheaper sibling is a type-level split of the observe-only scan surface so the compute/view wall is compiler-enforced instead of a doc comment. Related but distinct from `DECISIONS[kernel-era-keys-and-the-probe-registry]` (era drift in *measurements*; this is completeness of *keys*). Worth its own probe/design session before any more nomoi gain cross-article inputs (flux half and spill scalar are exactly such inputs — rank 1b would mint the fourth instance without this).
+
+8. **Instrument / ops notes (same date, supporting).** Not leverage rank — so concurrent minds do not lose them:
    - **World VCS:** first-light under local git; **commit with every changelog-owed rebuild** ( #ops-changelog-is-the-acceptance-check FE(5) ), not "when interesting." Checkout → explore older models (non-current `src=`).
    - **Changelog (halo):** entry `2026-07-29-01-cross-tile-beds-under-jacobi-still-tiled-to-the-eye` frozen; residual tile lattice + flux/spill still open work (not entry debt).
 
