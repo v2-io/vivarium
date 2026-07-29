@@ -254,8 +254,12 @@ pub fn step(state: &mut [f64], geom: &Geom, p: &PipeParams, guards: &mut Guards)
                 continue;
             }
             let head = (di - dj) + db; // η_i − η_j
+            // Mirrors the kernel's demotion (2026-07-29): roughness from the
+            // BED slope, a static terrain property, not from the instantaneous
+            // free surface. The surface form was a wrong-signed positive
+            // feedback and was grid-divergent.
             let n_manning = if p.jarrett {
-                (p.manning_n + p.jarrett_slope * (head.max(0.0) / p.l)).min(p.jarrett_n_cap)
+                (p.manning_n + p.jarrett_slope * (db.max(0.0) / p.l)).min(p.jarrett_n_cap)
             } else {
                 p.manning_n
             };

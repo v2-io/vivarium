@@ -60,13 +60,30 @@ pub struct WaterParams {
     /// term on the WATER NomosDecl (preserves flux mean, destroys variance).
     /// A parameter so the probes the council-accepted order-of-work demands
     /// (`DECISIONS[theta-is-lax-friedrichs-not-rhie-chow]`) can vary it.
+    ///
+    /// ⚠ NOT DECORATION, and not roll-wave damping: measured 2026-07-29, with
+    /// this at 1.0 (smoothing OFF) the scheme grows at EVERY Froude number
+    /// tested, 0.174 to 6.66 — including deeply subcritical flow, where there is
+    /// no physical instability to damp. It is DECLARED NUMERICAL STABILIZATION,
+    /// and the scheme does not stand up without it. Set it as close to 1.0 as
+    /// stability allows and declare the amount; do not delete it. That reading
+    /// supersedes two council-accepted entries and is `:status proposed` —
+    /// `pipe_step`'s comment carries the pending-adjudication frame.
     pub theta: f32,
-    /// Jarrett slope-roughness coefficient: n = manning_n + jarrett_slope·S.
-    /// A REGRESSION used as a live constitutive law — a measured positive
-    /// feedback on gentle slopes (`DECISIONS[jarrett-roughness-is-a-positive-
-    /// feedback…]`). Parameterized so the control (hold n constant) is runnable.
+    /// Jarrett slope-roughness coefficient: `n = manning_n + jarrett_slope·S`
+    /// with **S the BED slope across the pipe** — a static terrain property, so
+    /// `n` is a static roughness field and not a feedback. Jarrett 1984 is a
+    /// regression that ESTIMATES `n` from a MEASURED channel slope, and this is
+    /// that use of it.
+    ///
+    /// It was evaluated from the instantaneous free surface until 2026-07-29,
+    /// which closed a wrong-signed positive feedback and was measured
+    /// grid-divergent; `pipe_step` carries the full account and the numbers.
     pub jarrett_slope: f32,
-    /// Cap on slope-adjusted Manning n (Jarrett linearization ceiling).
+    /// Cap on slope-adjusted Manning n (Jarrett linearization ceiling). Measured
+    /// 2026-07-29: this ceiling binds on ~2/3 of wet cells on the eroded-tile
+    /// workload, so over most of the domain `n` is simply this constant
+    /// (`WaterSim::clips`, `examples/water_clips`).
     pub jarrett_n_cap: f32,
     /// Froude breaking cap multiplier: f ≤ froude_cap·√(g·h)·h·l. Measured
     /// SATURATED on eroded land (a SignDefinite/Bias term on the NomosDecl —
@@ -529,7 +546,31 @@ impl WaterSim {
             // Slope-dependent roughness (Jarrett 1984, linearized): steep
             // reaches are rough — this is what holds torrents to nature's
             // 2–4 m/s instead of Manning-lowland's 10+.
-            let n = (n_base + jarrett_slope * (head.max(0.0) / l)).min(jarrett_n_cap);
+            // Slope-dependent roughness from the BED slope — a STATIC property of
+            // the terrain, evaluated once per pipe per step from a bed the fast
+            // band treats as quasi-static. This is Jarrett 1984 used AS INTENDED:
+            // a regression that ESTIMATES `n` from a MEASURED channel slope.
+            //
+            // ⚠ IT USED TO READ THE INSTANTANEOUS FREE SURFACE (`head`), and that
+            // closed a POSITIVE FEEDBACK with the wrong sign: a cell gains water
+            // → its surface steepens → `n` rises → its outflow FALLS → it gains
+            // more. Measured consequences of that form, all 2026-07-13/07-29:
+            // growth at Fr ≈ 0.6 where no roll-wave criterion permits any; the
+            // growth GRID-DIVERGENT (σ +0.028 at l 1.2 m → +1.556 at 0.6 m, ~56×
+            // for one halving, mode collapsing onto the grid scale) with the
+            // n-held-constant control flat at 1.000000 on every grid — i.e. the
+            // term was INCONSISTENT, not merely artefactual, and got worse at
+            // exactly the tiers the fidelity ladder is built to reach; and the
+            // ceiling clipped it to a CONSTANT on ~2/3 of wet cells anyway, so
+            // the feedback was only ever live on the gentle third.
+            // `DECISIONS[jarrett-is-inconsistent-not-merely-artefactual]`.
+            //
+            // The bed slope keeps the physics the regression is actually about —
+            // steep reaches are boulder-strewn and step-pooled, which is what
+            // holds torrents to nature's 2–4 m/s — while removing the loop,
+            // because within a burst the bed is not a function of the water.
+            let bed_slope = (b_i - b_j).max(0.0) / l;
+            let n = (n_base + jarrett_slope * bed_slope).min(jarrett_n_cap);
             let raw = f + dt * g * hflow * head;
             guards.rectifier = raw < 0.0;
             let accel = raw.max(0.0);

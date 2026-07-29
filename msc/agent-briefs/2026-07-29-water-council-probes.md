@@ -340,3 +340,72 @@ One small correction to a premise in the brief, offered in the spirit of the bel
 ---
 
 *Standing by for follow-ups.*
+
+---
+
+## §5 Kernel truth wave (2026-07-29, later) — pre-registration
+
+Landed under Joseph's standing re-key grant. Written before the first run.
+
+**P7 — implicit friction removes the Δt dependence.** The defect (§2b) is that the Manning denominator is formed from the *pre-friction* velocity, so the steady state depends on Δt. Solving implicitly in the *updated* flux makes the steady state Δt-free **by algebra**: with `f = A/(1 + k·f)`, `k = dt·g·n²/(h^{7/3}·l)`, `A = f + dt·g·h·head`, steady state gives `k·f² = dt·g·h·head`, and `dt` cancels on both sides leaving `f = l·h^{5/3}·√S/n` — Manning exactly. So I predict `roll_wave` §2b reports **Fr = 2.000 at every dt from 0.8 s down**, not only at ≤0.05 s. This one is a derivation, not a guess; if it fails, the implementation is wrong, not the theory.
+
+**P8 — the Jarrett demotion.** Three consequences pre-registered as the coordinator named them: the Jarrett-ceiling clip row **collapses** (from 64–73% of wet cells toward 0); gentle-slope **ρ → 1** (the 2% and 5% growth vanishes); and the **grid-divergence flattens** (σ at l=0.6 m falls from +1.556 toward the control's 1.000000).
+
+**P9 — my own, and it is the one that could stop the demotion.** The 07-13 record says the Jarrett term is what stabilises the shipped kernel, by dropping Fr 2.49 → 0.75. That stabilisation came from `n` **rising on steep ground**, which is Jarrett's actual physical content and is worth keeping. So I am demoting the term to a **static, bed-slope-derived** roughness — `n = min(n_base + jarrett_slope·S_bed, cap)` computed from the **bed drop across the pipe**, never from the instantaneous free surface. That is Jarrett 1984 used *as intended* (a regression estimating `n` from a measured channel slope) rather than as a live constitutive law, and the bed is quasi-static within the fast band by construction, so no loop can close through it.
+
+I predict the stabilisation **survives**, because the mechanism (rough steep reaches) is untouched and only the feedback path is cut. **If it does not survive, that is the finding and the demotion does not land** — I will report it rather than force it. The discriminating measurement is the steep end of the `roll_wave` §1 slope ladder plus the Froude numbers on the `water_clips` workload.
+
+## §6 Kernel truth wave — results
+
+### §6.1 Implicit friction (landed, `77b1f5a`)
+
+**P7 confirmed.** `roll_wave` §2b, before → after:
+
+| dt (s) | Fr before | Fr after |
+|---|---|---|
+| 0.800 | 1.3584 | 1.9166 |
+| 0.400 | 1.6638 | **2.0000** |
+| **0.200 (shipped)** | **1.8484** | **2.0000** |
+| 0.100 | 1.9492 | **2.0000** |
+| ≤0.050 | 2.0000 | **2.0000** |
+
+Flat from dt 0.4 s down; the shipped pairing now returns the converged answer exactly instead of running ~8% slow. The residual at dt 0.8 s is **not** friction — at that step a cell ships `f·dt = 30.9×0.8 = 24.7 m³` against a capacity of `d·area = 23.04 m³`, so the **outflow clamp** binds, which is a different and legitimate mechanism. §2b now prints the clamp rate so that attribution is measured rather than arithmetic.
+
+### §6.2 The Jarrett demotion — one prediction confirmed, one refuted
+
+`n` is now computed from the **bed** drop across the pipe, not the instantaneous free surface. That is Jarrett 1984 used as intended (a regression estimating `n` from a *measured channel slope*), and the bed is quasi-static within the fast band, so no loop can close through it.
+
+**P8b confirmed, completely.** The gentle-slope growth is gone, and more than that — **`ρ SHIPPED` now equals `ρ n-CONSTANT` at every slope on the ladder**, i.e. the roughness term contributes no instability anywhere:
+
+```
+slope   Fr     ρ SHIPPED   ρ n-CONSTANT      (before the demotion: 1.00003 / 1.01090 at 2% / 5%)
+   2%  0.63     1.00000       1.00000
+   5%  0.60     1.00000       1.00000
+  20%  1.10     1.00042       1.00042
+  40%  1.55     1.00948       1.00948
+  70%  2.00     1.00000       1.00000
+```
+
+**P9 confirmed — the stabilisation survives, and strengthens.** This was the one that could have stopped the demotion. At 70% slope the kernel is stable (ρ 1.00000) at Fr 2.00, and on the `water_clips` workload the supercritical fraction *fell* from 0.53% to 0.00–0.07%, with max Fr mostly 1.28–1.75 instead of a pinned 2.00. Keeping `n` rising with slope is what carried the stabilisation, exactly as the 07-13 record said — the feedback path was never the part doing that work. The two measurements the coordinator asked me to hold in both hands turn out not to be in tension at all: **`n` rising on steep ground is the stabiliser; `n` responding to the water is the defect.** They were bundled in one expression, and separating them keeps the first and deletes the second.
+
+**P8a refuted, and instructively.** I predicted the Jarrett-ceiling clip row would collapse. It did not — it is **72.6% → 72.1%** (before: 72.5% → 63.9%). The prediction was category-confused: the ceiling binding measures *how much of the domain is steep enough to saturate the linearisation*, which is a **terrain statistic**, not a dynamics statistic. Demoting to bed slope does not make the terrain gentler. What did change is the *shape* of the row: it is now nearly constant in time (72.6 → 72.1) where before it drifted (72.5 → 63.9), because a static roughness field cannot follow the water. **The drift was the feedback, visible in the census all along, and neither I nor the census noticed it until the drift stopped.**
+
+### §6.3 Verdict on the transcription fork (coordinator's prediction)
+
+**Half right, and the half that is right should be mechanised today.**
+
+Right about the tax, and I paid it twice in one hour: I first changed only `water.rs` and would have "verified" the friction fix against a §2b that runs on the *transcription* — unchanged code — had I not caught it; and yesterday the clip census had to establish pin-agreement to 1-in-36,480 before its numbers counted for anything.
+
+Wrong, I think, that its reasons to exist are gone. Its module doc gives three, and they have not aged equally:
+
+1. **θ hardcoded** — dead since 2026-07-24. Delete from the doc.
+2. **Flux state private, so it cannot be perturbed** — **still live, and load-bearing.** `clips()` gives counts and `Clone` gives *copying*, but the `roll_wave` power iteration perturbs the full 5-DOF state `(d, fl, fr, ft, fb)` and renormalises the flux components every step. That needs *write* access to the flux arrays, which neither accessor provides.
+3. **f64** — **still live.** The pin sits at 1.3e-4 m, about one f32 ULP of the bed datum; a power iteration seeded at ε = 1e-9 is not expressible in f32 at all.
+
+So the growth-rate work genuinely needs a writable, f64 copy of the kernel, and neither of my accessors touches that. The coordinator's deeper cure (a pinned f64 *mode* of the real kernel) would mean making `WaterSim` generic over the float type plus a test-only flux accessor — real work, not a cleanup.
+
+**But the yoke is cheap right now and I recommend it: promote `water_op::pin_against_kernel` from a function the probes call into a `#[test]`.** It is already written, already parameterised, and already returns the divergence. As a test it turns "an agent discovers the fork drifted, mid-probe, if they are lucky" into "the build fails." Today's near-miss is precisely the failure mode it closes. I have not landed it because it belongs in the `null_space` example's own slice rather than mid-friction, and because a test that shells into an example needs the pin moved into the crate — a ten-minute job, not a two-minute one. Named here so it is owed rather than forgotten.
+
+### §6.4 Bearing on the momentum-closure deferral
+
+Joseph's new declared-lesser-law row (dropped advective term) has a due-date question, and these measurements bear on it in a direction that **relaxes** it slightly. The advective term's absence was being invoked to explain the roll-wave instability the kernel supposedly resolved-but-could-not-saturate. On the measurements, that is not what is happening: the growing mode has no Froude threshold, so it is not the instability the advective term would bound. What *is* now visible is that the breaking cap does real work at the steep end (`ρ no-cap` = 1.02298 at 70% against 1.00000 shipped), and the cap is precisely an unphysical stand-in for the missing advective saturation. So the honest statement is: **the closure upgrade is owed by the cap's existence, not by a roll-wave instability** — the debt is real and its justification changes. It becomes *due* when a claim depends on supercritical flow being quantitatively right; nothing in the current ladder does.
