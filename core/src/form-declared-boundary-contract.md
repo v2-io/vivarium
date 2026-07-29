@@ -38,7 +38,7 @@ The flux web types the *quantities* a nomos exchanges; nothing yet types the **d
 
 **Max attainable: exact** for "the current declaration schema cannot express the measured defect class" (checkable against `nomotheke.rs` by inspection); **empirical** for the three measured instances FE(1)/(5) cite.
 
-**Currently `robust-qualitative`:** the gap and its instances are measured ( #obs-tile-outlets-grade-away-the-basins , the seam-pit and assembled-routing numbers, and the 60.6 %-versus-0 comparison the declaration itself made runnable). The declaration-box *schema* remains an argued design following an accepted pattern (box ③) and is not built; what is built is one kernel-level contract enum, convicted by two tests — that the inference is preserved exactly, and that the two contracts carve measurably different worlds with the difference largest at the boundary they describe. No Joseph ratification; do not cite as ratified. Stage `draft`.
+**Currently `robust-qualitative`:** the gap and its instances are measured ( #obs-tile-outlets-grade-away-the-basins , the seam-pit and assembled-routing numbers, and the 63.5 %-versus-one-cell comparison the declaration itself made runnable). The declaration-box *schema* remains an argued design following an accepted pattern (box ③) and is not built; what is built is one kernel-level contract enum, convicted by two tests — that the inference is preserved exactly, and that the two contracts carve measurably different worlds with the difference largest at the boundary they describe. No Joseph ratification; do not cite as ratified. Stage `draft`.
 
 ## Discussion
 
