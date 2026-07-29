@@ -49,3 +49,4 @@ Build-order independence is the guarantee; beacons are the UX of demand without 
 
 - Supersedes builder-explorer-decoupling as design home.
 - Do not claim daemon shipped under #form-builder-admission .
+- Audit-tier latents to read beside any "benign race" claim (ref/architecture-audit.md, not yet claims): i32 voxel reachability, f32 far-lands precision, same-binary replay caveat.

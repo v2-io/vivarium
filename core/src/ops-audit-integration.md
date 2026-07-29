@@ -27,8 +27,9 @@ An audit report is an instrument, not a todo list and not law. Findings are veri
    - **Term** → `LEXICON.udon`.
    - **Process** → PROCESS / this family of ops segments / `audits/README.md`.
    - **Decline / defer** → note in the report's disposition trail or a DECISIONS entry; do not leave as silent ignore.
-4. **Authority.** Auditor recommendations are evidence. They do not mint `:by joseph` or `:by us` decisions. Unratified verdicts stay `claude` / `proposed` until Joseph decides.
+4. **Authority.** Auditor recommendations are evidence. They do not mint `:by joseph` or `:by us` decisions. Unratified verdicts stay `claude` / `proposed` until Joseph decides. Two further limits ride with this: an auditor sharing the author's model family shares its failure modes, so their agreement is weaker evidence than independent agreement (*correlated error*); and an audit verdict is never a store citizen — no verdict writes world-state or stands in for a measured probe result.
 5. **Strengthen first.** When a finding says "downgrade the claim," attempt to make the claim true (or produce a specific no-go) before accepting a softer label.
+6. **De-novo audits are unprimed.** A de-novo audit brief withholds the author's own concern list, known-defect inventory, and suspected areas until the auditor's findings land — priming forecloses the fresh reading that is the audit's value. Compare the concern list *after*, as a coverage check on both sides.
 
 ## Epistemic Status
 
@@ -42,3 +43,4 @@ The failure modes this process exists to block: (1) treating the audit as a chor
 
 - Live pending reports and a short status table: `audits/README.md`.
 - De-novo `AUDIT-WORKING-*` cognition trails: consult Joseph before mining or deleting (ASF lesson; apply if such dirs appear here).
+- Specimen behind FE(4)'s limits: a draft of a verification taxonomy once carried a fabricated conservation verdict, caught only by a reviewer who grepped the source — adopting any verification scheme without the correlated-error limit re-imports that failure (history: the graduated candidates inventory, §VI notes).

@@ -121,6 +121,10 @@ Three questions when writing or reviewing a segment. They determine its honest `
 
 Where a ceiling is clear, say so in Epistemic Status: *"Max attainable: X. Currently Y because Z."* It saves effort spent trying to prove something inherently empirical, and it stops a core claim sitting at sketch when a derivation is within reach.
 
+**Explanatory prose faces the same triage.** An explanation — why a mechanism behaves as it does, why a number came out — is either *derived* (cite the chain), a *labelled hypothesis with a falsifier*, or it does not land. A plausible-sounding explanation not grounded in the theory is worse than a gap: it reads as knowledge and blocks the search a visible gap invites. (Adopted from ASF's explanatory-claims discipline — `DECISIONS[candidates-adoption-calls-dispositioned]`.)
+
+ASF's *three rings* companion to this triage is deliberately not carried: it is a partition of ASF's own proof-shaped corpus by inevitability, not part of the portable instrument — a specification corpus has no inevitability core to ring. (Verified against `asf/doc/sop/format.sop.md`, read 2026-07-29.)
+
 ## 4. Document cadence
 
 1. **YAML frontmatter**
@@ -153,6 +157,8 @@ Past-work narration (*"previously carried X," "the audit recommended a soften"*)
 ## 5. Cross-references — every file, not only segments
 
 **References carry no path.** A path is a location and it rots; a slug is an identity and it does not. Archiving one file dangled three pointers across two repositories in a single afternoon.
+
+**A load-bearing citation carries its read-status.** Mark material actually read (*read YYYY-MM-DD*, as this file's own ASF citation does) apart from material named-not-read. A source list that cannot tell the two apart has failed here before: a proposed term carve was retracted when its spike's sources turned out to be named, not read.
 
 ### 5.1 Same-member and dictionary
 
@@ -217,6 +223,10 @@ The history layer is the commit message, the decision log, and `.archive/SUPERSE
 *The most important*, *the deepest*, *the one thing that matters*, *the real finding* — **an absolute is a claim with no predicate.** Nothing could convict it, so it cannot be marked true at any tier. It gets written at the moment of surprise, which means it reports the author's state as a property of the world — and a future reader inherits one author's surprise-ordering as a ranking, with no way to check it.
 
 **The fix is precision, not silence.** *"Load-bearing for the store, the key, and the seam"* is checkable; *"the load-bearing law of the whole system"* is not. Where the felt sense is itself worth keeping, mark it as one and name its cause — *"when I met this it felt like the deepest thing here, because it unified the seam and the store, which I had been holding separately."* That says where a mind found load, why, and that it is a report rather than a measurement. Bare superlatives belong in personal reflections.
+
+### Framing glosses must be isomorphic
+
+Framing prose may lead with a simpler mental model before the precise structure — that is good pedagogy, not dumbing down. The constraint: the model must be isomorphic where it touches, so a reader predicting consequences from the gloss is not misled; an overclaiming scaffold is worse than none. The working test: a bathtub-style gloss of the phase ladder must let a reader predict consequences that hold against the code.
 
 ### Line wrapping
 

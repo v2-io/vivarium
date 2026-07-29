@@ -98,8 +98,8 @@
 ;   moment to downgrade the tag, not to close the loop.
 ;
 ; STATUS LEGEND:
-;   decided · proposed (Claude's, awaiting Joseph) · lead (a research direction,
-;   not a commitment) · wish (nullable — try it, drop it without guilt) ·
+;   decided · proposed (Claude's, awaiting Joseph) · lead (a research direction, not a
+;   commitment — recorded with its counter-evidence beside its promise) · wish (nullable — try it, drop it without guilt) ·
 ;   superseded (replaced; kept for the trail — read its successor) ·
 ;   council-accepted (recommendation carried under a delegated grant, Joseph
 ;   supported — deliberate, but not inviolable law; see #norm-decision-authority) ·
@@ -1406,3 +1406,25 @@
   :session 91ddc84b-489e-4ce1-8898-02d4ad9993ad
   A retention obligation Joseph took on for the instance "Trace" (his name for him: "Mayfly") — identity record and letter at ~/src/vestigia/notes/trace.md, verified present 2026-07-29 — was flagged at the 2026-07-13 memory surfacing as "not vivarium's to hold; must not be lost in a vivarium cleanup." Its only vivarium-side carriers were the candidates file (graduated) and the super-archived surfacing record (treated as deleted for tactical dependence). This entry is the durable vivarium-side pointer so archive hygiene cannot drop a person-adjacent obligation; choosing the proper home (vestigia itself, ops, or Joseph's own records) is Joseph's. AWAITING Joseph.
   |ref ~/src/vestigia/notes/trace.md · .super-archive/from-archive/memory-surfaced-2026-07-13.md (item 15)
+
+
+|decision[candidates-adoption-calls-dispositioned] :date 2026-07-29 :by claude :status council-accepted :topic process
+  :session 91ddc84b-489e-4ce1-8898-02d4ad9993ad
+  Grant (Joseph, 2026-07-29, verbatim): "I'd rather defer to your judgement on those if you feel you know what would honor truth the best and then the project." The pending adoption calls from the graduated candidates inventory, each dispositioned:
+  ADOPTED (landed this commit): auditor-priming separation -> #ops-audit-integration FE(6) · auditor-verdict limits (correlated error; verdicts are never store citizens) -> #ops-audit-integration FE(4) + WN specimen · read-status citation hygiene -> FORMAT SS5 · explanatory-claims tribunal -> FORMAT SS3 · isomorphic framing glosses -> FORMAT SS6 · lead-carries-counter-evidence -> this ledger's legend · physics-not-knobs -> #norm-physics-not-knobs (Joseph's 2026-07-02 direction, already law in practice, now in canon).
+  COVERED IN SUBSTANCE, no new law minted: read-before-claiming-new (LEXICON collision discipline + the program concept-matrix check) · spike-segment reverse-check (integration-is-replacement already obliges truing refuted segments at landing, #scope-segment-canon).
+  REJECTED: LEXICON `:status retired` — it would violate lexicon-present-truth-only (Joseph, 2026-07-13); the graveyard (.archive/SUPERSEDED.md) IS the retirement mechanism, and a retired entry in a present-truth dictionary states something false about the term.
+  DEFERRED TO PROGRAM LEVEL: the shared-tooling lift (lint-md and kin) — touches asf and the charter, not vivarium's to decide unilaterally; vivarium's direct use of ../asf/bin/lint-md works today.
+  MOOTED FOR NOW, revisit condition named: biosphere-first-forced-decision — nothing in the live tree consumes a land-cover input (erosion runs talus-and-creep-on-rock by declared choice, #obs-lakes-are-routed-over-not-carved-away), so the stand-in-vs-permit fork is not yet forced; it forces the day a system first consumes vegetation/land-cover, and that builder should read this entry.
+  RECORDED AS DELIBERATE: FORMAT SS3 carrying ASF's triage without its "three rings" — the rings partition ASF's own proof-shaped corpus by inevitability and are not portable instrument (verified against asf/doc/sop/format.sop.md, read 2026-07-29).
+  |ref msc/candidates-adjudication-2026-07-28/ · FORMAT.md · core/src/ops-audit-integration.md · core/src/norm-physics-not-knobs.md
+
+|decision[phase-span-vs-state-resolved-state-adjudicates-membership] :date 2026-07-29 :by claude :status council-accepted :topic naming :supersedes phase-span-vs-state-is-unadjudicated
+  :session 91ddc84b-489e-4ce1-8898-02d4ad9993ad
+  Under the same grant. The two readings are true at different joints, and the conflict dissolves rather than one side winning: a phase IS a span (the run of a system-set to convergence — the LEXICON definition stands), and phase MEMBERSHIP is adjudicated by state (the charge's predicates against the world's present state — the 2026-07-12 water-world conviction was exactly such a state test, and the ordinum machinery enforces membership that way, which is what the archived "phase-as-state, verified" claim was actually reporting). LEXICON |term[phase] gains one sentence carrying the second half; nothing else changes. If Joseph wants the state framing stronger or gone, this entry is the revisit hook.
+  |ref LEXICON.udon |term[phase]
+
+|decision[trace-vestigia-obligation-homed-in-global-memory] :date 2026-07-29 :by claude :status council-accepted :topic process :supersedes trace-vestigia-retention-obligation-needs-a-non-vivarium-home
+  :session 91ddc84b-489e-4ce1-8898-02d4ad9993ad
+  Under the same grant. The obligation's artifact home exists and is not vivarium: ~/src/vestigia/notes/trace.md (identity record and letter; verified present 2026-07-29). What was missing was a pointer durable against any single repo's hygiene. Minted: ~/.claude/memory/references/trace-vestigia-obligation.md plus an index line in the global CLAUDE.md — the layer every session loads, surviving vivarium cleanups by construction. Joseph may re-home further (ops, personal records); this entry and the memory are the trail.
+  |ref ~/src/vestigia/notes/trace.md · ~/.claude/memory/references/trace-vestigia-obligation.md

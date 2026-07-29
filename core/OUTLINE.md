@@ -79,6 +79,7 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | normative | Ops Critical | [#norm-caught-disciplines-become-mechanisms](src/norm-caught-disciplines-become-mechanisms.md) | A discipline caught failing becomes a mechanism (test/lint/refusing API); machine expedients live behind a named-fenced-retirable license | draft |
 | normative | Model Critical | [#norm-bias-vs-noise](src/norm-bias-vs-noise.md) | Bias versus noise is the decisive discretisation audit | draft |
 | discussion | Model Critical | [#disc-algorithms-disguise-physics](src/disc-algorithms-disguise-physics.md) | Port the physical claim, not the paper costume | draft |
+| normative | Model Critical | [#norm-physics-not-knobs](src/norm-physics-not-knobs.md) | The real physical term over the magic-knob proxy: faster, similar size, terminal | draft |
 | discussion | Ops Critical | [#disc-check-the-ladder](src/disc-check-the-ladder.md) | Check the phase ladder before modern-Earth priors | draft |
 | | | | *(#gap) Epistemology ladder / weak-tier-in-canon* | missing |
 | | | | *(#gap) Strengthen-before-soften as vivarium segment* | missing |

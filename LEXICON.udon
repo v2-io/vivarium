@@ -27,7 +27,7 @@
     :name World-structure (phases & gates)
 
     |term[phase] :status carved
-      A span in which a set of macro systems runs until converged.
+      A span in which a set of macro systems runs until converged. Membership is adjudicated by STATE, never by elapsed process: which phase a world is in is answered by the charge's predicates against the world's present state — the 2026-07-12 water-world conviction was exactly such a state test, and the ordinum machinery enforces it that way. The span is the run; the state is the verdict (DECISIONS[phase-span-vs-state-resolved-state-adjudicates-membership]).
       |rel :to charge :kind must-deliver
       |rel :to promise :kind hands-forward
       |rel :to phase-gate :kind bounded-by
