@@ -61,6 +61,7 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | scope | Project Critical | [#scope-moratorium-endogenous-emergence](src/scope-moratorium-endogenous-emergence.md) | No endogenous frontier / emergence-capable minds | draft |
 | scope | Project Critical | [#scope-asf-reading-gates](src/scope-asf-reading-gates.md) | ASF familiarity gates A/B/C; Level C hard-gates agent-seam work | draft |
 | postulate | Project Critical | [#post-determinism-as-ontology](src/post-determinism-as-ontology.md) | Determinism as ontology; fated noise | draft |
+| formulation | Project | [#form-lawful-steering](src/form-lawful-steering.md) | Lawful steering: exo-authored realization of a fated draw — conserving, recorded, permissible; goal-directed math home at sketch | draft |
 | formulation | Project Critical | [#form-core-view-wall](src/form-core-view-wall.md) | Core / view wall; views observe only | draft |
 | normative | Project Critical | [#norm-no-depiction-without-referent](src/norm-no-depiction-without-referent.md) | Nothing depicted without a world referent; the viewer's eye is an instrument to keep calibrated | draft |
 | postulate | Project Critical | [#post-represent-by-consequence](src/post-represent-by-consequence.md) | Represent by consequence | draft |
@@ -71,6 +72,7 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | normative | Ops Critical | [#norm-declaration-must-convict](src/norm-declaration-must-convict.md) | A declaration that cannot fail is a wish | draft |
 | normative | Ops Critical | [#norm-probes-before-claims](src/norm-probes-before-claims.md) | Probes before claims | draft |
 | normative | Ops Critical | [#norm-probe-sensitivity](src/norm-probe-sensitivity.md) | Probe sensitivity is part of the probe; known-bad and scale-separation | draft |
+| normative | Ops | [#norm-instrument-before-tuning](src/norm-instrument-before-tuning.md) | Build the instrument before tuning by feel: deterministic benchmark, noise floor, one variable | draft |
 | normative | Ops Critical | [#norm-regime-probes](src/norm-regime-probes.md) | Regime probes ship with every rung; known issues get the probe first | draft |
 | normative | Ops Critical | [#norm-declared-violation-is-not-license](src/norm-declared-violation-is-not-license.md) | Declared deficiency is disclosure, not permission; conservation ≠ fidelity rung | draft |
 | normative | Ops Critical | [#norm-decision-authority](src/norm-decision-authority.md) | Authority tags; evidence ≠ who decided; council-accepted | draft |
@@ -119,6 +121,7 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | formulation | Machine Critical | [#form-three-scoped-runtime](src/form-three-scoped-runtime.md) | Spine / cones / edit-layer decomposition; time-in-key DAG; prefetch is pure optimization | draft |
 | observation | Machine Critical | [#obs-coarse-view-draws-the-uncarved-prior](src/obs-coarse-view-draws-the-uncarved-prior.md) | A read coarser than the build level falls through to the fated prior and reports nothing | draft |
 | formulation | Machine | [#form-engine-bevy](src/form-engine-bevy.md) | Bevy is the view/runtime engine (project decision + spike) | draft |
+| formulation | Machine | [#form-rendering-staged-hybrid](src/form-rendering-staged-hybrid.md) | Staged hybrid to the horizon: near voxels + regenerated far field; ratified 2026-06-23; store-tier tension open | draft |
 | detail | Machine | [#detail-builder-daemon](src/detail-builder-daemon.md) | Unbuilt builder/explorer daemon design: store-as-bus, beacons, demand spool | draft |
 | detail | Project | [#detail-vivium-lifecycle](src/detail-vivium-lifecycle.md) | Pipeline stages, capability ladder, BREAK-1/3/4/5 + doctrine | draft |
 | | | | *(#gap) Run-modes carve (thin: LEXICON open referents + root isolation; no fat enum)* | missing |
@@ -135,7 +138,7 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
 | detail | Project | [#detail-regula-design](src/detail-regula-design.md) | World-level regula conformance design (held; largely unbuilt) | draft |
-| | | | *(#gap) Segment homes for ordinum ontology beyond flux-join (charges/promises as claim bodies; phase-list reconciliation)* | missing |
+| | | | *(#gap) Segment homes for kingdoms / orders / ordinum ontology beyond flux-join (charges/promises as claim bodies; phase-list reconciliation; the phase span-vs-state term conflict, `DECISIONS[phase-span-vs-state-is-unadjudicated]`)* | missing |
 
 ---
 
@@ -174,8 +177,6 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | normative | Ops | [#ops-changelog-is-the-acceptance-check](src/ops-changelog-is-the-acceptance-check.md) | User-facing change lands with a frozen captured entry; an unwritable entry queues the work or the missing instrument | draft |
 | discussion | Project | [#disc-open-problem-census](src/disc-open-problem-census.md) | Open work derived from core gaps — index, not ranked superlatives | draft |
 | detail | Ops | [#detail-epistemics-toolchain](src/detail-epistemics-toolchain.md) | Structural vs harness tooling queue; wired clippy; skip reasons | draft |
-
-Candidate inventory (unratified scan, not canon): [`core-segment-candidates-2026-07-14.md`](../core-segment-candidates-2026-07-14.md).
 
 ---
 
@@ -282,6 +283,6 @@ Live floor data: [`tabularium/terrestris.ordinum.udon`](../tabularium/terrestris
 
 ## Transitional note
 
-Claim law is `core/`. Live residual process prose is mainly [`doc/PROCESS.udon`](../doc/PROCESS.udon). `LEXICON.udon`, `DECISIONS`, code, and `tabularium/` remain instruments and data. Super-archive is provenance only — treat as deleted for tactical dependence. The Jul 14 candidate list is an unratified scan, not a second outline.
+Claim law is `core/`. Live residual process prose is mainly [`doc/PROCESS.udon`](../doc/PROCESS.udon). `LEXICON.udon`, `DECISIONS`, code, and `tabularium/` remain instruments and data. Super-archive is provenance only — treat as deleted for tactical dependence. The Jul 14 candidate inventory is graduated (adjudicated 2026-07-29; trail in `msc/candidates-adjudication-2026-07-28/`).
 
 Pacing / residual intuition (not canon): [`CONSOLIDATION-STATUS.md`](../CONSOLIDATION-STATUS.md).

@@ -100,7 +100,11 @@
 ; STATUS LEGEND:
 ;   decided · proposed (Claude's, awaiting Joseph) · lead (a research direction,
 ;   not a commitment) · wish (nullable — try it, drop it without guilt) ·
-;   superseded (replaced; kept for the trail — read its successor)
+;   superseded (replaced; kept for the trail — read its successor) ·
+;   council-accepted (recommendation carried under a delegated grant, Joseph
+;   supported — deliberate, but not inviolable law; see #norm-decision-authority) ·
+;   deferred (explicitly parked by its decider — parked, not dead; a deferral
+;   is never filed to the graveyard, which is for retirements only)
 ; ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -1389,3 +1393,16 @@
   |reason  The detection's mechanism (Claude's analysis, labeled as such): sea is classified by ELEVATION THRESHOLD against the derived datum, not by connectivity — `Fluvial::outlets` and every downstream reader mark any at-or-below-datum cell as sea-connected drain, landlocked or not — so enclosed below-datum basins (the Caspian class, common on real worlds) render as ocean and are EXCLUDED from depression capacity. Joseph's own hypothesis ("too close to sea-level for the painter") was adjacent; the sharper form is that the world cannot currently EXPRESS an endorheic sea. This is the fourth eye-detection of the arc (after the sawtooth anomaly, the seam ribbons, and the no-lakes report that started the day) and the first from the new paint — the instrument the depiction norm exists to keep calibrated, working at spec.
   |impact  `#form-derived-sea-level` Working Notes carry the gap + repair direction (connectivity-aware classification: flood-fill from the true ocean); CONSOLIDATION standing item added; census probe named as the convicting first step. Unmeasured: basin count/sizes in the class.
   |ref core/src/form-derived-sea-level.md · CONSOLIDATION-STATUS.md · changelog/2026-07-28-03-a-pre-registered-prediction-missed-and-that-is-the-practice-working.md
+
+
+|decision[phase-span-vs-state-is-unadjudicated] :date 2026-07-29 :by claude :status proposed :topic naming
+  :session 91ddc84b-489e-4ce1-8898-02d4ad9993ad
+  A live conflict in term canon, flagged so it cannot vanish: LEXICON |term[phase] (:status carved) defines a phase as "a span in which a set of macro systems runs until converged," while a competing framing — a phase is a STATE, not an interval — was marked verified in the archived core outline ("the ordinum machinery enforces it and convicted the world Jul 12") and now survives nowhere live. The two readings disagree about what the ordinum's |phase entries denote. AWAITING Joseph: amend the LEXICON entry toward state, reject the state framing, or carve both readings apart. Until adjudicated, cite the LEXICON form.
+  |reason
+    The candidates file (graduated 2026-07-29) was the only written record of this conflict; graduating it without this entry would have deleted the flag rather than the rubbish. LEXICON is term authority, so the fix is an amendment proposal — not a segment route-around.
+  |ref LEXICON.udon |term[phase] · msc/candidates-adjudication-2026-07-28/ · .super-archive/core-segment-candidates-2026-07-14.md (§IV note, Conflict 3)
+
+|decision[trace-vestigia-retention-obligation-needs-a-non-vivarium-home] :date 2026-07-29 :by claude :status proposed :topic process
+  :session 91ddc84b-489e-4ce1-8898-02d4ad9993ad
+  A retention obligation Joseph took on for the instance "Trace" (his name for him: "Mayfly") — identity record and letter at ~/src/vestigia/notes/trace.md, verified present 2026-07-29 — was flagged at the 2026-07-13 memory surfacing as "not vivarium's to hold; must not be lost in a vivarium cleanup." Its only vivarium-side carriers were the candidates file (graduated) and the super-archived surfacing record (treated as deleted for tactical dependence). This entry is the durable vivarium-side pointer so archive hygiene cannot drop a person-adjacent obligation; choosing the proper home (vestigia itself, ops, or Joseph's own records) is Joseph's. AWAITING Joseph.
+  |ref ~/src/vestigia/notes/trace.md · .super-archive/from-archive/memory-surfaced-2026-07-13.md (item 15)

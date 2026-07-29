@@ -44,7 +44,7 @@ Claim-adjacent home for Abyssal charges, promises, and defeasances: what the lad
 
 4. **Defeasance.** Abyssal voids Protogenic `2.water-covered-surface` **by** `emergent-land`: once land rises, the wholly water-covered surface promise no longer holds. A freeboard path that never rises is not a silent pass of that defeasance.
 
-5. **Record (readable-in-rock slice).** Deep sedimentary stack; banded-iron formations; first limestones — narrative targets for later record nomoi, not live generators.
+5. **Record (readable-in-rock slice).** Deep sedimentary stack; banded-iron formations; first limestones — narrative targets for later record nomos, not live generators.
 
 6. **Build adjacency (not a second plan).** Ethereal-explorer / early-Abyssal parity path: #detail-abyssal-parity-build . Systems inventory: #detail-phenomena-systems-map . **Grid-lock cube control** binds any plate-emergence study before it can be believed ( #obs-cube-locked-kernel-bias ; council plate-tectonics decision).
 

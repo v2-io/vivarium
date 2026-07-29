@@ -2,6 +2,12 @@
 
 *Present-tense index of graduated substrate. Not claim law. Newest batches first.*
 
+## 2026-07-29 batch 9 — the Jul-14 candidate inventory, adjudicated empty
+
+| Path | Note |
+|------|------|
+| `from-root/core-segment-candidates-2026-07-14.md` | The corpus-scan candidate inventory. Adjudicated against the 98-segment core by three parallel agents (trail: `msc/candidates-adjudication-2026-07-28/`); all claim rows absorbed or superseded-by-stronger. Residue homed before graduation: `#form-lawful-steering`, `#norm-instrument-before-tuning`, `#form-rendering-staged-hybrid` (segments); LEXICON `\|term[tile]`; census water order-of-work + doctrine-mine + pending-adoption notes; `DECISIONS[phase-span-vs-state-is-unadjudicated]` + `DECISIONS[trace-vestigia-retention-obligation-needs-a-non-vivarium-home]` (both proposed, Joseph's). |
+
 ## 2026-07-24 batch 8 — doc residual iced only after full core peels
 
 | Path | Note |

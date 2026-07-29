@@ -2,6 +2,8 @@
 
 *2026-07-28. Three parallel agents, one per slice (§I–II, §III–V, §VI–end), each verifying against the absorbing segments rather than filename-matching. Slice reports with per-item evidence sit beside this file. Authority: claude, unratified — this is an adjudication input, not a disposition. Joseph's question, verbatim: "does core-segment-candidates-2026-07-14 have *anything* in it that isn't already properly indicated in the segments?"*
 
+> **Postscript 2026-07-29 — discharged and graduated.** Every real-residue item below was homed the next morning: segments `#form-lawful-steering`, `#norm-instrument-before-tuning`, `#form-rendering-staged-hybrid`; LEXICON `|term[tile]` (executing the decided impact) + the "nomoi" sweep; DECISIONS legend rows for `council-accepted` / `deferred`; `DECISIONS[phase-span-vs-state-is-unadjudicated]` and `DECISIONS[trace-vestigia-retention-obligation-needs-a-non-vivarium-home]` (both `proposed`, Joseph's to adjudicate); census rows/notes for the water order-of-work, the PHASES reportatio doctrine mine, and the pending adoption calls; the widened OUTLINE §IV gap row; the config-classes measurement into `#form-grid-equiangular-staggered` WN. The candidates file is graduated to `.super-archive/from-root/`. The "arguable" items below remain visible via the census pending-adoption note and this file.
+
 ## Verdict
 
 **Yes — a small, enumerable residue.** All substantive physics and architecture content is absorbed or superseded-by-stronger; the residue is mostly meta (un-made re-homing decisions, dictionary entries ordered but unexecuted, provenance caveats that did not ride into absorbing segments). The file is **not yet graduatable**; the residue below is small enough to discharge deliberately first.

@@ -46,6 +46,7 @@ A present-tense list of **named open work** derived from `core/OUTLINE.md` gaps 
    - **Leaf-only vs independent coarse tier** — named tension face-flux / three-scoped  
    - **Grid reopening conditions** — stand watch on #form-grid-equiangular-staggered  
    - **Recorded convergence-$\varepsilon$, and criterion-gated kernels** — #form-time-indexed-stage-chains has the claim home; nothing in the tree records the residual a stage reached, and no kernel runs to a declared tolerance rather than an authored count. Three `ASSUMPTIONS.md` rows sit **arbitrary** naming this as their cure. First step named there: water, which carries the most arbitrary constant and dominates build cost  
+   - **Water order-of-work (council 2026-07-24)** — of the council's three standing probes, literal promotion to `WaterParams` is done (2026-07-24); **clip-rate counting and the roll-wave probe remain unrun** (the $\theta$/roll-wave adjudication in `DECISIONS`; measured state owned by #detail-nomos-defect-anatomy )  
    - **Source-digest granularity: closed as a measured no-go, listed so it is not re-opened blind** — per-nomos attribution under-keys on present code structure, and even the compiler-safe form buys 0% on the most-edited files ( #form-complete-content-addressed-key Known-incomplete (3)). The live constraint is module **separation**, not attribution derivability  
 
 4. **Not ranked.** No "the one open problem." No import of pre-core BREAK lists as current census.
@@ -62,3 +63,5 @@ ARCHITECTURE §8 ordered: rename detail→abstract in core (done) and stop trust
 
 - Graduated ARCHITECTURE §8 is history; cite this slug for the census habit.
 - When a gap closes, delete the row here (integration is replacement).
+- **Ratified phase doctrine awaiting mining:** the ordinum's reportatio (`.super-archive/from-archive/PHASES.md`, pin `42621d5`) carries decided-by-joseph doctrine with no claim homes yet — canceling pairs, the phase-intrusion budget, declare-causally / materialize-lazily (incl. the corrected moon service list), phases-choose-machinery. The FE(2) gap rows say the phase segments are missing; this note says where the decided content sits, so it is mined rather than re-derived cold.
+- **Pending adoption calls with no live carrier** (each an un-made decision — adopt or deliberately drop, never silently lose): auditor-priming separation, program tooling lift, read-status citation hygiene, read-before-claiming-new, lead-carries-counter-evidence, spike-segment reverse-check, defeasance-everywhere (LEXICON has no `:status retired`), the gate-2 explanatory-claims tribunal, respectful-pedagogy, physics-not-knobs as a segment. Per-item evidence: `msc/candidates-adjudication-2026-07-28/`.

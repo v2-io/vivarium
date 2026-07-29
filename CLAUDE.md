@@ -36,7 +36,7 @@ A deterministic constructed-world laboratory (and sim game) in the RimWorld / DF
 
 **Main objective this phase:** peel residual prose into **core** (present best); graduate claim-empty mine to **`.super-archive/`**. **Integration is replacement** (`#scope-segment-canon`): core body holds current best; text removed *from core* goes to the **history layer** (git / DECISIONS / changelog), not a softened twin. Working Notes = forward residue, not history dump. Pointer tables are not integration. **Every graduated file speeds the next adjudication.** Novel not-ready-for-primacy: Working Notes, `type: sketch`, or `msc/`.
 
-Candidate inventory (unratified scan, not canon): [`core-segment-candidates-2026-07-14.md`](core-segment-candidates-2026-07-14.md).
+The 2026-07-14 candidate inventory is graduated (adjudicated empty 2026-07-29; residue homed — trail in `msc/candidates-adjudication-2026-07-28/`).
 
 ## Standing law (non-negotiable)
 
