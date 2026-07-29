@@ -10,9 +10,11 @@ depends:
   - form-depend-by-key-never-latest
 ---
 
-# Primary-read seam precedents (AMR, multirate, equation-free, HMM)
+# Primary-read seam precedents (AMR, multirate, equation-free, HMM; DD/parallel-LEM by dossier)
 
 Extended support for the seam laws: what the four primary methods actually say at the constructions vivarium reuses, read from the primaries — so seam work can lean on the precedent instead of re-deriving or mis-remembering it.
+
+**Fifth and sixth families held by commissioned dossier (2026-07-29):** domain decomposition / overlapped tiling, and parallel landscape-evolution flux coupling — [`ref/research/seam-exchange-precedents-dossier.md`](../../ref/research/seam-exchange-precedents-dossier.md), which carries its own per-claim verified/reported register and citation ledger. Headlines, at dossier grade (not re-verified here): the exchange's true register is **overlapped tiling / ghost-zone expansion** (exactness iff $d \ge \sigma s$ — a threshold, not an error budget), not Schwarz iteration (no iteration index exists to converge in); the ownership rule is **Restricted Additive Schwarz** by name (Cai–Sarkis 1999); the cone is corroborated exactly by Bangerth 2026's $C{+}1$-rounds result (arXiv:2606.12800); cross-tile flux is solved three ways in the LEM field (Barnes two-pass spillover graph; accumulation-as-linear-system; eSCAPE serial master) and **never with a fixed-cadence halo** — the $(d,\sigma)$ operating point is unfound in that field; the FE(9) spill object exists published as the **depression hierarchy + Fill–Spill–Merge** (Barnes–Callaghan–Wickert 2020/21), where a straddling basin's spill is per-hierarchy-level with merge events, so a single scalar is generically wrong. Integration into this segment's numbered FE rows (with primary re-reads where a claim becomes load-bearing) is owed work — the dossier names what it could not obtain (§7).
 
 ## Formal Expression
 
