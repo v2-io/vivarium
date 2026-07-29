@@ -63,6 +63,15 @@ impl<'w, 's> Observatory<'w, 's> {
     /// ( #form-same-level-halo-exchange store-identity). Ties inside a rank
     /// break by lexicographically smallest key, so what a view shows never
     /// depends on store iteration order. `None` if nothing is stored.
+    ///
+    /// Pinned to the current cohort (`src=`), like [`Self::water_tile_hit`]:
+    /// the exact-key path this scan replaced matched src implicitly, and the
+    /// live store holds the same tile at the same epochs under many source
+    /// trees — without the pin the lexicographic tie-break inside a rank
+    /// deterministically picks whichever cohort's hash sorts first (verified
+    /// stale-first on first-light, 2026-07-29), so a stale bed would render as
+    /// current geography. Cross-cohort reads go through
+    /// [`Self::load_eroded_regions_cohort`], where the cohort is named.
     fn store_eroded_at(
         &self,
         face: Face,
@@ -111,6 +120,9 @@ impl<'w, 's> Observatory<'w, 's> {
                 continue;
             }
             if key_field(&r.key, "seed") != Some(seed_s.as_str()) {
+                continue;
+            }
+            if key_field(&r.key, "src") != Some(crate::nomotheke::SRC_HASH) {
                 continue;
             }
             let rank = if key_field(&r.key, "edge") == Some("halo") { 1u8 } else { 0 };
