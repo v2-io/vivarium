@@ -112,12 +112,18 @@ pub struct PipeParams {
     /// The de Almeida–Bates flux-smoothing gain. `1.0` = OFF (no smoothing).
     /// The kernel hard-codes `0.8`.
     pub theta: f64,
-    /// Jarrett slope-roughness term. The kernel hard-codes the `1.6` coefficient
-    /// and the `0.13` cap; exposed here only so it can be switched off to isolate
-    /// what each term is doing.
+    /// Jarrett slope-roughness term, on/off. (The VALUES live in
+    /// `jarrett_slope` / `jarrett_n_cap`, which since 2026-07-24 are real
+    /// `WaterParams` fields in the kernel too.)
     pub jarrett: bool,
-    /// The Froude-2 breaking cap. The kernel always applies it.
+    /// Jarrett slope coefficient — the kernel's `WaterParams::jarrett_slope`.
+    pub jarrett_slope: f64,
+    /// Jarrett roughness ceiling — the kernel's `WaterParams::jarrett_n_cap`.
+    pub jarrett_n_cap: f64,
+    /// The Froude breaking cap, on/off. The kernel always applies it.
     pub breaking_cap: bool,
+    /// Breaking-cap multiplier — the kernel's `WaterParams::froude_cap`.
+    pub froude_cap: f64,
     /// The outflow clamp (a cell cannot ship more than it holds).
     pub outflow_clamp: bool,
     /// The kernel sweeps the θ-smoother IN PLACE (Gauss–Seidel), so it reads an
@@ -141,7 +147,10 @@ impl PipeParams {
             manning_n: 0.04,
             theta: 0.8,
             jarrett: true,
+            jarrett_slope: 1.6,
+            jarrett_n_cap: 0.13,
             breaking_cap: true,
+            froude_cap: 2.0,
             outflow_clamp: true,
             gauss_seidel: true,
         }
@@ -163,6 +172,14 @@ pub struct Guards {
     pub breaking: usize, // Froude-2 cap bit
     pub clamped: usize,  // outflow clamp bit
     pub pipes: usize,
+    /// ⚠ `depth = (…).max(0.0)` fired — a POSITIVITY clamp, and therefore a
+    /// silent MASS SOURCE. `DECISIONS[water-runs-outside-its-published-validity-envelope]`
+    /// lists it among the one-sided clips and marks it *"Unprobed."*
+    /// The outflow clamp is supposed to make it unreachable; this counts whether
+    /// it actually is.
+    pub positivity: usize,
+    /// Cells visited by the depth update (the denominator for `positivity`).
+    pub cells: usize,
 }
 
 /// Half-width of the band around `raw = 0` counted as "on the kink". Sized to the
@@ -237,8 +254,11 @@ pub fn step(state: &mut [f64], geom: &Geom, p: &PipeParams, guards: &mut Guards)
                 continue;
             }
             let head = (di - dj) + db; // η_i − η_j
-            let n_manning =
-                if p.jarrett { (p.manning_n + 1.6 * (head.max(0.0) / p.l)).min(0.13) } else { p.manning_n };
+            let n_manning = if p.jarrett {
+                (p.manning_n + p.jarrett_slope * (head.max(0.0) / p.l)).min(p.jarrett_n_cap)
+            } else {
+                p.manning_n
+            };
             let raw = f(state, i, k) + p.dt * p.g * hflow * head;
             if raw < 0.0 {
                 guards.rectifier_active += 1;
@@ -250,7 +270,7 @@ pub fn step(state: &mut [f64], geom: &Geom, p: &PipeParams, guards: &mut Guards)
             let v = accel / (hflow * p.l);
             let mut ff = accel / (1.0 + p.dt * p.g * n_manning * n_manning * v / hflow.powf(4.0 / 3.0));
             if p.breaking_cap {
-                let cap = 2.0 * (p.g * hflow).sqrt() * hflow * p.l;
+                let cap = p.froude_cap * (p.g * hflow).sqrt() * hflow * p.l;
                 if ff > cap {
                     guards.breaking += 1;
                     ff = cap;
@@ -297,7 +317,12 @@ pub fn step(state: &mut [f64], geom: &Geom, p: &PipeParams, guards: &mut Guards)
             }
         }
         let outflow: f64 = (0..4).map(|k| f(&snap, i, k)).sum();
-        state[5 * i] = (d(&snap, i) + (inflow - outflow) * p.dt / area).max(0.0);
+        let raw = d(&snap, i) + (inflow - outflow) * p.dt / area;
+        guards.cells += 1;
+        if raw < 0.0 {
+            guards.positivity += 1;
+        }
+        state[5 * i] = raw.max(0.0);
     }
 }
 
