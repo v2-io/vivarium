@@ -19,7 +19,7 @@ User-facing change lands with a **frozen, dated entry** in [`changelog/`](../../
 
 2. **Entries are history, not canon.** Frozen at landing, append-only, errata by postscript — a dated snapshot cannot go stale, which is what distinguishes this from the hand-maintained front doors the 2026-07-13 re-founding archived. Current truth stays in `core/`; `#scope-segment-canon` is untouched.
 
-3. **Every shot has a referent** — `#norm-no-depiction-without-referent` extended to documents: renders are *captured* from standard self-labelling commands, never composed or retouched. If the honest capture is unimpressive, the unimpressive capture is the entry.
+3. **Every shot has a referent** — `#norm-no-depiction-without-referent` extended to documents: renders are *captured* from standard self-labelling commands, never composed or retouched. If the honest capture is unimpressive, the unimpressive capture is the entry. **World-store git** ( #form-store-as-save FE(2) local revision control of a vivium directory) is a valid way to *restore* a prior model for capture — checkout then `explore` / `info` — alongside in-store multi-cohort reads. The entry still names seed, `src=`, and command; the git rev of the world dir is optional extra provenance, not a substitute for the capture.
 
 4. **Pre-register the expected entry** ( `#norm-caught-disciplines-become-mechanisms` FE(4) at outcome altitude): before building, one sentence of "when this lands, an entry can show X" — recorded in a frozen entry or DECISIONS, adjudicated at landing. A landed build whose pre-registered entry cannot be written has measurably not reached the end of the row.
 
@@ -41,3 +41,4 @@ The practice closes a measured failure: a day of defensible layer-beneath work o
 
 - Operational detail (capture commands, filename convention, entry form): [`changelog/README.md`](../../changelog/README.md) — the README is the manual; this segment is the law.
 - The standing instrument requisition from entry 01: a CLI-level region render (named window, named stage, relief/discharge ASCII) to make before/after pairs one command each.
+- **first-light world VCS (2026-07-29):** default store `~/.cache/vivarium/globe-world` is under local git (baseline post-Jacobi). Prefer committing that tree after rebuilds that will need a before/after later; pairs can then be `git checkout` + capture as well as dual-cohort capture under one live store.

@@ -16,7 +16,10 @@ An agent's *interpretation* of a render can still be off — the entry doesn't r
 **The rules, few and load-bearing:**
 
 - **Every shot has a referent** ( `#norm-no-depiction-without-referent` extends to documents): an ASCII render, screenshot, or number names its **seed, source cohort (`src=`), and the command that produced it** — so any reader can re-derive it, and no image is a mock-up.
-- **Before/after pairs are the ideal form.** The cohort-safe loaders make "before" a reproducible read of a named older cohort, not a memory. Where no visible tell exists yet, a ` ```udon ` snippet of the new reality (a manifest line, a declaration) stands in.
+- **Before/after pairs are the ideal form.** Two compatible ways to get a reproducible "before":
+  1. **In-store cohort** — the explorer can open a non-current `src=` settle history while the store still holds it (HUD names the previous source).
+  2. **World-directory git** — the default first-light store (`~/.cache/vivarium/globe-world`) is under **local** revision control (see that dir's `README.md` and `#form-store-as-save`). Checkout an older commit, capture, checkout back. Shallow compatibility only: keys fold `src=`; no promise that every historical store opens as "current" under every later binary.
+  Where no visible tell exists yet, a ` ```udon ` snippet of the new reality (a manifest line, a declaration) stands in.
 - **Entries are frozen.** Errata get a dated postscript, never an edit. History lives here and in git; current truth lives in `core/`.
 - **Filename:** `DATE-NN-slug.md`, NN ordering multiple entries per date.
 - Meta and depth are welcome when they serve the reader; the gravity is toward *what you can see and do*.

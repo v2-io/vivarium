@@ -22,6 +22,8 @@ The content-addressed memo store is the world's portable saved state — not a d
    - `roots` — current hash per complete key / (aspect, region, tier, time, …);
    - `mutations/` — append-oriented log of irreducible user/agent edits (shape reserved; the log is first-class, not an afterthought).
    Algorithm identity lives inside each object's key, not only in the app binary, so an app release need not invalidate the store by format alone.
+
+   **Local revision control of that directory is allowed and useful** (2026-07-29, first-light): put the store under a *local* git repo so successive rebuilds can be snapshotted and checked out for exploration. This is **not** a second save format and **not** the vivarium source repo — it freezes whole-directory state (manifest + objects + roots). Compatibility is deliberately shallow: keys fold `src=` ( #form-complete-content-addressed-key ), so an older checkout is a previous cohort for the explorer, not automatically “current” under a newer binary. No hard pin of rustc/LLVM; if a checkout misbehaves under a new binary, note it unless archaeology needs more. Operational home for the default globe: `~/.cache/vivarium/globe-world` (README there); `$VIVARIUM_WORLD` overrides.
 3. **Domain-neutral bus.** Keys and values at the store layer are opaque. Terrain tiles, box reservoirs, and future agent state share one put/get interface; meaning lives in nomos declarations and query paths (`store.rs`).
 4. **Hit is matured state.** A store Hit for a complete key is matured world state for that key — not a disposable cache. Miss → compute under pure keyed inputs ( #post-determinism-as-ontology ) → put. Revisits do not re-seed from raw prior when the memo still matches.
 5. **Invalidation vs eviction.** **Invalidation** is correctness (content-hash / complete-key mismatch — never OS mtime). **Eviction** is space: immutable blobs may be deleted; cost is recompute under the same keys, never silent wrongness when keys are complete.
@@ -48,6 +50,7 @@ Treating the store as "just a cache" reintroduces a second home for world truth 
 
 ## Working Notes
 
+- **first-light local git (2026-07-29):** `~/.cache/vivarium/globe-world` is a local-only repo; baseline commit after the post-Jacobi halo rebuild (`src` prefix `b129b27c`). Ignores `status.json`. Commit after rebuilds worth a named restore; tags optional (`pre-jacobi`, …). Changelog before/after can also use `git checkout <rev>` of that tree ( #ops-changelog-is-the-acceptance-check ).
 - **Sole home.** Do not reintroduce `form-save-is-memo-store` or `form-store-is-save` as parallel slugs.
 - **Dual homes demoted:** DESIGN-REDUX §13 (file graduated `core store/pull/ladder segments`); ARCHITECTURE §5; `store.rs` / `query.rs` module docs; plan headers.
 - **Residual / TENTATIVE shapes reserved from graduated REDUX §13 (not FE):**
