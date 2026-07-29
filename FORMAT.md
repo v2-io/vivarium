@@ -158,6 +158,8 @@ Past-work narration (*"previously carried X," "the audit recommended a soften"*)
 
 **References carry no path.** A path is a location and it rots; a slug is an identity and it does not. Archiving one file dangled three pointers across two repositories in a single afternoon.
 
+**A load-bearing measured number carries its kernel era, and crossing an era boundary requires a re-run or an era-scoped quote.** Emergent-statistic measurements are properties of the kernel/generator era that produced them ( #disc-known-active-hotspots ); the coarse-only no-go expired silently across such a boundary, and the water stability numbers aged across another, both on 2026-07-29. New observation segments and measured ledger entries name their era (commit or `SRC_HASH`) in Epistemic Status. (`DECISIONS[kernel-era-keys-and-the-probe-registry]`, council-accepted tiers.)
+
 **A load-bearing citation carries its read-status.** Mark material actually read (*read YYYY-MM-DD*, as this file's own ASF citation does) apart from material named-not-read. A source list that cannot tell the two apart has failed here before: a proposed term carve was retracted when its spike's sources turned out to be named, not read.
 
 ### 5.1 Same-member and dictionary
