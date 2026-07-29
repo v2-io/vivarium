@@ -516,40 +516,85 @@ fn cmd_build(rest: &[String]) -> i32 {
         done = 0;
         out.status(phase, 0, total);
         let t0 = std::time::Instant::now();
-        for f in 0..6 {
-            let face = Face::from_index(f);
-            for tj in 0..per_face {
-                for ti in 0..per_face {
-                    let (oi, oj) = ((ti * TILE_NX) as u32, (tj * TILE_NX) as u32);
-                    let src = match phase {
-                        "initial-topography" => world.initial_topography(face, level, oi, oj, TILE_NX).1,
-                        // Staged: interior epochs land as store citizens at the
-                        // manifest's stride, so the settle history is addressable
-                        // and watchable ( #form-time-indexed-stage-chains FE(2) ).
-                        "erosion" => world
-                            .erosion_tile_staged(face, level, oi, oj, TILE_NX, epochs, spec.demand.erosion_stage_stride)
-                            .1,
-                        // Water's step count was a bare `200` literal here — the
-                        // same class of misplacement as erosion's flag, failing
-                        // quietly instead of loudly (findings item 4). It is
-                        // still an arbitrary number ( #obs-water-fill-never-settles
-                        // measured that no criterion can replace it yet), but it
-                        // is now an arbitrary number this WORLD asked for, in the
-                        // file that records what this world asked for.
-                        _ => world.water_tile(face, level, oi, oj, TILE_NX, epochs, spec.demand.water_steps).1,
-                    };
-                    done += 1;
-                    if src == Source::Computed {
-                        computed += 1;
-                    }
-                    if done % 64 == 0 || done == total {
-                        out.status(phase, done, total);
+        if phase == "erosion" {
+            // Same-level Jacobi halo exchange on each face as one region
+            // (`#form-same-level-halo-exchange` production path). Cadence = stage
+            // stride so interior rungs are identity under the schedule.
+            use vivarium_world::erosion::HaloSchedule;
+            let schedule = HaloSchedule::for_build(spec.demand.erosion_stage_stride, epochs);
+            out.line(&format!(
+                "erosion: Jacobi halo d={} σ={} ρ={} (schedule in key; face-at-a-time region carve)",
+                schedule.depth, schedule.cadence, schedule.cone_rho
+            ));
+            for f in 0..6 {
+                let face = Face::from_index(f);
+                let src = world
+                    .erosion_region_exchanged_staged(
+                        face,
+                        level,
+                        0,
+                        0,
+                        TILE_NX,
+                        per_face,
+                        per_face,
+                        epochs,
+                        spec.demand.erosion_stage_stride,
+                        schedule,
+                    )
+                    .1;
+                let face_tiles = per_face * per_face;
+                done += face_tiles;
+                if src == Source::Computed {
+                    computed += face_tiles;
+                }
+                out.status(phase, done, total);
+                out.line(&format!(
+                    "{phase}: face {f} done ({done}/{total} tiles, {computed} computed this run) [{src:?}]"
+                ));
+            }
+        } else {
+            for f in 0..6 {
+                let face = Face::from_index(f);
+                for tj in 0..per_face {
+                    for ti in 0..per_face {
+                        let (oi, oj) = ((ti * TILE_NX) as u32, (tj * TILE_NX) as u32);
+                        let src = match phase {
+                            "initial-topography" => {
+                                world.initial_topography(face, level, oi, oj, TILE_NX).1
+                            }
+                            // Water pulls the preferred eroded bed (halo when the
+                            // erosion phase wrote one) via erosion_tile's store half.
+                            _ => world
+                                .water_tile(
+                                    face,
+                                    level,
+                                    oi,
+                                    oj,
+                                    TILE_NX,
+                                    epochs,
+                                    spec.demand.water_steps,
+                                )
+                                .1,
+                        };
+                        done += 1;
+                        if src == Source::Computed {
+                            computed += 1;
+                        }
+                        if done % 64 == 0 || done == total {
+                            out.status(phase, done, total);
+                        }
                     }
                 }
+                out.line(&format!(
+                    "{phase}: face {f} done ({done}/{total} tiles, {computed} computed this run)"
+                ));
             }
-            out.line(&format!("{phase}: face {f} done ({done}/{total} tiles, {computed} computed this run)"));
         }
-        out.line(&format!("{phase}: swept {total} tiles in {:.1?} ({computed} computed, {} were hits)", t0.elapsed(), total - (computed)));
+        out.line(&format!(
+            "{phase}: swept {total} tiles in {:.1?} ({computed} computed, {} were hits)",
+            t0.elapsed(),
+            total - computed
+        ));
         world.set_provisional_writes(false);
         computed = 0;
     }
@@ -613,28 +658,33 @@ fn cmd_build(rest: &[String]) -> i32 {
         } else {
             world.set_provisional_writes(!unmet.is_empty());
             let t0 = std::time::Instant::now();
-            let (mut bdone, mut bcomputed) = (0usize, 0usize);
             let btotal = (b.tiles * b.tiles) as usize;
+            use vivarium_world::erosion::HaloSchedule;
+            let schedule = HaloSchedule::for_build(b.stride, b.epochs);
             out.line(&format!(
-                "beacon: f{} L{} ({},{}) {}x{} tiles — erosion {} epochs, stage every {}",
-                b.face, b.level, b.oi, b.oj, b.tiles, b.tiles, b.epochs, b.stride
+                "beacon: f{} L{} ({},{}) {}x{} tiles — erosion {} epochs, stage every {}, Jacobi halo d={} σ={}",
+                b.face, b.level, b.oi, b.oj, b.tiles, b.tiles, b.epochs, b.stride,
+                schedule.depth, schedule.cadence
             ));
             let face = Face::from_index(b.face);
-            for tj in 0..b.tiles {
-                for ti in 0..b.tiles {
-                    let (oi, oj) = (b.oi + ti * TILE_NX as u32, b.oj + tj * TILE_NX as u32);
-                    let src = world
-                        .erosion_tile_staged(face, b.level, oi, oj, TILE_NX, b.epochs, b.stride)
-                        .1;
-                    bdone += 1;
-                    if src == Source::Computed {
-                        bcomputed += 1;
-                    }
-                    out.status("beacon", bdone, btotal);
-                }
-            }
+            let src = world
+                .erosion_region_exchanged_staged(
+                    face,
+                    b.level,
+                    b.oi,
+                    b.oj,
+                    TILE_NX,
+                    b.tiles as usize,
+                    b.tiles as usize,
+                    b.epochs,
+                    b.stride,
+                    schedule,
+                )
+                .1;
+            let bcomputed = if src == Source::Computed { btotal } else { 0 };
+            out.status("beacon", btotal, btotal);
             out.line(&format!(
-                "beacon: swept {btotal} tiles at L{} in {:.1?} ({bcomputed} computed, {} were hits)",
+                "beacon: swept {btotal} tiles at L{} in {:.1?} ({bcomputed} computed, {} were hits) [{src:?}]",
                 b.level,
                 t0.elapsed(),
                 btotal - bcomputed

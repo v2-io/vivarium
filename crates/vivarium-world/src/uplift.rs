@@ -64,11 +64,19 @@ pub fn uplift_rate_m_per_epoch(seed: u64, cell: CellId) -> f64 {
 
 /// A tile of rock-uplift rates (m/epoch), row-major `nx × nx` over `face` cells
 /// at `level` from origin `(oi, oj)` — the field erosion consumes each epoch.
+/// Indices past the face chart are clamped (halo windows at cube edges;
+/// cross-face resampling is still open).
 pub fn uplift_rate_tile(seed: u64, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> Vec<f32> {
+    let last = (1u32 << level).saturating_sub(1);
     let mut out = Vec::with_capacity(nx * nx);
     for j in 0..nx as u32 {
         for i in 0..nx as u32 {
-            let cell = CellId::from_face_ij(face, oi + i, oj + j, level);
+            let cell = CellId::from_face_ij(
+                face,
+                oi.saturating_add(i).min(last),
+                oj.saturating_add(j).min(last),
+                level,
+            );
             out.push(uplift_rate_m_per_epoch(seed, cell) as f32);
         }
     }

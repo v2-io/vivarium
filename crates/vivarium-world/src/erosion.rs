@@ -288,6 +288,21 @@ impl HaloSchedule {
     /// FE(7) (`d=16`, `σ=10`). Not law — a measured operating point.
     pub const MEASURED_BEACON: Self = Self { depth: 16, cadence: 10, cone_rho: 0 };
 
+    /// Production schedule for a builder pass: measured halo depth; cadence is
+    /// the stage stride when staging ( #form-same-level-halo-exchange FE(7):
+    /// exchange cadence and stage stride are the same number), otherwise the
+    /// measured beacon cadence capped by `epochs`.
+    pub fn for_build(stage_stride: u32, epochs: u32) -> Self {
+        let cadence = if stage_stride > 0 && stage_stride < epochs {
+            stage_stride
+        } else if epochs == 0 {
+            1
+        } else {
+            10u32.min(epochs).max(1)
+        };
+        Self { depth: 16, cadence, cone_rho: 0 }
+    }
+
     pub fn depth_usize(self) -> usize {
         self.depth as usize
     }
@@ -513,13 +528,18 @@ impl Fluvial {
     pub fn from_surface(seed: u64, face: Face, level: u8, oi: u32, oj: u32, nx: usize, surf: impl Fn(CellId) -> f64) -> Self {
         let radius = crate::planet::Planet::EARTH.radius_m;
         let cell_m = crate::sample::cell_size_m(level, radius) as f32;
+        // Face extent at this level — halo windows for edge tiles can ask past
+        // the chart. Clamp rather than panic: true cube-edge resampling for
+        // d≥2 is still open (`#form-same-level-halo-exchange` scope; `#form-cellid-chunk-patch`).
+        let face_n = 1u32 << level;
+        let last = face_n.saturating_sub(1);
         let mut h = vec![0.0f32; nx * nx];
         let mut cell_area = vec![0.0f32; nx * nx];
         let mut centers = vec![[0.0f64; 3]; nx * nx];
         for y in 0..nx {
             for x in 0..nx {
-                let gi = oi + x as u32;
-                let gj = oj + y as u32;
+                let gi = oi.saturating_add(x as u32).min(last);
+                let gj = oj.saturating_add(y as u32).min(last);
                 let cell = CellId::from_face_ij(face, gi, gj, level);
                 h[y * nx + x] = surf(cell) as f32;
                 cell_area[y * nx + x] =
@@ -1992,8 +2012,8 @@ mod fluvial_tests {
             let c = CellId::from_face_ij(face, i.max(0) as u32, j.max(0) as u32, level);
             gen::initial_topography_m(seed, c, level) as f32
         };
-        let a = carve_region_jacobi_exchange(32, 48, tile_n, 2, 2, epochs, schedule, mk, prior);
-        let b = carve_region_jacobi_exchange(32, 48, tile_n, 2, 2, epochs, schedule, mk, prior);
+        let a = carve_region_jacobi_exchange(32, 48, tile_n, 2, 2, epochs, schedule, mk, prior, |_, _| {});
+        let b = carve_region_jacobi_exchange(32, 48, tile_n, 2, 2, epochs, schedule, mk, prior, |_, _| {});
         assert_eq!(a.len(), 4);
         for (x, y) in a.iter().zip(b.iter()) {
             assert!(
@@ -2344,6 +2364,10 @@ pub struct ExchangedTile {
 /// uplift, precip) whose origin is `(oi, oj)` and side `nx`. Origins may be
 /// slightly negative after halo expansion; the maker is responsible for
 /// clamping cell samples the way the shipped path does.
+///
+/// `on_rung(epochs_reached, interiors)` fires after every cadence chunk (and the
+/// final partial chunk), so a staged build can memoize each rung without a
+/// second cold settle — `#form-same-level-halo-exchange` FE(7).
 pub fn carve_region_jacobi_exchange(
     region_oi: i64,
     region_oj: i64,
@@ -2354,6 +2378,7 @@ pub fn carve_region_jacobi_exchange(
     schedule: HaloSchedule,
     mut mk_window: impl FnMut(i64, i64, usize) -> Fluvial,
     prior: impl Fn(i64, i64) -> f32,
+    mut on_rung: impl FnMut(u32, &[ExchangedTile]),
 ) -> Vec<ExchangedTile> {
     assert!(tile_n > 0 && tiles_i > 0 && tiles_j > 0, "region must be non-empty");
     assert!(schedule.cadence >= 1, "HaloSchedule.cadence must be ≥ 1 (exchange on)");
@@ -2381,6 +2406,27 @@ pub fn carve_region_jacobi_exchange(
                     f.h[(d + j) * win + (d + i)];
             }
         }
+    };
+    let extract = |tiles: &[Fluvial]| -> Vec<ExchangedTile> {
+        let mut out = Vec::with_capacity(n_tiles);
+        for tj in 0..tiles_j {
+            for ti in 0..tiles_i {
+                let t = tj * tiles_i + ti;
+                let mut h = vec![0.0f32; tile_n * tile_n];
+                for j in 0..tile_n {
+                    for i in 0..tile_n {
+                        h[j * tile_n + i] = tiles[t].h[(d + j) * win + (d + i)];
+                    }
+                }
+                out.push(ExchangedTile {
+                    oi: (region_oi + (ti * tile_n) as i64).max(0) as u32,
+                    oj: (region_oj + (tj * tile_n) as i64).max(0) as u32,
+                    nx: tile_n,
+                    h,
+                });
+            }
+        }
+        out
     };
     let refill = |assembled: &[f32], t: usize, f: &mut Fluvial| {
         let (ti, tj) = (t % tiles_i, t / tiles_i);
@@ -2421,6 +2467,7 @@ pub fn carve_region_jacobi_exchange(
     };
 
     let mut done = 0u32;
+    let mut out = Vec::new();
     while done < epochs {
         let k = schedule.cadence.min(epochs - done);
         for f in tiles.iter_mut() {
@@ -2431,30 +2478,13 @@ pub fn carve_region_jacobi_exchange(
         for (t, f) in tiles.iter().enumerate() {
             publish(&mut assembled, t, f);
         }
+        out = extract(&tiles);
+        on_rung(done, &out);
         // Exchange after each chunk except when the settle is finished.
         if done < epochs {
             for (t, f) in tiles.iter_mut().enumerate() {
                 refill(&assembled, t, f);
             }
-        }
-    }
-
-    let mut out = Vec::with_capacity(n_tiles);
-    for tj in 0..tiles_j {
-        for ti in 0..tiles_i {
-            let t = tj * tiles_i + ti;
-            let mut h = vec![0.0f32; tile_n * tile_n];
-            for j in 0..tile_n {
-                for i in 0..tile_n {
-                    h[j * tile_n + i] = tiles[t].h[(d + j) * win + (d + i)];
-                }
-            }
-            out.push(ExchangedTile {
-                oi: (region_oi + (ti * tile_n) as i64).max(0) as u32,
-                oj: (region_oj + (tj * tile_n) as i64).max(0) as u32,
-                nx: tile_n,
-                h,
-            });
         }
     }
     out
