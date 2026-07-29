@@ -278,7 +278,7 @@ Live floor data: [`tabularium/terrestris.ordinum.udon`](../tabularium/terrestris
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
 | detail | Model | [#detail-nomos-defect-anatomy](src/detail-nomos-defect-anatomy.md) | Jul-13 defect→box map; failure-gallery / seductive-wrong specimens | draft |
-| observation | Math | [#obs-coarse-only-closure-nogo](src/obs-coarse-only-closure-nogo.md) | No pointwise coarse-only drainage closure reaches the trunk ($R^2\le0.36$, two seeds) | draft |
+| observation | Math | [#obs-coarse-only-closure-nogo](src/obs-coarse-only-closure-nogo.md) | Kernel-era-scoped no-go: on the 07-24 kernel no pointwise closure reaches the trunk ($R^2\le0.36$; isotonic 0.401); on current main the same construction measures 0.94/0.98 — family live again | draft |
 | worked-example | Model | [#worked-example-mfd-prime-question](src/worked-example-mfd-prime-question.md) | MFD as disguised geometric claim — Prime Question specimen of a dead costume | draft |
 
 ---

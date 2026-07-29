@@ -13,9 +13,14 @@ depends:
 
 # The coarse-only trunk closure is a measured no-go
 
-The erosion closure's carrier is the drainage trunk, and the trunk is **not a
-function of the coarse drainage state** — so no pointwise recalibration of the
-coarse-routed drainage can supply it (measured $R^2 \le 0.36$, two seeds).
+On the 2026-07-24 kernel this spike measured, the drainage trunk is **not a
+function of the coarse drainage state** — no pointwise recalibration of the
+coarse-routed drainage supplies it ($R^2 \le 0.36$, two seeds; general-monotone
+isotonic ceiling 0.401, so the power law was already the ceiling there). **The
+exclusion is kernel-era-scoped and does not transfer to the current kernel**:
+the same construction on current main measures power-law $R^2 = 0.940$ /
+isotonic $0.982$ (verified twice, 2026-07-29) — on today's kernel the pointwise
+family is live again, not excluded.
 
 ## Formal Expression
 
@@ -69,7 +74,16 @@ coarse-routed drainage can supply it (measured $R^2 \le 0.36$, two seeds).
 
 **Max attainable: robust-qualitative.** The $R^2 \le 0.36$ ceiling is empirical
 (two seeds, six tile$\times$depth cells each; `.super-archive/from-msc/spike-nonlocal-closure/`
-PROBE 6/8, deterministic). The structural claim — the trunk depends on sub-grid
+PROBE 6/8, deterministic). **Kernel-era scope (2026-07-29, the load-bearing addition):**
+the ceiling belongs to the kernel/generator that produced it (spike commit era; the probe
+re-run *at that commit* reproduces 0.362 ≈ the archived 0.359, and adds the general-monotone
+isotonic ceiling 0.401 — so the power law was already the ceiling there and the broad
+pointwise exclusion was earned *for that kernel*). **On current main the same construction
+measures power-law $R^2 = 0.940$ / isotonic $0.982$** (`examples/monotone_ceiling_probe.rs`,
+verified by two independent runs; drift isolated to ~12 commits including the
+craton-nucleation rewrite and fill-restore). This claim must not be quoted as present-tense
+law for the current kernel; whether it re-closes there — and *why* the drift re-opened it —
+is the open question the census carries. The structural claim — the trunk depends on sub-grid
 channel position, which is independent of coarse per-cell state — is argued from
 the measurement and from the routing mechanism, not yet derived; a derivation
 (that $\max(A_{\text{fine}})$ is not $\sigma(A_{\text{coarse}})$-measurable) would
