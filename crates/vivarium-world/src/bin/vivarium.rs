@@ -743,7 +743,10 @@ fn cmd_status(rest: &[String]) -> i32 {
             "  ⚠ {provisional_total} root(s) tagged provisional (written under --allow-unmet) — not lawful *in vivia* evidence"
         );
     }
-    println!("{:>5}  {:<14} {:>9}  {:>7}  {:>5}  ", "level", "nomos", "B dcl/drv", "tiles", "prov");
+    // Column width follows the longest nomos name present, so a new long name
+    // widens the table instead of shearing it.
+    let w = census.keys().map(|(_, n)| n.len()).max().unwrap_or(0).max("nomos".len());
+    println!("{:>5}  {:<w$} {:>9}  {:>7}  {:>5}  ", "level", "nomos", "B dcl/drv", "tiles", "prov");
     let max = census.values().map(|(n, _)| *n).max().unwrap_or(1);
     for ((level, nomos), (n, p)) in &census {
         let b = match nomotheke::lookup(nomos) {
@@ -752,7 +755,7 @@ fn cmd_status(rest: &[String]) -> i32 {
         };
         let bar = "█".repeat((n * 40 / max).max(1));
         let pmark = if *p > 0 { format!("{p}") } else { "·".into() };
-        println!("{level:>5}  {nomos:<14} {b:>9}  {n:>7}  {pmark:>5}  {bar}");
+        println!("{level:>5}  {nomos:<w$} {b:>9}  {n:>7}  {pmark:>5}  {bar}");
     }
     if unknown > 0 {
         println!("{unknown} pre-census roots (format v1 — valid, not attributable)");

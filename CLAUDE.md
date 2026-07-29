@@ -63,7 +63,7 @@ edit → bin/install (rebuild binaries) → vivarium build (rebuild the world) �
 
 Skipping the rebuild does not show you a stale picture; it shows you a *recomputing* one, which reads as a performance problem rather than a cache miss. That has now cost two separate sessions real time — one agent burned three verification cycles discovering it, and a replay was misdiagnosed as slow when it was recomputing the planet under changed keys.
 
-Note the sharp edge: the digest currently covers `src/bin/`, so **editing the CLI's help text invalidates a world**. Whether to exclude `src/bin/*.rs` (it cannot under-key — they are separate crates the lib cannot reference) is open and is Joseph's call; it touches `#form-complete-content-addressed-key`.
+The digest covers the **library** source only: `src/bin/` is excluded (safe by Cargo's target model — the lib cannot reference a `[[bin]]` target; `source_hash::is_outside_lib`, landed 2026-07-24), so editing the CLI does *not* invalidate a world. Editing a lib comment or test still does — comment-normalization was considered and declined 2026-07-24 (the decline and its reasons live in `source_hash.rs`; do not re-open without new information). Known not-covered in the other direction: rustc/LLVM version and FMA contraction (`ASSUMPTIONS.md` sidebar).
 
 ### Claim ↔ code order (and the allowed inversion)
 
