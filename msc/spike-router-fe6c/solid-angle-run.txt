@@ -1,0 +1,23 @@
+   Compiling vivarium-world v0.0.0 (/Users/josephwecker-v2/src/arch/vivarium/crates/vivarium-world)
+    Finished `release` profile [optimized] target(s) in 0.21s
+     Running `target/release/examples/solid_angle_precision`
+measure::cell_solid_angle vs Van Oosterom-Strackee, equiangular cube-sphere
+(relative disagreement; VOS is the cancellation-free reference)
+
+level   cells   median rel      max rel      cell size
+    4     225    1.554e-15    1.699e-14  625471.462 m
+    8     289    3.538e-13    5.039e-12   39091.966 m
+   10     324    6.647e-12    9.309e-11    9772.992 m
+   13     324    5.311e-10     4.691e-9    1221.624 m
+   16     289     2.826e-8     3.336e-7     152.703 m
+   19     324     1.596e-6     2.904e-5      19.088 m
+   21     324     3.175e-5     4.884e-4       4.772 m
+   23     324     4.125e-4     5.381e-3       1.193 m
+   25     324     5.468e-3     6.838e-2       0.298 m
+
+The error grows ~4^level — the signature of cancellation in the four-term
+arctangent difference, not of geometry. Below ~L16 it is irrelevant; at L21 it
+is 3e-5 median, at L23 4e-4, at L25 5e-3 median / 7e-2 worst.
+A drop-in fix is the VOS form above: same inputs, no cancellation, no new deps.
+NOT LANDED HERE — editing src/ re-keys every world under every cohort
+(#form-complete-content-addressed-key). See msc/agent-briefs/2026-07-29-router-fe6c-pricing.md

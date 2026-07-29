@@ -1,0 +1,122 @@
+warning: fields `e1` and `e2` are never read
+   --> crates/vivarium-world/examples/router_fe6c.rs:161:5
+    |
+159 | struct CellGeom {
+    |        -------- fields in this struct
+160 |     /// Orthonormal tangent basis at the cell centre.
+161 |     e1: V3,
+    |     ^^
+162 |     e2: V3,
+    |     ^^
+    |
+    = note: `CellGeom` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `vivarium-world` (example "router_fe6c") generated 1 warning
+    Finished `release` profile [optimized] target(s) in 0.05s
+     Running `target/release/examples/router_fe6c`
+######## FE(6c) PRICING — Coatleven flux-vector reconstruction on the tree ########
+Prices #obs-routing-curl-spiral FE(6)(c)+(d) against the FE(8) strawman.
+Predictions (pre-registered): msc/spike-router-fe6c/PREDICTIONS.md
+level=19 nx=96 epochs=80 uplift=0.02 dome=1200m seed=0
+
+---- P0: LiveMfd arm == live erosion.rs, bit-for-bit, 3x, both sites ----
+  BITMATCH FAIL at CORNER (sheared Jacobian): max|Δh|=6.835303e1
+  BITMATCH FAIL at FACE CENTRE (D4 acquittal control): max|Δh|=1.016934e2
+  trial 0: corner=false centre=false
+  BITMATCH FAIL at CORNER (sheared Jacobian): max|Δh|=6.835303e1
+  BITMATCH FAIL at FACE CENTRE (D4 acquittal control): max|Δh|=1.016934e2
+  trial 1: corner=false centre=false
+  BITMATCH FAIL at CORNER (sheared Jacobian): max|Δh|=6.835303e1
+  BITMATCH FAIL at FACE CENTRE (D4 acquittal control): max|Δh|=1.016934e2
+  trial 2: corner=false centre=false
+  P0 FAIL — nothing below is about the live world
+
+---- P1 GATE: geometric identity |K|Id = Sum |s|(x_s-x_K) (x) n_hat ----
+  Frobenius residual ||M/|K| - I||   worst=4.526e-1  mean=4.524e-1
+  FAIL — normals/face-centres are wrong, or the sphere bites here. Fix before reading on.
+
+---- determinism: reconstruction arms bit-identical across 3 reruns ----
+  determinism PASS
+
+================ SITE: CORNER (sheared Jacobian) ================
+  land fraction 88.6%   fill-raised cells (final epoch, live arm) 0.0%
+  arm                                                     secs   tau=20   tau=50  tau=100
+  UniformOld  8-fan, uniform len, D8 tree   [pre-6c1ad97]    0.10   0.5861   0.6359   0.8052
+  LiveMfd     8-fan, true gc,     D8 tree   [== erosion.rs today]    0.16   0.4348   0.5478   0.7143
+  EdgeTrue    4-fan drop/d,      D8 tree   [fan-half diag-kill]    0.15   0.3664   0.4594   0.6460
+  EdgeFull    4-fan drop/d,      D4 tree   [STRAWMAN, replication]    0.13   0.3443   0.4763   0.7959
+  EdgeTau     4-fan |s|drop/d,    D8 tree   [transmissivity control]    0.15   0.3624   0.4569   0.7033
+  CoatTpfa    4-fan |s|drop/d,   Q-hat tree [FE(6c), no (6d)]    0.13   0.4670   0.4638   0.5209
+  CoatGrad    4-fan |s|LSQ-grad, Q-hat tree [FE(6c)+(6d)]    0.17   0.4859   0.4567   0.5473
+  CoatMag     CoatGrad + ||Q||*sqrt(A) consumed [full FE(6c)]    0.17   0.4554   0.6980   0.8515
+  -- vs LiveMfd: M1 Jaccard(tau=50) / M2 log-drainage Spearman --
+     UniformOld  8-fan, uniform len, D8 tree   [pre-6c1ad97] M1=0.8390 M2=0.300
+     EdgeTrue    4-fan drop/d,      D8 tree   [fan-half diag-kill] M1=0.8289 M2=0.185
+     EdgeFull    4-fan drop/d,      D4 tree   [STRAWMAN, replication] M1=0.9240 M2=0.010
+     EdgeTau     4-fan |s|drop/d,    D8 tree   [transmissivity control] M1=0.8298 M2=0.181
+     CoatTpfa    4-fan |s|drop/d,   Q-hat tree [FE(6c), no (6d)] M1=0.8643 M2=0.240
+     CoatGrad    4-fan |s|LSQ-grad, Q-hat tree [FE(6c)+(6d)] M1=0.8179 M2=0.364
+     CoatMag     CoatGrad + ||Q||*sqrt(A) consumed [full FE(6c)] M1=0.9022 M2=0.121
+
+================ SITE: FACE CENTRE (D4 acquittal control) ================
+  land fraction 88.3%   fill-raised cells (final epoch, live arm) 0.1%
+  arm                                                     secs   tau=20   tau=50  tau=100
+  UniformOld  8-fan, uniform len, D8 tree   [pre-6c1ad97]    0.10   0.6060   0.6153   0.8009
+  LiveMfd     8-fan, true gc,     D8 tree   [== erosion.rs today]    0.17   0.6015   0.6306   0.8394
+  EdgeTrue    4-fan drop/d,      D8 tree   [fan-half diag-kill]    0.15   0.5351   0.5132   0.8325
+  EdgeFull    4-fan drop/d,      D4 tree   [STRAWMAN, replication]    0.14   0.4414   0.3664   0.6937
+  EdgeTau     4-fan |s|drop/d,    D8 tree   [transmissivity control]    0.15   0.5356   0.4915   0.8385
+  CoatTpfa    4-fan |s|drop/d,   Q-hat tree [FE(6c), no (6d)]    0.13   0.5117   0.5060   0.7188
+  CoatGrad    4-fan |s|LSQ-grad, Q-hat tree [FE(6c)+(6d)]    0.17   0.4882   0.5187   0.7835
+  CoatMag     CoatGrad + ||Q||*sqrt(A) consumed [full FE(6c)]    0.18   0.5017   0.6936   0.8626
+  -- vs LiveMfd: M1 Jaccard(tau=50) / M2 log-drainage Spearman --
+     UniformOld  8-fan, uniform len, D8 tree   [pre-6c1ad97] M1=0.5864 M2=0.524
+     EdgeTrue    4-fan drop/d,      D8 tree   [fan-half diag-kill] M1=0.7263 M2=0.405
+     EdgeFull    4-fan drop/d,      D4 tree   [STRAWMAN, replication] M1=0.7617 M2=0.362
+     EdgeTau     4-fan |s|drop/d,    D8 tree   [transmissivity control] M1=0.7215 M2=0.423
+     CoatTpfa    4-fan |s|drop/d,   Q-hat tree [FE(6c), no (6d)] M1=0.8478 M2=0.322
+     CoatGrad    4-fan |s|LSQ-grad, Q-hat tree [FE(6c)+(6d)] M1=0.8407 M2=0.291
+     CoatMag     CoatGrad + ||Q||*sqrt(A) consumed [full FE(6c)] M1=0.9005 M2=0.280
+
+---- P4: FE(6d) marginal on the FIELD (corner) ----
+  CoatTpfa vs CoatGrad: M2 log-drainage Spearman=0.299  M1 Jaccard(tau=50)=0.8344
+  LSQ downhill-fallback events (final epoch, corner) = 6863   (cells where the corrected
+  gradient sent nothing through any downhill face and the two-point weights took over)
+
+---- P5: ||Q||*sqrt(A) / raw accumulation, land cells (corner) ----
+  n=8209  p10=0.524  median=0.843  p90=0.995
+  tree projection residual angle(Q-hat, chosen receiver) @CORNER (sheared Jacobian)        n=7976 median=8.61deg p90=21.85deg  Q-hat-degenerate fallbacks=0
+  tree projection residual angle(Q-hat, chosen receiver) @FACE CENTRE (D4 acquittal control) n=8092 median=10.80deg p90=20.23deg  Q-hat-degenerate fallbacks=0
+
+======= NULL-TEST DIFFERENTIAL =======
+  CUBE = (arm-live axis-frac at CORNER) - (arm-live at FACE CENTRE)
+  arm                                                     tau=20    tau=50   tau=100
+  UniformOld  8-fan, uniform len, D8 tree   [pre-6c1ad97]   +0.1469   +0.1036   +0.1295
+  EdgeTrue    4-fan drop/d,      D8 tree   [fan-half diag-kill]   -0.0019   +0.0291   -0.0614
+  EdgeFull    4-fan drop/d,      D4 tree   [STRAWMAN, replication]   +0.0696   +0.1928   +0.2274
+  EdgeTau     4-fan |s|drop/d,    D8 tree   [transmissivity control]   -0.0065   +0.0482   -0.0100
+  CoatTpfa    4-fan |s|drop/d,   Q-hat tree [FE(6c), no (6d)]   +0.1222   +0.0407   -0.0727
+  CoatGrad    4-fan |s|LSQ-grad, Q-hat tree [FE(6c)+(6d)]   +0.1644   +0.0209   -0.1110
+  CoatMag     CoatGrad + ||Q||*sqrt(A) consumed [full FE(6c)]   +0.1205   +0.0873   +0.1140
+  -- same-fan (baseline = EdgeTrue): isolates the TREE treatment alone --
+  EdgeFull    4-fan drop/d,      D4 tree   [STRAWMAN, replication]   +0.0715   +0.1636   +0.2887
+  CoatTpfa    4-fan |s|drop/d,   Q-hat tree [FE(6c), no (6d)]   +0.1241   +0.0116   -0.0113
+  CoatGrad    4-fan |s|LSQ-grad, Q-hat tree [FE(6c)+(6d)]   +0.1663   -0.0082   -0.0496
+  CoatMag     CoatGrad + ||Q||*sqrt(A) consumed [full FE(6c)]   +0.1224   +0.0581   +0.1754
+
+======= NULL-TEST DIFFERENTIAL — s_K=0 CARVE-OUT (fill-raised cells excluded) =======
+  CUBE = (arm-live axis-frac at CORNER) - (arm-live at FACE CENTRE)
+  arm                                                     tau=20    tau=50   tau=100
+  UniformOld  8-fan, uniform len, D8 tree   [pre-6c1ad97]   +0.1468   +0.1025   +0.1307
+  EdgeTrue    4-fan drop/d,      D8 tree   [fan-half diag-kill]   -0.0031   +0.0263   -0.0628
+  EdgeFull    4-fan drop/d,      D4 tree   [STRAWMAN, replication]   +0.0690   +0.1896   +0.2259
+  EdgeTau     4-fan |s|drop/d,    D8 tree   [transmissivity control]   -0.0073   +0.0451   -0.0115
+  CoatTpfa    4-fan |s|drop/d,   Q-hat tree [FE(6c), no (6d)]   +0.1214   +0.0396   -0.0710
+  CoatGrad    4-fan |s|LSQ-grad, Q-hat tree [FE(6c)+(6d)]   +0.1633   +0.0178   -0.1127
+  CoatMag     CoatGrad + ||Q||*sqrt(A) consumed [full FE(6c)]   +0.1199   +0.0864   +0.1148
+  -- same-fan (baseline = EdgeTrue): isolates the TREE treatment alone --
+  EdgeFull    4-fan drop/d,      D4 tree   [STRAWMAN, replication]   +0.0721   +0.1634   +0.2887
+  CoatTpfa    4-fan |s|drop/d,   Q-hat tree [FE(6c), no (6d)]   +0.1245   +0.0133   -0.0082
+  CoatGrad    4-fan |s|LSQ-grad, Q-hat tree [FE(6c)+(6d)]   +0.1663   -0.0084   -0.0499
+  CoatMag     CoatGrad + ||Q||*sqrt(A) consumed [full FE(6c)]   +0.1230   +0.0601   +0.1777
