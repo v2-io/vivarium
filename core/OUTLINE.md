@@ -162,6 +162,7 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | formulation | Model Critical | [#form-sphere-continuous-surface-fields](src/form-sphere-continuous-surface-fields.md) | Solid surface fields continuous on $S^2$; never per-face noise charts | draft |
 | sketch | Model | [#sketch-detail-abstract-reversion](src/sketch-detail-abstract-reversion.md) | Reversion frame; open: nonlinear closure for non-local flux (state half retired as measured) | draft |
 | sketch | Math | [#sketch-dynamic-exponent-seams](src/sketch-dynamic-exponent-seams.md) | Dynamic exponent $z$ per process; timestep-from-quadtree tactic — under investigation | draft |
+| sketch | Model | [#sketch-ml-surrogate-rungs](src/sketch-ml-surrogate-rungs.md) | Learned surrogates as fidelity-ladder rungs: keyed weights, flux-form outputs, leaf-coverage rarity as the envelope tripwire — exploratory | draft |
 | detail | Math | [#detail-seam-precedents](src/detail-seam-precedents.md) | Primary-read seam precedents (AMR / multirate / equation-free / HMM) | draft |
 | detail | Math | [#detail-structure-scheme-map](src/detail-structure-scheme-map.md) | Structure→scheme catalogue + conflicts + consumer reconstructions | draft |
 | detail | Math | [#detail-info-theoretic-discretisation](src/detail-info-theoretic-discretisation.md) | Sampling / anti-alias / Jensen-vs-aliasing / fated-jitter / multires dictionary | draft |
