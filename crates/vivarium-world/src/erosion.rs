@@ -612,14 +612,38 @@ impl Fluvial {
         let mut centers = vec![[0.0f64; 3]; nx * nx];
         for y in 0..nx {
             for x in 0..nx {
-                let gi = oi.saturating_add(x as u32).min(last);
-                let gj = oj.saturating_add(y as u32).min(last);
+                // **The clamp governs the DATA lookup only.** A halo window on a
+                // region perimeter asks for cells outside this chart. Their
+                // *heights* genuinely are not available yet — cross-face
+                // resampling for d ≥ 2 is open work ( #form-cellid-chunk-patch )
+                // — so the height is still read from the clamped cell. Their
+                // *geometry* is available in closed form: the equiangular
+                // formulae extrapolate past the edge, returning unit centres and
+                // finite positive areas that continue smoothly onto the
+                // neighbouring face's territory.
+                //
+                // Clamping the geometry too was a NaN mint, not an inaccuracy:
+                // the overhanging rows collapsed onto the last chart row, so
+                // distinct cells shared a centre and sat 0.0 m apart where a real
+                // neighbour is ~19 km away, and every slope and flux divides by
+                // that. It corrupted 83 stored roots per cohort for seven
+                // cohorts ( #obs-halo-windows-overhang-the-chart-and-mint-nan ;
+                // tripwire `an_overhanging_window_has_no_zero_length_neighbour_pairs` ).
+                //
+                // The extrapolated centre is near, not identical to, the true
+                // neighbouring-face cell — each face carries its own
+                // parametrisation. It is a smooth, slightly distorted
+                // continuation, and it is not a substitute for real cross-face
+                // geometry; it is what makes the metric possible at all.
+                let ri = oi.saturating_add(x as u32);
+                let rj = oj.saturating_add(y as u32);
+                let (gi, gj) = (ri.min(last), rj.min(last));
                 let cell = CellId::from_face_ij(face, gi, gj, level);
                 h[y * nx + x] = surf(cell) as f32;
                 cell_area[y * nx + x] =
-                    crate::measure::cell_area_m2(face, gi as u64, gj as u64, level, radius) as f32;
+                    crate::measure::cell_area_m2(face, ri as u64, rj as u64, level, radius) as f32;
                 centers[y * nx + x] =
-                    crate::measure::cell_center_unit(face, gi as u64, gj as u64, level);
+                    crate::measure::cell_center_unit(face, ri as u64, rj as u64, level);
             }
         }
         Self {
@@ -2242,6 +2266,52 @@ mod fluvial_tests {
             ocean_max, 0.0,
             "the connected ocean is being reported as standing water — a lake field that \
              includes the sea is not a lake field"
+        );
+    }
+
+    /// **No two adjacent cells may sit at zero distance, including in a window
+    /// that overhangs the cube chart.** This is the invariant the halo path broke:
+    /// `from_surface` clamps out-of-chart indices, and when the clamp reached the
+    /// *geometry* as well as the data, the overhanging rows all collapsed onto the
+    /// last chart row — so distinct cells shared a centre vector and sat 0.0 m
+    /// apart, where a real neighbour at L9 is 19 395.8 m away. Every slope and
+    /// flux divides by that distance, so this minted non-finite heights on 83
+    /// stored roots per cohort for seven cohorts
+    /// ( #obs-halo-windows-overhang-the-chart-and-mint-nan ).
+    ///
+    /// Zero distance between distinct cells is not an inaccuracy; it is outside
+    /// the model. So the guard is on the geometric invariant rather than on the
+    /// downstream NaN: a test for finite heights would pass the moment a division
+    /// happened to be avoided, while this convicts the impossible configuration
+    /// itself.
+    #[test]
+    fn an_overhanging_window_has_no_zero_length_neighbour_pairs() {
+        let level = 4u8; // 16² chart — small and fast
+        let face_n = 1u32 << level;
+        let nx = 6usize;
+        // Overhang the high edge by 3 cells, the way a halo window does.
+        let o = face_n - 3;
+        let f = Fluvial::from_surface(0, Face::XPos, level, o, o, nx, |_| 1000.0);
+        let mut zero_pairs = 0usize;
+        for j in 0..nx {
+            for i in 0..nx {
+                let a = j * nx + i;
+                for (dx, dy) in NEIGHBORS {
+                    let (x, y) = (i as i32 + dx, j as i32 + dy);
+                    if x < 0 || y < 0 || x >= nx as i32 || y >= nx as i32 {
+                        continue;
+                    }
+                    let b = y as usize * nx + x as usize;
+                    if f.dist_m(a, b) <= 0.0 {
+                        zero_pairs += 1;
+                    }
+                }
+            }
+        }
+        assert_eq!(
+            zero_pairs, 0,
+            "{zero_pairs} adjacent cell pairs are 0.0 m apart in a window overhanging the chart — \
+             distinct cells sharing a centre, which every slope and flux then divides by"
         );
     }
 

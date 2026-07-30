@@ -47,3 +47,35 @@ never hold water. The explorer sets `NoFluxWall` per drawn tile, so this affects
 the paint on any drawn tile with no submerged cell touching its rim. Found while
 building the connectivity tripwire (the first version of that test hit this
 instead of the classification). Distinct defect, named, unrepaired.
+
+---
+
+# Pre-registration 2 — the halo-geometry repair (2026-07-30)
+
+Written before the rebuild, before reading any rebuilt payload. Base `19fd43d` + the
+`from_surface` geometry split.
+
+**P5 — non-finite `erosion-tile` cells go to zero in the new cohort.** If any
+remain, the zero-distance metric was not the only mint and the segment's FE(5)
+is incomplete.
+
+**P6 — only perimeter tiles change, plus their exchange neighbours.** The split
+only alters cells where the requested index exceeds the chart, i.e. overhanging
+windows, i.e. perimeter tiles: 28 of 64 per face = 43.75%. But the Jacobi
+exchange shares halo bands, so a perimeter tile's corrected values can propagate
+inward over rounds. So: **more than 43.75% and less than 100%** of `erosion-tile`
+payloads change. If it comes back at exactly 43.75% the exchange is not
+propagating what I think it propagates; if it comes back at 100% something
+changed for interior windows, which the diff says it should not.
+
+**P7 — `water-tile` payloads change wherever their bed did**, and not elsewhere.
+
+**P8 — `mantle-thermal`'s 28 bad roots are untouched.** Different nomos, nothing
+in this repair reaches it. If they clear, my localization was wrong about them
+being a separate defect.
+
+**P9 — the +46% attribution is testable here.** FE(8) inferred that NaN acts as a
+wall in the ocean mask and inflates NaN cell counts. With the mint repaired there
+are no NaN walls, so that clause loses its subject; what it predicted is that the
+*mechanism existed*, which this rebuild cannot confirm retrospectively. Recording
+honestly that P9 is **not** decidable by this run — the attribution stays inferred.

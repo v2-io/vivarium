@@ -18,7 +18,7 @@ The cause is one clamp doing two jobs. A halo window on a region perimeter asks 
 
 ## Formal Expression
 
-1. **Measured: the census.** `examples/nan_census` over 122 810 roots. Non-finite cells appear in exactly two nomoi:
+1. **Measured: the census, and the high-edge mint is now repaired.** `examples/nan_census` over the whole store. The **current cohort holds zero non-finite `erosion-tile` cells** (0 roots of 3552, 0 positions) since the geometry split landed; the figures below are the seven cohorts carved before it, which remain in the store as archaeology:
 
    | nomos | roots | roots with non-finite cells | non-finite cells |
    |---|---|---|---|
@@ -28,25 +28,33 @@ The cause is one clamp doing two jobs. A halo window on a region perimeter asks 
 
    The `mantle-thermal` rows carry exactly one bad cell each and are a separate, unexplained defect.
 
-2. **Measured: it is the same 83 roots in every cohort.** Per `src=`, seven consecutive cohorts each report 3552 `erosion-tile` roots and **83** with non-finite cells. Deterministic, not a flake.
+2. **Measured: it was the same 83 roots in every cohort, and is now none.** Per `src=`, seven consecutive pre-repair cohorts each report 3552 `erosion-tile` roots and exactly **83** with non-finite cells — deterministic, not a flake. The cohort carved after the split reports **0**, which is what convicts the zero-distance metric as the *only* mint on this path.
 
 3. **Measured: perimeter only.** Of the current cohort's distinct `(face, oi, oj, level)` positions holding non-finite cells, **73 are on a region perimeter and 0 are interior**. Within one position the count grows monotonically along the stage chain (257 → 686 → 1093 → 1561 → 1917 → 2136 → 2215 → 2513), so the corruption starts at the edge and spreads through routing.
 
 4. **Measured: the plain carve is clean.** The same footprint (face 0, L9, `(128,448)`, 64², 40 epochs), carved through the per-tile path on its own stored inputs, stays finite for every epoch (`examples/nan_origin`). The mint is in the **region/halo path**, and every convicted root carries `edge=halo d=16`.
 
-5. **Measured: the degenerate geometry.** For a perimeter window at L9 with $d = 16$, the chart is $512^2$ and the last row asks for $j = 591$: **81 rows collapse onto $j = 511$, i.e. 80 duplicate rows.** Two clamped cells share a centre vector exactly. A genuinely adjacent pair at that level is **19 395.8 m** apart; a duplicated pair is **0.0 m** apart. Division by that distance is the mint.
+5. **Measured: the degenerate geometry.** The region carve computes window origins as `region_oj + tj·tile_n − d`, which for a whole-face L9 region at $d = 16$ gives $\{-16, 48, \ldots, 432\}$ with span 96. The highest window therefore spans $432 \ldots 527$ against a chart whose last index is 511: **17 rows land on $j = 511$, i.e. 16 duplicate rows.** Two clamped cells share a centre vector exactly, so they sit **0.0 m** apart while a genuinely adjacent pair at that level is **19 395.8 m** apart. Division by that distance is the mint.
 
-6. **The geometry never needed clamping.** `measure::cell_center_unit` is an analytic equiangular formula and **extrapolates cleanly past the chart edge** — evaluated 80 rows out ($j = 591$) it returns a unit vector ($\lvert \mathbf{d} \rvert = 1.000000$) that continues smoothly onto the neighbouring face's territory. So the clamp conflates two things that are not alike: **data** beyond the chart genuinely requires cross-face resampling and is open work ( #form-cellid-chunk-patch ); **geometry** beyond the chart is available in closed form for free.
+6. **The geometry never needed clamping.** `measure::cell_center_unit` is an analytic equiangular formula and **extrapolates cleanly past the chart edge**: over the whole range the halo actually asks for (16 rows out, $j = 527$) it returns unit vectors with smoothly growing arc separations (19 395.8 m at the edge → 19 622.3 m at $j = 527$), and `measure::cell_area_m2` returns finite positive areas throughout (283.9 → 274.4 Mm²). So the clamp conflates two things that are not alike: **data** beyond the chart genuinely requires cross-face resampling and is open work ( #form-cellid-chunk-patch ); **geometry** beyond the chart is available in closed form for free.
 
-7. **The low edge fails differently, and silently.** The region carve computes window origins as `region_oi + ti·tile_n − d`, which is **negative** for a low-edge tile, and the builder passes `oi.max(0) as u32`. So the window is not padded — it is **slid**. Its interior no longer sits at halo offset $d$, so the publish step (`h[(d+j)·win + (d+i)]`) writes ground from a **16-cell offset** into that tile. No NaN results, which is why nothing caught it; the tile is simply carved from the wrong ground. This is the more dangerous of the two failures because its output is finite and plausible.
+   The extrapolated direction is *not* the true neighbouring-face cell centre — each face has its own parametrisation, so continuing this one past its edge lands near but not on the neighbour's cell. It is a smooth, non-degenerate, slightly distorted continuation, and it stays well inside the tangent domain over the range needed (the extended parameter reaches ≈1.06 of the face half-width at $d = 16$). Strictly better than a zero-distance impossibility, and not a substitute for real cross-face geometry.
 
-8. **It interacts with the ocean mask, and the interaction is measured.** A non-finite height fails `h ≤ sea`, so a NaN cell is classified **not submerged** — under #form-ocean-is-connectivity-not-elevation it is therefore a *wall* in the reachability flood, able to enclose submerged ground that is not enclosed. Measured across the cohort boundary: non-finite **cells** rise from 37 948 to **55 391** (+46%) in the first cohort carved under connectivity, with the affected root count unchanged at 83 — consistent with NaN walls creating spurious basins whose fill then propagates NaN through the spill maximum.
+7. **Measured: what the repair moved.** Computing `centers` and `cell_area` from the **unclamped** requested index — while the height still reads from the clamped cell — changed **655 of 3552** `erosion-tile` payloads (18.4%) and **94 of 384** `water-tile` payloads, with `initial-topography`, `climate`, `uplift-tile`, `hydrosphere` and `mantle-thermal` bit-identical. 655 roots over a ~9-stage chain is ≈73 tiles, which is **exactly the 73 positions that held non-finite cells**: the repair moved the corrupted set and nothing else.
+
+   Only the *last* row and column of tiles overhang at all. Of the eight window origins $\{-16, 48, \ldots, 432\}$ only 432 exceeds the chart; origins 48–368 span at most 463 < 511. So the affected fraction is one row plus one column per face, not a four-sided perimeter — a pre-registration of "43.75–100%" missed low for exactly that reason (`msc/lake-connectivity-2026-07-29-prereg.md`).
+
+8. **The low edge fails differently, and silently — and this repair does not touch it.** The region carve computes window origins as `region_oi + ti·tile_n − d`, which is **negative** for a low-edge tile, and the builder passes `oi.max(0) as u32`. So the window is not padded — it is **slid**. Its interior no longer sits at halo offset $d$, so the publish step (`h[(d+j)·win + (d+i)]`) writes ground from a **16-cell offset** into that tile. No NaN results, which is why nothing caught it; the tile is simply carved from the wrong ground. This is the more dangerous of the two failures because its output is finite and plausible.
+
+9. **It interacted with the ocean mask, and the interaction was measured.** A non-finite height fails `h ≤ sea`, so a NaN cell is classified **not submerged** — under #form-ocean-is-connectivity-not-elevation it is therefore a *wall* in the reachability flood, able to enclose submerged ground that is not enclosed. Measured across the cohort boundary: non-finite **cells** rise from 37 948 to **55 391** (+46%) in the first cohort carved under connectivity, with the affected root count unchanged at 83 — consistent with NaN walls creating spurious basins whose fill then propagates NaN through the spill maximum.
 
 ## Epistemic Status
 
-**Max attainable: `exact`** for FE(1)–(7) — each is a count or a closed-form geometric fact from a deterministic read of the store, reproducible by the two named instruments.
+**Max attainable: `exact`** for FE(1)–(8) — each is a count or a closed-form geometric fact from a deterministic read of the store, reproducible by the two named instruments plus the tripwire `an_overhanging_window_has_no_zero_length_neighbour_pairs`.
 
-**Currently `exact`** for those clauses. FE(8)'s +46% is exact as a measurement; its *attribution* to NaN-as-wall is a strong inference from the mechanism and the timing, not an isolated experiment — the clean test is to repair the mint and re-measure, which is also the repair. Stage `draft`.
+**Currently `exact`** for those clauses. FE(9)'s +46% is exact as a measurement; its *attribution* to NaN-as-wall remains **inferred** and this repair could not decide it — with the mint gone there are no NaN walls left to measure, so the clause records a mechanism that existed rather than one now demonstrable. Recorded as undecidable-by-this-run rather than quietly upgraded.
+
+FE(8) (the low-edge slide) is `exact` as a reading of the code and **unmeasured** as a consequence: nobody has quantified how wrong a slid tile's ground is. Stage `draft`.
 
 ## Discussion
 
@@ -57,6 +65,7 @@ It is also the night's recurring shape once more. One accessor served two caller
 ## Working Notes
 
 - **The repair, in two independent parts.** (a) Compute `centers` and `cell_area` from the **unclamped** requested index while continuing to clamp the *data* lookup — this removes the degenerate metric and leaves the declared cross-face data gap exactly where it was. (b) Make the low-edge window **pad rather than slide**: `from_surface` would need signed origins, and the measure helpers signed indices, so the requested cell can be named even when it is off-chart on the low side. (a) stops the NaN; (b) stops the misalignment; neither substitutes for cross-face resampling.
-- **Owed before the repair lands:** a tripwire that fails on any non-finite stored height. There is no such test today, which is why 83 roots survived seven cohorts.
+- **Tripwire landed** as `an_overhanging_window_has_no_zero_length_neighbour_pairs`, and it is on the *geometric invariant* rather than on downstream finiteness: it reported 108 zero-length adjacent pairs before the split and zero after. A finiteness test would have passed the moment a division happened to be avoided. **Still owed:** a store-level guard, since nothing today would catch a non-finite payload arriving by some other route — which is why 83 roots survived seven cohorts.
+- **Correction, 2026-07-30:** an earlier version of FE(5) reported *80* duplicate rows and a last-row request of $j = 591$. That came from a hand-built window origin in the probe rather than the builder's own formula; the real overhang is **16 rows** from origin 432. The mechanism, the 0.0 m against 19 395.8 m, and the census counts were unaffected — but the magnitude was published as measured when it was reconstructed, and the probe now derives origins from the carve's formula so the same slip cannot recur.
 - **Not investigated:** the 28 `mantle-thermal` roots with one bad cell each. Different nomos, different shape, no hypothesis.
-- **Expect payload changes on repair:** every perimeter tile of every region moves, so this is a real-diff cohort with a changelog entry owed, and every drainage-derived statistic measured on a perimeter tile is suspect until then.
+- **Statistics measured on a last-row or last-column tile before cohort `2dc664ed` are suspect** — 73 tiles carried non-finite cells and their drainage, χ and basin numbers were computed through them.

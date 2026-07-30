@@ -99,25 +99,25 @@ fn main() {
     println!();
     println!("-- the overhanging halo window, geometry only --");
     let face_n = 1u32 << LEVEL;
-    let d = 16u32;
-    let win = NX + 2 * d as usize;
-    // A perimeter tile's window: origin backed off by the halo depth, extending
-    // past the chart's last row.
-    let (woi, woj) = (OI.saturating_sub(d), (face_n - NX as u32).saturating_sub(0).saturating_sub(d) + NX as u32);
-    println!("  chart is {face_n}² cells; window origin ({woi},{woj}) span {win} → last row asks for j={}", woj as usize + win - 1);
-    let mut dup_rows = 0usize;
     let last = face_n - 1;
-    let mut seen_last = 0usize;
-    for y in 0..win {
-        let gj = woj.saturating_add(y as u32).min(last);
-        if gj == last {
-            seen_last += 1;
-        }
-    }
-    if seen_last > 1 {
-        dup_rows = seen_last - 1;
-    }
-    println!("  rows collapsing onto j={last}: {seen_last} (so {dup_rows} DUPLICATE rows)");
+    let d = 16i64;
+    let win = NX as i64 + 2 * d;
+    // Origins exactly as `carve_region_jacobi_exchange` computes them:
+    // `region_oj + tj*tile_n - d`, for a whole-face region at this level. Deriving
+    // them rather than reconstructing them by hand, because a hand-built origin is
+    // how an earlier version of this probe reported an overhang four times too
+    // large.
+    let tiles = (face_n as usize / NX) as i64;
+    let origins: Vec<i64> = (0..tiles).map(|t| t * NX as i64 - d).collect();
+    println!("  chart is {face_n}² cells; window span {win}; origins {origins:?}");
+    let hi_origin = *origins.last().unwrap();
+    println!("  highest window spans {hi_origin}..{}", hi_origin + win - 1);
+    let seen_last = (0..win).filter(|y| (hi_origin + y).min(last as i64) == last as i64).count();
+    println!("  rows collapsing onto j={last}: {seen_last} (so {} DUPLICATE rows)", seen_last.saturating_sub(1));
+    let lo_origin = origins[0];
+    println!("  lowest window origin is {lo_origin}, clamped to 0 by the builder → the window");
+    println!("    SLIDES by {} cells instead of padding, so this tile's interior is not at", -lo_origin);
+    println!("    halo offset d and publish writes ground from the wrong place");
     let c0 = vivarium_world::measure::cell_center_unit(face, 100, last as u64, LEVEL);
     let c1 = vivarium_world::measure::cell_center_unit(face, 100, last as u64, LEVEL);
     let same = c0 == c1;
