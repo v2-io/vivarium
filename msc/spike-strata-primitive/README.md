@@ -6,14 +6,15 @@ Joseph's question, verbatim:
 
 > *"I'm genuinely surprised we're talking about the ocean as its own thing at all instead of already being in the realm of [unknown/undefined -> mantel layers -> water layer(s) -> topological layer -> air column / atmosphere layer] strata as our main primitive all 'round..."*
 
-## What this spike found, in six lines
+## What this spike found, in seven lines
 
 1. **The column-as-primitive question is already decided in canon** and the code went three other ways; the claim is not the gap. ( #form-column-control-volume FE(1)/(5).)
 2. **The ordering question has an authoritative answer too** — a closed water cycle and basic weather gate at phase **3**, before erosion at phase **4** — and *what let the build invert it* is measurable: of phase 3's four gate charges, one has an instrument that can fail; both of phase 4's built gates have one. The `closed-water-cycle` predicate tests an algebraic identity, so on the path its test exercises no world can fail it.
-3. **Under Joseph's own reduce-back-on-pull test, every vertical representation scores (a), a workaround** — including the solid strata, because the pull *fabricates* its content (a hardcoded $2\ \mathrm{m}$ of soil) from a scalar height. No pull can invert a lossy projection.
+3. **Under Joseph's reduce-back-on-pull test the strata score neither branch — they *synthesize*.** The pull fabricates content (a hardcoded $2\ \mathrm{m}$ of soil) from a scalar height, so there is nothing projected in to reduce back. Measured: **8 surface-height derivations, 9 water-depth derivations, 5 simultaneous sea levels**, against **5 durable f32 per cell**.
 4. **Nine separately-named open rungs are one missing object**, and seven declared phase `|record`s are unkeepable without it.
-5. **The fidelity-ladder clause landed tonight convicts the present arrangement**, not just the unbuilt cases it names — the strata, not the water, are the read-time field.
+5. **The case is stronger inverted, and this is the finding I had backwards**: the kernels already hold the state (`WaterSim` 8 per-cell arrays, 1 reaching the store; `Fluvial` 6 and 1; `DrainageSurface` 6 and 0). A column would **re-home existing state**, not add structure — the opposite of the FE(11) read-time defect rather than a new instance of it.
 6. **The cheapest consequential fix touches no code**: give the phase-3 gates predicates that can fail. It moves no `SRC_HASH` and invalidates no store.
+7. **Two findings outrank the spike** and are flagged rather than adjudicated: the committed store holds **NaN heights** in 83 of 3552 erosion roots, silently painting as dry land; and `Coverage` reports `watered_tiles=0` while 384 water roots exist, because it keys at the wrong level.
 
 ## The answer, up front
 
@@ -336,6 +337,8 @@ The reframing is worth landing as a claim, because it changes what six existing 
 Each is small, each stands alone, and each removes a way for the pattern to recur. That ordering — conviction before claim before kernel — inverts what I would have recommended an hour ago, and the reason is the 2026-07-24 date.
 
 **And the first move is cheaper than any of those and sits in the ordinum.** Give the phase-3 gate charges instruments: a falsifiable predicate on `weather-channels` (which has none), and a `closed-water-cycle` predicate that tests a **flux between reservoirs** rather than an algebraic identity that cannot fail. That is data, not library source — so it moves no `SRC_HASH`, invalidates no store, and can land tonight. Its effect is to convert an implicit deferral into a standing audit finding, which is the mechanism the rest of this list is trying to buy. If only one thing from this spike happens, I would make it this one, because it is the only item that makes the *next* deferral visible rather than repairing a past one.
+
+**And one correction the census forces on this list, against the direction I was drifting.** I had been sliding toward *build on `column::Column`*. That is untenable on the measurements: its datum is unrelated to the lithospheric column's (the strata column's "bedrock datum" sits inside the top few percent of `crust_m` — measured $2350\ \mathrm{m}$ against $30\,000\ \mathrm{m}$ at one address), its two strata are invented at read time, its `saturation` is write-only, its derived queries are test-only, its `water_depth` is the retired threshold, and its constructor drops the seed. The census's caution is the one to keep: **none of those is an argument against stratification**, because every one is a property of `column.rs` plus `gen.rs` rather than of the idea. So the object wants designing from the kernels' existing state — the eight arrays above — rather than growing from the existing type.
 
 Then the strata-aware incision question, with a costing spike of its own — of everything here it is what I would least want decided by argument rather than measurement, since the objection to it is a performance claim and no performance claim in this document is measured.
 
