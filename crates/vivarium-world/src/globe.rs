@@ -37,7 +37,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::gen::{self, SEA_LEVEL_M};
+use crate::gen;
 use crate::planet::Planet;
 use crate::query::World;
 use crate::sphere::{CubeCoord, Geo};
@@ -90,7 +90,12 @@ pub fn render(
     let h = (w / 4).max(1);
     let level = cov.level;
     let nx = cov.nx;
-    let sea = SEA_LEVEL_M;
+    // The world's own waterline, not the retired decree. `gen::SEA_LEVEL_M`
+    // (4000 m) sits ~1.1 km below the derived level on the default seed, so
+    // using it here drew a kilometre of seafloor as land and put the coastline
+    // on the wrong contour — while the explorer, sharing this reader's honesty
+    // block, used the derived level. One waterline across both fidelities.
+    let sea = crate::sea_level::derived_sea_level_m(world.seed());
     // Relief scale for the land height ramp (m above sea level → full ramp).
     let relief = 3500.0;
     // Ocean depth scale (m below sea level → deepest blue).

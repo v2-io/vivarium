@@ -978,7 +978,14 @@ impl<'s> World<'s> {
         };
         let precip_rate = (precip_m_yr / SEC_PER_YEAR * FILL_ACCEL) as f32;
         let sea = crate::sea_level::derived_sea_level_m(self.seed) as f32;
-        let mut sim = crate::water::WaterSim::new(face, level, (oi, oj), nx, cell_m, bed, 2.0);
+        // ONE waterline. The initial fill is `max(sea − bed, 0)`, so it must use
+        // the same derived level as the rim boundary condition below: `WaterSim::new`
+        // forwards the retired decreed datum (`gen::SEA_LEVEL_M`, a compat residual
+        // its own doc points away from), which left every submarine interior
+        // 1106.3 m underfilled against a rim pinned to the true waterline — a
+        // deficit no bounded fill can relax (`#obs-water-fill-never-settles`).
+        let mut sim =
+            crate::water::WaterSim::new_at_sea(face, level, (oi, oj), nx, cell_m, bed, 2.0, sea);
         let p = crate::water::WaterParams {
             precip: precip_rate,
             evaporation: 2.0e-4, // scaled with the accelerated cycle
@@ -1849,6 +1856,50 @@ mod tests {
             w.water_tile(face, 19, 2000, 3000, nx, eepochs, steps, BedArticle::EdgeSink);
         assert_eq!(src2, Source::Hit);
         assert_eq!(d1, d2);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// **One waterline.** `water_tile` computes `derived_sea_level_m(seed)` for
+    /// `WaterParams::sea_m` — the rim boundary condition — and then built its sim
+    /// with [`crate::water::WaterSim::new`], whose own doc names the decreed
+    /// 4000 m datum a *compat residual* and points new callers at `new_at_sea`.
+    /// Since the initial fill is `max(sea − bed, 0)`, a submarine interior began
+    /// **1106.3 m underfilled** while its rim was pinned to the true waterline,
+    /// and `#obs-water-fill-never-settles` establishes that 40 s of world time
+    /// cannot relax that. The Water paint reads this field, so the error was
+    /// visible on screen as ocean depth wrong by up to a kilometre.
+    ///
+    /// `steps = 0` isolates the initial condition: no stepping, no rim pin, so
+    /// this convicts the constructor choice and nothing else. It fires on the
+    /// defect and inverts on the fix (`#norm-caught-disciplines-become-mechanisms`).
+    #[test]
+    fn water_tile_starts_at_the_derived_waterline_not_the_retired_datum() {
+        let dir = tmpdir("water-datum");
+        let face = Face::from_index(2);
+        let (nx, eepochs) = (32usize, 20u32);
+        let s = Store::open(&dir).unwrap();
+        let w = World::new(&s, 0);
+        let (bed, _) = w.erosion_tile(face, 19, 2000, 3000, nx, eepochs);
+        let (depth, _) = w.water_tile(face, 19, 2000, 3000, nx, eepochs, 0, BedArticle::EdgeSink);
+        let sea = crate::sea_level::derived_sea_level_m(0) as f32;
+        let retired = crate::gen::SEA_LEVEL_M as f32;
+        // This footprint is below BOTH datums, so the two candidate answers
+        // differ everywhere by the full gap — the test cannot pass by accident
+        // on a tile that happens to straddle nothing.
+        assert!(
+            bed.iter().all(|&b| b < retired),
+            "footprint must sit below both datums for this to discriminate"
+        );
+        for (i, (&b, &d)) in bed.iter().zip(depth.iter()).enumerate() {
+            assert_eq!(
+                d,
+                sea - b,
+                "cell {i}: bed {b} m is {} m below the derived waterline and wants that depth; \
+                 got {d} m, the retired {retired} m datum's answer — {} m short",
+                sea - b,
+                sea - retired
+            );
+        }
         let _ = fs::remove_dir_all(&dir);
     }
 

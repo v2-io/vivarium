@@ -471,7 +471,18 @@ pub fn spawn(
                                 dep_cells = ds.stats.depression_cells;
                                 dep_capacity_m3 = ds.stats.depression_volume_m3;
                                 dep_deepest_m = ds.stats.deepest_depression_m;
-                                ds.fill_depth
+                                // `standing_water`, not `fill_depth`: the physical
+                                // spill-level depth with the flat-orienting ε
+                                // excluded — which is the quantity this mode's own
+                                // description names ("filled to its spill point").
+                                // The two differ by ~0.02 m at tile scale, below
+                                // this paint's own 1 m floor, so nothing on screen
+                                // moves; what changes is that the field is now
+                                // level across a body (bit-identical spill float)
+                                // and reports nothing on flats that hold nothing —
+                                // 4418 of 9216 cells of manufactured wetness on the
+                                // probe's flat control ( `examples/lake_surface_probe` ).
+                                ds.standing_water
                             } else {
                                 Vec::new()
                             };

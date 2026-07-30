@@ -172,8 +172,9 @@ mod tests {
 // O(n) stack — same result, less to get wrong (core's own reasoning; the O(n)
 // swap remains available when n log n bites).
 //
-// Frame-native: heights in METRES, sea level = gen::SEA_LEVEL_M as a real outlet
-// set (rivers run to the coast, not just the grid edge), seeded from the
+// Frame-native: heights in METRES, sea level = `sea_level::derived_sea_level_m`
+// (the poured waterline, not the retired `gen::SEA_LEVEL_M` decree) as a real
+// outlet set (rivers run to the coast, not just the grid edge), seeded from the
 // band-limited two-band prior at the sim level's own Nyquist. Per-material
 // erodibility (Material::erodibility / incision_threshold) is the flagged next
 // hook — uniform hardness in this first increment.
@@ -545,9 +546,36 @@ pub struct DrainageSurface {
     /// The depression-filled surface the routing was derived on — the heights
     /// water sees, which are not the heights the store holds.
     pub filled_h: Vec<f32>,
-    /// `filled_h − stored h` (m): depression capacity depth. See
-    /// [`DrainageStats::depression_volume_m3`] for what this is not.
+    /// `filled_h − stored h` (m): depression capacity depth, **ε included**. See
+    /// [`DrainageStats::depression_volume_m3`] for what this is not, and
+    /// [`Self::standing_water`] for the field that is water.
     pub fill_depth: Vec<f32>,
+    /// **Standing-water depth (m): where water stands.** The true spill level
+    /// minus the stored bed, with the flat-orienting ε *excluded* — the second
+    /// return of [`Fluvial::fill_depressions`], which `erode` already consumes
+    /// (no incision under water; lake-trap deposition) and which every reader
+    /// path used to discard.
+    ///
+    /// It is the field to paint as a lake, and it differs from [`Self::fill_depth`]
+    /// in kind, not only in magnitude: **one standing body shares one spill
+    /// float**, so `bed + standing_water` is bit-identical across a lake and its
+    /// surface is exactly level, while `bed + fill_depth` is a tilted sheet.
+    /// Measured (`examples/lake_surface_probe` B): on a flat shelf with no
+    /// depression anywhere, `fill_depth` reports 4418 of 9216 cells wet and
+    /// 0.06 km³ of water that cannot exist; `standing_water` reports zero.
+    ///
+    /// **What it assumes, declared:** the *wet limit*. A depression stands full to
+    /// its spill point, which is the hydrologic steady state when net supply is
+    /// positive — it carries no water balance, so it cannot produce an endorheic
+    /// basin standing below its sill (the Caspian class,
+    /// `#form-derived-sea-level` Working Notes). Volume-limited filling is a
+    /// further rung and needs a P−E field this project does not yet own.
+    ///
+    /// **What it cannot express at all:** a landlocked basin whose floor dips
+    /// below derived sea level. [`Fluvial::outlets`] classifies sea by elevation
+    /// threshold rather than connectivity, so such a basin is already an outlet
+    /// and holds nothing here.
+    pub standing_water: Vec<f32>,
     pub stats: DrainageStats,
 }
 
@@ -719,12 +747,64 @@ impl Fluvial {
         let nx = self.nx;
         let sea = sea_level::derived_sea_level_m(self.seed) as f32;
         let sinks = self.edge == EdgeContract::BaseLevelSink;
+
+        // **The sea is where the ocean reaches, not everywhere below its level.**
+        // Being under the datum makes a cell *submerged*; it makes it *ocean* only
+        // if the ocean can get there. A below-datum basin rimmed by dry land is a
+        // lake, and classifying it as sea told Priority-Flood it was already a
+        // drain — so it held no water, at any settle length, under any halo depth,
+        // with or without a water balance. That was the mechanism under the
+        // Caspian gap ( #form-derived-sea-level Working Notes).
+        //
+        // Connectivity is computed here rather than modelled: a below-datum cell
+        // is ocean if it reaches the domain boundary through below-datum cells,
+        // because past that boundary lies the rest of a planet that is ~95%
+        // submerged. Eight-connected, matching [`NEIGHBORS`] — the same
+        // neighbourhood flow itself uses, so a strait water can cross is a strait
+        // this agrees is open. Deterministic: a boolean reachability set over a
+        // Vec stack, independent of visit order.
+        //
+        // **Declared scope.** This is as honest as the *window* is wide. An
+        // enclosed sea larger than the drawn domain touches the boundary and is
+        // read as ocean; only a whole-face domain adjudicates the planet's real
+        // basins. Prior art frames the ocean the same way — "a designated sink
+        // region or the map edge" (Barnes/Callaghan/Wickert 2021, Fill-Spill-Merge;
+        // `msc/research-lem-sota/lake-and-settle-sota-2026-07-29.md`).
+        let submerged = |i: usize| self.h[i] <= sea;
+        let mut ocean = vec![false; nx * nx];
+        let mut stack: Vec<usize> = Vec::new();
+        for y in 0..nx {
+            for x in 0..nx {
+                if Self::is_edge(nx, x, y) {
+                    let i = y * nx + x;
+                    if submerged(i) && !ocean[i] {
+                        ocean[i] = true;
+                        stack.push(i);
+                    }
+                }
+            }
+        }
+        while let Some(i) = stack.pop() {
+            let (x, y) = (i % nx, i / nx);
+            for (dx, dy) in NEIGHBORS {
+                let (xp, yp) = (x as i32 + dx, y as i32 + dy);
+                if xp < 0 || yp < 0 || xp >= nx as i32 || yp >= nx as i32 {
+                    continue;
+                }
+                let j = yp as usize * nx + xp as usize;
+                if !ocean[j] && submerged(j) {
+                    ocean[j] = true;
+                    stack.push(j);
+                }
+            }
+        }
+
         let mut out = vec![false; nx * nx];
         for y in 0..nx {
             for x in 0..nx {
                 let i = y * nx + x;
                 let edge_sink = sinks && Self::is_edge(nx, x, y);
-                out[i] = edge_sink || self.h[i] <= sea;
+                out[i] = edge_sink || ocean[i];
             }
         }
         // A walled domain with no coast has no sink at all, and Priority-Flood
@@ -1251,7 +1331,10 @@ impl Fluvial {
         let n = self.nx * self.nx;
         let saved_h = self.h.clone();
         let outlets = self.outlets();
-        self.fill_depressions(&outlets);
+        // Both halves are kept. The fill's physical return — where water stands —
+        // was dropped here for as long as this reader existed, which left every
+        // view and every table running on the ε-augmented raise instead.
+        let standing_water = self.fill_depressions(&outlets);
         let recv = self.receivers(&outlets);
         let order = self.elevation_order();
         self.accumulate_drainage(&order);
@@ -1422,6 +1505,7 @@ impl Fluvial {
             recv,
             filled_h,
             fill_depth,
+            standing_water,
             stats: DrainageStats {
                 subaerial,
                 cells: n,
@@ -2009,6 +2093,156 @@ mod fluvial_tests {
         // And it is idempotent: reading twice gives the same field.
         let d2 = f.drainage_surface();
         assert_eq!(d.mfd, d2.mfd, "two reads of one surface disagreed");
+    }
+
+    /// **A lake surface is level; the raise is not.** Every cell of one standing
+    /// body shares one spill float, so `bed + standing_water` must be a single
+    /// bit-identical value across the body — that is what makes it a water
+    /// surface rather than a shaded region. `bed + fill_depth` carries the
+    /// flat-orienting ε and is a tilted sheet, and this convicts the difference
+    /// rather than asserting it: if the two fields were ever wired to the same
+    /// vector, the second half of this test would fail.
+    #[test]
+    fn a_lake_surface_is_exactly_level_and_the_raise_is_not() {
+        let mut f = small();
+        let nx = f.nx;
+        for y in (nx / 2 - 6)..(nx / 2 + 6) {
+            for x in (nx / 2 - 6)..(nx / 2 + 6) {
+                f.h[y * nx + x] -= 300.0;
+            }
+        }
+        let bed = f.h.clone();
+        let d = f.drainage_surface();
+
+        let wet: Vec<usize> = (0..nx * nx).filter(|&i| d.standing_water[i] > 0.0).collect();
+        assert!(!wet.is_empty(), "the gouged pit holds no water — nothing to test");
+
+        let distinct = |field: &[f32]| -> usize {
+            let mut v: Vec<u32> = wet.iter().map(|&i| (bed[i] + field[i]).to_bits()).collect();
+            v.sort_unstable();
+            v.dedup();
+            v.len()
+        };
+        assert_eq!(
+            distinct(&d.standing_water),
+            1,
+            "a standing body must have ONE surface height, bit-identical across every cell"
+        );
+        assert!(
+            distinct(&d.fill_depth) > 1,
+            "fill_depth carries the ε and cannot be level — if it is, the two fields have been \
+             conflated and the physical one is no longer distinguishable"
+        );
+    }
+
+    /// **The wet limit reports nothing where nothing can stand.** A perfectly flat
+    /// shelf above sea level has no closed depression: every cell *is* its own
+    /// spill level. The ε still raises it (that is the ε's job — giving D8 a
+    /// receiver on a flat), so `fill_depth` reports a large wet area that holds no
+    /// water. Measured on the probe's own construction B: 4418 of 9216 cells and
+    /// 0.06 km³ of water that cannot exist (`examples/lake_surface_probe`).
+    ///
+    /// This is the tripwire for the reader wiring: if `standing_water` is ever
+    /// sourced from the raise again, the first assert fires.
+    #[test]
+    fn standing_water_is_empty_on_a_flat_that_the_epsilon_still_raises() {
+        let seed = 0u64;
+        let sea = crate::sea_level::derived_sea_level_m(seed) as f32;
+        let (level, oi, oj, nx) = (13u8, 6512u32, 1552u32, 96usize);
+        let mut f = Fluvial::from_surface(seed, Face::XPos, level, oi, oj, nx, |_| 0.0);
+        for y in 0..nx {
+            for x in 0..nx {
+                // Left half dead flat, right half a monotone ramp to the edge.
+                f.h[y * nx + x] =
+                    if x < nx / 2 { sea + 500.0 } else { sea + 500.0 - (x - nx / 2) as f32 };
+            }
+        }
+        let d = f.drainage_surface();
+        assert!(
+            d.standing_water.iter().all(|&w| w == 0.0),
+            "water standing on a surface with no depression: {} cells",
+            d.standing_water.iter().filter(|&&w| w > 0.0).count()
+        );
+        // And the ε really is there, so the first assert is not passing by virtue
+        // of an inert fill.
+        assert!(
+            d.fill_depth.iter().filter(|&&r| r > 0.0).count() > nx * nx / 4,
+            "the ε raised almost nothing here, so this construction no longer discriminates"
+        );
+    }
+
+    /// **A landlocked basin below the datum is told it is the sea.** [`Self::outlets`]
+    /// classifies ocean by *elevation threshold* rather than connectivity
+    /// (`out[i] = edge_sink || h[i] <= sea`), and [`Self::fill_depressions`] seeds
+    /// its heap from exactly that set — so a crater whose floor dips below derived
+    /// sea level, with a rim of dry land all the way round and no connection to any
+    /// ocean, is marked closed at step zero and can hold no water. No settle, no
+    /// volume-limited fill and no halo depth can repair it; the classification is
+    /// upstream of all of them. This is the mechanism under the Caspian gap
+    /// (`#form-derived-sea-level` Working Notes, Joseph 2026-07-28).
+    ///
+    /// Prior art names the fix: the ocean is *"a designated sink region or the map
+    /// edge"* (Barnes 2021, Fill–Spill–Merge), i.e. seeded by connectivity, and
+    /// Priority-Flood from real edge/ocean cells then computes that connectivity
+    /// for free — the spill field needs no algorithmic change.
+    /// See `msc/research-lem-sota/lake-and-settle-sota-2026-07-29.md`.
+    ///
+    /// This test was written red against the threshold classification and inverted
+    /// when connectivity landed, which is what convicts the repair rather than the
+    /// wording of it (`#norm-caught-disciplines-become-mechanisms`).
+    #[test]
+    fn a_landlocked_below_datum_basin_is_misclassified_as_ocean() {
+        let seed = 0u64;
+        let sea = crate::sea_level::derived_sea_level_m(seed) as f32;
+        let (level, oi, oj, nx) = (13u8, 6512u32, 1552u32, 96usize);
+        let mut f = Fluvial::from_surface(seed, Face::XPos, level, oi, oj, nx, |_| 0.0);
+        // Dry land everywhere, 400 m above the waterline...
+        for h in f.h.iter_mut() {
+            *h = sea + 400.0;
+        }
+        // ...a genuine ocean along the left edge, 500 m below it. This is the
+        // control that keeps the test about connectivity: real sea exists in the
+        // domain, so the "walled domain with no coast" fallback below (which makes
+        // the single LOWEST cell an outlet, and would otherwise drain the crater as
+        // the deepest thing present) does not fire.
+        for y in 0..nx {
+            for x in 0..8 {
+                f.h[y * nx + x] = sea - 500.0;
+            }
+        }
+        // ...and one crater whose floor is 300 m below the datum, enclosed by dry
+        // land in every direction. Nothing here is ocean by any physical reading:
+        // the sea cannot reach it.
+        let (c0, c1) = (nx / 2, nx / 2 + 16);
+        for y in c0..c1 {
+            for x in c0..c1 {
+                f.h[y * nx + x] = sea - 300.0;
+            }
+        }
+        // A wall contract, so the rim is not a blanket sink — the only thing that
+        // can make an interior cell an outlet is its relationship to the sea.
+        f.set_edge_contract(EdgeContract::NoFluxWall);
+        let d = f.drainage_surface();
+
+        let crater_max = (c0..c1)
+            .flat_map(|y| (c0..c1).map(move |x| y * nx + x))
+            .fold(0.0f32, |m, i| m.max(d.standing_water[i]));
+        assert!(
+            crater_max > 0.0,
+            "an enclosed crater 300 m below the datum, rimmed by 400 m of dry land, holds no \
+             water: its cells were classified ocean by elevation threshold rather than by \
+             connectivity to an ocean"
+        );
+        // And the ocean is not a lake: the connected sea must report no standing
+        // water at all, or the repair has merely relabelled everything wet.
+        let ocean_max = (0..nx)
+            .flat_map(|y| (0..8).map(move |x| y * nx + x))
+            .fold(0.0f32, |m, i| m.max(d.standing_water[i]));
+        assert_eq!(
+            ocean_max, 0.0,
+            "the connected ocean is being reported as standing water — a lake field that \
+             includes the sea is not a lake field"
+        );
     }
 
     /// Discharge must actually consume the precipitation field. This is the guard

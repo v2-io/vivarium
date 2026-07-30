@@ -136,10 +136,14 @@ fn report(label: &str, bed: &[f32], depth: &[f32], area: &[f32], nx: usize) {
     }
 }
 
-/// Every per-cell field a *reader* can currently reach that a view might paint as
-/// water. Today that is one field, which is the finding.
+/// Both per-cell fields a reader can reach. `fill_depth` is the ε-augmented raise
+/// the reader used to expose alone; `standing_water` is the physical spill-level
+/// depth. Printing them side by side is the whole argument.
 fn fields(ds: &DrainageSurface) -> Vec<(&'static str, &[f32])> {
-    vec![("fill_depth (raise, ε in)", &ds.fill_depth)]
+    vec![
+        ("fill_depth (raise, ε in)", &ds.fill_depth),
+        ("standing_water (ε out)", &ds.standing_water),
+    ]
 }
 
 /// Land fraction and relief of one candidate window, measured on the same prior
@@ -275,8 +279,43 @@ fn main() {
     let area = f.cell_area.clone();
     let below = bed.iter().filter(|&&h| (h as f64) <= sea).count();
     let ds = f.drainage_surface();
-    println!("  cells at or below sea: {below}/{} — every one of them an outlet", NX * NX);
+    println!(
+        "  cells below the datum: {below}/{} — all of them reach this window's rim, so all are ocean",
+        NX * NX
+    );
     for (label, depth) in fields(&ds) {
         report(label, &bed, depth, &area, NX);
     }
+
+    println!();
+    println!("== E. the planet, per whole cube face at L8 — what standing water exists ==");
+    // A whole face infers `NoFluxWall`, so the only outlets are cells the ocean
+    // actually reaches. This is the domain that adjudicates real basins: a window
+    // narrower than an enclosed sea reads that sea as ocean, a whole face does not.
+    // Coarse by declaration — an L8 cell is ~78 km, so only basins bigger than that
+    // can appear at all, and the count is a floor rather than a census.
+    let n = 1usize << SCAN_LEVEL;
+    let (mut tot_lakes, mut tot_cells, mut tot_vol) = (0usize, 0usize, 0.0f64);
+    for face in [Face::XPos, Face::XNeg, Face::YPos, Face::YNeg, Face::ZPos, Face::ZNeg] {
+        let mut f = Fluvial::from_prior(SEED, face, SCAN_LEVEL, 0, 0, n);
+        let bed = f.h.clone();
+        let area = f.cell_area.clone();
+        let submerged = bed.iter().filter(|&&h| (h as f64) <= sea).count();
+        let ds = f.drainage_surface();
+        let wet = |i: usize| ds.standing_water[i] > 0.0;
+        let bs = bodies(n, &wet);
+        let cells: usize = bs.iter().map(|b| b.cells.len()).sum();
+        let vol: f64 = bs.iter().map(|b| volume_km3(b, &ds.standing_water, &area)).sum();
+        let deepest = ds.standing_water.iter().copied().fold(0.0f32, f32::max);
+        let level_all = bs.iter().all(|b| surface_spread_m(b, &bed, &ds.standing_water) == 0.0);
+        println!(
+            "  {face:<6?} submerged {submerged:>6}/{}  lakes {:>4}  cells {cells:>5}  {vol:>9.1} km³  deepest {deepest:>7.1} m  all level: {level_all}",
+            n * n,
+            bs.len()
+        );
+        tot_lakes += bs.len();
+        tot_cells += cells;
+        tot_vol += vol;
+    }
+    println!("  planet total: {tot_lakes} standing bodies, {tot_cells} cells, {tot_vol:.1} km³");
 }
