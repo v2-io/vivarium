@@ -66,6 +66,18 @@ Skipping the rebuild does not show you a stale picture; it shows you a *recomput
 
 The digest covers the **library** source only: `src/bin/` is excluded (safe by Cargo's target model — the lib cannot reference a `[[bin]]` target; `source_hash::is_outside_lib`, landed 2026-07-24), so editing the CLI does *not* invalidate a world. Editing a lib comment or test still does — comment-normalization was considered and declined 2026-07-24 (the decline and its reasons live in `source_hash.rs`; do not re-open without new information). Known not-covered in the other direction: rustc/LLVM version and FMA contraction (`ASSUMPTIONS.md` sidebar).
 
+### Values you cannot recall: `bin/provenance`, `bin/check-provenance`
+
+A hash, a root count, a line number, a quoted string — you either read it in *this* session or you generated it, and there is no third case. The trouble is that the second one does not feel like guessing. It feels like recall, arriving with the same confidence as a value you copied from output thirty seconds earlier.
+
+Measured, 2026-07-30: one session's changelog entries carried thirteen hashes. Twelve were right — every one copied from a command's output. The thirteenth, `src=f0e5cb32e1b8b7de`, appears in **zero roots** of the store, and it was the only field written with no output at hand. Not carelessness; at the moment of writing, inventing was simply the cheaper path.
+
+So `bin/provenance` prints the block, and `bin/check-provenance` (in `bin/check`) refuses the pointer that does not resolve.
+
+**If you feel you can predict what `bin/provenance` outputs, that feeling is the leak this exists to plug** — and it is checkable in about two seconds, which is the whole argument. Its own first run misreported this world's name as `freely`, having read that word out of the manifest comment *"rename freely."* A tool built to stop fabrication fabricated, in its first execution, and running it is what caught that too.
+
+Same shape, same session, three times: a segment written that already existed; a defect "found" that the view's own affordance list had declared; a conformance audit proposed that ships as `vivarium status`. **When you think you have found something this project lacks, it usually has it** — `ls`, `grep`, or running the command costs less than the segment you were about to write.
+
 ### Claim ↔ code order (and the allowed inversion)
 
 **Ideal flow:** claim segment (or honest OUTLINE `#gap`) → ordinum / nomotheke when law is ladder-shaped → code and probes that can convict.

@@ -68,8 +68,18 @@ srcset=$(mktemp); toks=$(mktemp); allow=$(mktemp)
 trap 'rm -f "$srcset" "$toks" "$allow"' EXIT
 
 if [ -f "$ALLOW" ]; then
-  # `<token> <reason>` — a bare token with no reason is not an entry.
-  awk 'NF>=2 && $1 !~ /^#/ {print $1}' "$ALLOW" | sort -u > "$allow"
+  # `<token> <category> <reason>` — categories are `specimen` (quoted because it
+  # is bad) and `pruned` (real once, roots since collected). A bare token, an
+  # unknown category, or a missing reason is not an entry: an unexplained
+  # exemption is how a gate becomes decoration, and requiring `specimen` to
+  # DECLARE the value false is what stops the allowlist laundering a fabrication.
+  awk '$1 !~ /^#/ && NF>=3 && ($2=="specimen" || $2=="pruned") {print $1}' "$ALLOW" | sort -u > "$allow"
+  bad_cat=$(awk '$1 !~ /^#/ && NF>=1 && !($2=="specimen" || $2=="pruned") {print "      " $0}' "$ALLOW" || true)
+  if [ -n "$bad_cat" ]; then
+    echo "check-provenance: malformed entries in $ALLOW (need: <token> <specimen|pruned> <reason>)"
+    echo "$bad_cat"
+    exit 1
+  fi
 else
   : > "$allow"
 fi
@@ -80,6 +90,20 @@ if [ -d "$STORE/roots" ]; then
   grep -rhoE 'src=[0-9a-f]{16}' "$STORE/roots" 2>/dev/null | sed 's/src=//' | sort -u > "$srcset"
 else
   : > "$srcset"
+fi
+
+# An exemption that is no longer needed is a dead rule. Convict it.
+if [ "$have_store" -eq 1 ] && [ -s "$allow" ]; then
+  # `|| true` per iteration: a correctly-still-needed exemption makes grep exit
+  # 1, and without this `set -e` would fail the whole check on the healthy case.
+  stale=$(while IFS= read -r a; do
+            if grep -qxF "$a" "$srcset"; then echo "      $a now resolves — remove its $ALLOW entry"; fi
+          done < "$allow" || true)
+  if [ -n "$stale" ]; then
+    echo "check-provenance: stale exemptions"
+    echo "$stale"
+    exit 1
+  fi
 fi
 
 BOUND=(changelog core CLAUDE.md FORMAT.md ASSUMPTIONS.md CONSOLIDATION-STATUS.md README.md LEXICON.udon)

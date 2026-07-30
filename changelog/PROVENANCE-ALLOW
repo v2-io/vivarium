@@ -1,0 +1,21 @@
+# Exemptions for bin/check-provenance.  One per line:
+#
+#     <token>  <category>  <reason>
+#
+# CATEGORIES, and there are only two:
+#
+#   specimen — the token is quoted BECAUSE it is bad. Documentation of a
+#              provenance fault has to name the fault. A `specimen` entry
+#              asserts the value is false, so it cannot be used to launder a
+#              fabricated pointer into passing: to exempt it you must declare it
+#              wrong, which is the opposite of claiming it.
+#
+#   pruned   — the token was a real cohort whose roots have since been
+#              garbage-collected. The pointer was honest when written and is now
+#              unverifiable locally.
+#
+# EXEMPTIONS STAY CONVICTABLE. If a token listed here starts resolving, the
+# entry is stale and the check says so — an allowlist that only ever grows is
+# how a gate turns into decoration.
+
+f0e5cb32e1b8b7de  specimen  Fabricated 2026-07-30 and quoted as the worked example in CLAUDE.md and two changelog entries. In zero roots by construction; if it ever resolves, something is very wrong.
