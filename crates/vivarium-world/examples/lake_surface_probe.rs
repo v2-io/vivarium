@@ -267,6 +267,21 @@ fn main() {
                 ds.stats.depression_volume_m3 / 1e9,
                 ds.stats.deepest_depression_m
             );
+
+            // **How much of this is the carve, and how much is the prior?** The
+            // question Joseph's eye asked of the view: a basin with an apparent
+            // outlet to the sea should not hold water. One candidate cause is that
+            // the reader is filling pits the fluvial kernel never made — the
+            // band-limited prior's own small-scale relief. The same window,
+            // uncarved, answers it directly: if the prior alone reports as much
+            // standing water as the carved surface, the bodies are prior detail
+            // rather than drainage.
+            println!("  -- the SAME window, uncarved prior (how much is the carve?) --");
+            let mut f0 = Fluvial::from_prior(SEED, face, LEVEL, oi, oj, NX);
+            let bed0 = f0.h.clone();
+            let area0 = f0.cell_area.clone();
+            let ds0 = f0.drainage_surface();
+            report("standing_water (PRIOR)", &bed0, &ds0.standing_water, &area0, NX);
         }
     }
 

@@ -50,9 +50,12 @@ pub enum Paint {
     /// #norm-no-depiction-without-referent exists to prevent. So rising and
     /// falling are opposite hues and the HUD carries both fractions.
     Change,
-    /// Colour is **standing-water CAPACITY** — how deep water would stand at
-    /// each cell if every closed basin in the drawn surface filled to its spill
-    /// point. Not water: a property of the bed.
+    /// Colour is **standing water at the spill point** — the depth at which water
+    /// stands when every closed basin in the drawn surface is full to its sill.
+    /// This is the *wet limit*: the hydrologic steady state under positive net
+    /// supply, level to the bit across each body and exactly zero on ground that
+    /// drains ( #form-ocean-is-connectivity-not-elevation ,
+    /// #obs-connectivity-fills-the-basins-the-threshold-drained ).
     ///
     /// This mode exists because a repair had no picture. Until 2026-07-28 the
     /// fluvial epoch filled every closed basin and kept the raise, so the stored
@@ -62,12 +65,19 @@ pub enum Paint {
     /// quantity real and left it visible only inside a probe's printout, which
     /// is the gap this closes.
     ///
-    /// **It is a capacity, and the caption has to keep saying so** — no
-    /// evaporation, inflow, seepage or residence time is in the account, and the
-    /// water nomos settles 40 s of world time at any level, so nothing here is
-    /// standing water and much of it never will be ( #obs-water-fill-never-settles ).
-    /// Press 3 for the water that actually exists; the difference between the two
-    /// pictures is the honest subject of this one.
+    /// **It is a limit, and the caption has to keep saying so** — no evaporation,
+    /// inflow, seepage or residence time is in the account, so an endorheic basin
+    /// under a dry climate stands lower than this and nothing here says by how
+    /// much. Volume-limited filling is a further rung and wants a $P-E$ field this
+    /// project does not own.
+    ///
+    /// Press 3 for the *marched* water field. The difference between the two
+    /// pictures is the honest subject of this one, and it is not a
+    /// less-versus-more-water difference: the marched kernel is a transient that
+    /// covers 40 s of world time at any level ( #obs-water-fill-never-settles ),
+    /// while this is the equilibrium it is failing to reach. The equilibrium needs
+    /// no settle — it is a pure function of the stored bed, so it exists at every
+    /// level the bed does, including a beacon the builder carves erosion-only.
     Depression,
 }
 
@@ -134,9 +144,12 @@ impl Paint {
                  the sign is what tells them apart. Z cycles the scale"
             }
             Paint::Depression => {
-                "colour = CAPACITY of the drawn bed to hold standing water: depth to the spill point of each \
-                 closed basin (violet shallow -> white deep). THIS IS NOT WATER -- no inflow, evaporation, \
-                 seepage or residence time is in it, and press 3 for the water that actually exists. \
+                "colour = STANDING WATER AT THE SPILL POINT, the wet limit: where water stands with every \
+                 closed basin full to its sill (violet shallow -> white deep), level to the bit across each \
+                 body and zero on ground that drains. It assumes net supply is positive -- no evaporation, \
+                 inflow, seepage or residence time is in it, so an endorheic basin under a dry climate stands \
+                 lower and nothing here says by how much. Press 3 for the MARCHED field, which is a 40 s \
+                 transient toward this same equilibrium, not a second opinion about it. \
                  The reader treats the drawn window's rim as a NO-FLUX WALL, so basins reaching a tile edge \
                  are counted; on an assembled multi-tile surface that mixes inherited basins with seam pits \
                  the tiling manufactures, and nothing here separates them"
@@ -386,7 +399,7 @@ pub fn declared_affordances(
         // is doing. So the affordance is declared here, where every sighting
         // carries it, rather than only in a line the viewer may not be reading.
         v.push(
-            "DEPRESSION paint draws CAPACITY, and a filled basin here is NOT a lake -- no inflow,              evaporation, seepage or residence time is in the account, and press 3 to see the standing              water that actually exists (usually none). ADMITTED as a real measured quantity of the bed              drawn in a non-water palette on purpose; what is unreal is the lake your eye supplies."
+            "DEPRESSION paint draws the WET LIMIT -- where water stands with every closed basin full to              its sill. What your eye supplies and this does not is the water BALANCE: no evaporation,              inflow, seepage or residence time is in the account, so a basin under a dry climate stands              lower than drawn and nothing here says by how much. ADMITTED, and drawn in a non-water              palette on purpose, because a limit is a claim about the bed's geometry plus one assumption              about climate, not a reading of water that is there."
                 .to_string(),
         );
         v.push(

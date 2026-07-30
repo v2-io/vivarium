@@ -478,17 +478,28 @@ pub fn depression_line(frame: &Frame) -> String {
     let f = &frame.facts;
     let pct = 100.0 * f.depression_cells as f32 / f.cells.max(1) as f32;
     let cap_km3 = f.depression_capacity_m3 / 1e9;
-    let held = if f.inland_water_cells == 0 {
-        "and NONE of it holds standing water: the water nomos settles 40 s of world time at any level,          and the shipped carve grades each tile to its own perimeter. Capacity is the bed's; water is not"
+    // Three different reasons the marched field can read zero, and only one of
+    // them is about the world. Saying "nothing stands here" when no water tile was
+    // even readable asserts a physical cause for a census artifact — and the
+    // census pins its level to topography and erosion keys only, so a build whose
+    // finest rung is erosion-only (the beacon, by decision) reports 0/0 here.
+    let held = if f.water_requested == 0 {
+        "  No marched water field was requested at the census level, so the two pictures cannot be          compared in this frame -- that is a census fact, not a statement about these basins"
+            .to_string()
+    } else if f.water_loaded == 0 {
+        "  No marched water field is READABLE at this source hash, so nothing here is a comparison          against one -- rerun `vivarium build`"
+            .to_string()
+    } else if f.inland_water_cells == 0 {
+        "  The marched water field holds NO inland water anywhere it is readable, which is about that          kernel and not about these basins: it settles 40 s of world time at any level          ( #obs-water-fill-never-settles ). The equilibrium above needs no settle; the transient          never reaches it"
             .to_string()
     } else {
         format!(
-            "against {} cells actually holding inland standing water -- the gap is what is unfilled",
+            "  Against {} cells the marched water field actually holds -- the two are different claims          about the same basins, and the gap is the transient's",
             f.inland_water_cells
         )
     };
     format!(
-        "capacity to the spill point: {} cells ({:.2}% of drawn), deepest {:.0} m, {:.3e} km^3 -- {}.          Read under a NO-FLUX WALL at each drawn unit's rim (a sink contract there would drain them and          report ~0); on a multi-tile surface inherited basins and tile-seam pits are both in this number          and nothing here separates them",
+        "standing water at the spill point (the WET LIMIT): {} cells ({:.2}% of drawn), deepest {:.0} m,          {:.3e} km^3. Where water stands if every closed basin is full to its sill -- level to the bit          across each body, and zero on ground that drains. It assumes net supply is positive: no          evaporation, inflow, seepage or residence time is in the account, so an endorheic basin under a          dry climate stands lower and nothing here says by how much.{}          Read under a NO-FLUX WALL at each drawn unit's rim (a sink contract there would drain them and          report ~0); on a multi-tile surface inherited basins and tile-seam pits are both in this number          and nothing here separates them",
         f.depression_cells,
         pct,
         f.depression_deepest_m,
