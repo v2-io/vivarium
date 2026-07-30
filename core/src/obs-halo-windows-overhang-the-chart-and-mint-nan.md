@@ -4,6 +4,7 @@ type: observation
 status: exact
 stage: draft
 depends:
+  - obs-chart-edge-halo-clamps-to-the-face
   - form-same-level-halo-exchange
   - form-cellid-chunk-patch
   - form-ocean-is-connectivity-not-elevation
@@ -13,6 +14,8 @@ depends:
 # Halo windows overhang the cube chart, and the clamp that saves them from panicking mints NaN on one edge and misaligns the carve on the other
 
 Every cohort in the store carries **83 `erosion-tile` roots with non-finite heights**, out of 3552, and they are **not** scattered: 73 of 73 distinct positions sit on a region perimeter and **none** in the interior. The inputs are clean — `initial-topography`, `uplift-tile` and `climate` are finite in every cell of every root — so erosion mints these from finite data, deterministically, at the chart's edge.
+
+**This segment is the measured defect and its repair; the clamp itself is owned by #obs-chart-edge-halo-clamps-to-the-face , which declared it as a boundary contract in force before any of this was measured.** What that segment did not distinguish — and what this one adds — is that clamping a cell's *position* is categorically unlike clamping its *height*: the first is outside the model rather than merely inaccurate.
 
 The cause is one clamp doing two jobs. A halo window on a region perimeter asks for cells outside the cube chart; `Fluvial::from_surface` clamps the index (*"Clamp rather than panic: true cube-edge resampling for d≥2 is still open"*), and that clamp is applied to the cell's **geometry** as well as to its **data**. Clamped cells therefore share an $(i,j)$, share a centre vector, and sit at distance **zero** from a real neighbour — so any slope or flux that divides by that distance is $\Delta h / 0$.
 
