@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# Prints the changelog provenance block for the CURRENT world, ready to paste.
+#
+# WHY THIS EXISTS, and it is the more important half of `bin/check-provenance`.
+# That script convicts a fabricated pointer after it is written. This one makes
+# the correct pointer *cheaper to obtain than a fabricated one* — which is the
+# only intervention that works on a habit rather than on an instance.
+#
+# The measured instance: a changelog entry shipped with `src=f0e5cb32e1b8b7de`,
+# a digest present in zero roots. Twelve other hashes in the same night's
+# entries were right, and every one had been copied from a command's output.
+# The wrong one was the only field written with no output at hand — so at the
+# moment of writing, inventing was the path of least resistance. A gate alone
+# leaves that gradient in place and merely adds a wall at the bottom of it.
+# Joseph, 2026-07-30: *"make the easiest thing the most correct thing. That's
+# how you defeat compulsive or borderline detrimental habits, including in
+# others who collaborate on the project."*
+#
+# So: run this, paste the table, fill in the two prose columns. There is then no
+# moment at which a digest has to come from anywhere but a read.
+#
+#   bin/provenance                # markdown table for a changelog entry
+#   bin/provenance --line         # one-line form, for a commit message or a segment
+#
+# HEURISTICS, named because they can be wrong. "Current cohort" is the `src=` of
+# the newest root file by mtime, and "previous" is the newest root whose digest
+# differs from it. Both are honest for the ordinary one-builder-at-a-time case
+# and would misreport under two concurrent builds into one store — which is also
+# when `#form-depend-by-key-never-latest`'s cohort discipline matters most, so
+# read the printed counts rather than trusting the labels blindly.
+#
+# Known not covered (deliberate): the Window and Commands rows. Those are
+# judgement about what the entry is *about*, not facts about the store, and a
+# tool that guessed them would be inventing exactly the kind of field this
+# exists to stop being invented.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+STORE=${VIVARIUM_WORLD:-$HOME/.cache/vivarium/globe-world}
+MODE=${1:-table}
+
+if [ ! -d "$STORE/roots" ]; then
+  echo "bin/provenance: no store at $STORE — nothing to read a digest from." >&2
+  echo "  Build first (\`vivarium build\`), or set VIVARIUM_WORLD." >&2
+  exit 1
+fi
+
+# Newest root, and the newest root carrying a different digest. The listing is
+# taken ONCE into a temp file: `ls -t | head -1` over a 100k-root store makes
+# `ls` die of SIGPIPE, which `set -o pipefail` then reports as a failure of this
+# script — a self-inflicted flake in the tool whose whole job is trustworthiness.
+list=$(mktemp); trap 'rm -f "$list"' EXIT
+ls -t "$STORE/roots" > "$list"
+newest=$(head -1 "$list")
+cur=$(sed -n '2p' "$STORE/roots/$newest" | grep -oE 'src=[0-9a-f]{16}' | sed 's/src=//' || true)
+[ -n "$cur" ] || { echo "bin/provenance: newest root names no src= digest" >&2; exit 1; }
+
+prev=""
+while IFS= read -r r; do
+  h=$(sed -n '2p' "$STORE/roots/$r" 2>/dev/null | grep -oE 'src=[0-9a-f]{16}' | sed 's/src=//' || true)
+  if [ -n "$h" ] && [ "$h" != "$cur" ]; then prev="$h"; break; fi
+done < "$list"
+
+cur_n=$(grep -rlF "src=$cur" "$STORE/roots" 2>/dev/null | wc -l | tr -d ' ')
+store_now=$(git -C "$STORE" rev-parse --short HEAD 2>/dev/null || echo "(store not under git)")
+store_prev=$(git -C "$STORE" rev-parse --short HEAD~1 2>/dev/null || echo "(no parent)")
+src_now=$(git rev-parse --short HEAD)
+dirty=$(git status --porcelain --untracked-files=no | wc -l | tr -d ' ')
+# The manifest is `key = value` with `#` comments (spec.rs). Parse it as that,
+# anchored to line starts — an unanchored regex here read the word "freely" out
+# of the comment "rename freely" and reported it as the world's name, which is
+# the tool committing the exact fault it exists to prevent.
+mf=$STORE/manifest
+field() { awk -F'[[:space:]]*=[[:space:]]*' -v k="$1" '$0 !~ /^[[:space:]]*#/ && $1 == k {gsub(/"/,"",$2); print $2; exit}' "$mf" 2>/dev/null; }
+seed=$(field seed)
+name=$(field name)
+target_phase=$(field target_phase)
+order=$(field order)
+
+if [ "$MODE" = "--line" ]; then
+  printf 'world %s seed %s · src=%s (%s roots) · world git %s · source %s%s\n' \
+    "${name:-?}" "${seed:-?}" "$cur" "$cur_n" "$store_now" "$src_now" \
+    "$([ "$dirty" -gt 0 ] && echo " [+$dirty uncommitted]")"
+  exit 0
+fi
+
+cat <<EOF
+*World: \`${name:-?}\`, seed \`${seed:-?}\`, store \`$STORE\`. Declared order \`${order:-?}\`, target phase \`${target_phase:-?}\`.*
+
+## Provenance (required fields)
+
+| Field | Before | After |
+| --- | --- | --- |
+| **Kernel / memo \`src=\`** | \`${prev:-(no earlier cohort in store)}\` | **\`$cur\`** ($cur_n roots) |
+| **World-dir git** | \`$store_prev\` | **\`$store_now\`** |
+| **Source repo** | | \`$src_now\` |
+| **Window** | | |
+| **Commands** | | |
+EOF
+
+if [ "$dirty" -gt 0 ]; then
+  echo
+  echo "<!-- bin/provenance: $dirty uncommitted tracked file(s) — the Source repo rev above"
+  echo "     does not describe the working tree. Commit before freezing the entry. -->"
+fi

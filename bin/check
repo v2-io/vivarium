@@ -13,6 +13,9 @@ cargo test -p vivarium-world --test cli_admission
 echo "== check-decision-refs (FORMAT §5.1 citation form) =="
 bin/check-decision-refs
 
+echo "== check-provenance (cohort digests, git revisions, capture embeds must resolve) =="
+bin/check-provenance
+
 echo "== null-space gate (examples/null_space_gate — can-fail, exits nonzero on a spurious zero mode) =="
 cargo run -p vivarium-world --release --example null_space_gate --quiet
 

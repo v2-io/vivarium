@@ -1,0 +1,164 @@
+#!/usr/bin/env bash
+# Convicts every provenance pointer in the bound tree: cohort digests, git
+# revisions, and capture embeds must RESOLVE.
+#
+# WHY THIS EXISTS. On 2026-07-30 a changelog entry shipped with
+# `src=f0e5cb32e1b8b7de` in its provenance table. That hash appears in **zero**
+# roots of the store; it was generated, not read. Twelve other hashes in the
+# same night's entries were correct — every one of them copied from a command's
+# output, and the single wrong one was the only field written without an output
+# to copy from. So the defect is not carelessness that more care would fix: a
+# 16-hex digest cannot be recalled, only read or invented, and a mind that
+# generates from plausibility cannot feel which of the two it just did.
+# `#norm-caught-disciplines-become-mechanisms` is explicit about what follows —
+# do not restate the discipline, convert it. This is the conversion.
+#
+# It matters because of what a provenance field IS FOR. Per
+# `#ops-changelog-is-the-acceptance-check`, an entry earns its keep by letting a
+# later reader re-run the world it describes. A dead pointer does not merely
+# look untidy; it silently removes the one property the entry exists to have.
+#
+# WHAT IT CHECKS
+#   1. Cohort digests — every `src=<16 hex>` must appear in the store's roots.
+#   2. Git revisions — every backticked 7–12 hex token must resolve as a commit
+#      in this repo or in the world store's own repo.
+#   3. Capture embeds — every `![[captures/...]]` must name a file that exists.
+#
+# THE THIRD CASE IN RULE 2, AND WHY IT IS NOT A LOOPHOLE. Measured before this
+# script was written: of 29 backticked hex tokens in `changelog/` + `core/`, 24
+# resolved as commits and 5 did not — and all 5 were 8-hex *prefixes of `src=`
+# digests* (`12ea45e5`, `2dc664ed`, `89f159d4`, `b129b27c`, `defc3c44`), which
+# are legitimate short forms of a cohort, not revisions. A two-way rule would
+# have failed on all five, and a gate that cries wolf five times out of 29 is a
+# gate someone deletes. So a token also passes if it prefixes a known digest.
+# That measurement is the reason the rule has three arms instead of two.
+#
+# SCOPE, and why it is drawn here:
+#   changelog/ is BOUND — reproducibility is the whole point of its provenance
+#   tables, so a dead pointer there is the defect this exists for.
+#   core/ and the root canon docs are BOUND — read as current truth.
+#   msc/ is EXCLUDED — scratch, spikes, pre-registrations and audit reports,
+#   where a token may deliberately quote a hypothetical or a hash under test.
+#   .super-archive/ and archive/ are EXCLUDED — frozen provenance, naming the
+#   world as it was; "fixing" them would be editing archaeology.
+#
+# WHEN THE STORE IS ABSENT (another machine, a fresh clone, CI) the digest arm
+# and the store-commit arm cannot run. It says so, with counts, and passes the
+# arms it can still run. It does not pass silently: an unverified count printed
+# is the honest state, and a green line claiming otherwise would be the same
+# class of defect this script exists to catch.
+#
+# A LEGITIMATELY PRUNED COHORT is the one true false positive: a digest that was
+# real when written and whose roots have since been garbage-collected. That is
+# what `changelog/PROVENANCE-ALLOW` is for — one `<token>  <reason>` per line,
+# and the reason is required, because an unexplained allowlist entry is how a
+# gate becomes decoration.
+#
+# Known not covered (deliberate, not oversight): numbers. A count or a
+# measurement in prose has no mechanical referent, so nothing here can convict
+# `4007 wet cells` — that is what a re-runnable instrument and a fresh reader
+# are for, and the audit brief in `msc/` is the current form of the second.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+STORE=${VIVARIUM_WORLD:-$HOME/.cache/vivarium/globe-world}
+ALLOW=changelog/PROVENANCE-ALLOW
+
+srcset=$(mktemp); toks=$(mktemp); allow=$(mktemp)
+trap 'rm -f "$srcset" "$toks" "$allow"' EXIT
+
+if [ -f "$ALLOW" ]; then
+  # `<token> <reason>` — a bare token with no reason is not an entry.
+  awk 'NF>=2 && $1 !~ /^#/ {print $1}' "$ALLOW" | sort -u > "$allow"
+else
+  : > "$allow"
+fi
+
+have_store=0
+if [ -d "$STORE/roots" ]; then
+  have_store=1
+  grep -rhoE 'src=[0-9a-f]{16}' "$STORE/roots" 2>/dev/null | sed 's/src=//' | sort -u > "$srcset"
+else
+  : > "$srcset"
+fi
+
+BOUND=(changelog core CLAUDE.md FORMAT.md ASSUMPTIONS.md CONSOLIDATION-STATUS.md README.md LEXICON.udon)
+
+fail=0
+note() { if [ "$fail" -eq 0 ]; then echo "check-provenance: unresolvable provenance pointers"; fi; fail=$((fail + 1)); }
+
+# ---- 1. cohort digests -------------------------------------------------------
+digest_n=0
+while IFS= read -r hit; do
+  [ -n "$hit" ] || continue
+  where=${hit%%:*}
+  h=${hit##*src=}
+  digest_n=$((digest_n + 1))
+  [ "$have_store" -eq 1 ] || continue
+  grep -qxF "$h" "$srcset" && continue
+  grep -qxF "$h" "$allow" && continue
+  note
+  echo "  $where"
+  echo "      src=$h is in NO root of $STORE"
+  cand=$(grep -F "${h:0:6}" "$srcset" | head -3 || true)
+  [ -n "$cand" ] && echo "$cand" | sed 's/^/      nearest known digest: /'
+  echo "      if this cohort was pruned, add it to $ALLOW with a reason"
+done < <(grep -rHoE 'src=[0-9a-f]{16}' "${BOUND[@]}" 2>/dev/null || true)
+
+# ---- 2. git revisions ------------------------------------------------------
+grep -rhoE '`[0-9a-f]{7,12}`' "${BOUND[@]}" 2>/dev/null | tr -d '`' | sort -u > "$toks" || true
+rev_n=0; rev_store=0
+while IFS= read -r t; do
+  [ -n "$t" ] || continue
+  rev_n=$((rev_n + 1))
+  git cat-file -e "$t^{commit}" 2>/dev/null && continue
+  if [ "$have_store" -eq 1 ] && git -C "$STORE" cat-file -e "$t^{commit}" 2>/dev/null; then
+    rev_store=$((rev_store + 1)); continue
+  fi
+  # Short form of a cohort digest — see the header note on the third arm.
+  if [ "$have_store" -eq 1 ] && grep -qE "^$t" "$srcset"; then continue; fi
+  grep -qxF "$t" "$allow" && continue
+  # With no store we cannot tell a store revision or a digest prefix from a
+  # fabrication, so this arm is not convicted rather than guessed.
+  [ "$have_store" -eq 1 ] || continue
+  note
+  echo "  \`$t\` resolves as neither a commit (here or in the store) nor a known cohort digest"
+  echo "      $(grep -rln "$t" "${BOUND[@]}" 2>/dev/null | head -3 | tr '\n' ' ')"
+done < "$toks"
+
+# ---- 3. capture embeds -----------------------------------------------------
+emb_n=0
+while IFS= read -r hit; do
+  [ -n "$hit" ] || continue
+  where=${hit%%:*}
+  rel=${hit##*\[\[}
+  rel=${rel%%\]\]*}
+  # Placeholder forms are syntax, not pointers — the same carve-out
+  # `check-decision-refs` makes for `<slug>`. A doc showing the *form* of an
+  # embed writes `<name>` or an ellipsis; only a concrete path is a citation.
+  case "$rel" in
+    *'<'* | *'…'* | *'...'*) continue ;;
+  esac
+  emb_n=$((emb_n + 1))
+  # Embeds are written relative to changelog/ (FE(7) of the changelog ops norm).
+  [ -f "changelog/$rel" ] && continue
+  [ -f "$rel" ] && continue
+  note
+  echo "  $where"
+  echo "      embed [[$rel]] names no file (looked in changelog/ and the repo root)"
+done < <(grep -rHoE '!\[\[[^]]+\]\]' "${BOUND[@]}" 2>/dev/null || true)
+
+if [ "$fail" -gt 0 ]; then
+  echo
+  echo "  $fail unresolvable. A provenance field exists to be followed; copy it from a"
+  echo "  command's output rather than writing it from memory — a 16-hex digest cannot"
+  echo "  be recalled, only read or invented."
+  exit 1
+fi
+
+if [ "$have_store" -eq 1 ]; then
+  echo "check-provenance: ok ($digest_n digests against $(wc -l < "$srcset" | tr -d ' ') known cohorts, $rev_n revisions, $emb_n embeds)"
+else
+  echo "check-provenance: PARTIAL — no store at $STORE."
+  echo "  $digest_n cohort digests and $rev_n revisions UNVERIFIED; $emb_n embeds checked."
+fi

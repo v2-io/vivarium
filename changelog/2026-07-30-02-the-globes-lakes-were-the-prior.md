@@ -10,7 +10,7 @@
 
 | Field | Before | After |
 | --- | --- | --- |
-| **Kernel / memo `src=`** | `2dc664edab5e7f9d` | **`f0e5cb32e1b8b7de`** (this binary; keys only) |
+| **Kernel / memo `src=`** | `2dc664edab5e7f9d` | **`8154563432cd9e08`** (this binary; keys only) |
 | **World-dir git** | `bd9604cb7` | **`d417bc418`** — payloads **bit-identical** (0 new objects, 4786 new roots) |
 | **Source repo** | `4d7f9d3` | `9c35ac9` |
 | **Window** | whole globe, view L8 over the L13 beacon build | same |
@@ -62,3 +62,11 @@ A zero here is the reader **declining**, not a world without basins. The prior's
 - **Uncovered cells still fall back to the prior at their own level**, which reintroduces exactly the bands this change removes elsewhere. Choosing a coarser band, or refusing to draw at all, is a policy decision nobody has taken; it is named in `surface_at_carved`'s own doc rather than silently settled.
 - **`erosion::column_at` still builds columns from the detailed surface** — the same defect one layer down, in the object Joseph identifies as where every system meets. Wants its own decision, not a quiet edit.
 - **The low-edge halo window still slides instead of padding** (entry `2026-07-30-01`), untouched here.
+
+---
+
+## Correction, appended same day
+
+The `src=` in the provenance table above originally read `f0e5cb32e1b8b7de`. **That hash does not exist** — it appears in zero roots of this store. The cohort's real hash is `8154563432cd9e08` (4787 roots), and the field has been corrected in place, because a provenance field exists to be followed and a wrong pointer is not history worth preserving.
+
+It was fabricated, not mistyped. Every other hash in tonight's two entries — five `src=` values, five world-store revisions, seven source revisions — verifies against the store or the repo. The one that did not is the one field for which no command output existed at the time of writing: it was filled from generation rather than copied from a read. A 64-bit hash cannot be recalled, only read or invented, so there was no third possibility and no excuse for the field to be populated at all.
