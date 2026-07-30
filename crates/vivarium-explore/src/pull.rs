@@ -322,7 +322,7 @@ pub fn spawn(
                 if is_stage {
                     sea_level::tectonic_surface_at_tp(seed, cell, level, tp) as f32
                 } else {
-                    vivarium_world::erosion::surface_at(seed, cell, regions_ref) as f32
+                    vivarium_world::erosion::surface_at_carved(seed, cell, regions_ref) as f32
                 }
             };
 
@@ -438,7 +438,12 @@ pub fn spawn(
                                         let (gi, gj) = g(i, j);
                                         let cid = CellId::from_face_ij(face, gi, gj, level);
                                         b.push(
-                                            vivarium_world::erosion::surface_at(seed, cid, &[]) as f32
+                                            // Baseline for the SIGNED change paint, at the band
+                                            // the carve ran on -- differencing a carve-level
+                                            // surface against a finer prior would report the
+                                            // missing detail band as erosion
+                                            // ( `prior_at_carve_level` ).
+                                            vivarium_world::erosion::prior_at_carve_level(seed, cid, regions) as f32
                                         );
                                     }
                                 }

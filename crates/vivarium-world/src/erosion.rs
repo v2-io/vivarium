@@ -2978,6 +2978,55 @@ impl ErodedRegion {
 /// Surface through a TELESCOPE of tiers, finest-first: the first region that
 /// contains the cell answers (its coarser parents already shaped its seed); the
 /// baseline prior answers everywhere else. `regions` is ordered coarse → fine.
+/// **The surface as the kernel produced it** — for anything that depicts or
+/// measures, as against [`surface_at`], which is for *seeding* a finer rung.
+///
+/// [`surface_at`] returns `base + detail`: bilinear over the carve plus the
+/// prior's own detail increment at the asked-for level. That is correct as an
+/// initial condition for a finer carve — the prior is declared law below the
+/// coarse run's Nyquist — and wrong as a depiction, because the detail belongs
+/// to no rung that ran: it carries no key, took part in no action, and states a
+/// drainage structure the world does not have ( #form-fidelity-ladder FE(7)–(9)).
+/// Measured: standing water read off the detailed surface reports 8.5× the
+/// basins of the carve it decorates.
+///
+/// So this returns the covering region's own stored cell, unblended and
+/// undecorated. Drawn, it is visibly stair-stepped at the carve's grain, which
+/// is the honest picture: *"draw the carve you have and let the absence show."*
+///
+/// **Uncovered cells remain a declared gap.** Where no region answers, this
+/// falls back to the prior at the cell's own level exactly as [`surface_at`]
+/// does — which reintroduces detail bands no rung ran. Choosing a coarser band
+/// there, or refusing to draw at all, is a policy decision nobody has taken;
+/// the view already reports the uncovered fraction, so the gap is visible rather
+/// than hidden.
+pub fn surface_at_carved(seed: u64, cell: CellId, regions: &[ErodedRegion]) -> f64 {
+    debug_assert!(regions.windows(2).all(|w| w[0].level <= w[1].level), "surface_at_carved: regions must be ordered coarse -> fine");
+    for r in regions.iter().rev() {
+        if let Some(s) = r.carved_surface_m(cell) {
+            return s;
+        }
+    }
+    gen::initial_topography_m(seed, cell, cell.level())
+}
+
+/// The **uncarved prior at the band the covering carve ran on** — the honest
+/// baseline for a signed comparison against [`surface_at_carved`].
+///
+/// A signed-change view must compare like with like. Differencing a carve-level
+/// surface against the prior evaluated at a *finer* level would report the
+/// missing detail band as elevation change, swamping the erosion it exists to
+/// show. So the baseline is evaluated at the covering region's own level, which
+/// is exactly the band `surface_at`'s `detail` term adds and this one omits.
+pub fn prior_at_carve_level(seed: u64, cell: CellId, regions: &[ErodedRegion]) -> f64 {
+    for r in regions.iter().rev() {
+        if r.covers(cell) {
+            return gen::initial_topography_m(seed, cell, r.level);
+        }
+    }
+    gen::initial_topography_m(seed, cell, cell.level())
+}
+
 pub fn surface_at(seed: u64, cell: CellId, regions: &[ErodedRegion]) -> f64 {
     // Ordering is a CONTRACT, and passing fine-first fails silently (the coarse
     // tier answers everything, the fine tier is dead weight — a probe lost an

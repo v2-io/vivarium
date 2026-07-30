@@ -483,7 +483,21 @@ pub fn depression_line(frame: &Frame) -> String {
     // even readable asserts a physical cause for a census artifact — and the
     // census pins its level to topography and erosion keys only, so a build whose
     // finest rung is erosion-only (the beacon, by decision) reports 0/0 here.
-    let held = if f.water_requested == 0 {
+    // **Zero has several causes and only one of them is about basins.** The field
+    // is read at the level that RAN ( #form-fidelity-ladder FE(8) ), so a view no
+    // carve covers has nothing to report — and saying "no standing water" there
+    // would state a result where the honest statement is that no kernel has run.
+    // The prior's own closed basins are real relief and an *initial condition*;
+    // they are not an answer.
+    let held = if f.depression_cells == 0 && f.prior_fallback_frac > 0.99 {
+        "  NO CARVE COVERS THIS VIEW, so there is nothing here to read: the zero is the reader          declining, not a world without basins. An eroded region answers only at its own level or          finer, and every drawn cell here fell back to the uncarved prior — whose relief does contain          closed basins, as an initial condition no kernel has processed. Zoom to a built region, or          `vivarium build` one at this level."
+            .to_string()
+    } else if f.prior_fallback_frac > 0.01 {
+        format!(
+            "  Read only where a carve answers: {:.1}% of drawn cells fell back to the uncarved prior          and are reported as dry regardless of the prior's own relief, because that relief is an          initial condition rather than a result.",
+            f.prior_fallback_frac * 100.0
+        )
+    } else if f.water_requested == 0 {
         "  No marched water field was requested at the census level, so the two pictures cannot be          compared in this frame -- that is a census fact, not a statement about these basins"
             .to_string()
     } else if f.water_loaded == 0 {

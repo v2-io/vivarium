@@ -350,6 +350,22 @@ fn main() {
         report("(b) OLD: on drawn surface", &drawn_bed, &ds_drawn.standing_water, &drawn_area, vnx);
         report("(c) NEW: sampled at carve", &drawn_bed, &sampled, &drawn_area, vnx);
         println!("      the (b) bodies are pits in re-added prior detail; (c) can only report basins a kernel carved");
+
+        // (d) The same sampled field over the CARVED bed — bed and water from one
+        // rung. (c) reports the right bodies but is not level, because carve-level
+        // water over a detail-augmented bed does not conform to the ground beneath
+        // it: the phantom relocates to the disagreement between consumers rather
+        // than vanishing. This is the column that shows the surface fix closing it.
+        let carved_bed: Vec<f32> = (0..vnx * vnx)
+            .map(|k| {
+                let (i, j) = (k % vnx, k / vnx);
+                let c = CellId::from_face_ij(face, voi + i as u32, voj + j as u32, vlevel);
+                vivarium_world::erosion::surface_at_carved(SEED, c, std::slice::from_ref(&region)) as f32
+            })
+            .collect();
+        report("(d) NEW water, CARVED bed", &carved_bed, &sampled, &drawn_area, vnx);
+        println!("      (c) and (d) hold the same water; only the ground under it differs, and");
+        println!("      levelness is the test that can tell — a lake must be level over its own bed");
     }
 
     println!();

@@ -322,7 +322,11 @@ impl<'w, 's> Observatory<'w, 's> {
                 if erosion::tier_at(cell, regions).is_some() {
                     any_eroded = true;
                 }
-                tile.push(erosion::surface_at(self.w.seed(), cell, regions) as f32);
+                // The CARVED surface: a view depicts what ran, and adds no
+                // terms ( #form-fidelity-ladder FE(8), `surface_at_carved`).
+                // Visibly stair-stepped at the carve's grain, which is the
+                // honest picture rather than a defect in it.
+                tile.push(erosion::surface_at_carved(self.w.seed(), cell, regions) as f32);
             }
         }
         (tile, any_eroded)
