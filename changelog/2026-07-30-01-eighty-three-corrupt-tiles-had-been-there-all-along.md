@@ -52,7 +52,20 @@ The extrapolated centre is *near*, not identical to, the true neighbouring-face 
 ## What is still wrong
 
 - **The low edge still slides instead of padding.** A negative window origin is clamped to 0, so the window covers different ground than requested and its interior is no longer at halo offset `d` — publish then writes ground from a 16-cell offset into that tile. **Finite, plausible, wrong**, and nothing catches it because there is no NaN to trip on. This is the more dangerous of the two failures and it is untouched here. Fixing it needs signed origins through `from_surface` and the measure helpers.
-- **`mantle-thermal` mints one bad cell per affected root** and grew 28 → 29 with this rebuild. Separate nomos, no hypothesis, no probe.
 - **Nothing guards the store against a non-finite payload** arriving by another route. The new tripwire covers this geometry; it does not cover the store.
 - **Statistics measured on a last-row or last-column tile before `2dc664ed` are suspect.** 73 tiles carried non-finite cells and their drainage, χ and basin numbers were computed through them.
 - **The +46% NaN inflation** attributed to NaN-acting-as-a-wall under the new ocean mask stays **inferred**. With the mint gone there are no NaN walls left to measure, so this rebuild could not decide it, and it is recorded as undecidable rather than upgraded.
+
+---
+
+## Correction, appended same day (the entry body above is frozen; this is the amendment)
+
+**The `mantle-thermal` defect this entry reported does not exist.** Both the P8 row and the "still wrong" bullet claimed 28 → 29 corrupt `mantle-thermal` roots, actively minting. That was my instrument's error, not the world's: `epoch-reduction` payloads are four `f64`s (`EpochReduction::to_bytes`, 32 bytes) and `examples/nan_census` decoded every payload as `f32` regardless, turning a valid struct into plausible garbage that included a NaN bit pattern. Decoded correctly, `mantle-thermal` is finite in all 6828 cells of all 1707 roots.
+
+So P8 is **void, not hit** — it predicted that a defect would be untouched, and there was no defect.
+
+The corrected census also reports `hydrosphere` (27 roots) as **undecoded**, because the probe does not know its encoding. That is the honest state: those roots are *unverified*, not verified-clean, and an earlier run silently counted them as clean.
+
+**The finding this entry is actually about is unaffected**: the halo-geometry NaN was real, was 83 roots per cohort across seven cohorts, and is now zero. It was the only genuine non-finite defect in the store.
+
+**The lesson is the instrument's, and it is the same shape as the night's other findings.** A census that assumes one encoding for every payload will manufacture defects in whatever does not match, and the manufactured ones look exactly like the real ones. The probe now selects an encoding per nomos and refuses to scan what it cannot identify.

@@ -25,6 +25,44 @@ fn decode_f32(b: &[u8]) -> Vec<f32> {
     b.chunks_exact(4).map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]])).collect()
 }
 
+/// **A census must not guess an encoding.** Payload bytes carry no self-describing
+/// header, so a reader that assumes `f32` will happily decode a struct of `f64`s
+/// into plausible-looking garbage — an earlier version of this probe did exactly
+/// that to `epoch-reduction` (four `f64`s, 32 bytes) and reported 29 corrupt
+/// `mantle-thermal` roots that do not exist. The nomos name is the only evidence
+/// available about the encoding, so it is consulted, and anything unrecognised is
+/// reported as **undecoded** rather than scanned under an assumption.
+enum Payload {
+    F32(Vec<f32>),
+    F64(Vec<f64>),
+    Unknown,
+}
+
+fn decode(nomos: &str, b: &[u8]) -> Payload {
+    match nomos {
+        // Per-cell scalar fields, written by `query::encode_f32`.
+        "erosion-tile" | "initial-topography" | "climate" | "water-tile" | "uplift-tile" => {
+            Payload::F32(decode_f32(b))
+        }
+        // `EpochReduction::to_bytes`: four f64s in declaration order.
+        "mantle-thermal" if b.len() == 32 => Payload::F64(
+            b.chunks_exact(8)
+                .map(|c| f64::from_le_bytes(c.try_into().expect("8 bytes")))
+                .collect(),
+        ),
+        _ => Payload::Unknown,
+    }
+}
+
+/// `(cells, non-finite cells)` for a payload whose encoding is known.
+fn scan(p: &Payload) -> Option<(usize, usize)> {
+    match p {
+        Payload::F32(v) => Some((v.len(), v.iter().filter(|x| !x.is_finite()).count())),
+        Payload::F64(v) => Some((v.len(), v.iter().filter(|x| !x.is_finite()).count())),
+        Payload::Unknown => None,
+    }
+}
+
 fn main() {
     let dir = std::env::args().nth(1).unwrap_or_else(|| {
         let home = std::env::var("HOME").expect("HOME");
@@ -35,18 +73,21 @@ fn main() {
     println!("store: {dir}");
     println!("roots: {}", roots.len());
 
-    // Per nomos: (roots, roots with any non-finite, total cells, non-finite cells)
-    let mut tally: BTreeMap<String, (usize, usize, usize, usize)> = BTreeMap::new();
+    // Per nomos: (roots, roots with any non-finite, total cells, non-finite cells, undecoded roots)
+    let mut tally: BTreeMap<String, (usize, usize, usize, usize, usize)> = BTreeMap::new();
     let mut worst: Option<(usize, String)> = None;
 
     for r in &roots {
         let nomos = r.key.split('@').next().unwrap_or("(unkeyed)").to_string();
         let Some(bytes) = store.object_bytes(&r.object) else { continue };
-        let v = decode_f32(&bytes);
-        let bad = v.iter().filter(|x| !x.is_finite()).count();
-        let e = tally.entry(nomos).or_insert((0, 0, 0, 0));
+        let decoded = decode(&nomos, &bytes);
+        let e = tally.entry(nomos).or_insert((0, 0, 0, 0, 0));
         e.0 += 1;
-        e.2 += v.len();
+        let Some((cells, bad)) = scan(&decoded) else {
+            e.4 += 1;
+            continue;
+        };
+        e.2 += cells;
         if bad > 0 {
             e.1 += 1;
             e.3 += bad;
@@ -57,10 +98,10 @@ fn main() {
     }
 
     println!();
-    println!("{:<46} {:>7} {:>9} {:>12} {:>10}", "nomos", "roots", "BAD roots", "cells", "BAD cells");
-    for (nomos, (n, nbad, cells, cbad)) in &tally {
-        let flag = if *nbad > 0 { "  <== NON-FINITE" } else { "" };
-        println!("{nomos:<46} {n:>7} {nbad:>9} {cells:>12} {cbad:>10}{flag}");
+    println!("{:<40} {:>7} {:>9} {:>12} {:>10} {:>10}", "nomos", "roots", "BAD roots", "cells", "BAD cells", "UNDECODED");
+    for (nomos, (n, nbad, cells, cbad, und)) in &tally {
+        let flag = if *nbad > 0 { "  <== NON-FINITE" } else if *und > 0 { "  (encoding not known to this probe)" } else { "" };
+        println!("{nomos:<40} {n:>7} {nbad:>9} {cells:>12} {cbad:>10} {und:>10}{flag}");
     }
 
     // **Which cohort?** A store accumulates every source tree it was ever built
@@ -143,11 +184,46 @@ fn main() {
         println!("    face {f} L{level} ({oi:>5},{oj:>5})  bad cells {bad:>5}  {where_}");
     }
 
+    // **Small payloads get dumped whole.** A nomos whose payload is a handful of
+    // numbers can be diagnosed by looking at it, and the surviving values around a
+    // NaN usually name the operation that produced it.
+    println!();
+    println!("non-erosion roots with non-finite cells, dumped whole (payloads <= 16 cells):");
+    let mut shown = 0usize;
+    for r in &roots {
+        if r.key.starts_with("erosion-tile@") {
+            continue;
+        }
+        let Some(bytes) = store.object_bytes(&r.object) else { continue };
+        let nomos = r.key.split('@').next().unwrap_or("");
+        let v: Vec<f64> = match decode(nomos, &bytes) {
+            Payload::F32(f) => f.iter().map(|&x| x as f64).collect(),
+            Payload::F64(f) => f,
+            Payload::Unknown => continue,
+        };
+        if v.len() > 16 || v.iter().all(|x| x.is_finite()) {
+            continue;
+        }
+        if shown < 4 {
+            println!("  {}", r.key);
+            let cells: Vec<String> = v
+                .iter()
+                .enumerate()
+                .map(|(i, x)| if x.is_finite() { format!("[{i}] {x:.4}") } else { format!("[{i}] {x}") })
+                .collect();
+            println!("    {}", cells.join("  "));
+        }
+        shown += 1;
+    }
+    println!("  ({shown} such roots total)");
+
     println!();
     match worst {
         None => println!("VERDICT: every payload is finite in every cell."),
         Some((n, key)) => {
-            println!("VERDICT: NON-FINITE VALUES PRESENT. Worst root holds {n} of them:");
+            let current = key.contains(&format!("src={}", vivarium_world::nomotheke::SRC_HASH));
+            let era = if current { "IN THE CURRENT COHORT" } else { "in a RETIRED cohort (archaeology; the current cohort is clean above)" };
+            println!("VERDICT: non-finite values present {era}. Worst root holds {n}:");
             println!("  {key}");
         }
     }

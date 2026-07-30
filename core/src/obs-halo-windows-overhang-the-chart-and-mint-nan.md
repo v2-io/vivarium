@@ -22,11 +22,11 @@ The cause is one clamp doing two jobs. A halo window on a region perimeter asks 
 
    | nomos | roots | roots with non-finite cells | non-finite cells |
    |---|---|---|---|
-   | `erosion-tile` | 85 374 | 581 | 300 522 |
-   | `mantle-thermal` | 1 626 | 28 | 28 |
-   | `initial-topography` · `uplift-tile` · `climate` · `water-tile` · `hydrosphere` | 36 810 | **0** | **0** |
+   | `erosion-tile` (pre-repair cohorts) | 88 926 | 581 | 300 522 |
+   | `initial-topography` · `uplift-tile` · `climate` · `water-tile` · `mantle-thermal` | 38 644 | **0** | **0** |
+   | `hydrosphere` | 27 | *not decoded* | *encoding unknown to the probe* |
 
-   The `mantle-thermal` rows carry exactly one bad cell each and are a separate, unexplained defect.
+   **The halo geometry was the only genuine non-finite defect in this store.** An earlier version of the census reported 29 corrupt `mantle-thermal` roots; that was the instrument's own error — `epoch-reduction` payloads are four `f64`s (`EpochReduction::to_bytes`, 32 bytes) and the probe decoded them as eight `f32`s, producing plausible garbage including a NaN bit pattern. Decoded correctly they are clean in every cell. The probe now selects an encoding per nomos and reports anything it does not recognise as **undecoded** rather than scanning it under an assumption, which is why `hydrosphere` appears as a gap rather than as a pass.
 
 2. **Measured: it was the same 83 roots in every cohort, and is now none.** Per `src=`, seven consecutive pre-repair cohorts each report 3552 `erosion-tile` roots and exactly **83** with non-finite cells — deterministic, not a flake. The cohort carved after the split reports **0**, which is what convicts the zero-distance metric as the *only* mint on this path.
 
@@ -67,5 +67,5 @@ It is also the night's recurring shape once more. One accessor served two caller
 - **The repair, in two independent parts.** (a) Compute `centers` and `cell_area` from the **unclamped** requested index while continuing to clamp the *data* lookup — this removes the degenerate metric and leaves the declared cross-face data gap exactly where it was. (b) Make the low-edge window **pad rather than slide**: `from_surface` would need signed origins, and the measure helpers signed indices, so the requested cell can be named even when it is off-chart on the low side. (a) stops the NaN; (b) stops the misalignment; neither substitutes for cross-face resampling.
 - **Tripwire landed** as `an_overhanging_window_has_no_zero_length_neighbour_pairs`, and it is on the *geometric invariant* rather than on downstream finiteness: it reported 108 zero-length adjacent pairs before the split and zero after. A finiteness test would have passed the moment a division happened to be avoided. **Still owed:** a store-level guard, since nothing today would catch a non-finite payload arriving by some other route — which is why 83 roots survived seven cohorts.
 - **Correction, 2026-07-30:** an earlier version of FE(5) reported *80* duplicate rows and a last-row request of $j = 591$. That came from a hand-built window origin in the probe rather than the builder's own formula; the real overhang is **16 rows** from origin 432. The mechanism, the 0.0 m against 19 395.8 m, and the census counts were unaffected — but the magnitude was published as measured when it was reconstructed, and the probe now derives origins from the carve's formula so the same slip cannot recur.
-- **Not investigated:** the 28 `mantle-thermal` roots with one bad cell each. Different nomos, different shape, no hypothesis.
+- **Owed:** teach the census `hydrosphere`'s encoding, the one payload shape it currently cannot check. Until then its 27 roots are unverified, not verified-clean.
 - **Statistics measured on a last-row or last-column tile before cohort `2dc664ed` are suspect** — 73 tiles carried non-finite cells and their drainage, χ and basin numbers were computed through them.
