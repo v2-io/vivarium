@@ -43,7 +43,23 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
    Related as "the sphere is real at joins"; **different repairs.**
 
-5. **Highest-leverage next — dated 2026-07-29** (revised after builder/view halo adoption). Ideation rank only.
+5. **Highest-leverage next — revised 2026-07-29 (late evening), after the ocean-connectivity land.** Ideation rank only.
+
+   **What moved.** Rank 1 was *water settle path → lakes on screen*. It is **retired as the lake blocker**: lakes did not need the settle. The sea was classified by height, so every landlocked below-datum basin was a drain ( #form-ocean-is-connectivity-not-elevation ), and repairing that put **1165 standing bodies / 976 865 km³** on the planet with no kernel step at all ( #obs-connectivity-fills-the-basins-the-threshold-drained ). The settle question survives for transients, currents and flood propagation — not for standing water, and #obs-water-fill-never-settles now says so. Three consequences reorder the table below: the **mixed-tier reader** is what stands between a viewer and an honest lake; the **ocean mask** wants to be a shared object before four consumers drift further; and the **spill/sill object** of 1b gained a second, independent motivation.
+
+   | Rank | Action | Why high leverage | Not this instead |
+   | --- | --- | --- | --- |
+   | **1** | **Stop the reader computing across tiers** ( #form-fidelity-ladder FE(8)–(9)): the depression / standing-water field refuses above the carve level, or carries its tier composition | The only thing between a person and an honest lake on screen. Measured: the uncarved prior holds **8.5×** the carved basin count, so a fine view's lakes are mostly undrained prior dimples — the speckle Joseph read off the screen. Everything else on this list is invisible until this is true | Not the settle; not a new paint |
+   | **1b** | **Ocean mask as one shared world object** — lift it out of `erosion::outlets` and retire the four independent thresholds (both paints, terminal globe reader, water-kernel initial fill) | Only the router's answer is connectivity-aware; the others are wrong in the way the router just stopped being. Joseph: crustal columns will want the same mask for plate work, so this is paid once and consumed many times | Not a second classification pass inside each consumer |
+   | **1c** | **Flux half + spill/sill object** on same-level seams ( #form-same-level-halo-exchange FE(1)/(9)) — build shape unchanged from the 2026-07-29 dossier (spill/datum object first, sill graph not per-basin scalar, Bangerth-style keyable flux rounds after, witnessed read-sets from birth) | Now doubly motivated: it completes the seam repair *and* it is the object a cross-tile lake needs, since a basin straddling a seam is exactly what a tile-local domain cannot adjudicate ( #form-ocean-is-connectivity-not-elevation FE(4)) | Not more Jacobi diagnosis |
+   | **1d** | **Matched-ratio $d/(v\sigma)$ arms on `halo_exchange_probe`** (dossier §4.1) | One run; could upgrade FE(6)'s operating point from adopted to derived | Cheap; informs 1c rather than competing |
+   | **2** | **Explain the 30%** — why ocean connectivity moved 30.0% of L9 erosion payloads and 94% of the beacon, when the per-face distribution is *inversely* ordered against land fraction and lake count | A pre-registered miss by 3× with both candidate mechanisms refuted; an unexplained blast radius in the newest law is the thing most likely to be hiding a second defect | Not a third guess in prose |
+   | **3** | **Router adoption decision + one cheap land** — diagonal-kill + transmissivity under probes, or explicitly park Coatléven ( #obs-routing-curl-spiral FE(6)(c) priced) | FE(6c) is priced; another sweep without adopt/decline is low leverage. Transmissivity is also the live specimen for FE(10)'s sub-grid closure | Not the basin/lake spine |
+   | **4** | **One cold-stage stage-parallel carve** ( #form-erosion-at-a-cooling-stage ) | Target measured; design clear | Not chain-carried |
+   | **5** | **χ instrument path** — sediment budget + hillslope-off + post-fill G-sweep ( #obs-chi-shape-is-erosions-criterion ) | Rate half is a known continuous no-go | Does not unlock lakes any more |
+   | demote | Water settle *as a lake blocker*; demand spool; store-backed nav; panel-seam metric-freeze; ML surrogate; Caspian census (**answered** — the Caspian class exists now) | Superseded or lower multiplier | — |
+
+   **Superseded rank table (2026-07-29, earlier)** — kept for one revision only so a concurrent mind can see what moved:
 
    | Rank | Action | Why high leverage | Not this instead |
    | --- | --- | --- | --- |
@@ -61,6 +77,7 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
    | Region | State | Era note |
    | --- | --- | --- |
+   | **`erosion.rs::outlets` / `fill_depressions` / `query.rs::water_tile` / `globe.rs`** | **JUST RE-KEYED — ocean connectivity, 2026-07-29 late evening** | The sea is now what the ocean reaches ( #form-ocean-is-connectivity-not-elevation ). `src=f0a6800a2f0d920e`, world git `e0300f43c`. **Every drainage-derived statistic measured before this cohort is suspect**: 30.0% of L9 erosion payloads and 94% of the beacon moved, and which ones is not predicted by any geography anyone has yet found. Water tiles all moved (initial fill left the retired 4000 m datum). Standing water is a new reader field; the depression paint pulls it. Changelog `2026-07-29-04`. |
    | **`query.rs` / `erosion.rs` / builder (halo path)** | **Adopted, warm — keys completed 2026-07-29 (late)** | Exchange region now in the halo key; `water_tile` takes a `BedArticle` folded into the water key; `erosion_tile` pure (plain article only); store-preference is view-half only, deterministic. first-light rebuilt under `src=defc3c44` (world git `e67fbaeb9`); null-diff adjudicated 3936/3936 bit-identical (changelog `2026-07-29-02`). Water phase 12× faster with the roots scan out of the compute loop. `DECISIONS[compute-names-its-article-water-bed-and-exchange-region-into-the-key]`. |
    | **`water.rs`** | Wave **landed, still warm** | `77b1f5a` implicit friction; `de4c6c4` Jarrett static + $\theta$ relabel; wrap `12f7758`. Froude-threshold result re-verified post-fix and sealed (`2f22edf`). Still pre-fix / not re-run: §5 cap-off sweep ("stable through Fr 2.43"). |
    | **`measure.rs::cell_solid_angle`** | Just re-keyed | `72ca39a` VOS difference-form; area-consuming stats changed era 2026-07-29. |
