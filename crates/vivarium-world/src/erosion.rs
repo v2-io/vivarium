@@ -2843,6 +2843,53 @@ impl ErodedRegion {
 
     /// Sampled surface (m above bedrock datum) for `cell`, if it lies within the
     /// region (and on the same face, at a level ≥ the region's).
+    /// The index into [`Self::h`] of the carved cell containing `cell` — no
+    /// interpolation, no detail increment. `None` when this region does not
+    /// cover it.
+    ///
+    /// This is the accessor for reading a **field the kernel actually produced**
+    /// at the level it ran, and it exists because [`Self::surface_m`] cannot be
+    /// that accessor: `surface_m` returns `base + detail`, bilinear over the carve
+    /// plus the *fine prior minus coarse prior* increment, so every caller
+    /// inheriting it inherits a surface no rung computed
+    /// ( #form-fidelity-ladder FE(7)–(9)). Consumers that need a picture want
+    /// `surface_m`; consumers computing a derived physical quantity want this.
+    pub fn carved_index(&self, cell: CellId) -> Option<usize> {
+        let (gx, gy) = self.grid_pos(cell)?;
+        let (x, y) = ((gx.round() as usize).min(self.nx - 1), (gy.round() as usize).min(self.nx - 1));
+        Some(y * self.nx + x)
+    }
+
+    /// The carved surface at `cell` with **no** interpolation and **no** detail
+    /// increment — the stored height of the cell that answers for it.
+    pub fn carved_surface_m(&self, cell: CellId) -> Option<f64> {
+        Some(self.h[self.carved_index(cell)?] as f64)
+    }
+
+    /// **Standing water over this region, at this region's own level** — the wet
+    /// limit ( #obs-connectivity-fills-the-basins-the-threshold-drained ), read
+    /// on the bed the kernel produced rather than on any assembled or detailed
+    /// surface. Row-major `nx × nx`, aligned with [`Self::h`] and indexable by
+    /// [`Self::carved_index`].
+    ///
+    /// **The domain is the region, which is the honest unit.** A reader that
+    /// re-derives this per *drawn tile* imposes a boundary the carve never had and
+    /// manufactures seam pits at every tile rim ( #obs-tile-outlets-grade-away-the-basins );
+    /// a region is wider, so fewer basins are cut by its edge and the enclosure
+    /// test behind the ocean mask is correspondingly more honest
+    /// ( #form-ocean-is-connectivity-not-elevation FE(4)).
+    ///
+    /// The boundary contract is the one geometry infers for this region — the same
+    /// one its own carve ran under — because reading a bed under a contract it was
+    /// not made under reports water standing on ground that was graded assuming an
+    /// outlet elsewhere. Regions carved with halo exchange had live neighbours that
+    /// this reader does not, which is a known and unmeasured understatement at
+    /// region rims.
+    pub fn standing_water(&self) -> Vec<f32> {
+        let mut f = Fluvial::from_region(self);
+        f.drainage_surface().standing_water
+    }
+
     pub fn surface_m(&self, cell: CellId) -> Option<f64> {
         let (gx, gy) = self.grid_pos(cell)?;
         let level = cell.to_face_ij().3;

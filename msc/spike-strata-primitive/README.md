@@ -9,7 +9,7 @@ Joseph's question, verbatim:
 ## What this spike found, in six lines
 
 1. **The column-as-primitive question is already decided in canon** and the code went three other ways; the claim is not the gap. ( #form-column-control-volume FE(1)/(5).)
-2. **The ordering question has an authoritative answer too** — a closed water cycle and basic weather gate at phase **3**, before erosion at phase **4** — and *what let the build invert it* is measurable: of phase 3's four gate charges, one has an instrument that can fail; both of phase 4's built gates have one. The `closed-water-cycle` predicate tests an algebraic identity and **cannot fail**.
+2. **The ordering question has an authoritative answer too** — a closed water cycle and basic weather gate at phase **3**, before erosion at phase **4** — and *what let the build invert it* is measurable: of phase 3's four gate charges, one has an instrument that can fail; both of phase 4's built gates have one. The `closed-water-cycle` predicate tests an algebraic identity, so on the path its test exercises no world can fail it.
 3. **Under Joseph's own reduce-back-on-pull test, every vertical representation scores (a), a workaround** — including the solid strata, because the pull *fabricates* its content (a hardcoded $2\ \mathrm{m}$ of soil) from a scalar height. No pull can invert a lossy projection.
 4. **Nine separately-named open rungs are one missing object**, and seven declared phase `|record`s are unkeepable without it.
 5. **The fidelity-ladder clause landed tonight convicts the present arrangement**, not just the unbuilt cases it names — the strata, not the water, are the read-time field.
@@ -45,7 +45,9 @@ So a closed water cycle and basic weather dynamics gate **before** the erosion p
 
 **Of phase 3's four gate charges, one has an instrument that can fail. Both of phase 4's built gates have one.** The build did not defy the declared order so much as follow the instrumented one — which is #norm-declaration-must-convict as a measurement rather than a maxim, and FORMAT's second open question ("a declaration which cannot fail a build is a wish") with a number attached.
 
-**And the water-cycle predicate is worth stating precisely, because it is weaker than "weaker than its promise."** The charge prose says *"Water cycle, closed."* The promise prose says *"A closed, conserved water cycle with its energy-gradient channels."* The predicate says *"global water mass is conserved — nothing pulled from nothing, nothing drained into nothing."* And in `hydrosphere.rs` that conservation is an **algebraic identity**: `ocean_km3 = total_km3 - atmosphere_km3`, with the residual documented as *"Exactly 0 by construction."* So the predicate is not merely narrower than the promise — **as implemented it cannot fail**, and a partition with zero flux between reservoirs satisfies it perfectly. A conserved inventory is not a closed cycle, and the gate reads satisfied while no water moves.
+**And the water-cycle predicate is worth stating precisely, because it is weaker than "weaker than its promise."** The charge prose says *"Water cycle, closed."* The promise prose says *"A closed, conserved water cycle with its energy-gradient channels."* The predicate says *"global water mass is conserved — nothing pulled from nothing, nothing drained into nothing."* And in `hydrosphere.rs` that conservation is an **algebraic identity**. `Hydrosphere::of` sets `atmosphere_km3 = total × ATMOSPHERE_FRACTION` and then `ocean_km3 = total − atmosphere_km3`, with the source comment saying *"conservation by construction"*; `conservation_residual_km3` returns `total − (ocean + atmosphere)`, documented as *"Exactly 0 by construction."*
+
+Being precise about the scope, since "cannot fail" is the kind of claim that should not be loose: on the construction path the test exercises, the residual is zero by algebra and **no world can make it fail**. The one input that could is a corrupted `from_bytes` deserialization — so the predicate is a store-integrity check wearing a physics predicate's name. A partition with **zero flux between reservoirs** satisfies it perfectly. A conserved inventory is not a closed cycle, and the gate reads satisfied while no water moves.
 
 I want to be careful about the register here, because there is a more dramatic version of this finding that is false. **The cycle is closed by assumption, not unclosed.** `climate.rs` sets precipitation equal to evaporation at steady state, drawn from a conserved stock, and says so honestly. What is absent is the *dynamics*, not the *budget*. The defect is in the gate's instrument, not in anyone's diligence — and generalized: **any charge whose predicate under-tests its prose will let a later phase build on it, silently, and `crate::audit` cannot see the difference** because an unkept promise with no predicate is indistinguishable from a gloss.
 
@@ -59,7 +61,11 @@ Joseph supplied the criterion mid-spike, and it is a better instrument than the 
 
 > *"Honestly every time I hear about work being done that doesn't assume the column as the primitive makes me think 'either this is a temporary hack' or 'they know what they're doing-- this is for algorithmic efficiency, and it reduces back to columns on pull/request...'"*
 
-Two categories: **(a)** a workaround, or **(b)** a deliberate representation change for efficiency that **reduces back to columns on pull**. Scored honestly, **every vertical representation in the tree is (a)** — including the solid strata, which I expected to score (b) and which had been read as (b) before I checked the constructor.
+Two categories: **(a)** a workaround, or **(b)** a deliberate representation change for efficiency that **reduces back to columns on pull**. I first scored the solid strata (b), then (a) after reading the constructor. The census file settles it as **neither**, and its phrasing is better than mine:
+
+> It does not reduce back to columns on pull, because there is nothing to reduce: no kernel state is projected into it. It synthesizes. That is a third thing, and it is the thing to say plainly.
+
+That is the correct call and I am adopting it. A hack *stands in* for something real; this invents. So Joseph's two-way test needs a third branch for what is actually there, and naming it is more useful than forcing it into (a) — because the repair for a hack is to replace it, whereas the repair for a synthesis is to give the thing it pretends to summarize somewhere to live.
 
 **Why the solid case fails, and it is the load-bearing argument in this spike.** There *is* a pull path: `erosion::column_at(seed, cell, regions)` returns a `column::Column`, which looks exactly like (b). Following it through is what settles the question:
 
@@ -88,12 +94,20 @@ That also means the two findings are complementary rather than competing: water 
 
 | layer | verdict | why |
 |---|---|---|
-| solid strata | **(a)** | pull path exists and fabricates its content — constant $2\ \mathrm{m}$ soil, one undifferentiated bedrock category, no erosion history |
-| standing water | **(a)** | the field exists (`Column::water_depth`) and the hydrology writes its answer elsewhere; and being a **scalar**, it could not carry layering even if used |
-| pore water | **(a)** | `Stratum::saturation` exists per layer, set by a two-constant threshold at construction, and no kernel reads or updates it |
+| solid strata | **synthesized** | the pull fabricates content — constant $2\ \mathrm{m}$ soil, one undifferentiated bedrock category, no erosion history. Measured: two strata, `Undifferentiated(Igneous)` of $2348.135\ \mathrm{m}$ and `Soil` of exactly $2.000\ \mathrm{m}$ |
+| standing water | **(a)** | the field exists and the hydrology writes its answer elsewhere; and being a **scalar**, it could not carry layering even if used |
+| pore water | **(a)** | `Stratum::saturation` is written at `gen.rs:48` and read by nothing tree-wide; the real pore water is `WaterSim::groundwater`, and the two never meet |
 | air | absent | `MaterialId::Void`, carrying air's density under a name meaning *absence* |
 
-**And the threshold count is five, not four.** The retired elevation law — the one #form-ocean-is-connectivity-not-elevation replaced tonight — is *also* how `gen::column_from_surface_at_sea` sets `water_depth`. So it survives inside the column constructor itself, which is the one place a reader would most reasonably trust. The four known sites (both explorer paints, the terminal globe reader, the water kernel's initial fill) plus this one is five, against one connectivity-aware answer in the router. The independently-measured census in `census-vertical-state.md` should be preferred over my count.
+**And the census gives the divergence its scale.** For one horizontal cell in the live default world the crate can produce **eight different values for the solid surface height** and **nine for how much water stands here**, against **five simultaneous values of sea level** (spreads of $3.9$, $108.4$, $1214.7$ and $2214.7\ \mathrm{m}$). Durable, per cell, is **five f32** — one each from `initial-topography`, `uplift-tile`, `climate`, `erosion-tile`, `water-tile`. Verified by direct scan of 116 955 store root files: **no root kind's payload is a column, and none carries more than one number per cell.**
+
+**A concrete bug found inside the constructor, currently harmless.** `gen::column_from_surface` (`gen.rs:28-35`) computes its waterline as `derived_sea_level_m(0)` — **seed 0, hardcoded, with no seed parameter to lose it from** — while `erosion::column_at` hands it a seed-dependent surface. Measured on this world the resulting water depth is **$108.388\ \mathrm{m}$ shallower** than the world's own datum gives. It harms nothing today only because `column_at` has zero call sites. If a strata primitive is built from this constructor, that goes first.
+
+**And the threshold count is five, not four — confirmed independently.** The retired elevation law that #form-ocean-is-connectivity-not-elevation replaced is *also* how `gen::column_from_surface_at_sea` sets `water_depth`, so it survives inside the column constructor, which is the one place a reader would most reasonably trust. I found it by following one call path; the census reached five by reading every site (`globe.rs:169`, `paint.rs:302`, `paint.rs:310/345/358`, `water.rs:334`+`:920`, `gen.rs:48/51`) against one connectivity-aware answer at `erosion.rs:774-807`. That is one more than the segment's Working Note records.
+
+**The *submerged* classification — legitimately a threshold — is re-derived at eight further sites** in six near-identical whole-sphere sample loops (`sea_level.rs:217/244/356/394/428`, `erosion_return.rs:182/218/302`), five of which differ only in which surface function they call and which of the two sea values they compare against.
+
+**And the pattern has a second measured instance that is not the ocean mask at all.** `erosion_return` classifies a cell subaerial-versus-submarine from a **hardcoded level 8** (`erosion_return.rs:63`, used at `:101`, `:181`, `:217`) regardless of the cell's actual level, while a reader at level $L$ classifies the same cell with level-$L$ bathymetry. Measured over $55\,296$ cells per level: at level 9 the two agree **to the bit** (bathymetry's octaves saturate there); at level 13 they disagree on **1.02%** of the sphere with a mean surface gap of $105.6\ \mathrm{m}$ and a worst of $1247.8\ \mathrm{m}$; at level 19, **1.06%** and $1283.4\ \mathrm{m}$. So about one percent of the world is a cell the rock-mass ledger erodes or deposits on the opposite verdict from the one a finer reader reaches. Whether the level-8 pin is deliberate pour-grain law or an oversight is *not* settled — `erosion_return.rs`'s module doc calls the ledger a pour-grain article, which reads as deliberate, but nothing states what a finer reader should then do.
 
 **The scalar-versus-strata distinction for fluids is a separate question from primitivity, and it may be the actual crux of Joseph's bracket** — note his plural, *"water layer(s)"*. A scalar `water_depth` cannot express a stratified ocean, a brine layer, ice over water, or a thermocline, no matter who reads it. So there are two independent findings here that a single "make the column primitive" framing would blur: *water is bypassed* (a wiring fact) and *water could not carry layers anyway* (a type fact). The second is the one his plural is pointing at.
 
@@ -149,6 +163,22 @@ The resolution, and I think it is the load-bearing design point:
 Run-length strata make the vertical ladder free in a way a fixed-$N$ layer scheme does not. A dry column is one entry. A one-layer mixed-layer ocean is one entry. A single-layer atmosphere with mass is one entry. Refinement adds entries **at build time, when a rung runs**, and the rung's layer count enters the key — which is what #form-complete-content-addressed-key already demands and what makes the causal-closure argument in #form-fidelity-ladder go through on the vertical axis as it does on the frequency axis. `Vec<Stratum>` was chosen for the solid; its ladder-freeness is general, and it is the property that makes the extension legal rather than a fresh instance of the defect.
 
 The sharp near-term consequence, which cuts against the obvious enthusiastic move: **the work is not to add layers.** It is to make the layers that already exist singly *be strata*. One water stratum in place of a `water_depth` scalar buys nothing on its own — and that is the point, because it is a change with no dynamics attached and therefore no ladder violation available, while being the change that makes every later composition legal.
+
+## The strongest form of the case is the one I had backwards
+
+I argued above that a column-shaped world *reaches* things the current one cannot. That is true and it is the weaker half. The census measured the other half, and it inverts my premise:
+
+| struct | per-cell state arrays it holds | how many reach the store |
+|---|---|---|
+| `WaterSim` | `bed`, `depth`, `sediment`, `groundwater`, `sed_bed`, `bed_res`, `colmation`, `armor` — **eight** | **one** (`depth`) |
+| `Fluvial` | `h`, `drainage`, `cell_area`, `centers`, `uplift_rate`, `precip_weight` — **six** | **one** (`h`) |
+| `DrainageSurface` | `mfd`, `d8`, `recv`, `filled_h`, `fill_depth`, `standing_water` — **six** | **none**; recomputed per call |
+
+So the sub-surface state a stratified column would carry — pore water, sealing, armour, alluvium, suspended load — **already exists at kernel time.** It has nowhere durable to go because the store's vocabulary is one scalar per field per cell. `colmation`'s own doc says it is *"PERSISTENT — a sealed bed stays sealed between storms"*, and it is discarded when the tile is memoized.
+
+**That changes what the proposal is.** A stratified column primitive is not adding structure the kernels lack; it is giving state that already exists a shared home and a key. Re-homing is a much cheaper claim to defend than inventing, and it means the FE(6) demolition-date discipline applies in the *favourable* direction: two of the fields it would absorb (`armor`, `colmation`) are already declared scaffolding awaiting exactly this.
+
+It also supplies the missing piece of my ladder argument. I claimed run-length strata make the vertical ladder free; the sharper statement is that **the kernels are already running at a fidelity the store cannot express**, so the first strata do not introduce a band no rung ran — they record a band that ran and was thrown away. That is the opposite of the FE(11) defect rather than a new instance of it.
 
 ## What a column-shaped world gets that the current one cannot reach
 
@@ -257,9 +287,19 @@ This is the one place I would coin rather than extend, and it is a small coinage
 
 Joseph's `unknown/undefined` is doing real work here. A column that bottoms out in a *declared unknown* is honest; one that bottoms out at an undeclared datum reads as a claim that the world ends there. And the same argument that makes the horizontal contract the flux web's business rather than kernel privacy applies verbatim: the vertical ends are coupling surfaces — the top to the atmosphere, the bottom to the mantle — and #form-isostasy-column's chain already crosses the bottom one without naming it.
 
+## Two findings from the census that outrank this spike
+
+Both are incidental to the question and neither is mine to adjudicate. Raising them because a strata primitive built on these beds would inherit the first, and because the second explains a standing puzzle.
+
+**The committed store holds NaN heights.** Measured by direct payload scan: **83 of 3552 current-cohort `erosion-tile` roots contain NaN**, $55\,391$ cells of $14\,548\,992$ stored (0.38%), across 11 distinct tile origins, worst tile 87.9% NaN. The NaN fraction against epochs at that origin runs $7.5, 15.7, 28.7, 46.8, 10.7, 11.0, 11.5, 87.9$ — it grows, partly resets, then blows up, so it is not simple monotone propagation and the census does not explain the pattern. **Two clamps make it silent rather than loud:** `WaterSim::new_at_sea`'s `(sea - b).max(0.0)` returns the non-NaN operand, so a NaN bed becomes $0\ \mathrm{m}$ of water — dry land, without warning; and `globe.rs`'s `unwrap_or(sea)` guards an out-of-range index rather than a NaN value, so NaN reaches `elev < sea`, compares false, and paints as land. This is #norm-probes-before-claims territory and wants its own probe.
+
+**`Coverage` cannot see the built water.** It reports `watered_tiles=0` while **384** current-cohort water roots sit in the store, because it keys at the deepest *surface* level (13 on this world) and every water tile is at level 9. That is the mechanism under `vivarium-explore/src/water.rs`'s standing note that the water field has never been rendered: the census feeding the view reports the field as absent.
+
+**One stale doc, cheap to fix:** `DrainageSurface::standing_water`'s comment still says `Fluvial::outlets` classifies sea by elevation threshold — it became connectivity-aware at `erosion.rs:751-807`, so the paragraph now describes a repaired defect.
+
 ## Two smaller gaps, both cheap and both mechanical
 
-**The dictionary does not define the primitive.** There is no `LEXICON.udon` entry for *column* or for *stratum* (measured in the sibling survey). `CLAUDE.md` routes "term meanings" to the LEXICON and #form-column-control-volume FE(4) turns on the difference between a point sample, a cell average and a band-limited reading — so a term that two different structs claim, that four segments turn on, and whose reading semantics are an open fork has no dictionary home. Coining the entry is small and would give the name one place to be pinned.
+**The dictionary does not define the primitive.** There is no `LEXICON.udon` entry for *column* or for *stratum* (measured in the sibling survey). `CLAUDE.md` routes "term meanings" to the LEXICON and #form-column-control-volume FE(4) turns on the difference between a point sample, a cell average and a band-limited reading — so a term that two different structs claim, that **12 segments cite by slug and 37 of 109 mention by name** (measured), and whose reading semantics are an open fork, has no dictionary home. Coining the entry is small and would give the name one place to be pinned.
 
 **The sea-level datum travels outside the flux web.** The sibling survey found it arriving as an *assumption* string on `water-tile` with no keeper on the ordinum promise — and this is where the tide deferral has been charged all along, silently. It also sits next to the known-stale declaration that `9dd86ab` deliberately named rather than guessed at, so the two are one repair with one `SRC_HASH` move.
 

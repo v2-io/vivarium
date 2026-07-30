@@ -341,9 +341,26 @@ pub fn spawn(
             let (mut dep_cells_total, mut dep_capacity_total, mut dep_deepest_total) =
                 (0usize, 0.0f64, 0.0f32);
 
+            // **Standing water is computed at the level that RAN, once per region.**
+            // Not per drawn unit: a reader over the drawn surface computes a
+            // derived physical quantity on a surface no rung produced — bilinear
+            // over the carve plus the prior's detail increment — and the answer is
+            // then mostly undrained prior dimples rather than basins (measured 8.5×
+            // on `examples/lake_surface_probe`; #form-fidelity-ladder FE(7)–(9)).
+            // Sampling the region's own field down to the view is a *view of the
+            // rendered physics*; recomputing on the drawn surface is a second
+            // physics. The region is also the wider domain, so fewer basins are cut
+            // by its rim than by a tile's ( #obs-tile-outlets-grade-away-the-basins ).
+            let region_lakes: Vec<Vec<f32>> = if req.paint.needs_depression() {
+                regions.iter().map(|r| r.standing_water()).collect()
+            } else {
+                Vec::new()
+            };
+
             let faces: Vec<FaceMesh> = std::thread::scope(|s| {
                 let (world, regions, cov, water, cache, ghost, units) =
                     (&world, &regions, &frame_cov, &water, &stage_cache, &ghost, &units);
+                let region_lakes = &region_lakes;
                 let handles: Vec<_> = units
                     .iter()
                     .map(|&unit| {
@@ -454,35 +471,49 @@ pub fn spawn(
                             // the window no outlet at all when there is no coast in
                             // it — and the HUD says which one is up.
                             let depression: Vec<f32> = if req.paint.needs_depression() {
-                                let region = vivarium_world::erosion::ErodedRegion {
-                                    face,
-                                    level,
-                                    oi,
-                                    oj,
-                                    nx,
-                                    h: tile.clone(),
-                                    seed,
-                                };
-                                let mut f = vivarium_world::erosion::Fluvial::from_region(&region);
-                                f.set_edge_contract(
-                                    vivarium_world::erosion::EdgeContract::NoFluxWall,
-                                );
-                                let ds = f.drainage_surface();
-                                dep_cells = ds.stats.depression_cells;
-                                dep_capacity_m3 = ds.stats.depression_volume_m3;
-                                dep_deepest_m = ds.stats.deepest_depression_m;
-                                // `standing_water`, not `fill_depth`: the physical
-                                // spill-level depth with the flat-orienting ε
-                                // excluded — which is the quantity this mode's own
-                                // description names ("filled to its spill point").
-                                // The two differ by ~0.02 m at tile scale, below
-                                // this paint's own 1 m floor, so nothing on screen
-                                // moves; what changes is that the field is now
-                                // level across a body (bit-identical spill float)
-                                // and reports nothing on flats that hold nothing —
-                                // 4418 of 9216 cells of manufactured wetness on the
-                                // probe's flat control ( `examples/lake_surface_probe` ).
-                                ds.standing_water
+                                // Sample each region's own standing-water field.
+                                // Regions are ordered coarse → fine by contract, so
+                                // finest-first here mirrors `erosion::surface_at`.
+                                // A drawn cell no region covers gets ZERO rather than
+                                // a value read off the prior — that refusal is the
+                                // point, and its size is already on the HUD as the
+                                // prior-fallback fraction, which counts exactly these
+                                // cells.
+                                let radius = vivarium_world::planet::Planet::EARTH.radius_m;
+                                let mut out = vec![0.0f32; nx * nx];
+                                for j in 0..nx {
+                                    for i in 0..nx {
+                                        let (gi, gj) = g(i as u32, j as u32);
+                                        let cell = CellId::from_face_ij(face, gi, gj, level);
+                                        for (ri, r) in regions.iter().enumerate().rev() {
+                                            let Some(k) = r.carved_index(cell) else { continue };
+                                            let d = region_lakes[ri][k];
+                                            out[j * nx + i] = d;
+                                            // Stats over the DRAWN cells, so depth is
+                                            // piecewise-constant at carve resolution
+                                            // and the volume is that step function's
+                                            // integral — not a finer measurement than
+                                            // the carve supports.
+                                            if d > 1.0 {
+                                                dep_cells += 1;
+                                                dep_capacity_m3 += d as f64
+                                                    * vivarium_world::measure::cell_area_m2(
+                                                        face, gi as u64, gj as u64, level, radius,
+                                                    );
+                                                dep_deepest_m = dep_deepest_m.max(d);
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                                // The field is `standing_water`, not `fill_depth`:
+                                // the physical spill-level depth with the
+                                // flat-orienting ε excluded, which is the quantity
+                                // this mode's own description names ("filled to its
+                                // spill point"). The raise reports 4418 of 9216
+                                // cells wet on a flat that holds nothing
+                                // (`examples/lake_surface_probe` B).
+                                out
                             } else {
                                 Vec::new()
                             };

@@ -303,6 +303,56 @@ fn main() {
     }
 
     println!();
+    println!("== F. what the READER's domain choice costs, at a view finer than the carve ==");
+    // The fix this probe convicts. A view drawing L+1 over an L carve gets its
+    // surface from `ErodedRegion::surface_m`, which returns bilinear-over-carve
+    // PLUS the prior's detail increment. Computing standing water on THAT is
+    // computing on a surface no rung produced. Sampling the region's own field
+    // down to the view instead is a view of the rendered physics.
+    //
+    // Both columns below describe the same geography at the same view level. The
+    // difference is entirely which surface the reader ran on.
+    {
+        let (face, oi, oj) = (Face::XPos, 6512u32, 1552u32);
+        let mut carved = Fluvial::from_prior(SEED, face, LEVEL, oi, oj, NX);
+        carved.erode(&FluvialParams { epochs: 60, ..Default::default() });
+        let region = carved.to_region();
+        let region_lake = region.standing_water();
+
+        // The view: one level finer, same footprint.
+        let vlevel = LEVEL + 1;
+        let vnx = NX * 2;
+        let (voi, voj) = (oi * 2, oj * 2);
+
+        // (b) OLD reader — build the drawn surface the way a view does, then run
+        // the fill on it.
+        let mut drawn = Fluvial::from_surface(SEED, face, vlevel, voi, voj, vnx, |c| {
+            region.surface_m(c).unwrap_or_else(|| gen::initial_topography_m(SEED, c, vlevel))
+        });
+        let drawn_bed = drawn.h.clone();
+        let drawn_area = drawn.cell_area.clone();
+        let ds_drawn = drawn.drainage_surface();
+
+        // (c) NEW reader — sample the region's own field at its own level.
+        let mut sampled = vec![0.0f32; vnx * vnx];
+        let mut unanswered = 0usize;
+        for j in 0..vnx {
+            for i in 0..vnx {
+                let c = CellId::from_face_ij(face, voi + i as u32, voj + j as u32, vlevel);
+                match region.carved_index(c) {
+                    Some(k) => sampled[j * vnx + i] = region_lake[k],
+                    None => unanswered += 1,
+                }
+            }
+        }
+
+        println!("  view L{vlevel} over an L{LEVEL} carve, {vnx}² cells ({unanswered} uncovered by the region)");
+        report("(b) OLD: on drawn surface", &drawn_bed, &ds_drawn.standing_water, &drawn_area, vnx);
+        report("(c) NEW: sampled at carve", &drawn_bed, &sampled, &drawn_area, vnx);
+        println!("      the (b) bodies are pits in re-added prior detail; (c) can only report basins a kernel carved");
+    }
+
+    println!();
     println!("== E. the planet, per whole cube face at L8 — what standing water exists ==");
     // A whole face infers `NoFluxWall`, so the only outlets are cells the ocean
     // actually reaches. This is the domain that adjudicates real basins: a window
