@@ -3038,36 +3038,57 @@ impl ErodedRegion {
 
     /// Does this region cover `cell` (same face, level ≥ region's, inside bounds)?
     /// The cheap bounds-only check — the fidelity-debug overlay's query.
+    ///
+    /// **Half-open tile ownership** `[oi, oi+nx) × [oj, oj+nx)` in region-level
+    /// face cells. The old bilinear guard `gx ≤ nx-2` left the last row/column
+    /// of every 64-tile **and** the shared boundary with the next tile
+    /// uncovered, so `surface_at_carved` fell through to the prior on a
+    /// **planet-wide lattice** (every 64 cells) — fine prior strips mixed with
+    /// coarser carve interiors, at every zoom, not a beacon fan (Joseph
+    /// 2026-07-31). Bilinear still clamps at the edge; coverage does not lie.
     pub fn covers(&self, cell: CellId) -> bool {
-        self.grid_pos(cell).is_some()
+        self.local_xy(cell).is_some()
     }
 
-    /// Cell centre in region-grid coords, if covered (the shared bounds logic).
-    fn grid_pos(&self, cell: CellId) -> Option<(f64, f64)> {
+    /// Cell centre in continuous local coords for bilinear, if this region owns
+    /// the cell under half-open tile bounds.
+    fn local_xy(&self, cell: CellId) -> Option<(f64, f64)> {
         let (face, i, j, level) = cell.to_face_ij();
         if face != self.face || level < self.level {
             return None;
         }
         let scale = (1u64 << (level - self.level)) as f64;
-        let gx = (i as f64 + 0.5) / scale - self.oi as f64 - 0.5;
-        let gy = (j as f64 + 0.5) / scale - self.oj as f64 - 0.5;
-        if gx < 0.0 || gy < 0.0 || gx > (self.nx - 2) as f64 || gy > (self.nx - 2) as f64 {
+        // Face position in region-level continuous coordinates (cell centres).
+        let fx = (i as f64 + 0.5) / scale;
+        let fy = (j as f64 + 0.5) / scale;
+        let oi = self.oi as f64;
+        let oj = self.oj as f64;
+        let n = self.nx as f64;
+        // Half-open [oi, oi+nx) × [oj, oj+nx). Adjacent tiles share no gap.
+        if fx < oi || fy < oj || fx >= oi + n || fy >= oj + n {
             return None;
         }
-        Some((gx, gy))
+        // Local continuous coord with 0 at first cell centre of the tile.
+        Some((fx - oi - 0.5, fy - oj - 0.5))
     }
 
     /// Bilinear-only sample (no detail increment) — the LOW band, used as the
     /// pin target for fine-tier mean conservation.
     pub fn surface_bilinear_m(&self, cell: CellId) -> Option<f64> {
-        let (gx, gy) = self.grid_pos(cell)?;
+        let (gx, gy) = self.local_xy(cell)?;
+        let max = (self.nx - 1) as f64;
+        // Clamp into the last bilinear cell so edge-owned centres still sample.
+        let gx = gx.clamp(0.0, max - 1e-9);
+        let gy = gy.clamp(0.0, max - 1e-9);
         let (x0, y0) = (gx.floor() as usize, gy.floor() as usize);
         let (fx, fy) = (gx - x0 as f64, gy - y0 as f64);
+        let x1 = (x0 + 1).min(self.nx - 1);
+        let y1 = (y0 + 1).min(self.nx - 1);
         let at = |x: usize, y: usize| self.h[y * self.nx + x] as f64;
         Some(at(x0, y0) * (1.0 - fx) * (1.0 - fy)
-            + at(x0 + 1, y0) * fx * (1.0 - fy)
-            + at(x0, y0 + 1) * (1.0 - fx) * fy
-            + at(x0 + 1, y0 + 1) * fx * fy)
+            + at(x1, y0) * fx * (1.0 - fy)
+            + at(x0, y1) * (1.0 - fx) * fy
+            + at(x1, y1) * fx * fy)
     }
 
     /// Sampled surface (m above bedrock datum) for `cell`, if it lies within the
@@ -3084,8 +3105,11 @@ impl ErodedRegion {
     /// ( #form-fidelity-ladder FE(7)–(9)). Consumers that need a picture want
     /// `surface_m`; consumers computing a derived physical quantity want this.
     pub fn carved_index(&self, cell: CellId) -> Option<usize> {
-        let (gx, gy) = self.grid_pos(cell)?;
-        let (x, y) = ((gx.round() as usize).min(self.nx - 1), (gy.round() as usize).min(self.nx - 1));
+        let (gx, gy) = self.local_xy(cell)?;
+        let (x, y) = (
+            (gx.round() as usize).min(self.nx - 1),
+            (gy.round() as usize).min(self.nx - 1),
+        );
         Some(y * self.nx + x)
     }
 
@@ -3131,15 +3155,22 @@ impl ErodedRegion {
     }
 
     pub fn surface_m(&self, cell: CellId) -> Option<f64> {
-        let (gx, gy) = self.grid_pos(cell)?;
+        let (gx, gy) = self.local_xy(cell)?;
         let level = cell.to_face_ij().3;
+        let max = (self.nx - 1) as f64;
+        // Same edge clamp as surface_bilinear_m: half-open ownership covers the
+        // last row/column; bilinear still samples a valid cell pair.
+        let gx = gx.clamp(0.0, max - 1e-9);
+        let gy = gy.clamp(0.0, max - 1e-9);
         let (x0, y0) = (gx.floor() as usize, gy.floor() as usize);
         let (fx, fy) = (gx - x0 as f64, gy - y0 as f64);
+        let x1 = (x0 + 1).min(self.nx - 1);
+        let y1 = (y0 + 1).min(self.nx - 1);
         let at = |x: usize, y: usize| self.h[y * self.nx + x] as f64;
         let base = at(x0, y0) * (1.0 - fx) * (1.0 - fy)
-            + at(x0 + 1, y0) * fx * (1.0 - fy)
-            + at(x0, y0 + 1) * (1.0 - fx) * fy
-            + at(x0 + 1, y0 + 1) * fx * fy;
+            + at(x1, y0) * fx * (1.0 - fy)
+            + at(x0, y1) * (1.0 - fx) * fy
+            + at(x1, y1) * fx * fy;
         let detail = gen::initial_topography_m(self.seed, cell, level) - gen::initial_topography_m(self.seed, cell, self.level);
         Some(base + detail)
     }
