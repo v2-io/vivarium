@@ -53,11 +53,10 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
    | Rank | Action | Why high leverage | Not this instead |
    | --- | --- | --- | --- |
    | **1–5** | **P0–P4 instrument ladder** — **landed / P4 done-for-now 2026-07-31 night** (Joseph eyes) | Spot-check usable | Not reopening chrome |
-   | **6** | **Sill-graph object + Jacobi inject** — **landed 2026-07-31 night** (`sill_graph.rs` + `inject_region_sill_spill` + key `sill1`); lake re-measure still open | Non-local seam datum | Not flux-first |
-   | **7** | **Flux half** (after sill wire) | Trunk starvation / catchment | Not matched-ratio first |
-   | **8** | Matched-ratio + rebuild re-measure | Operating \((d,\sigma)\); structural quotes | — |
-   | **9** | Matched-ratio re-measure; rebuild cohort | Operating \((d,\sigma)\) | — |
-   | **10** | Phase-3 cycle predicate / router / χ / cold-stage — one at a time after 9 | — | Not all four |
+   | **6** | **Sill + flux Jacobi wire** — **landed 2026-07-31 night** (`sill1` + `flux1`); lake-sized FE(9) re-measure still open | Non-local datum + catchment | Not volume hierarchy |
+   | **7** | **Matched-ratio probe** — **run once** (within-ratio spreads 0.9–5.5 m; empirical only — not law) | Schedule science | Not operating-law promotion |
+   | **8** | **Rebuild under sill1+flux1** — in flight | Fresh cohort | — |
+   | **9** | Phase-3 / router / χ / cold-stage — one after rebuild eyes | — | Not all four |
    | demote | Water settle as lake blocker; Caspian (answered); demand spool; costume-green cycle; explorer polish not serving physics | — | — |
 
    **Sequence (2026-07-31 night).** P4 done-for-now → sill-graph (object ✓, wire next) → flux half → re-measure/rebuild → one world piece.

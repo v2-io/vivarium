@@ -9,11 +9,11 @@
 | # | Task | Status |
 |---|---|---|
 | 1 | Present-true stale segments (agent drift list) | **done** |
-| 2 | Wire sill-graph into Jacobi + real memo/key | **done** (inject + `sill1` key; lake re-measure still open) |
-| 3 | Flux-half record (per seam/stage, keyed) | pending |
-| 4 | Flux-half in carve loop | pending |
-| 5 | Matched-ratio re-measure (`halo_exchange_probe`) | pending |
-| 6 | Rebuild + re-measure under that stack | pending |
+| 2 | Wire sill-graph into Jacobi + real memo/key | **done** (`sill1`; lake re-measure still open) |
+| 3 | Flux-half record (per seam/stage, keyed) | **done** (`flux_record.rs`) |
+| 4 | Flux-half in carve loop | **done** (Jacobi inflow inject; `flux1`) |
+| 5 | Matched-ratio re-measure | **done** (`matched_ratio_probe`; empirical — not law) |
+| 6 | Rebuild + re-measure under that stack | **in progress** |
 
 ## Law anchors (do not invert)
 
@@ -34,3 +34,4 @@
 
 - **2026-07-31 night:** Goal set. P4 done-for-now. `sill_graph` object+FE(9) tests already landed (`b4caf10`). Present-true pass starts.
 - **2026-07-31 night:** Present-true committed. Jacobi sill inject: region extract → spill surface → `Fluvial::region_spill` between cadence chunks; halo key `sill1`. Next: flux half.
+- **2026-07-31 night:** Flux half wire (`flux_record` + Jacobi inject, key `flux1`). Matched-ratio probe: L13 span128 tile64 epochs40 — within-ratio spreads 0.88 / 3.02 / 5.53 m at d/σ 1.0 / 0.8 / 1.6; **not** promoting ratio to law. Rebuild under sill1+flux1 started.

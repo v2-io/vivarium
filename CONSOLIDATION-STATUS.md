@@ -39,7 +39,7 @@ World-law channel is in good order. **Instrument foundation P0–P4 done-for-now
 
 ### C. World pieces (after P4) — active
 
-1. **Sill-graph** — object + FE(9) tests **landed** (`sill_graph.rs`); **wire into Jacobi + memo** next → then flux half (+ matched-ratio arms)  
+1. **Sill + flux Jacobi wire** — **landed** (`sill1`/`flux1`); matched-ratio probe run (empirical); rebuild under stack in flight; lake re-measure residual  
 2. Re-measure; router adopt/park; column_at residual; cold-stage; χ path — one at a time after 1  
 
 
