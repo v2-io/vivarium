@@ -24,7 +24,8 @@
 use std::collections::{BTreeSet, HashMap};
 use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, Sender};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use vivarium_world::lithosphere;
 use vivarium_world::query::World;
@@ -256,16 +257,20 @@ pub fn spawn(
         let mut ladder = Ladder::read(&world, demanded_frames, view_frames);
         let stage_cache = StageSurfaceCache::default();
 
-        // Census state, refreshed when the root count moves (a builder running in
-        // another terminal). Landings are needed only for replay, and reading
-        // them is a directory walk, so they are read lazily and re-read when the
-        // census changes.
-        let mut roots = store.roots().unwrap_or_default();
+        // Census state, refreshed when the listing epoch moves (same-process put
+        // generation, or entry-count fingerprint for a builder in another
+        // terminal). `roots_shared` is hot: one body scan per epoch, not per
+        // pull (#disc-explorer-instrument-parity P0). Landings are replay-only
+        // and re-read when the census changes.
+        let mut roots = store.roots_shared().unwrap_or_else(|_| Arc::new(Vec::new()));
         let mut cov = Coverage::parse(&roots);
         let mut water = WaterField::load(&world, &cov);
         let mut landings: Vec<watch::Landing> = Vec::new();
         let mut chain = Chain::read(&roots, 0);
         crate::lens::read_residuals(&store, &roots, &mut chain);
+        // Full roots/ readdir is O(archive); only for live builder watch, not every pull.
+        let mut last_external_check = Instant::now();
+        const EXTERNAL_CENSUS_INTERVAL: Duration = Duration::from_secs(1);
 
         while let Ok(first) = rx.recv() {
             // **Latest request wins.** While a multi-second mesh builds, the UI
@@ -276,13 +281,15 @@ pub fn spawn(
             while let Ok(newer) = rx.try_recv() {
                 req = newer;
             }
-            let t0 = std::time::Instant::now();
+            let t0 = Instant::now();
 
-            // Re-read the census each frame: cheap next to a mesh build, and it
-            // is what makes live-watching work at all — an explorer open beside a
-            // running builder should show tiles arriving.
-            let now = store.roots().unwrap_or_default();
-            if now.len() != roots.len() {
+            if last_external_check.elapsed() >= EXTERNAL_CENSUS_INTERVAL {
+                let _ = store.roots_invalidate_if_external();
+                last_external_check = Instant::now();
+            }
+            // Generation-hot listing: Arc clone when warm; body scan only on epoch move.
+            let now = store.roots_shared().unwrap_or_else(|_| Arc::new(Vec::new()));
+            if !Arc::ptr_eq(&now, &roots) {
                 roots = now;
                 cov = Coverage::parse(&roots);
                 water = WaterField::load(&world, &cov);
@@ -335,7 +342,7 @@ pub fn spawn(
                     let c = Coverage::parse(&rs);
                     (rs, c)
                 }
-                _ => (roots.clone(), Coverage::parse(&roots)),
+                _ => (roots.as_ref().clone(), Coverage::parse(&roots)),
             };
 
             // **Key-side reject before decode.** Two filters, both free string

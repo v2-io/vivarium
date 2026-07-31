@@ -52,7 +52,7 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
    | Rank | Action | Why high leverage | Not this instead |
    | --- | --- | --- | --- |
-   | **1** | **P0 — Index is hot** — generation-backed `Store::roots` (counter on `put`; census/load share one scan per generation). Measured: ~10⁵ root files, full re-read multi-second, often **×2–3 per pull** | Without this, every “updating view…” pays O(archive) before any height sample. Memo store already holds values; the **index** was never hot. Not a second philosophy of caching — the missing half of `#form-store-as-save` under interactive load. Generation (not OS mtime) is the listing epoch | Not more LoD policy; not sill/flux yet |
+   | **1** | **P0 — Index is hot** — **landed 2026-07-31** (`Store::roots_shared` generation cache; external entry-count invalidate on 1 s throttle). First-light stopwatch: cold body scan ~2.2 s / 146k roots; warm hit ~ns. **Next attention: P1** | Without this, every “updating view…” paid O(archive) before any height sample. Residual: cold open still pays one full scan (acceptable once); external builder detect is throttled readdir not body parse | Not more LoD policy; not sill/flux yet |
    | **2** | **P1 — Pull thrash is boring** — after P0, settle request policy so steady camera does not chain multi-second updates; target ≪ 1 s for first-light L7 whole-globe present once index is warm | Joseph: framerate of *drawn* mesh is fine; the pain is endless multi-second updates of the wrong thing | Not a full quadtree |
    | **3** | **P2+P3 — Intent legible + open view usable** — HUD always WHOLE GLOBE vs CLOSE-IN WINDOW + carve/prior/mixed; prefer open at covering level **(b)** or instant honest prior + zoom-to-carve **(c)**; coarse overview product **(a)** only if needed (see parity segment) | Today open L7 is 100% prior while L9 carve sits in store — cannot spot-check fluvial without fighting the instrument | Not finishing every explorer-intent wishlist item |
    | **4** | **P4 — Spot-check gate** — declare parity when P0–P3 hold and physics can be inspected on first-light without thrash | The “we are at foundation” milestone | Not Abyssal completion |
@@ -81,9 +81,10 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
 7. **Dependency-tracking mechanism — first rungs built 2026-07-29 (late).** Witnessed read-sets + `Observatory` type split shipped. **Open:** wiring region-exchange interiors / stage ladders / epoch reductions; audit command that diffs read-sets across cohorts; full fold-or-check-into-key design. Rank **5** (sill + flux, post-P4) should land WITH witnesses from birth. Distinct from kernel-era probe registry (measurement drift vs key completeness).
 
-8. **Instrument / ops notes (revised 2026-07-31 evening).** Leverage for explore is **rank 1–4** above (P0–P4), not demoted polish.
-   - **Measured thrash (P0 evidence):** first-light `roots/` ~10⁵ files; full content re-read multi-second; pull path called `roots()` more than once per update. Prior L7 alone ~0.24 s — not the multi-second tax. GPU framerate of whatever *is* drawn is not the complaint.
-   - **Partial explore cuts already landed** (level filter, face-local R, tile ocean, altitude windows, latest-wins) — necessary, **not sufficient** for P0–P4.
+8. **Instrument / ops notes (revised 2026-07-31 late).** Leverage for explore is **rank 1–4** above (P0–P4), not demoted polish.
+   - **P0 landed:** generation-hot `roots_shared` + throttled external invalidate. Stopwatch first-light: cold ~2.2 s body parse; warm ~ns; external readdir ~65 ms. Pull uses shared Arc; no multi-second re-census per update.
+   - **P1 still open:** request policy / mesh path may still thrash for other reasons — re-measure “updating view…” after install.
+   - **Partial explore cuts already landed** (level filter, face-local R, tile ocean, altitude windows, latest-wins) + **P0 index**.
    - **World VCS + provenance:** commit store with changelog rebuilds; digests only from `bin/provenance`.
    - **Pending audit:** `audits/grok-final-overview-2026-07-28.md` still not fully `#ops-audit-integration`.
 

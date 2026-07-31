@@ -30,7 +30,8 @@
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 
 /// 64-bit FNV-1a. MVP-grade content hash (see the module note on collisions).
 fn fnv1a(bytes: &[u8]) -> u64 {
@@ -121,6 +122,17 @@ pub struct RootEntry {
     pub deps: Option<Vec<String>>,
 }
 
+/// Hot listing of [`Store::roots`] — generation for same-process puts, entry
+/// count for external writers (builder beside explore). Bodies are parsed once
+/// per epoch; see `#disc-explorer-instrument-parity` P0.
+struct RootsCache {
+    /// [`Store::generation`] at the time of the scan.
+    generation: u64,
+    /// Non-tmp files under `roots/` when scanned (cheap external-writer probe).
+    entry_count: usize,
+    entries: Arc<Vec<RootEntry>>,
+}
+
 /// A filesystem-backed content-addressed store.
 pub struct Store {
     objects: PathBuf,
@@ -132,6 +144,13 @@ pub struct Store {
     /// rather than a discipline. A view that displays this displays its own
     /// compliance.
     refused: AtomicUsize,
+    /// Bumped on every successful put on **this** handle. Index cache epoch for
+    /// same-process writers — not content-addressed truth (`#form-store-as-save`
+    /// still forbids OS mtime as key validity).
+    generation: AtomicU64,
+    /// Parsed root listing; shared across pull/census so thrash does not re-read
+    /// ~10⁵ root files per "updating view…".
+    roots_cache: Mutex<Option<RootsCache>>,
 }
 
 impl Store {
@@ -143,7 +162,14 @@ impl Store {
         let roots = dir.join("roots");
         fs::create_dir_all(&objects)?;
         fs::create_dir_all(&roots)?;
-        Ok(Store { objects, roots, read_only: false, refused: AtomicUsize::new(0) })
+        Ok(Store {
+            objects,
+            roots,
+            read_only: false,
+            refused: AtomicUsize::new(0),
+            generation: AtomicU64::new(0),
+            roots_cache: Mutex::new(None),
+        })
     }
 
     /// Open a store **as a view does**: reads served normally, every [`put_with`]
@@ -176,6 +202,8 @@ impl Store {
             roots: dir.join("roots"),
             read_only: true,
             refused: AtomicUsize::new(0),
+            generation: AtomicU64::new(0),
+            roots_cache: Mutex::new(None),
         })
     }
 
@@ -264,14 +292,99 @@ impl Store {
                 root.push_str(d);
             }
         }
-        write_atomic(&self.roots.join(hex(key.hash())), root.as_bytes())
+        write_atomic(&self.roots.join(hex(key.hash())), root.as_bytes())?;
+        // Listing epoch moves; drop cache so the next roots() rescans once.
+        self.generation.fetch_add(1, Ordering::Release);
+        if let Ok(mut guard) = self.roots_cache.lock() {
+            *guard = None;
+        }
+        Ok(())
+    }
+
+    /// Same-process put generation (for probes / HUD). Starts at 0; increments
+    /// after each successful [`put_with`] on this handle.
+    pub fn generation(&self) -> u64 {
+        self.generation.load(Ordering::Acquire)
     }
 
     /// Enumerate every root for the census instruments. Roots written before
     /// key-strings were recorded (format v1, pre-2026-07-10) appear with an
     /// empty key and should be counted as "unknown"; they are valid but not
     /// attributable. Missing third line ⇒ not provisional.
+    ///
+    /// Hot path: parses root files once per listing epoch (generation + entry
+    /// count). Callers that only need to iterate should prefer
+    /// [`roots_shared`] to avoid cloning ~10⁵ entries.
     pub fn roots(&self) -> io::Result<Vec<RootEntry>> {
+        Ok(self.roots_shared()?.as_ref().clone())
+    }
+
+    /// Shared root listing for interactive instruments — same epoch rules as
+    /// [`roots`], without cloning the full vector on every call.
+    ///
+    /// **Hot path is generation-only** (same-process puts). A full `roots/`
+    /// readdir every call is itself O(archive) and re-introduces thrash at ~10⁵
+    /// entries; external writers (builder beside explore) must call
+    /// [`roots_invalidate_if_external`] on a throttle, then this again.
+    pub fn roots_shared(&self) -> io::Result<Arc<Vec<RootEntry>>> {
+        let gen = self.generation.load(Ordering::Acquire);
+        {
+            let guard = self.roots_cache.lock().unwrap_or_else(|e| e.into_inner());
+            if let Some(cache) = guard.as_ref() {
+                if cache.generation == gen {
+                    return Ok(Arc::clone(&cache.entries));
+                }
+            }
+        }
+        let entries = Arc::new(self.scan_roots()?);
+        let gen_after = self.generation.load(Ordering::Acquire);
+        // Only publish if no put raced during the scan.
+        if gen_after == gen {
+            let entry_count = entries.len();
+            let mut guard = self.roots_cache.lock().unwrap_or_else(|e| e.into_inner());
+            *guard = Some(RootsCache {
+                generation: gen,
+                entry_count,
+                entries: Arc::clone(&entries),
+            });
+        }
+        Ok(entries)
+    }
+
+    /// Drop the hot listing if the number of root files no longer matches the
+    /// cached census (another process put). Returns `true` when the cache was
+    /// cleared. Cost is one `read_dir` of names — not body parse. Call on a
+    /// throttle from live-watch instruments, not every mesh pull.
+    pub fn roots_invalidate_if_external(&self) -> io::Result<bool> {
+        let count = self.roots_entry_count()?;
+        let mut guard = self.roots_cache.lock().unwrap_or_else(|e| e.into_inner());
+        match guard.as_ref() {
+            Some(cache) if cache.entry_count != count => {
+                *guard = None;
+                Ok(true)
+            }
+            Some(_) => Ok(false),
+            None => Ok(false),
+        }
+    }
+
+    /// Count non-tmp root files without reading bodies.
+    fn roots_entry_count(&self) -> io::Result<usize> {
+        if !self.roots.is_dir() {
+            return Ok(0);
+        }
+        let mut n = 0usize;
+        for entry in fs::read_dir(&self.roots)? {
+            let path = entry?.path();
+            if path.extension().is_some_and(|e| e == "tmp") {
+                continue;
+            }
+            n += 1;
+        }
+        Ok(n)
+    }
+
+    fn scan_roots(&self) -> io::Result<Vec<RootEntry>> {
         let mut out = Vec::new();
         if !self.roots.is_dir() {
             // A read-only handle on a world that was never built: no roots, not an
@@ -498,6 +611,57 @@ mod tests {
         s.put(&k2, b"tileB").unwrap();
         assert_eq!(s.get(&k1).as_deref(), Some(&b"tileA"[..]));
         assert_eq!(s.get(&k2).as_deref(), Some(&b"tileB"[..]));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn roots_listing_is_hot_within_a_generation() {
+        // P0: repeated census must not re-parse every root body. Shared Arc
+        // identity is the probe that the index stayed warm.
+        let dir = tmpdir("hot-roots");
+        let s = Store::open(&dir).unwrap();
+        for i in 0..32 {
+            s.put(&Key::new("probe", "v0").field("i", i), b"x").unwrap();
+        }
+        assert_eq!(s.generation(), 32);
+        let a = s.roots_shared().unwrap();
+        let b = s.roots_shared().unwrap();
+        assert!(Arc::ptr_eq(&a, &b), "second roots_shared must reuse the cached Arc");
+        assert_eq!(a.len(), 32);
+        s.put(&Key::new("probe", "v0").field("i", 99), b"y").unwrap();
+        assert_eq!(s.generation(), 33);
+        let c = s.roots_shared().unwrap();
+        assert!(!Arc::ptr_eq(&a, &c), "put must move the listing epoch");
+        assert_eq!(c.len(), 33);
+        let d = s.roots_shared().unwrap();
+        assert!(Arc::ptr_eq(&c, &d));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn roots_listing_invalidates_when_entry_count_moves_externally() {
+        // Builder in another process: same handle generation, more root files.
+        // Hot path stays generation-only; live-watch calls
+        // roots_invalidate_if_external on a throttle.
+        let dir = tmpdir("ext-roots");
+        let s = Store::open(&dir).unwrap();
+        s.put(&Key::new("a", "v0").field("i", 0), b"a").unwrap();
+        let first = s.roots_shared().unwrap();
+        assert_eq!(first.len(), 1);
+        {
+            let other = Store::open(&dir).unwrap();
+            other.put(&Key::new("b", "v0").field("i", 1), b"foreign").unwrap();
+        }
+        assert_eq!(s.generation(), 1, "foreign put must not bump this handle");
+        // Without the external probe, the hot path would keep serving the stale Arc.
+        assert!(
+            Arc::ptr_eq(&first, &s.roots_shared().unwrap()),
+            "generation-only path stays warm until external invalidate"
+        );
+        assert!(s.roots_invalidate_if_external().unwrap());
+        let second = s.roots_shared().unwrap();
+        assert_eq!(second.len(), 2);
+        assert!(!Arc::ptr_eq(&first, &second));
         let _ = fs::remove_dir_all(&dir);
     }
 }
