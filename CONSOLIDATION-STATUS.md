@@ -14,10 +14,10 @@ World-law channel is in good order. P0–P1 fixed thrash so the globe is **inspe
 
 ## What is true now (instrument)
 
-- **Landed:** generation-hot roots; no full-census clone per settle; region/prior caches; AlreadyCurrent; altitude windows; level filter; face-local R; tile ocean on assembled surface.
-- **Not true:** open L7 whole-globe shows the fluvial bed when carve is L9 / src stale — coverage law; rebuild or P3 policy.
-- **Not true:** close-in blue = world ocean — may be window-boundary flood (FE(4)/(5)).
-- **Not true:** closed water cycle kept — predicate strengthened; still specified/red until face ocean + non-identity checks.
+- **Landed:** generation-hot roots; thrash boring; face-domain ocean **sample** for paint (≤L9); P3 explore banner for fresh/stale; AlreadyCurrent; altitude windows.
+- **Not true yet:** open L7 shows fluvial bed while `src` stale / rebuild in flight — pure prior until fresh carve lands.
+- **Not true:** closed water cycle kept — honest red + feel needle.
+- **In flight:** `vivarium build` first-light under current binary (log `/tmp/vivarium-build-logs/first-light-rebuild.log`).
 
 ## Open work
 
