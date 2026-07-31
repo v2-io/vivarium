@@ -49,5 +49,5 @@ The declaration boxes exist because the 2026-07-13 audit found "the theory deman
 ## Working Notes
 
 - First candidate rows when the box lands: `EROSION` (edge = base-level sink on partial tiles; coast-only on full faces; and the full-face case is itself a **no-flux wall** at the cube seam, which is a third contract nobody has named — three contracts, all currently implicit in `Fluvial::outlets`), `WATER` (edge behaviour of the fill), `CLIMATE`/`UPLIFT` (pointwise — boundary-free, and saying so is the honest row).
-- **Keyed Halo adopted 2026-07-29.** Builder + view cohort use schedule keys; plain single-tile contracts remain probe-accessible. Flux half and spill scalar remain open. Chart-edge clamp named as FE(7).
+- **Keyed Halo adopted 2026-07-29.** Builder + view cohort use schedule keys; plain single-tile contracts remain probe-accessible. **Sill-graph library object landed 2026-07-31** (scalar exchange refuted — do not reintroduce a spill scalar); **sill production wire + flux half remain open**. Chart-edge clamp named as FE(7).
 - Sibling: the cohort question is the *store-side* twin (which world-history am I reading) of this *domain-side* question (which edge semantics am I computing under); both are "the audit is green while the answer is wrong" classes — map at #form-seam-families .
