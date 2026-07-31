@@ -8,7 +8,7 @@
 
 Tags as in 01: **`[VERIFIED 3/3]`** survived three adversarial passes · **`[CONTESTED nR/nK]`** mixed · **`[REFUTED]`** checked and killed, retained so it is not re-derived · **`[UNVOTED]`** extracted with a verbatim quote, never checked.
 
-Verbatim quotes and URLs: [`appendix/synthesis-practice-safety-critical.md`](appendix/synthesis-practice-safety-critical.md).
+Verbatim quotes and URLs: [`appendix/synthesis-practice-safety-critical.md`](appendix/synthesis-practice-safety-critical.md), which covers close to the full unverified pool for this run. The full raw pool (139 mined claims, 29 sources) is [`appendix/harvest/run2-practice-hud-telemetry-safety-critical.md`](appendix/harvest/run2-practice-hud-telemetry-safety-critical.md).
 
 ### One source-level warning that governs §1
 
@@ -90,9 +90,9 @@ The lesson is not "draw it instead of writing it." It is that **a graphic can in
 
 ## 3. Mode awareness
 
-**`[VERIFIED 3/3]`** The operational failure is a mode-indication failure, and the failing artifact is a status chip: in glass-cockpit flight decks a flight-mode transition is annunciated by the onset of a green outline box drawn around the alphanumeric mode indication on the primary flight display — **and pilots miss it.**
+**`[VERIFIED 3/3 — IDENTITY/ABSTRACT ONLY]`** The operational failure is a mode-indication failure, and the failing artifact is a status chip: in glass-cockpit flight decks a flight-mode transition is annunciated by the onset of a green outline box drawn around the alphanumeric mode indication on the primary flight display — **and pilots miss it.**
 
-*Nikolic, Orr & Sarter (2004). Publisher 403s; identity confirmed via Crossref, OpenAlex and Semantic Scholar independently by three verifiers. Body text was not read by anyone in this chain.*
+*Nikolic, Orr & Sarter (2004). Publisher 403s; identity confirmed via Crossref, OpenAlex and Semantic Scholar independently by three verifiers. Body text was not read by anyone in this chain.* **Tag corrected 2026-07-31** (external audit finding, mirrored from 01 §2.5): three passes verified identity/abstract, not the empirical claim against a read body — see 01 §2.5 for the full correction note.
 
 **`[UNVOTED]`, secondary-summary-derived — the primary was inaccessible.** Sarter & Woods (1995), 985 citations:
 

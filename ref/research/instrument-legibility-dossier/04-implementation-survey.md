@@ -18,13 +18,13 @@ The reason this document exists separately from 03: 03 carries mechanisms that s
 | `vivarium-explore` pins | `bevy = "0.18"` | read from `Cargo.toml` |
 | Resolves to | **0.18.1** — the only 0.18.x in the local registry cache | checked on disk |
 | 0.18.0 released | 2026-01-13 | `[VERIFIED 3/3]` |
-| 0.18.1 released | 2026-03-02 **or** 2026-03-04 — *the two synthesis passes disagree; unresolved, both dates appear in the corpus* | inconsistent |
-| 0.19.0 released | 2026-06-18 **or** 2026-06-19 — *same inconsistency* | inconsistent |
+| 0.18.1 released | **2026-03-04** | `[VERIFIED 3/3]` — closed 2026-07-31 |
+| 0.19.0 released | **2026-06-19** | `[VERIFIED 3/3]` — closed 2026-07-31 |
 | `docs.rs/bevy/latest/…` now serves | **0.19.0** — never cite `/latest` for a 0.18 fact | `[VERIFIED 3/3]` |
 | Text backend, 0.18 | cosmic-text | `[VERIFIED 3/3]` |
 | Text backend, 0.19 | **Parley** (wholesale replacement) | `[VERIFIED 3/3]` |
 
-The two date inconsistencies are minor and were not chased. They are recorded rather than silently resolved because picking one would be inventing a value.
+**Closed 2026-07-31.** This table previously recorded the two dates each as an unresolved "X or Y," reasoning that picking one would be inventing a value. Two independent external audits pointed out that the registry this document itself names as authoritative (`crates.io`) is one API call away and is the adjudicator, not a third source to weigh — refusing to check it is not the same discipline as refusing to guess between sources nobody has checked. Re-queried directly against `crates.io`'s `created_at` field (verified twice more, once by each audit, once again in this repair pass): `bevy` 0.18.0 = 2026-01-13T21:15:24Z, 0.18.1 = 2026-03-04T01:22:23Z, 0.19.0 = 2026-06-19T20:17:40Z.
 
 ---
 
@@ -37,7 +37,7 @@ Three facts are required for any crate in this ecosystem to be useful informatio
 | **`bevy_ui_anchor`** | 0.12.0 (2026-07-08) | **0.11.0** (2026-02-15) — 0.12.0 requires `bevy ^0.19` | 2026-07-08 | Healthy. 21 releases since 2024-08-07, no yanks, one release per Bevy cycle through 0.14→0.19. **Pin 0.11.0 exactly.** |
 | **`bevy_easings`** | 0.19.0 (2026-06-24) | 0.18.0 (2026-01-25) | 2026-06-24 | Healthy. Tracks every Bevy release since 2020. |
 | **`bevy_egui`** | 0.41.1 (2026-07-18) | frozen at **0.39.x** (last: 0.39.1, 2026-02-06) | actively developed, but the 0.18-compatible line is ~5.5 months stale and receiving no further fixes | Actively developed *upstream*; the 0.18 line is not. See the screenshot hazard in [03 §7](03-implementation-concerns.md). |
-| **`bevy_feathers`** | 0.18.1 (2026-03-04) | 0.18.1 (current) | current | Version-current. Self-disclaims product use in its own docs. Feature-gated `experimental_bevy_feathers` in 0.18. |
+| **`bevy_feathers`** | **0.19.0** (2026-06-19) — *corrected 2026-07-31; this row previously read 0.18.1, conflating "latest on our line" with "latest absolute," which is exactly the confusion the three-facts rule above exists to prevent* | 0.18.1 (2026-03-04) | 0.19.0 released 2026-06-19 | 0.18-line is version-current as of its own release, one Bevy cycle behind absolute latest. Self-disclaims product use in its own docs. Feature-gated `experimental_bevy_feathers` in 0.18. |
 | **`iyes_perf_ui`** | 0.5.0 (2025-05-20) | **none** — compat table tops out at Bevy 0.16 | 2025-05-20, ~14 months dormant, not archived | Two Bevy releases behind. |
 | **`bevy_screen_diagnostics`** | 0.8.1 (2025-04-26) | **none** — tops out at 0.16; a community 0.17 port (PR #16, opened 2025-10-02) sits unmerged | 2025-04-26, ~15 months dormant, not archived | Two Bevy releases behind. Also narrow in scope (fps / entity count / cpu-mem). |
 | **`bevy_mod_billboard`** | 0.7.0 (2024-07-10) | **none** — frozen at Bevy 0.14; 0.15/0.16 upgrade requests unanswered, one over a year old | 2024-07-10, >2 years dormant, not archived | Built on the pre-0.15 Bundle pattern — porting is an API rewrite, not a version bump. |
@@ -82,7 +82,7 @@ The single highest-yield check, and the one that caught the most defects in this
 
 ## 5. What this survey did not establish
 
-- Whether the Bevy-0.18-compatible `bevy_egui` line (0.39.x) postdates or predates the egui-side 0.35 fix for the screenshot-bypass defect. **Open either way** — not checked.
+- Whether the Bevy-0.18-compatible `bevy_egui` line (0.39.x) postdates or predates the egui-side 0.35 fix for the screenshot-bypass defect. **Partially closed 2026-07-31, still genuinely contested between the two external audits — see 03 §7 for the full statement of both positions and why neither is picked here.** In short: `bevy_egui` 0.39.1 (the 0.18-compatible release) depends on `egui ^0.33` (checked directly against crates.io dependency data, this repair pass) — a caret requirement that cannot resolve to 0.35 unless egui backported the fix into a 0.33.x patch, which nobody in this chain has checked. One audit treats that as sufficient to flip the default assumption to hazard-present; the other still calls it correctly open. Both readings are recorded rather than one being picked.
 - Whether `bevy_easings` can drive `UiTransform`. Only `Node`/`BackgroundColor`/`TextColor`/`Val`/`UiRect` were confirmed.
 - Whether `bevy_ui_anchor` ships any off-screen clamping or bearing behaviour. Absent from the fetched README; not confirmed absent from the source.
 - Whether Bevy's shipped default font carries OpenType feature tables. The only source is a third-party crate's README describing it as a stripped FiraCode — a lead, not a fact.

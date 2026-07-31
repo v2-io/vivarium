@@ -13,7 +13,7 @@ Each entry is tagged with what actually happened to it:
 - **`[REFUTED 3/3]`** — checked and killed. **Retained deliberately.** A later reader needs to know what was tested and failed, or the same claim gets re-derived from the same plausible-looking source.
 - **`[UNVOTED]`** — extracted from a fetched source with a verbatim quote, never adversarially checked. Roughly a third of comparable claims did not survive when checked. These are leads.
 
-Verbatim quotes and URLs for every entry live in [`appendix/synthesis-perception-attention.md`](appendix/synthesis-perception-attention.md). **Read the appendix before acting on anything here.**
+Verbatim quotes and URLs for the claims covered here live in [`appendix/synthesis-perception-attention.md`](appendix/synthesis-perception-attention.md). **Read the appendix before acting on anything here.** That synthesis is itself a curated ~55-of-111 selection, not the full unverified pool; the full pool (125 mined claims, 25 sources, every quote) is [`appendix/harvest/run1-human-perception-attention-typography.md`](appendix/harvest/run1-human-perception-attention-typography.md).
 
 Two sources in this area are burned: Healey's *"Perception in Visualization"* course page went 5-for-5 refuted — do not cite it from this corpus. Wolfe's *Guided Search 6.0* went 3-of-5 refuted; its survivors are discounted below where they appear.
 
@@ -33,15 +33,17 @@ Two sources in this area are burned: Healey's *"Perception in Visualization"* co
 
 ### 2.1 Static colour and shape fail as peripheral alerts; motion does not
 
-**`[VERIFIED 3/3]`** Across a 7°-to-52° eccentricity range:
+**`[VERIFIED 3/3]`** Across a 7°-to-52° eccentricity range (Experiment 1A/1B):
 
 | Encoding | Undetected, near (7°) | Undetected, far (52°) | Detection latency |
 |---|---|---|---|
-| Colour | 6% | **25%** | 2.3 s near → 4.6 s far |
+| Colour | 5.5% | **24%** | 2.3 s near → 4.6 s far |
 | Shape | — | — | 2.0 s near → 4.4 s far |
-| Motion | <2% | **<2%** | **~1.0 s, location-independent** |
+| Motion | ~0% | **~0%** | **~1.0 s, location-independent** |
 
 *Bartram, Ware & Calvert (2003), "Moticons: detection, distraction and task," Int. J. Human-Computer Studies 58:515–545. Verified against the PDF by three independent passes (WebFetch could not parse it; all three ran `pdftotext`).*
+
+**Correction, 2026-07-31, from two independent external audits plus a direct re-extraction of the PDF this repair pass:** this table previously read 6% / 25% / <2%. Those figures are also literally in the paper — its own General Discussion section (p.541) states "the percentage of undetected targets increased dramatically from 6% to 25%... failure-to-detect with motion was less than 2%" — but the §4.2.1 Results text for this specific experiment (p.524-525, quoted directly above) is more precise: **"nearly a 0% error rate"** for motion, and **"5.5% in the near condition and 24% in the far condition"** for colour. Two verbatim quotes in the same primary, from different sections, giving different precision on the same numbers — not a dossier transcription error. This table now carries the more precise Results-section figures per the dossier's own quote-over-gloss rule; the rounder 6%/25%/<2% figures are the paper's own later paraphrase and are not wrong to cite, just less precise.
 
 **Scope limit carried from the source, not optional:** the degree glyph is dropped by `pdftotext`; "7 to 52" is read as degrees by parallel phrasing elsewhere in the methods.
 
@@ -53,11 +55,13 @@ Two sources in this area are burned: Healey's *"Perception in Visualization"* co
 
 ### 2.3 Designable motion parameters — but the sufficiency claim was contested
 
-**`[CONTESTED 1R/2K]`** Amplitude ≈1° is highly detectable even in pronounced peripheral conditions; amplitude had **no significant effect on detection accuracy** (the authors' own hypothesis that it would was disconfirmed), though sub-1° amplitudes may cost response time (low-amplitude far-field detection nearly doubled, 0.92 s → 1.78 s, in Experiment 1B only). Frequencies across the whole tested 1–3 Hz range were effective with no perceptible difference. Smooth vs "jumpy" cues performed equally. 20–30 frames/s over a few seconds suffices to elicit a single continuous motion percept.
+**`[CONTESTED 1R/2K]`** Amplitude ≈1° is highly detectable even in pronounced peripheral conditions; amplitude had **no significant effect on detection accuracy** (the authors' own hypothesis that it would was disconfirmed), though sub-1° amplitudes may cost response time (low-amplitude far-field detection nearly doubled, 0.92 s → 1.78 s, in Experiment 1B only). The paper's own guideline box (G4) frames its frequency finding as "the motions tested had periodic frequencies between 1 and 3 Hz... no perceptible effect in the range of frequencies we tested" — see the correction below before treating this as a swept 1–3 Hz range. Smooth vs "jumpy" cues performed equally. 20–30 frames/s over a few seconds suffices to elicit a single continuous motion percept.
 
 **The dissent, which matters more than the numbers:** the numbers survive verbatim; the claim that they are *sufficient to build against* does not. From the paper's own text — §6.2.1 reports background-motion interference in the Tetris condition; §8 names perceptual interference with other motions as **unaddressed future work**; p.541 records that participants **were expecting cues**; §4.4 p.527 flags the 1A/1B amplitude inconsistency as "puzzling" and unresolved.
 
-*Same source as 2.1. The dissenting verifier extracted the full 1493-line text rather than relying on the guidelines box.*
+**Correction, 2026-07-31 — the "1–3 Hz" figure is the primary's own internal inconsistency, not a dossier gloss.** Re-extracting the PDF directly (this repair pass) locates the actual factorial design behind the F(7,84)=86.89 / F(1,12)=40.18 statistics in §2.2: "each motion type was implemented in **two** frequencies: SLOW (30 frames/s, roughly **1 Hz**) and FAST (15 frames/s, roughly **2 Hz**), resulting in eight distinct motion cues" (§6.1.4). That experiment tested exactly two discrete levels, not a continuous sweep — and F(1,12)=40.18 is the *frequency* main effect on **subjective distraction rating**, not on detection accuracy; the paper states separately, of that same experiment, "frequency alone has no effect on error rate" (§6.2, p.538). The G4 guideline's "between 1 and 3 Hz" appears to fold in a third, unrelated ~3 Hz frequency used only for the *amplitude* manipulation in Experiment 1 (§4.1.1.6: "Frequency was roughly 3 Hz") — i.e. G4 is likely synthesizing across two different experiments with different designs, not describing either one's factorial range. Read as: *within* the motion-type/frequency experiment, two discrete levels (~1 Hz, ~2 Hz) were tested and frequency did not affect detection accuracy (though it did affect distraction rating); the "1–3 Hz" language is the authors' own looser cross-experiment gloss and should not be read as a validated continuous-sweep result.
+
+*Same source as 2.1. The dissenting verifier extracted the full 1493-line text rather than relying on the guidelines box; this correction re-extracted the same PDF independently and confirms the dissent's caution was warranted, for a reason neither original pass isolated.*
 
 ### 2.4 Onset capture is defeated by concurrent load; sustained colour difference is not
 
@@ -69,11 +73,13 @@ Two sources in this area are burned: Healey's *"Perception in Visualization"* co
 
 ### 2.5 Abrupt onset does not reliably capture in real data-rich displays
 
-**`[VERIFIED 3/3]`** Flashing and abrupt onset — the canonical lab-validated capture mechanism, and the one most dashboards reach for — does **not** reliably capture attention in real operational displays.
+**`[VERIFIED 3/3 — IDENTITY/ABSTRACT ONLY]`** Flashing and abrupt onset — the canonical lab-validated capture mechanism, and the one most dashboards reach for — does **not** reliably capture attention in real operational displays.
 
-**`[VERIFIED 3/3]`** Three separable display-context properties each measurably degrade detection of an abrupt-onset signal: (a) colour similarity between onset target and background, (b) **motion of background elements**, (c) increasing eccentricity from current fixation. Design crossed 5 backgrounds against 2 eccentricities with participants under an externally paced concurrent visual task — degradation established under *loaded*, not idle, viewing.
+**`[VERIFIED 3/3 — IDENTITY/ABSTRACT ONLY]`** Three separable display-context properties each measurably degrade detection of an abrupt-onset signal: (a) colour similarity between onset target and background, (b) **motion of background elements**, (c) increasing eccentricity from current fixation. Design crossed 5 backgrounds against 2 eccentricities with participants under an externally paced concurrent visual task — degradation established under *loaded*, not idle, viewing.
 
 *Nikolic, Orr & Sarter (2004), "Why Pilots Miss the Green Box: How Display Context Undermines Attention Capture," Int. J. Aviation Psychology 14(1). Publisher returns 403; identity confirmed independently via Crossref, OpenAlex and Semantic Scholar by three separate passes. **The body text was not read by anyone in this chain** — this is abstract-level plus registry metadata.*
+
+**Tag correction, 2026-07-31 (external audit finding):** the plain `[VERIFIED 3/3]` tag overclaimed here. Three independent passes confirmed the paper's *identity* and *abstract wording* — they did not, and could not, adversarially check method, N, or effect sizes against a body text nobody read. Relabeled `IDENTITY/ABSTRACT ONLY` to distinguish it from claims where three verifiers actually contested the empirical result against a read primary (e.g. §2.1's Bartram table). Treat the two bullets above as a well-sourced, real-paper lead, not as adjudicated-empirical-fact tier.
 
 ---
 

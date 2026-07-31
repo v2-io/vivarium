@@ -12,7 +12,7 @@ This is the **best-evidenced** of the four, and the reason is worth stating: its
 - **`[SOURCE-READ]`** — one agent read the vendored crate file directly during synthesis. Fewer eyes than a 3/3, but the strongest possible source tier. Line numbers given are that agent's.
 - **`[REFUTED 3/3]`** / **`[CONTESTED]`** / **`[UNVOTED]`** as in 01 and 02.
 
-Detail and the ecosystem ledger: [`appendix/synthesis-bevy-0.18.md`](appendix/synthesis-bevy-0.18.md).
+Detail and the ecosystem ledger: [`appendix/synthesis-bevy-0.18.md`](appendix/synthesis-bevy-0.18.md). The full raw pool (130 mined claims, 26 sources) behind it is [`appendix/harvest/run3-bevy-0.18-primitives.md`](appendix/harvest/run3-bevy-0.18-primitives.md).
 
 ### The failure mode this area specifically exhibits
 
@@ -128,7 +128,9 @@ let viewport_position =
 
 **`[SOURCE-READ]`** `bevy_render-0.18.1/src/view/window/screenshot.rs` confirms the mechanism: spawn a `Screenshot` component, `.observe(save_to_disk(path))`, and Bevy fires `ScreenshotCaptured` when ready. **This is the documented first-party path.**
 
-**`[UNVOTED]`, but source-grounded and consequential.** The mechanism works by redirecting the render target away from the swapchain to a copyable texture. `bevy_ui` renders through Bevy's normal render graph and is therefore captured by construction. **`bevy_egui` (pre-0.35) drew straight to the window's swapchain texture, bypassing the redirect entirely — so its UI was silently absent from every screenshot.** Filed as Bevy issue #16689, labelled `P-Regression`, fixed only on the egui side in 0.35, with no app-level system-ordering workaround per the reporter's own exhausted attempts. *Whether the Bevy-0.18-compatible `bevy_egui` line postdates that fix was **not** determined — open either way.*
+**`[UNVOTED]`, but source-grounded and consequential.** The mechanism works by redirecting the render target away from the swapchain to a copyable texture. `bevy_ui` renders through Bevy's normal render graph and is therefore captured by construction. **`bevy_egui` (pre-0.35) drew straight to the window's swapchain texture, bypassing the redirect entirely — so its UI was silently absent from every screenshot.** Filed as Bevy issue #16689, labelled `P-Regression`, fixed only on the egui side in 0.35, with no app-level system-ordering workaround per the reporter's own exhausted attempts.
+
+*Whether the Bevy-0.18-compatible `bevy_egui` line postdates that fix — genuinely contested, 2026-07-31.* Checked directly against crates.io this repair pass: `bevy_egui` 0.39.1 (the release pinned for Bevy ^0.18) depends on `egui ^0.33`; `bevy_egui` 0.41.1 (Bevy ^0.19) depends on `egui ^0.35`. A `^0.33` requirement cannot resolve to 0.35 under normal semver — so on the face of the dependency graph, 0.39.1 predates the fix. But this is not fully closable from here: it stays open whether egui backported the fix into a 0.33.x patch (not checked by either audit or this pass), and the two audits that reviewed this dossier disagree — one (`AUDIT-2026-07-31-grok.md` §3.6) treats the dependency fact as sufficient to flip the default assumption to **hazard-present**; the other (`AUDIT-2026-07-31-grok-2.md` B-3) calls the open status **correct as-is**. Both are recorded rather than one being picked. Practical reading: **do not assume the hazard is fixed** on the 0.18 line without checking the actual resolved egui version and its changelog.
 
 **`[UNVOTED]`, a caution about screenshot-based verification generally.** Bevy's own screenshot-diff CI **failed to catch** the font-smoothing regression before it shipped to `main` — the fixing PR names this as one of its objectives. A passing screenshot diff is evidence of gross visual regression, not of subtle rendering-mode defects.
 

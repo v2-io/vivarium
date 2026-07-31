@@ -2,6 +2,8 @@
 
 *Produced 2026-07-31. **`msc/`-grade: substrate, not claim canon.** Nothing here is a vivarium claim. Where a finding is strong enough to convict or support a segment, that promotion is separate work and is noted in §9.*
 
+> **Read this before §1.** Two independent external audits (2026-07-31, `../AUDIT-2026-07-31-grok.md` §3.3 and `../AUDIT-2026-07-31-grok-2.md` A-1) both flagged this document as sitting in tension with `00-INDEX.md` §5's "makes no claims about vivarium, proposes no changes" fence — this file *does* argue a specific design verdict, and `00-INDEX.md` routes readers here as "closer to the evidence," which is true for the raw per-run material and **not** true for this file's own §1/§9/§12 design inferences, which are a further synthesis hop *beyond* 01–04, not a primary layer beneath them. Read the tier-by-tier breakdown added to §1(a) below before treating "close to the worst available choice" as a finding rather than an argument built from mixed-tier evidence.
+
 ## What this is
 
 Joseph asked for the whole gamut of user-facing instrumentation and visualization design principles — first-principles perceptual work through modern game telemetry, with the framing that the interesting layer is *"orthogonal or adjacent to gameplay… traditional HCI/UX. Principled instrument-panels, for example"* — plus a specialized pass on what Bevy offers at primitive and library level.
@@ -18,6 +20,7 @@ The immediate consumer is `vivarium explore`'s chrome, whose attention failure i
 | `synthesis-perception-attention.md` | Human side — attention capture, clutter, crowding, contrast, typography |
 | `synthesis-practice-safety-critical.md` | Practice side — HUD taxonomy, GUR empirics, avionics/nuclear/alarm-management, dashboards |
 | `synthesis-bevy-0.18.md` | Bevy 0.18 capability answer, version-stamped, with ecosystem-crate ledger |
+| `harvest/` | Added 2026-07-31 — the three raw per-run extraction pools (quote/URL/date/grade for every mined claim) behind the three synthesis files above; closer to the evidence than any of them |
 
 ### Epistemic grading used throughout
 
@@ -32,23 +35,25 @@ A claim's *quote* is generally more trustworthy than the sentence introducing it
 
 ## 1. What contradicts the proposed chip strip
 
-`#disc-explorer-human-chrome` FE(5) specifies **CARVE** as *"Red / unmissable when N=0 and M>0."* Four independent lines say a red chip is close to the worst available choice for that job.
+`#disc-explorer-human-chrome` FE(5) specifies **CARVE** as *"Red / unmissable when N=0 and M>0."* Four independent lines argue against a red chip for that job — **but they are four different evidence tiers, not four replications of one finding, and combining them into "close to the worst available choice" oversteps what any one of them shows. Correction below the table states the honest version.**
 
-**(a) Colour fails peripherally, and the failure is measured.** Bartram, Ware & Calvert (2003), *IJHCS* 58:515–545 [E, survived 3/3]:
+**(a) Colour fails peripherally, and the failure is measured** — but under *expected* cues on a static field, not vivarium's case. Bartram, Ware & Calvert (2003), *IJHCS* 58:515–545 [E, verified against primary]:
 
 | Encoding | Undetected @ 7° | Undetected @ 52° | Latency near → far |
 |---|---|---|---|
-| Colour | 6% | **25%** | 2.3 s → 4.6 s |
+| Colour | 5.5% | **24%** | 2.3 s → 4.6 s |
 | Shape | — | — | 2.0 s → 4.4 s |
-| Motion | <2% | **<2%** | **~1.0 s, flat** |
+| Motion | ~0% | **~0%** | **~1.0 s, flat** |
 
-The operator's fovea is on the globe. That is the far-field condition.
+*(Corrected 2026-07-31 from 6%/25%/<2% — see `01-perception-and-attention-fundamentals.md` §2.1 for the two-quotes-in-one-primary explanation.)* The operator's fovea is on the globe. That is the far-field condition — but Bartram's participants expected cues on a static field (§2 caveat below); this is an extension by analogy, not a direct measurement of vivarium's case.
 
-**(b) Red-on-black specifically is a known failure case.** WCAG 5.3:1 (passes AA), APCA Lc=40 (fails) [T, computed]. Both formulas are luminance-only by construction; red carries little luminance against dark terrain.
+**(b) Red-on-black specifically is a known failure case — conditional on APCA being the more accurate model.** WCAG 5.3:1 (passes AA), APCA Lc=40 (fails) [T, computed]. Both formulas are luminance-only by construction; red carries little luminance against dark terrain. APCA is not an adopted standard (00-INDEX debt 5) — this is a live, non-peer-reviewed contrast model's prediction, not a settled fact. Also note: green fails by the same logic Nikolic's green box does in (d), so this line does not specifically indict red over any other saturated hue.
 
-**(c) The globe's own motion suppresses awareness of colour change.** Suchow & Alvarez (2011), *Current Biology* 21(2):140–143 — "motion silences awareness of visual change," measured for hue, luminance, size and shape; extended to orientation by a 2021 replication (N=30, η²p=0.783, ~80 ms cost). A colour flip on a chip beside a rotating planet is the silenced case.
+**(c) The globe's own motion suppresses awareness of colour change — extended by analogy, not measured for this case.** Suchow & Alvarez (2011), *Current Biology* 21(2):140–143 — "motion silences awareness of visual change," measured for hue, luminance, size and shape; extended to orientation by a 2021 replication (N=30, η²p=0.783, ~80 ms cost). A colour flip on a chip beside a rotating planet is analogous to the silenced case, not the same experiment — nobody has measured a chip beside a large, slowly rotating, multi-hued sphere (00-INDEX gaps list).
 
-**(d) There is a paper named after this exact failure.** Nikolic, Orr & Sarter (2004), *"Why Pilots Miss the Green Box: How Display Context Undermines Attention Capture"* [E, survived 3/3]. The failing artifact is literally a status chip — a green outline box around a mode annunciation on the primary flight display. Three separable degraders, each measured under concurrent load: colour similarity to background, **motion of background elements**, and eccentricity. Abrupt onset and flashing — the mechanism every HUD reaches for — does not reliably capture attention in real data-rich displays.
+**(d) There is a paper named after this exact failure — for a *green* outline box, at identity/abstract verification only.** Nikolic, Orr & Sarter (2004), *"Why Pilots Miss the Green Box: How Display Context Undermines Attention Capture"* [E — **identity/abstract verified only**, body text never read by anyone in this chain; retagged 2026-07-31, see 01 §2.5]. The failing artifact is literally a status chip — a green outline box around a mode annunciation on the primary flight display. Three separable degraders, each measured under concurrent load: colour similarity to background, **motion of background elements**, and eccentricity. Abrupt onset and flashing — the mechanism every HUD reaches for — does not reliably capture attention in real data-rich displays.
+
+**Correction, 2026-07-31 (two independent external audits, both flagging this as the dossier's sharpest scope-fence violation):** the honest claim these four lines jointly support is narrower than "close to the worst available choice" — it is: *colour-only peripheral status indication is a poor bet under several independent, mostly-unrelated literatures; the vivarium-specific encoding (a chip beside a large rotating sphere) is unmeasured by any of them; and red is not specially convicted over other saturated colours — Bartram's colour condition tested red and green together and did not separate them, and (b)/(d) both implicate green too.* Treat "close to the worst available choice" as this document's own rhetorical framing, not a finding the evidence independently establishes.
 
 ### The deeper problem: an overlay is in the cost regime by construction
 
@@ -264,7 +269,7 @@ One error of the coordinating session's own, recorded because it is the same sha
 
 Not promoted here. Candidates, with what each would need:
 
-- **`#disc-explorer-human-chrome` FE(5) needs revision** — the red-chip specification has four independent lines against it (§1). A probe measuring detection of the CARVE state under realistic globe-scanning would convict either way.
+- **`#disc-explorer-human-chrome` FE(5) may warrant revision** — colour-only peripheral status indication is a poor bet under several independent literatures, though (per the §1 correction) not specifically a red-vs-other-colour finding, and the vivarium-specific geometry is unmeasured. A probe measuring detection of the CARVE state under realistic globe-scanning would convict either way, and is the actual evidence this candidate needs before revision.
 - **A Feature Congestion probe** over committed capture frames (§3) — the one genuinely computable, falsifiable instrument the corpus offers, and the closest fit to `#norm-probes-before-claims` of anything here.
 - **`#norm-no-depiction-without-referent` could extend from depiction to assertion** (§5) — the cueing/criterion-shift results say an overlay that *asserts* is believed over the raw scene, and disclosure does not recalibrate. That is the same harm the norm exists to prevent, arriving through a channel the norm does not currently name.
 - **The staleness annunciator is architecturally forced** (§4) — EID's blind spot means no physics-legibility work substitutes for an explicit clock-based alarm. Worth stating in a segment because it forecloses a tempting alternative.
