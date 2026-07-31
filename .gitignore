@@ -32,3 +32,6 @@ export_presets.cfg
 # Secrets / local LLM config
 .env
 .env.local
+
+# orientation gate (local study/pass; never commit)
+.orient/

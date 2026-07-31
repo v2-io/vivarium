@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Gate: valid orientation pass for current Level-A corpus.
+# Used by git pre-commit. Exit 0 = allowed to commit; 1 = refuse.
+set -euo pipefail
+# shellcheck source=orient-lib.sh
+source "$(cd "$(dirname "$0")" && pwd)/orient-lib.sh"
+
+if [[ "${ORIENT_SKIP:-}" == "1" ]]; then
+  echo "orient-check: SKIPPED via ORIENT_SKIP=1 (Joseph only)" >&2
+  exit 0
+fi
+
+[[ -f "$PASS_FILE" ]] || {
+  echo "orient-check: no pass — refuse commit" >&2
+  echo "  1) Read every path from:  bin/orient-study --list" >&2
+  echo "  2) bin/orient-study" >&2
+  echo "  3) bin/orient-prove   # sealed closed-book quiz" >&2
+  echo "  See ORIENT.md" >&2
+  exit 1
+}
+
+pass_ts=$(grep '^ts=' "$PASS_FILE" | head -1 | cut -d= -f2)
+pass_corpus=$(grep '^corpus=' "$PASS_FILE" | head -1 | cut -d= -f2)
+[[ -n "$pass_ts" && -n "$pass_corpus" ]] || orient_die "malformed $PASS_FILE"
+
+now=$(date +%s)
+age=$((now - pass_ts))
+if (( age > PASS_TTL_SEC || age < 0 )); then
+  echo "orient-check: pass expired (${age}s; TTL ${PASS_TTL_SEC}s) — bin/orient-prove again" >&2
+  exit 1
+fi
+
+live=$(orient_corpus_hash)
+if [[ "$live" != "$pass_corpus" ]]; then
+  echo "orient-check: Level-A corpus changed since pass — re-study and re-prove" >&2
+  echo "  pass=$pass_corpus" >&2
+  echo "  live=$live" >&2
+  exit 1
+fi
+
+echo "orient-check: ok (pass age ${age}s, corpus ${live:0:12}…)"
+exit 0
