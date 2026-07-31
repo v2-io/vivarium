@@ -189,7 +189,7 @@
         not yet seen through the dense sky.
       |promise[closed-water-cycle].regime :from closed-water-cycle
         A closed, conserved water cycle with its energy-gradient channels.
-        |predicate global water mass is conserved — nothing pulled from nothing, nothing drained into nothing.
+        |predicate water mass is conserved across reservoirs AND the ocean set is a world domain object (face-or-coarser connectivity, not elevation alone, not re-adjudicated by a view window) AND stock can move between atmosphere / standing / ocean under that shared ocean — algebraic box residual alone does NOT keep this promise (identity conservation is necessary but not sufficient; zoom-dependent ocean paint convicts).
       |promise[weather-channels].capability :from weather-energy-channels :unlocks modern-weather
         Basic weather fluid dynamics; the useful-energy / entropy-gradient
         channels later dynamics run on.

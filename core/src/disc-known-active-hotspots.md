@@ -55,15 +55,16 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
    | **1** | **P0 — Index is hot** — **landed 2026-07-31** (`Store::roots_shared` generation cache; external entry-count invalidate on 1 s throttle). First-light stopwatch: cold body scan ~2.2 s / 146k roots; warm hit ~ns | Without this, every “updating view…” paid O(archive) before any height sample. Residual: cold open still pays one full scan (acceptable once); external builder detect is throttled readdir not body parse | Not more LoD policy; not sill/flux yet |
    | **2** | **P1 — Pull thrash is boring** — **landed 2026-07-31** (roots_shared in observe; no full-census clone/reparse per pull; region+prior caches; AlreadyCurrent skip; Frame carries Arc roots + coverage). Bench: Coverage::parse ~24 ms, load_eroded empty ~24 ms, full roots clone ~7 ms — **no longer paid every settle**. **Next: P2/P3** | Joseph: framerate of *drawn* mesh is fine; the pain was endless multi-second updates. Residual: genuine level/lens change still remeshes (correct); cold open + first Present load still pay once | Not a full quadtree |
    | **3** | **P2+P3 — Intent legible + open view usable** — HUD always WHOLE GLOBE vs CLOSE-IN WINDOW + carve/prior/mixed; prefer open at covering level **(b)** or instant honest prior + zoom-to-carve **(c)**; coarse overview product **(a)** only if needed (see parity segment) | Today open L7 is 100% prior while L9 carve sits in store — cannot spot-check fluvial without fighting the instrument | Not finishing every explorer-intent wishlist item |
-   | **4** | **P4 — Spot-check gate** — declare parity when P0–P3 hold and physics can be inspected on first-light without thrash | The “we are at foundation” milestone | Not Abyssal completion |
-   | **5** | **Sill-graph spill → flux half** ( #form-same-level-halo-exchange FE(9)/(1) ) + matched-ratio arms | Next **world piece** after eyes work; cross-tile lakes / seam completion | **Gated on P4** (unless parallel free agent and no attention conflict) |
-   | **6** | **Phase-3 promise run+gate** (`closed-water-cycle` path); status already reports | Floor load-bearing | **Gated on P4** (same exception) |
-   | **7** | Re-measure blast radii; router adopt/park; `column_at` residual; cold-stage; χ path | Physics backlog after foundation | **Gated on P4** — not while instrument thrash still blocks spot-check |
-   | demote | Water settle as lake blocker; Caspian census (answered); demand spool; “build regula audit”; full quadtree-as-first-step; explorer polish that does not serve P0–P4 | Superseded or premature | — |
+   | **4** | **Face (or store) ocean product — view samples, never re-floods the postage stamp** ( #form-ocean-is-connectivity-not-elevation FE(5)/(8) ). Window-local `ocean_mask` makes sea zap with zoom (convicted 2026-07-31 L14). Compute: face mask once per bed epoch; window lookup $O(n_x^2)$ | Without this, paint-law and “closed water cycle” cannot be honest under close-in inspection — P4 spot-check of ocean/lakes is blocked by ethereal sea | Not a weather GCM; not sill/flux first |
+   | **5** | **P4 — Spot-check gate** — declare parity when P0–P3 + stable ocean class hold and physics can be inspected without thrash *or* zoom-invented sea | The “we are at foundation” milestone | Not Abyssal completion |
+   | **6** | **Phase-3 `closed-water-cycle` — honest red until a convicting predicate can fail and doesn’t** — inventory conservation is necessary **not** sufficient; ocean world-object + reservoir motion required (ordinum predicate strengthened 2026-07-31). Status: **red on cycle closure**, loud **encouraging signs** on P0/P1 thrash, shared mask function, conserved inventory box | Soft green (flux unmet:none, box residual 0, phase-4 demand) while sea is view-conditional is costume closure | Not claiming Kept; not algebraic identity alone |
+   | **7** | **Sill-graph spill → flux half** ( #form-same-level-halo-exchange FE(9)/(1) ) + matched-ratio arms | Next **world piece** after eyes + ocean object | **Gated on P4** (unless parallel free agent and no attention conflict) |
+   | **8** | Re-measure blast radii; router adopt/park; `column_at` residual; cold-stage; χ path | Physics backlog after foundation | **Gated on P4** |
+   | demote | Water settle as lake blocker; Caspian census (answered); demand spool; “build regula audit”; full quadtree-as-first-step; explorer polish that does not serve P0–P4; **comfort-green phase-3 cycle from box residual alone** | Superseded or premature / forbidden costume | — |
 
    **LoD under acceptance.** Prefer performant **wholesale** level switch within P1 budget. Add **heterogeneous** LoD (coarse shell + fine patch, multi-block pin) only if wholesale cannot show carve grain under P1. Full quadtree is out of scope for parity.
 
-   **Phase floor (unchanged fact).** Status: no false green; phase-4 claimed while phase-3 `closed-water-cycle` only specified — rank 6 work, not a license to hand-write every predicate.
+   **Phase floor (Joseph 2026-07-31).** **Honest red** on `closed-water-cycle` until domain-stable ocean + non-identity predicate; **encouraging signs** elsewhere (thrash fixed, shared mask pure function, inventory conserved-by-construction as *stock*, not as cycle kept). Phase-4 claim/demand does not clear phase-3. Role leakage (view invents world objects) → tighten role split, do not soften the world claim.
 
 6. **Molten ground (era-volatile code) — supporting half, revised 2026-07-31.** Before quoting a measured emergent statistic, check whether its ground is warm; if so, carry the era or re-measure (`DECISIONS[kernel-era-keys-and-the-probe-registry]` is the mechanization program; this list covers the gap until that ships). Before briefing an agent into a warm region, say it is warm.
 
@@ -81,10 +82,11 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
 7. **Dependency-tracking mechanism — first rungs built 2026-07-29 (late).** Witnessed read-sets + `Observatory` type split shipped. **Open:** wiring region-exchange interiors / stage ladders / epoch reductions; audit command that diffs read-sets across cohorts; full fold-or-check-into-key design. Rank **5** (sill + flux, post-P4) should land WITH witnesses from birth. Distinct from kernel-era probe registry (measurement drift vs key completeness).
 
-8. **Instrument / ops notes (revised 2026-07-31 late / P1).** Leverage for explore is **rank 1–4** above (P0–P4), not demoted polish.
-   - **P0+P1 landed:** generation-hot listing; observe never clones full roots; pull caches coverage/census/regions; prior whole-face tiles cached; identical request → `AlreadyCurrent` (no remesh). Probes: `roots_bench`, `pull_hot_bench`.
-   - **P2/P3 next:** HUD intent + open view at covering grain or honest instant prior (store currently often pure-prior at L7 because carve is L9 / src stale after lib edits).
-   - **Partial explore cuts** (level filter, face-local R, tile ocean, altitude windows, latest-wins) remain the mesh policy under P1.
+8. **Instrument / ops notes (revised 2026-07-31 night).** Leverage: finish P2/P3, then **rank 4 ocean product** before declaring P4.
+   - **P0+P1 landed:** generation-hot listing; observe never clones full roots; pull caches; prior faces cached; `AlreadyCurrent`. Probes: `roots_bench`, `pull_hot_bench`.
+   - **Encouraging (do not hide):** thrash fixed enough to inspect; shared `ocean_mask` pure function; hydrosphere inventory residual 0 by construction; flux web declares producers.
+   - **Honest red (do not greenwash):** close-in ocean **zaps with zoom** (window flood = FE(4) leakage); `closed-water-cycle` predicate was identity conservation — **strengthened in ordinum**; status must not costume-close the cycle; phase-4 demand does not keep phase-3.
+   - **P2/P3 next for HUD/open grain;** **rank 4** face ocean product (sample into window); then P4.
    - **World VCS + provenance:** commit store with changelog rebuilds; digests only from `bin/provenance`.
    - **Pending audit:** `audits/grok-final-overview-2026-07-28.md` still not fully `#ops-audit-integration`.
 
@@ -92,7 +94,7 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
 **Max attainable: discussion-grade** as maintained ideation — completeness is impossible; honesty about dated judgment is the bar.
 
-**Currently `discussion-grade`.** FE(5) **sealed 2026-07-31 evening** with Joseph: instrument parity P0–P4 first (`#disc-explorer-instrument-parity`); sill/flux and phase-gate resume after P4. Outside-reader rank not required for this seal. Stage `draft`.
+**Currently `discussion-grade`.** FE(5) re-sealed **2026-07-31 night** with Joseph: P0–P1 done; P2/P3 then **face ocean product** before P4; phase-3 cycle **honest red** until convicting; role leakage → stricter role split (`#form-ocean-is-connectivity-not-elevation` FE(5)). Stage `draft`.
 
 ## Discussion
 
