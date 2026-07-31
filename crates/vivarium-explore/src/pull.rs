@@ -44,10 +44,9 @@ use crate::water::{WaterField, WET_M};
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Request {
     pub level: u8,
-    /// `None` = the whole globe, six faces. `Some` = **one window into one
-    /// face**, which is how anything finer than a whole-face monolith gets
-    /// drawn: L13 is 8192² cells per face, and six of those is not a mesh, it is
-    /// a memory error with a nice comment.
+    /// `None` = the whole globe, six faces. `Some` = **centre window** into one
+    /// face (the pull expands orthogonal same-face neighbours — see
+    /// [`Patch::ortho_ring`]). L13 whole faces are not a mesh; the ring is.
     ///
     /// The window is not a different renderer. It is the same mesher with a
     /// non-zero origin ( `mesh::FaceInput` ), because a globe path and a region
@@ -87,6 +86,33 @@ impl Patch {
         let half = nx as u32 / 2;
         let hi = face_n - nx as u32;
         Patch { face, oi: i.saturating_sub(half).min(hi), oj: j.saturating_sub(half).min(hi), nx }
+    }
+
+    /// Centre pane plus up to **4 orthogonal** same-face neighbours (N/S/E/W),
+    /// each `nx×nx`, slid to stay on the face. Diagonals deferred until cost is
+    /// re-measured. Used for L10+ close-in so the view is not a lone postage stamp.
+    pub fn ortho_ring(self, level: u8) -> Vec<Patch> {
+        let face_n = 1u32 << level;
+        let step = self.nx as u32;
+        let mut out = vec![self];
+        for (di, dj) in [(0i32, -1), (0, 1), (-1, 0), (1, 0)] {
+            let oi = self.oi as i64 + di as i64 * step as i64;
+            let oj = self.oj as i64 + dj as i64 * step as i64;
+            if oi < 0 || oj < 0 {
+                continue;
+            }
+            let (oi, oj) = (oi as u32, oj as u32);
+            if oi + step > face_n || oj + step > face_n {
+                continue;
+            }
+            out.push(Patch {
+                face: self.face,
+                oi,
+                oj,
+                nx: self.nx,
+            });
+        }
+        out
     }
 }
 
@@ -419,11 +445,10 @@ pub fn spawn(
             }
 
             let level = req.level;
-            // The unit of work: either six whole faces, or one window into one.
-            // Everything downstream is written against this list, so the two
-            // modes are one code path with a different list.
+            // The unit of work: either six whole faces, or a centre window plus
+            // orthogonal same-face neighbours (postage stamp → small mosaic).
             let units: Vec<Patch> = match req.patch {
-                Some(p) => vec![p],
+                Some(p) => p.ortho_ring(level),
                 None => {
                     let n = 1usize << level;
                     (0u8..6).map(|f| Patch { face: f, oi: 0, oj: 0, nx: n }).collect()
@@ -469,7 +494,6 @@ pub fn spawn(
             //
             // 400 tiles is a tiny R. The wrong family was O(C·R) with R useless,
             // not "400 is large."
-            let patch = req.patch;
             let view_level = req.level;
             let key_in_view = |k: &str| -> bool {
                 let Some(rl) = watch::key_field(k, "level").and_then(|v| v.parse::<u8>().ok()) else {
@@ -479,10 +503,11 @@ pub fn spawn(
                 if rl > view_level {
                     return false;
                 }
-                match patch {
-                    None => true,
-                    Some(p) => key_overlaps_patch(k, p, view_level),
+                // Whole globe, or any pane of the close-in ring.
+                if req.patch.is_none() {
+                    return true;
                 }
+                units.iter().any(|p| key_overlaps_patch(k, *p, view_level))
             };
             // Region load key: lens + level + patch (not paint/exag — those do not
             // change which tiles decode). Invalidate when roots Arc moves.
@@ -1007,6 +1032,31 @@ pub fn spawn(
             }
         }
     });
+}
+
+#[cfg(test)]
+mod patch_ring_tests {
+    use super::*;
+
+    #[test]
+    fn ortho_ring_is_centre_plus_up_to_four() {
+        // Interior centre: full 5-pane ring.
+        let c = Patch { face: 0, oi: 256, oj: 256, nx: 128 };
+        let ring = c.ortho_ring(12); // face 4096 wide
+        assert_eq!(ring.len(), 5);
+        assert_eq!(ring[0], c);
+        assert!(ring.iter().any(|p| p.oi == 256 && p.oj == 128)); // N
+        assert!(ring.iter().any(|p| p.oi == 256 && p.oj == 384)); // S
+        assert!(ring.iter().any(|p| p.oi == 128 && p.oj == 256)); // W
+        assert!(ring.iter().any(|p| p.oi == 384 && p.oj == 256)); // E
+    }
+
+    #[test]
+    fn ortho_ring_clips_at_face_edge() {
+        let c = Patch { face: 2, oi: 0, oj: 0, nx: 128 };
+        let ring = c.ortho_ring(10);
+        assert_eq!(ring.len(), 3, "only E and S stay on-face"); // centre + E + S
+    }
 }
 
 #[cfg(test)]

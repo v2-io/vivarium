@@ -61,16 +61,16 @@ use crate::paint::Paint;
 use crate::pull::{Frame, Msg, Request};
 use crate::water::WaterField;
 
-/// Levels the **whole-globe** mesh spans. L7 = 128² cells/face × 6 ≈ 98 k cells —
-/// a mesh that rebuilds in a fraction of a second. L8 was 4× that, L9 16×, and
-/// the old L9 ceiling was the multi-second "muddle while zooming" path: every
-/// scroll step paid for a full-planet remesh that the next scroll abandoned.
+/// Levels the **whole-globe** mesh spans. After P0/P1 thrash cuts, L8/L9 whole-
+/// globe is usable again (L8 ≈ 4× L7 cells, L9 ≈ 16×). Keeping the ceiling at
+/// L7 forced a hard jump L7-globe → L10-window and made L8/L9 un-seeable as
+/// intermediate rungs. Window mode starts only **above** this ceiling.
 const LEVEL_MIN: u8 = 5;
-const LEVEL_GLOBE_MAX: u8 = 7;
+const LEVEL_GLOBE_MAX: u8 = 9;
 
-/// Levels the **region window** spans. Finer than the globe ceiling (or close
-/// approach at any level) draws one camera-centred window into one face — the
-/// first rung of a quadtree: cost set by window size, not by planet area.
+/// Levels the **region window** spans. Finer than the globe ceiling (close-in)
+/// draws a camera-centred window **plus adjacent same-face panes** (pull expands
+/// the ring) — cost set by window size × ring, not by planet area.
 ///
 /// L13 ≈ 1.2 km cells, where the tree's fine builds live and fluvial form is a
 /// *shape* rather than a single cell.
@@ -933,8 +933,9 @@ fn request_update(orbit: Res<Orbit>, mut ex: ResMut<Explorer>, tx: Res<ReqTx>) {
         ex.level.min(LEVEL_GLOBE_MAX)
     };
 
-    // Window only when close *and* finer than the whole-globe ceiling. Never
-    // window just because level is high while still far from the surface.
+    // Window only when close *and* finer than the whole-globe ceiling (L10+
+    // once LEVEL_GLOBE_MAX is 9). L8/L9 stay whole-globe so the level ladder
+    // is continuous rather than L7-globe → postage-stamp.
     let want_window = close && mesh_level > LEVEL_GLOBE_MAX;
     let mut patch = want_window.then(|| {
         let d = view_dir(&orbit);

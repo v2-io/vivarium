@@ -254,10 +254,13 @@ pub fn header(
         frame.req.level,
         if cell_km >= 1.0 { format!("{cell_km:.1} km/cell") } else { format!("{:.0} m/cell", cell_km * 1000.0) },
         match frame.req.patch {
-            Some(p) => format!(
-                "CLOSE-IN WINDOW {}×{} on face {} @ ({},{}) — not the whole planet",
-                p.nx, p.nx, p.face, p.oi, p.oj
-            ),
+            Some(p) => {
+                let n_panes = frame.faces.len().max(1);
+                format!(
+                    "CLOSE-IN {}×{} centre face {} @ ({},{}) + ortho ring ({} panes) — not the whole planet",
+                    p.nx, p.nx, p.face, p.oi, p.oj, n_panes
+                )
+            }
             None => format!("WHOLE GLOBE (over an L{} store build)", cov.level),
         },
         frame.req.exag,
