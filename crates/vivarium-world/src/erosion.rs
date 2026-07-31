@@ -347,10 +347,11 @@ impl BedArticle {
     pub fn key_token(&self) -> Option<String> {
         match self {
             BedArticle::EdgeSink => None,
-            // `sill1` = region sill-graph spill inject (FE(9) wire, 2026-07-31).
-            // Changing that algorithm must bump the digit so beds do not alias.
+            // `sill1` = region sill-graph spill inject (FE(9)).
+            // `flux1` = seam discharge inject (FE(1) flux half).
+            // Bump digits when either algorithm changes so beds do not alias.
             BedArticle::Halo { schedule: s, region: r } => Some(format!(
-                "halo,d{},s{},r{},o{}+{},t{}x{},sill1",
+                "halo,d{},s{},r{},o{}+{},t{}x{},sill1,flux1",
                 s.depth, s.cadence, s.cone_rho, r.oi, r.oj, r.tiles_i, r.tiles_j
             )),
         }
@@ -411,6 +412,9 @@ pub struct Fluvial {
     /// Priority-Flood so straddling lakes agree across tile windows. `None`
     /// for plain single-tile carves.
     region_spill: Option<Vec<f32>>,
+    /// Extra runoff seed (m² catchment units) from neighbour seam flux inject
+    /// (FE(1) flux half). Length `nx²` when set.
+    region_inflow: Option<Vec<f32>>,
 }
 
 const NEIGHBORS: [(i32, i32); 8] =
@@ -718,6 +722,7 @@ impl Fluvial {
             last_delta_m: f32::INFINITY,
             edge: Self::inferred_edge_contract(level, oi.max(0) as u32, oj.max(0) as u32, nx),
             region_spill: None,
+            region_inflow: None,
         }
     }
 
@@ -728,6 +733,19 @@ impl Fluvial {
             assert_eq!(s.len(), self.nx * self.nx, "region_spill length must be nx²");
         }
         self.region_spill = spill;
+    }
+
+    /// Inject seam-flux inflow seeds (m²) for the next erode — FE(1) flux half.
+    pub fn set_region_inflow(&mut self, inflow: Option<Vec<f32>>) {
+        if let Some(ref s) = inflow {
+            assert_eq!(s.len(), self.nx * self.nx, "region_inflow length must be nx²");
+        }
+        self.region_inflow = inflow;
+    }
+
+    /// Great-circle neighbour distance (m) — public for flux-export measurement.
+    pub fn dist_m_public(&self, a: usize, b: usize) -> f32 {
+        self.dist_m(a, b)
     }
 
     /// The contract geometry implies — a whole cube face (`oi = oj = 0`,
@@ -1037,10 +1055,17 @@ impl Fluvial {
     fn accumulate_drainage(&mut self, order: &[usize]) {
         const P: f32 = 1.0; // directional first-moment unbiased on square lattice; DECISIONS[the-router-is-a-scalar-pretending-to-be-a-vector-and-p-is-the-bias] / #obs-cube-locked-kernel-bias
         let nx = self.nx;
-        // Local runoff = true spherical cell area × local precip weight.
+        // Local runoff = true spherical cell area × local precip weight
+        // (+ seam-flux inflow seeds when the Jacobi flux half is live).
         // (Uniform cell_m² was a cube-locked bias — `#obs-cube-locked-kernel-bias`.)
         for i in 0..self.drainage.len() {
-            self.drainage[i] = self.cell_area[i] * self.precip_weight[i];
+            let inflow = self
+                .region_inflow
+                .as_ref()
+                .map(|v| v[i])
+                .unwrap_or(0.0)
+                .max(0.0);
+            self.drainage[i] = self.cell_area[i] * self.precip_weight[i] + inflow;
         }
         for &i in order.iter().rev() {
             let (x, y) = (i % nx, i / nx);
@@ -2904,12 +2929,11 @@ pub struct ExchangedTile {
 /// returned. This is the production path the probe was the instrument for —
 /// still region-scoped (not a single-tile pull with a dependency cone).
 ///
-/// **Sill-graph wire (FE(9)).** After each cadence assemble of interior beds, a
-/// sill graph is extracted over the **whole region** (coast / ocean outlets
-/// only — not per-tile edge sinks), flooded, and the absolute spill surface is
-/// written into each window's interior via [`Fluvial::set_region_spill`] before
-/// the next erode chunk. That is the non-local half of the boundary datum;
-/// the local half remains the elevation halo refill.
+/// **Sill + flux wire.** After each cadence assemble: (1) sill graph over the
+/// whole region → absolute spill surface into each window
+/// ([`Fluvial::set_region_spill`]); (2) interior→neighbour discharge exports
+/// assembled into inflow seeds ([`Fluvial::set_region_inflow`]). Local boundary
+/// datum remains the elevation halo refill.
 ///
 /// `mk_window(oi, oj, nx)` must return a fully driven [`Fluvial`] (surface,
 /// uplift, precip) whose origin is `(oi, oj)` and side `nx`. Origins may be
@@ -3048,9 +3072,31 @@ pub fn carve_region_jacobi_exchange(
                 tiles_j,
                 d,
             );
+            // FE(1) flux half: measure interior→neighbour exports, assemble
+            // inflows, inject before the next erode chunk.
+            inject_region_seam_flux(&mut tiles, tile_n, tiles_i, tiles_j, d);
         }
     }
     out
+}
+
+/// Measure each tile's interior export and write neighbour inflows as drainage seeds.
+fn inject_region_seam_flux(
+    tiles: &mut [Fluvial],
+    tile_n: usize,
+    tiles_i: usize,
+    tiles_j: usize,
+    d: usize,
+) {
+    use crate::flux_record::{assemble_inflows, measure_interior_exports};
+    let exports: Vec<_> = tiles
+        .iter()
+        .map(|f| measure_interior_exports(f, d, tile_n))
+        .collect();
+    let inflows = assemble_inflows(&exports, tiles_i, tiles_j, tile_n, d);
+    for (f, inflow) in tiles.iter_mut().zip(inflows.into_iter()) {
+        f.set_region_inflow(Some(inflow));
+    }
 }
 
 /// Extract a sill graph over the assembled region bed, flood it, and write the

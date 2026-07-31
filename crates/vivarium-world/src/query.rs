@@ -502,10 +502,10 @@ impl<'s> World<'s> {
     /// [`Source::Computed`] if any tile missed and [`Source::Hit`] if every tile
     /// was already present under the schedule's keys.
     ///
-    /// **Sill-graph wire (FE(9)):** `carve_region_jacobi_exchange` injects a
-    /// region-assembled spill surface into each window between cadence chunks
-    /// (`sill1` in the halo key token). **Not yet:** flux half, demand-driven
-    /// single-tile cone with `ρ`, volume-aware fill–spill–merge hierarchy.
+    /// **Sill + flux wire:** between cadence chunks, injects region spill
+    /// surface (`sill1`) and neighbour seam discharge seeds (`flux1`) into each
+    /// window. **Not yet:** sediment flux, demand-driven single-tile cone with
+    /// `ρ`, volume-aware hierarchy, matched-ratio operating law.
     pub fn erosion_region_exchanged(
         &self,
         face: Face,
