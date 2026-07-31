@@ -37,23 +37,18 @@ pub fn unmodelled(frame: &Frame, ladder: &Ladder, cov: &Coverage) -> Vec<String>
          depression as the mantle cools, not water going anywhere."
             .to_string(),
     );
-    if !cov.watered.is_empty() && f.water_loaded == 0 {
+    if f.water_requested > 0 && f.water_loaded == 0 {
+        out.push(
+            "Water-tile roots exist for this world but none loaded under this binary's source hash -- \
+             staleness, not absence. `vivarium build` re-settles them."
+                .to_string(),
+        );
+    } else if f.water_loaded > 0 {
         out.push(format!(
-            "The {} built `water-tile` roots were settled under a DIFFERENT source tree, so none is readable \
-             at this binary's source hash and the water paint is empty. That is staleness, not an absence of \
-             water -- `vivarium build` re-settles them. (Loading them anyway would blend two datums; \
-             re-running the fill here would be a view cold-running evolution the builder has not done.)",
-            cov.watered.len()
-        ));
-    } else if !cov.watered.is_empty() {
-        out.push(format!(
-            "The one real hydrology -- the built `water-tile` depth field, {} tiles -- is NOT part of the \
-             surface datum and no view drew it before this one. Press 3 to see it. \
-             It is a fixed {}-step fill under a declared x9000 bounded-fill acceleration, and \
-             `#obs-water-fill-never-settles` measured that it does not reach a steady state, so those \
-             depths are a state the kernel was stopped at, not an equilibrium.",
-            cov.watered.len(),
-            cov.watered.values().next().map(|(_, s)| *s).unwrap_or(0),
+            "Built `water-tile` depth field at L{}: {} tiles loaded. Inland depth paints cyan on surface \
+             (and loud on water paint, key 3). Fixed-step fill under bounded acceleration -- \
+             `#obs-water-fill-never-settles`: not equilibrium.",
+            f.water_level, f.water_loaded,
         ));
     }
 
@@ -296,13 +291,14 @@ pub fn census(frame: &Frame, cov: &Coverage) -> String {
     let mut s = String::new();
     let _ = writeln!(
         s,
-        "BUILT  {} readable tiles at L{}: watered {} | eroded {} | initial-topo {} | provisional {}{}",
-        cov.built_tiles(),
+        "BUILT  surface L{}: eroded {} | initial-topo {} | provisional {}  |  water L{}: {}/{} tiles{}",
         cov.level,
-        t[3],
         t[2],
         t[1],
         cov.provisional.len(),
+        f.water_level,
+        f.water_loaded,
+        f.water_requested,
         if cov.stale_only_tiles() > 0 {
             format!(
                 "  |  {} tiles have ONLY stale-source roots: built, unreadable here, drawn from the prior -- rerun `vivarium build`",
@@ -321,13 +317,19 @@ pub fn census(frame: &Frame, cov: &Coverage) -> String {
     );
     let _ = writeln!(
         s,
-        "       standing water: {} cells wet, {} of them INLAND  ({}/{} water tiles readable at this source hash at L{}, the census level{})  |  view writes refused: {}",
+        "       standing water: {} cells wet, {} of them INLAND  (water field L{}: {}/{} tiles{})  |  view writes refused: {}",
         f.water_cells,
         f.inland_water_cells,
+        f.water_level,
         f.water_loaded,
         f.water_requested,
-        cov.level,
-        if f.water_loaded < f.water_requested { " -- STALE, rerun vivarium build" } else { "" },
+        if f.water_requested == 0 {
+            " -- no water-tile under this src; rebuild or water phase not run"
+        } else if f.water_loaded < f.water_requested {
+            " -- some water tiles unreadable"
+        } else {
+            ""
+        },
         f.refused_writes
     );
     if frame.seam.n == 0 {

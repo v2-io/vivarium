@@ -283,7 +283,18 @@ fn seam_overlay(c: [f32; 3], excess_m: f32, isolated: bool) -> [f32; 3] {
 
 pub fn shade(mode: Paint, f: CellFacts) -> [f32; 4] {
     let c = match mode {
-        Paint::Surface => hypsometric(f.h_m, f.sea_m, f.is_ocean),
+        Paint::Surface => {
+            // Inland standing water from the water-tile nomos (not ocean paint).
+            // Without this, settled lakes were only visible in water mode — and
+            // water mode was often empty because coverage ignored L9 water when
+            // an L13 beacon set the surface level.
+            if !f.is_ocean && f.water_m > crate::water::WET_M {
+                let t = (f.water_m / f.water_max_m.max(1.0)).clamp(0.0, 1.0).powf(0.4);
+                lerp3([0.45, 0.85, 0.95], [0.08, 0.42, 0.72], t)
+            } else {
+                hypsometric(f.h_m, f.sea_m, f.is_ocean)
+            }
+        }
 
         Paint::Provenance => {
             // Provisional overrides the ladder: bytes written under waived flux

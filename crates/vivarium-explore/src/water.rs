@@ -26,24 +26,33 @@
 //! cold-trigger evolution the builder has not done). Where the current source
 //! has no settled water, this field is empty and the HUD says the tiles are
 //! stale — which is the true answer, and arrives instantly.
+//!
+//! **Level selection (2026-07-31):** Coverage's ladder is "deepest *surface*
+//! tile" (often an L13 beacon). Water was only stored at L9 full-globe — so
+//! loading solely via `cov.watered` made **every** settled lake invisible
+//! whenever a finer erosion beacon existed. We load the **finest water-tile
+//! grain under the current `src=`**, not the coverage surface level.
 
 use std::collections::HashMap;
 
+use vivarium_world::nomotheke::SRC_HASH;
 use vivarium_world::query::World;
 use vivarium_world::sphere::Face;
-use vivarium_world::watch::Coverage;
+use vivarium_world::store::RootEntry;
+use vivarium_world::watch::{self, Coverage};
 
 /// Standing-water depth (m) over the built tiles, at the level they were built
 /// at — sampled down to whatever level the view is drawing.
 pub struct WaterField {
-    /// The level these tiles were built at (the coverage's display level).
+    /// The level these tiles were built at (the water nomos's level, not
+    /// necessarily the coverage surface level).
     pub level: u8,
     pub nx: usize,
     /// `(face, oi, oj)` → the tile's depth field.
     tiles: HashMap<(u8, u32, u32), Vec<f32>>,
     /// Deepest standing water found (m) — the display ramp's top.
     pub max_depth_m: f32,
-    /// Water roots the census named.
+    /// Water roots the census named (at the chosen level, current src).
     pub requested: usize,
     /// Of those, how many were settled under the CURRENT source hash and could
     /// therefore be shown. `loaded < requested` is a staleness finding, not a
@@ -69,14 +78,90 @@ impl WaterField {
         }
     }
 
-    /// Load every built water tile named by the coverage census.
+    /// Load water for display from the root listing (preferred).
     ///
-    /// Each tile is pulled by its own complete key — the `(eepochs, steps)` the
-    /// census read off the root, never "the latest water tile"
-    /// ( #form-depend-by-key-never-latest ). `eepochs` names which eroded bed
-    /// this water settled onto; `steps` is water's own clock. Confusing the two
-    /// is the near-miss `watch::time_index_field` documents, and it would show
-    /// up here as loading the wrong bed's water.
+    /// Picks the **finest** level that has any `water-tile` under the current
+    /// `SRC_HASH`, then loads every tile at that level. Does **not** use
+    /// [`Coverage`]'s surface level — that is often a beacon grain with no water.
+    pub fn load_from_roots(world: &World, roots: &[RootEntry]) -> WaterField {
+        // level → list of (face, oi, oj, nx, eepochs, steps)
+        let mut by_level: HashMap<u8, Vec<(u8, u32, u32, usize, u32, u32)>> = HashMap::new();
+        for r in roots {
+            if !r.key.starts_with("water-tile@") {
+                continue;
+            }
+            if watch::key_field(&r.key, "src") != Some(SRC_HASH) {
+                continue;
+            }
+            let Some(level) = watch::key_field(&r.key, "level").and_then(|v| v.parse::<u8>().ok())
+            else {
+                continue;
+            };
+            let Some(face) = watch::key_field(&r.key, "face").and_then(|v| v.parse::<u8>().ok())
+            else {
+                continue;
+            };
+            let Some(oi) = watch::key_field(&r.key, "oi").and_then(|v| v.parse::<u32>().ok()) else {
+                continue;
+            };
+            let Some(oj) = watch::key_field(&r.key, "oj").and_then(|v| v.parse::<u32>().ok()) else {
+                continue;
+            };
+            let Some(nx) = watch::key_field(&r.key, "nx").and_then(|v| v.parse::<usize>().ok())
+            else {
+                continue;
+            };
+            let eepochs = watch::key_field(&r.key, "eepochs")
+                .and_then(|v| v.parse::<u32>().ok())
+                .unwrap_or(0);
+            let steps = watch::key_field(&r.key, "steps")
+                .and_then(|v| v.parse::<u32>().ok())
+                .unwrap_or(0);
+            by_level
+                .entry(level)
+                .or_default()
+                .push((face, oi, oj, nx, eepochs, steps));
+        }
+        let Some((&level, entries)) = by_level.iter().max_by_key(|(l, _)| *l) else {
+            return WaterField::none();
+        };
+        let nx = entries.first().map(|e| e.3).unwrap_or(64);
+        let mut tiles = HashMap::with_capacity(entries.len());
+        let mut max_depth_m = 0.0f32;
+        let mut loaded = 0usize;
+        for &(f, oi, oj, tile_nx, eepochs, steps) in entries {
+            let face = Face::from_index(f);
+            let Some((depth, _src)) = world
+                .observe()
+                .water_tile_hit(face, level, oi, oj, tile_nx, eepochs, steps)
+            else {
+                continue;
+            };
+            if depth.len() != tile_nx * tile_nx {
+                continue;
+            }
+            for &d in &depth {
+                if d.is_finite() && d > max_depth_m {
+                    max_depth_m = d;
+                }
+            }
+            tiles.insert((f, oi, oj), depth);
+            loaded += 1;
+        }
+        WaterField {
+            level,
+            nx,
+            tiles,
+            max_depth_m,
+            requested: entries.len(),
+            loaded,
+        }
+    }
+
+    /// Load via coverage census — **only** water at the coverage surface level.
+    /// Prefer [`load_from_roots`] when a beacon made `cov.level` finer than the
+    /// water build grain.
+    #[allow(dead_code)] // retained for callers that only have Coverage
     pub fn load(world: &World, cov: &Coverage) -> WaterField {
         if cov.watered.is_empty() {
             return WaterField::none();
@@ -88,7 +173,7 @@ impl WaterField {
             let Some((depth, _src)) =
                 world.observe().water_tile_hit(face, cov.level, oi, oj, cov.nx, eepochs, steps)
             else {
-                continue; // not settled under the current source — stale, not shown
+                continue;
             };
             if depth.len() != cov.nx * cov.nx {
                 continue;

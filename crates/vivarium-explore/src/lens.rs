@@ -278,6 +278,8 @@ pub struct FrameFacts {
     /// world has no lakes" and "this binary cannot see the lakes it has".
     pub water_requested: usize,
     pub water_loaded: usize,
+    /// Level of the water-tile field drawn (may be coarser than surface coverage).
+    pub water_level: u8,
     /// Sea datum used (m), and whether it is the store's or this view's estimate.
     pub sea_m: f32,
     pub sea_provenance: SeaProvenance,

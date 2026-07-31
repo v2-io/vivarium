@@ -58,7 +58,7 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
    | **4** | **P3 residual** — **landed 2026-07-31:** explore fresh/stale banner; first-light rebuilt under current `src` (world git `7216c8dca`, ~3552 fresh erosion). Far globe ≤L7 still pure prior by coverage; **zoom past L7** for L9/L13 covering-grain windows | — | — |
    | **5** | **P4 — Spot-check gate** — **instrument bar met 2026-07-31** (thrash boring, face-sampled ocean, fresh carve present). **Joseph eyes invited** to confirm fluvial/ocean/depression spot-check; cycle still honest red | Foundation for physics sessions | Not Abyssal complete; not closed-water-cycle Kept |
    | **6** | **Phase-3 `closed-water-cycle`** — honest red + feel needle until face ocean + non-identity predicate can fail and don’t | Costume green forbidden | Not algebraic residual alone |
-   | **7** | Sill-graph spill → flux half + matched-ratio arms | After P4 | Gated on P4 |
+   | **7** | **Basin fill visible / volume-aware lakes** — water field load fixed (not buried under beacon coverage level); next: sill-graph for cross-tile lake consistency when eyes find wrong empties | Joseph wants to *see* basins fill | Not water settle as “the” lake blocker story alone |
    | **8** | Blast radii; router; column_at; cold-stage; χ | After P4 | Gated on P4 |
    | demote | Water settle as lake blocker; Caspian (answered); demand spool; regula-as-new-audit; explorer polish not serving P3–P4; costume-green cycle | — | — |
 

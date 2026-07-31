@@ -357,7 +357,9 @@ pub fn spawn(
         // and re-read when the census changes.
         let mut roots = store.roots_shared().unwrap_or_else(|_| Arc::new(Vec::new()));
         let mut cov = Coverage::parse(&roots);
-        let mut water = WaterField::load(&world, &cov);
+        // Finest fresh water grain — not Coverage surface level (beacon L13 would
+        // hide full-globe L9 water and report "0 wet" while lakes sit in the store).
+        let mut water = WaterField::load_from_roots(&world, &roots);
         let mut landings: Vec<watch::Landing> = Vec::new();
         let mut chain = Chain::read(&roots, 0);
         crate::lens::read_residuals(&store, &roots, &mut chain);
@@ -393,7 +395,7 @@ pub fn spawn(
             if !Arc::ptr_eq(&now, &roots) {
                 roots = now;
                 cov = Coverage::parse(&roots);
-                water = WaterField::load(&world, &cov);
+                water = WaterField::load_from_roots(&world, &roots);
                 landings.clear();
                 ladder.refresh_residency(&world);
                 chain = Chain::read(&roots, chain.sel);
@@ -963,6 +965,7 @@ pub fn spawn(
                 water_cells,
                 water_requested: water.requested,
                 water_loaded: water.loaded,
+                water_level: water.level,
                 sea_m,
                 sea_provenance,
                 craton_growth: lithosphere::craton_growth(tp),

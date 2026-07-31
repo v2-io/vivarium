@@ -354,7 +354,7 @@ fn main() {
     }
     let cov = Coverage::parse(&roots);
     let ladder = Ladder::read(&world, spec.demand.frames, view_frames);
-    let water = WaterField::load(&world, &cov);
+    let water = WaterField::load_from_roots(&world, &roots);
     let mut chain = Chain::read(&roots, 0);
     lens::read_residuals(&store, &roots, &mut chain);
     // Fresh vs stale under *this* binary — P3 bar is carve coverage, not tile count.
