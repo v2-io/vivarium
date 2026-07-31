@@ -43,6 +43,8 @@ This norm is the project's own history stated as an obligation. The wall began a
 
 ## Working Notes
 
+- **Specimen, 2026-07-30 — a fault whose discipline could not have caught it.** A changelog provenance field shipped a fabricated cohort digest. Twelve other hashes the same night were right, and every one had been copied from a command's output; the wrong one was the only field written with no output at hand. Restating "verify before writing" would have addressed nothing, because a 16-hex digest cannot be recalled — only read or invented — and the generating mind cannot feel which it just did. Converted both ways this norm allows: `bin/check-provenance` (in `bin/check`) refuses a pointer that does not resolve, and `bin/provenance` prints the block so the correct value is *cheaper* than the invented one. The second half is the one that acts on the habit; the first only walls the bottom of the gradient. Joseph's framing: *"make the easiest thing the most correct thing."*
+
 - FE(2)(a) is scheduled as code (cohort-selecting loaders in `query.rs`, replacing the merging default); FE(2)(b) starts as a convention (number + probe name + cohort in segment prose) and hardens if it fails.
 - The store-side cohort question and the domain-side boundary question ( #form-declared-boundary-contract ) are the same "audit green, answer wrong" class; that segment's Working Notes cross-reference.
 - This norm deliberately does not own delegation/prose-register disciplines (global memory's territory); it owns the *repo's* honesty surfaces.
