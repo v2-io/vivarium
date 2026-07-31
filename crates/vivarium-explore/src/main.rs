@@ -61,25 +61,25 @@ use crate::paint::Paint;
 use crate::pull::{Frame, Msg, Request};
 use crate::water::WaterField;
 
-/// Levels the **whole-globe** mesh spans. L9 = 512² cells/face ≈ 20 km cells,
-/// six faces = 1.6 M cells, which is already the ceiling for a monolith: L10
-/// would be 6.3 M and L13 would be 400 M.
+/// Levels the **whole-globe** mesh spans. L7 = 128² cells/face × 6 ≈ 98 k cells —
+/// a mesh that rebuilds in a fraction of a second. L8 was 4× that, L9 16×, and
+/// the old L9 ceiling was the multi-second "muddle while zooming" path: every
+/// scroll step paid for a full-planet remesh that the next scroll abandoned.
 const LEVEL_MIN: u8 = 5;
-const LEVEL_GLOBE_MAX: u8 = 9;
+const LEVEL_GLOBE_MAX: u8 = 7;
 
-/// Levels the **region window** spans. Finer than L9 is drawn as one `PATCH_NX`
-/// window into one face rather than a bigger monolith — the note this constant
-/// replaces said "wants a per-region quadtree", and a camera-centred window is
-/// the first rung of one: constant cost, resolution set by level.
+/// Levels the **region window** spans. Finer than the globe ceiling (or close
+/// approach at any level) draws one camera-centred window into one face — the
+/// first rung of a quadtree: cost set by window size, not by planet area.
 ///
-/// L13 ≈ 1.2 km cells, which is where the tree's fine builds live and the first
-/// scale at which fluvial form is a *shape* rather than a single cell.
+/// L13 ≈ 1.2 km cells, where the tree's fine builds live and fluvial form is a
+/// *shape* rather than a single cell.
 const LEVEL_MAX: u8 = 14;
 
-/// Cells across a region window. 384² = 147 k cells — under a tenth of the L9
-/// globe's mesh, so a window is cheaper than the globe it replaces at every
-/// level, and the cost is flat in level rather than quadrupling.
-const PATCH_NX: usize = 384;
+/// Region window width bounds (cells). Cost is O(nx²); 384² was the old fixed
+/// size that made every close-in frame feel like a full-globe remesh.
+const PATCH_NX_MIN: usize = 128;
+const PATCH_NX_MAX: usize = 384;
 
 /// Relief exaggeration cycle for X. 1 = honest (a billiard ball, truthfully).
 const EXAG_STEPS: [f32; 4] = [1.0, 10.0, 20.0, 50.0];
@@ -869,30 +869,57 @@ fn lens_update(
     }
 }
 
-/// Resolution-on-zoom, and one build in flight at a time (latest wins).
+/// Resolution-on-zoom. **Latest request always wins** — the worker drains its
+/// queue to the newest `Request` before each build, so a multi-second pull
+/// never forces the viewer to watch every intermediate zoom level. The old
+/// `!inflight` gate dropped all scroll while a globe remesh ran, which is how
+/// the instrument spent seconds building a view the hand had already left.
 fn request_update(orbit: Res<Orbit>, mut ex: ResMut<Explorer>, tx: Res<ReqTx>) {
+    let r = radius_km();
+    let alt = (orbit.dist - r).max(20.0);
+
     if ex.auto_level {
-        let r = radius_km();
-        let alt = (orbit.dist - r).max(20.0);
+        // Cell size tracks altitude so screen-space grain stays roughly constant.
+        // Step *at most one level toward the target* so a fast scroll does not
+        // jump L6→L13 and force a pathologically expensive first rebuild.
         let quarter = r * std::f32::consts::FRAC_PI_2;
-        let target_cell = alt * 0.005;
-        let l = (quarter / target_cell).log2().ceil() as i32;
-        ex.level = l.clamp(LEVEL_MIN as i32, LEVEL_MAX as i32) as u8;
+        let target_cell = (alt * 0.008).max(0.15); // km; slightly coarser than before
+        let raw = (quarter / target_cell).log2().ceil() as i32;
+        let target = raw.clamp(LEVEL_MIN as i32, LEVEL_MAX as i32) as u8;
+        if target > ex.level {
+            ex.level += 1;
+        } else if target < ex.level {
+            ex.level -= 1;
+        }
     }
-    // Past the globe's ceiling the view becomes a window, centred on whatever the
-    // camera is actually looking at — which is the planet's centre direction, so
-    // "where you are pointed" and "what gets drawn" are the same thing and no
-    // separate focus concept is needed.
-    let patch = (ex.level > LEVEL_GLOBE_MAX).then(|| {
-        let d = Vec3::new(
-            orbit.pitch.cos() * orbit.yaw.cos(),
-            orbit.pitch.sin(),
-            orbit.pitch.cos() * orbit.yaw.sin(),
-        );
+
+    // Window when past the globe ceiling *or* when close enough that a full
+    // sphere is mostly off-screen — a full-globe remesh at low altitude is paid
+    // for faces you cannot see.
+    let want_window = ex.level > LEVEL_GLOBE_MAX || alt < 0.35 * r;
+    let mut patch = want_window.then(|| {
+        let d = view_dir(&orbit);
         let (face, i, j, _) =
             CubeCoord::from_unit([d.x as f64, d.y as f64, d.z as f64]).cell(ex.level).to_face_ij();
-        pull::Patch::centred(face.index(), ex.level, i, j, PATCH_NX)
+        let nx = patch_nx_for(alt, ex.level, r);
+        pull::Patch::centred(face.index(), ex.level, i, j, nx)
     });
+    // **Sticky window.** Without this, every pixel of orbit drag recentres the
+    // patch and enqueues a full remesh — the view "crawls" while thrashing the
+    // pull thread. Only slide the window when the look point has left a slack
+    // band (~1/8 of the window), or when level / size / face changed.
+    if let (Some(p), Some(prev_req)) = (patch, ex.requested) {
+        if let Some(prev) = prev_req.patch {
+            if p.face == prev.face && p.nx == prev.nx && prev_req.level == ex.level {
+                let slack = (p.nx as u32 / 8).max(8);
+                let di = p.oi.abs_diff(prev.oi);
+                let dj = p.oj.abs_diff(prev.oj);
+                if di < slack && dj < slack {
+                    patch = Some(prev);
+                }
+            }
+        }
+    }
     let want = Request {
         level: ex.level,
         patch,
@@ -902,10 +929,32 @@ fn request_update(orbit: Res<Orbit>, mut ex: ResMut<Explorer>, tx: Res<ReqTx>) {
         lens: ex.lens,
         change_scale_m: CHANGE_STEPS[ex.change_i],
     };
-    if !ex.inflight && ex.requested != Some(want) && tx.0.send(want).is_ok() {
+    // Always enqueue the latest want. The worker keeps only the last request
+    // when several pile up during a slow build.
+    if ex.requested != Some(want) && tx.0.send(want).is_ok() {
         ex.requested = Some(want);
         ex.inflight = true;
     }
+}
+
+/// Camera look direction (unit vector from planet centre toward the eye).
+fn view_dir(orbit: &Orbit) -> Vec3 {
+    Vec3::new(
+        orbit.pitch.cos() * orbit.yaw.cos(),
+        orbit.pitch.sin(),
+        orbit.pitch.cos() * orbit.yaw.sin(),
+    )
+}
+
+/// Window width so the patch roughly fills the FOV at the current altitude.
+/// Flat-sky approx: visible arc ≈ 2 · alt · tan(fov/2); convert to cells at
+/// this level. Clamped so cost stays bounded.
+fn patch_nx_for(alt_km: f32, level: u8, r_km: f32) -> usize {
+    let cell_km = (r_km * std::f32::consts::FRAC_PI_2) / (1u32 << level) as f32;
+    let fov = 45f32.to_radians();
+    let half = alt_km * (fov * 0.5).tan();
+    let cells = (2.2 * half / cell_km.max(1e-3)).ceil() as usize;
+    cells.clamp(PATCH_NX_MIN, PATCH_NX_MAX)
 }
 
 fn apply_frames(
@@ -919,18 +968,26 @@ fn apply_frames(
     mut materials: ResMut<Assets<StandardMaterial>>,
     old: Query<Entity, With<FaceEntity>>,
 ) {
-    let msg = {
+    // Drain the channel: keep only the latest Frame. Landings are advisory and
+    // must not block applying a frame that is already waiting behind them.
+    let mut last_frame: Option<Box<Frame>> = None;
+    {
         let rx = rx.0.lock().unwrap();
-        match rx.try_recv() {
-            Ok(m) => m,
-            Err(_) => return,
+        loop {
+            match rx.try_recv() {
+                Ok(Msg::Frame(f)) => last_frame = Some(f),
+                Ok(Msg::Landings(_)) => {}
+                Err(_) => break,
+            }
         }
-    };
-    let frame = match msg {
-        Msg::Landings(_) => return,
-        Msg::Frame(f) => f,
-    };
-    ex.inflight = false;
+    }
+    let Some(frame) = last_frame else { return };
+
+    // Inflight clears only when the frame matches the latest request we sent —
+    // otherwise a slower older build finished after a newer one was enqueued.
+    if ex.requested == Some(frame.req) {
+        ex.inflight = false;
+    }
     ladder.0.built = frame.ladder_built.clone();
     chain.0 = frame.chain.clone();
     cov.0 = Coverage::parse(&frame.roots);
@@ -974,19 +1031,37 @@ fn apply_frames(
 fn camera_update(
     orbit: Res<Orbit>,
     sun: Res<Sun>,
-    mut cam: Query<&mut Transform, (With<ExploreCam>, Without<SunLight>)>,
+    mut cam: Query<(&mut Transform, &mut Projection), (With<ExploreCam>, Without<SunLight>)>,
     mut light: Query<&mut Transform, (With<SunLight>, Without<ExploreCam>)>,
 ) {
-    let dir = Vec3::new(
-        orbit.pitch.cos() * orbit.yaw.cos(),
-        orbit.pitch.sin(),
-        orbit.pitch.cos() * orbit.yaw.sin(),
-    );
+    let r = radius_km();
+    let dir = view_dir(&orbit);
     let eye = dir * orbit.dist;
+    let alt = (orbit.dist - r).max(1.0);
+
+    // **Look target.** Far out: planet centre (classic orbit). Close in: the
+    // nadir on the surface under the camera. Looking at the centre from low
+    // altitude is what made the horizon "do the wrong thing" — the camera aims
+    // through the planet at the far limb while the mesh underfoot foreshortens
+    // into mush. Blend over ~1.2 radii of altitude.
+    let nadir_blend = (1.0 - (alt / (1.2 * r)).clamp(0.0, 1.0)).powf(1.25);
+    let look_at = dir * (r * nadir_blend);
     let up = if dir.y.abs() > 0.98 { Vec3::X } else { Vec3::Y };
-    let t = Transform::from_translation(eye).looking_at(Vec3::ZERO, up);
-    if let Ok(mut c) = cam.single_mut() {
+    let t = Transform::from_translation(eye).looking_at(look_at, up);
+
+    // **Clip planes** track altitude so we neither clip the near surface nor
+    // waste depth precision on a fixed 5 km near plane.
+    let near = (alt * 0.04).clamp(0.5, 400.0);
+    let far = (orbit.dist + 3.0 * r).max(near * 200.0);
+
+    if let Ok((mut c, mut proj)) = cam.single_mut() {
         *c = t;
+        if let Projection::Perspective(ref mut p) = *proj {
+            p.near = near;
+            p.far = far;
+            // Slightly wider FOV when close so a region window fills the glass.
+            p.fov = (45.0 + 12.0 * nadir_blend).to_radians();
+        }
     }
     if let Ok(mut s) = light.single_mut() {
         if sun.headlight {

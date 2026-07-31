@@ -251,7 +251,7 @@ pub fn header(
     let _ = writeln!(
         s,
         "vivium \"{world_name}\" {seed:#018x}  |  {lens}{}",
-        if inflight { "  |  rebuilding..." } else { "" }
+        if inflight { "  |  updating view..." } else { "" }
     );
     let _ = writeln!(
         s,
@@ -641,7 +641,7 @@ pub fn craton_line(f: &FrameFacts) -> String {
 
 /// The key map, kept last so it never pushes information off the top.
 pub fn keys(_paint: Paint) -> String {
-    "drag spin | wheel zoom (past L9 the globe becomes a REGION WINDOW) | [ ] level | A auto-level\n\
+    "drag spin | wheel zoom (close-in = REGION WINDOW, not a full-globe remesh) | [ ] level | A auto-level\n\
      X relief | O pole | R reset | B GO TO THE SELECTED CHAIN'S REGION | G cycle chains\n\
      TAB paint (1 surface 2 provenance 3 water 4 seam 5 change 6 depression) | Z change scale | P present\n\
      E EROSION SETTLE HISTORY (world-time) | T deep time (mantle cooling) | V replay (build history)\n\

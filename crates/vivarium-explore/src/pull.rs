@@ -207,7 +207,15 @@ pub fn spawn(
         let mut chain = Chain::read(&roots, 0);
         crate::lens::read_residuals(&store, &roots, &mut chain);
 
-        while let Ok(req) = rx.recv() {
+        while let Ok(first) = rx.recv() {
+            // **Latest request wins.** While a multi-second mesh builds, the UI
+            // keeps sending the current zoom/level. Draining the backlog here
+            // means we never pay for intermediate zooms the hand already left —
+            // that was the "does the wrong thing very slowly" path.
+            let mut req = first;
+            while let Ok(newer) = rx.try_recv() {
+                req = newer;
+            }
             let t0 = std::time::Instant::now();
 
             // Re-read the census each frame: cheap next to a mesh build, and it
@@ -357,9 +365,8 @@ pub fn spawn(
                 Vec::new()
             };
             // Ocean mask per region — same domain honesty as standing water
-            // ( #form-ocean-is-connectivity-not-elevation ). Always paid: every
-            // paint mode needs the coast, and a flood-fill over a region is
-            // cheap next to mesh build.
+            // ( #form-ocean-is-connectivity-not-elevation ). Flood-fill is cheap
+            // next to mesh build; still only run once per pull, not per cell.
             let region_ocean: Vec<Vec<bool>> =
                 regions.iter().map(|r| r.ocean_mask()).collect();
 
