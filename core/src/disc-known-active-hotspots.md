@@ -44,27 +44,27 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
    Related as "the sphere is real at joins"; **different repairs.**
 
-5. **Highest-leverage next — sealed 2026-07-31 (evening): instrument parity first, then world pieces.** Ideation rank only; parity **definition** lives in `#disc-explorer-instrument-parity` (P0–P4). Joseph acceptance: zoomable (limited) **performant** globe; LoD heterogeneity only if wholesale switch cannot meet the bar; **spot-check physics must be possible** (no multi-second thrash conflating paint with bed).
+5. **Highest-leverage next — re-sealed 2026-07-31 (Joseph: pencil priority and proceed).** Ideation rank only; parity definition: `#disc-explorer-instrument-parity`. **Next cut: face ocean product** (not more explorer chrome, not sill/flux, not weather GCM). P0–P1 done; P2 largely free (HUD already legible); P3 open-grain rides rebuild/`src` freshness; **P4 waits on zoom-stable sea.**
 
-   **Parity bar (stop-condition for the instrument strand).** P4 in `#disc-explorer-instrument-parity`: can orbit/zoom to a limit and inspect fluvial/ocean/depression on a built cohort; weird pictures are primarily **physics or paint-law** questions. Until P4, instrument honesty **outranks** new world features when session attention conflicts.
+   **Parity bar.** P4: orbit/zoom and inspect fluvial/ocean/depression; weirdness is physics or paint-law — **not** thrash and **not** ethereal sea. Until P4, instrument honesty outranks new world features when attention conflicts.
 
-   **What already landed (not reopened).** Mixed-tier view FE(8); pad/NaN; chart-edge direction resample; shared `ocean_mask`; ocean paint on assembled tile; level-filter before decode; face-local R; altitude-gated windows; latest-wins drain; provenance tooling. Water settle remains **not** the lake blocker.
+   **What already landed (not reopened).** Mixed-tier view FE(8); pad/NaN; chart-edge direction resample; shared `ocean_mask` pure function; level-filter; face-local R; altitude windows; latest-wins; P0 roots hot; P1 thrash boring; feel needle `:progress`. Water settle remains **not** the lake blocker.
 
    | Rank | Action | Why high leverage | Not this instead |
    | --- | --- | --- | --- |
-   | **1** | **P0 — Index is hot** — **landed 2026-07-31** (`Store::roots_shared` generation cache; external entry-count invalidate on 1 s throttle). First-light stopwatch: cold body scan ~2.2 s / 146k roots; warm hit ~ns | Without this, every “updating view…” paid O(archive) before any height sample. Residual: cold open still pays one full scan (acceptable once); external builder detect is throttled readdir not body parse | Not more LoD policy; not sill/flux yet |
-   | **2** | **P1 — Pull thrash is boring** — **landed 2026-07-31** (roots_shared in observe; no full-census clone/reparse per pull; region+prior caches; AlreadyCurrent skip; Frame carries Arc roots + coverage). Bench: Coverage::parse ~24 ms, load_eroded empty ~24 ms, full roots clone ~7 ms — **no longer paid every settle**. **Next: P2/P3** | Joseph: framerate of *drawn* mesh is fine; the pain was endless multi-second updates. Residual: genuine level/lens change still remeshes (correct); cold open + first Present load still pay once | Not a full quadtree |
-   | **3** | **P2+P3 — Intent legible + open view usable** — HUD always WHOLE GLOBE vs CLOSE-IN WINDOW + carve/prior/mixed; prefer open at covering level **(b)** or instant honest prior + zoom-to-carve **(c)**; coarse overview product **(a)** only if needed (see parity segment) | Today open L7 is 100% prior while L9 carve sits in store — cannot spot-check fluvial without fighting the instrument | Not finishing every explorer-intent wishlist item |
-   | **4** | **Face (or store) ocean product — view samples, never re-floods the postage stamp** ( #form-ocean-is-connectivity-not-elevation FE(5)/(8) ). Window-local `ocean_mask` makes sea zap with zoom (convicted 2026-07-31 L14). Compute: face mask once per bed epoch; window lookup $O(n_x^2)$ | Without this, paint-law and “closed water cycle” cannot be honest under close-in inspection — P4 spot-check of ocean/lakes is blocked by ethereal sea | Not a weather GCM; not sill/flux first |
-   | **5** | **P4 — Spot-check gate** — declare parity when P0–P3 + stable ocean class hold and physics can be inspected without thrash *or* zoom-invented sea | The “we are at foundation” milestone | Not Abyssal completion |
-   | **6** | **Phase-3 `closed-water-cycle` — honest red until a convicting predicate can fail and doesn’t** — inventory conservation is necessary **not** sufficient; ocean world-object + reservoir motion required (ordinum predicate strengthened 2026-07-31). Status: **red on cycle closure**, loud **encouraging signs** on P0/P1 thrash, shared mask function, conserved inventory box | Soft green (flux unmet:none, box residual 0, phase-4 demand) while sea is view-conditional is costume closure | Not claiming Kept; not algebraic identity alone |
-   | **7** | **Sill-graph spill → flux half** ( #form-same-level-halo-exchange FE(9)/(1) ) + matched-ratio arms | Next **world piece** after eyes + ocean object | **Gated on P4** (unless parallel free agent and no attention conflict) |
-   | **8** | Re-measure blast radii; router adopt/park; `column_at` residual; cold-stage; χ path | Physics backlog after foundation | **Gated on P4** |
-   | demote | Water settle as lake blocker; Caspian census (answered); demand spool; “build regula audit”; full quadtree-as-first-step; explorer polish that does not serve P0–P4; **comfort-green phase-3 cycle from box residual alone** | Superseded or premature / forbidden costume | — |
+   | **1** | **P0 — Index is hot** — **landed** | — | — |
+   | **2** | **P1 — Pull thrash boring** — **landed** | — | — |
+   | **3** | **Face ocean product** — **landed 2026-07-31 (explore working set):** adjudicate at ≤L9 whole face; paint samples; never re-flood postage stamp. Store citizen still optional later. | Zoom-stable sea for close-in; `closed-water-cycle` feel 45 | Not weather GCM |
+   | **4** | **P3 residual** — open at covering level when store has carve under current `src`, or rebuild first-light; honest prior open OK if P1 holds | Fluvial still unreadable when L9 carve is stale/src-mismatched | Not a second law |
+   | **5** | **P4 — Spot-check gate** — thrash boring **and** sea not zoom-invented; declare foundation | — | Not Abyssal complete |
+   | **6** | **Phase-3 `closed-water-cycle`** — honest red + feel needle until face ocean + non-identity predicate can fail and don’t | Costume green forbidden | Not algebraic residual alone |
+   | **7** | Sill-graph spill → flux half + matched-ratio arms | After P4 | Gated on P4 |
+   | **8** | Blast radii; router; column_at; cold-stage; χ | After P4 | Gated on P4 |
+   | demote | Water settle as lake blocker; Caspian (answered); demand spool; regula-as-new-audit; explorer polish not serving P3–P4; costume-green cycle | — | — |
 
-   **LoD under acceptance.** Prefer performant **wholesale** level switch within P1 budget. Add **heterogeneous** LoD (coarse shell + fine patch, multi-block pin) only if wholesale cannot show carve grain under P1. Full quadtree is out of scope for parity.
+   **Sequence (Joseph 2026-07-31).** (1) Face ocean sample path → (2) P3/rebuild as needed → (3) P4 declare → (4) sill/flux and deeper cycle. P2 HUD is residual polish, not a blocking milestone.
 
-   **Phase floor (Joseph 2026-07-31).** **Honest red** on `closed-water-cycle` until domain-stable ocean + non-identity predicate; **encouraging signs** elsewhere (thrash fixed, shared mask pure function, inventory conserved-by-construction as *stock*, not as cycle kept). Phase-4 claim/demand does not clear phase-3. Role leakage (view invents world objects) → tighten role split, do not soften the world claim.
+   **Phase floor.** Honest red on cycle closure; encouraging signs (P0/P1, shared mask fn, inventory box, feel needle) stay loud. Leakage → stricter role split.
 
 6. **Molten ground (era-volatile code) — supporting half, revised 2026-07-31.** Before quoting a measured emergent statistic, check whether its ground is warm; if so, carry the era or re-measure (`DECISIONS[kernel-era-keys-and-the-probe-registry]` is the mechanization program; this list covers the gap until that ships). Before briefing an agent into a warm region, say it is warm.
 
@@ -82,19 +82,19 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
 7. **Dependency-tracking mechanism — first rungs built 2026-07-29 (late).** Witnessed read-sets + `Observatory` type split shipped. **Open:** wiring region-exchange interiors / stage ladders / epoch reductions; audit command that diffs read-sets across cohorts; full fold-or-check-into-key design. Rank **5** (sill + flux, post-P4) should land WITH witnesses from birth. Distinct from kernel-era probe registry (measurement drift vs key completeness).
 
-8. **Instrument / ops notes (revised 2026-07-31 night).** Leverage: finish P2/P3, then **rank 4 ocean product** before declaring P4.
-   - **P0+P1 landed:** generation-hot listing; observe never clones full roots; pull caches; prior faces cached; `AlreadyCurrent`. Probes: `roots_bench`, `pull_hot_bench`.
-   - **Encouraging (do not hide):** thrash fixed enough to inspect; shared `ocean_mask` pure function; hydrosphere inventory residual 0 by construction; flux web declares producers.
-   - **Honest red (do not greenwash):** close-in ocean **zaps with zoom** (window flood = FE(4) leakage); `closed-water-cycle` predicate was identity conservation — **strengthened in ordinum**; status must not costume-close the cycle; phase-4 demand does not keep phase-3.
-   - **P2/P3 next for HUD/open grain;** **rank 4** face ocean product (sample into window); then P4.
+8. **Instrument / ops notes (revised 2026-07-31 — face ocean next).**
+   - **P0+P1 landed.** Probes: `roots_bench`, `pull_hot_bench`.
+   - **Face ocean explore path landed:** ≤L9 face mask + sample into windows (kill zoom-zap for paint). Store memo still optional.
+   - **Next:** P3 residual (covering level / rebuild under current `src`) → P4 declare when thrash + sea stable.
+   - **Encouraging:** thrash fixed; face-sampled ocean paint; inventory residual 0; feel needle on cycle.
+   - **Honest red:** cycle not Kept; no store ocean citizen yet; rebuild may still be needed for fluvial.
    - **World VCS + provenance:** commit store with changelog rebuilds; digests only from `bin/provenance`.
-   - **Pending audit:** `audits/grok-final-overview-2026-07-28.md` still not fully `#ops-audit-integration`.
 
 ## Epistemic Status
 
 **Max attainable: discussion-grade** as maintained ideation — completeness is impossible; honesty about dated judgment is the bar.
 
-**Currently `discussion-grade`.** FE(5) re-sealed **2026-07-31 night** with Joseph: P0–P1 done; P2/P3 then **face ocean product** before P4; phase-3 cycle **honest red** until convicting; role leakage → stricter role split (`#form-ocean-is-connectivity-not-elevation` FE(5)). Stage `draft`.
+**Currently `discussion-grade`.** Priority penciled **2026-07-31** with Joseph: **face ocean product next**, then P3 residual / P4, then sill/flux. Stage `draft`.
 
 ## Discussion
 

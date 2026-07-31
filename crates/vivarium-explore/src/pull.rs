@@ -211,6 +211,71 @@ impl PriorFaceCache {
     }
 }
 
+/// Face-domain ocean adjudication grain. Full faces at L14 are impossible;
+/// L9 is 512²/face — basins at ~few-km scale, six faces of height+mask stay
+/// workable. Finer views **sample** this mask ( #form-ocean-is-connectivity-not-elevation
+/// FE(5)/(8) ); they must not re-flood the postage stamp.
+const FACE_OCEAN_LEVEL_MAX: u8 = 9;
+
+fn ocean_adjudication_level(view_level: u8) -> u8 {
+    view_level.min(FACE_OCEAN_LEVEL_MAX)
+}
+
+/// Map face cell `(i,j)` at `from_level` into `to_level` (nearest ancestor or child origin).
+fn face_ij_at_level(i: u32, j: u32, from_level: u8, to_level: u8) -> (u32, u32) {
+    if to_level == from_level {
+        (i, j)
+    } else if from_level > to_level {
+        let s = 1u32 << (from_level - to_level);
+        (i / s, j / s)
+    } else {
+        let s = 1u32 << (to_level - from_level);
+        (i.saturating_mul(s), j.saturating_mul(s))
+    }
+}
+
+fn sample_face_ocean(mask: &[bool], ocean_level: u8, gi: u32, gj: u32, view_level: u8) -> bool {
+    let n = 1u32 << ocean_level;
+    let (oi, oj) = face_ij_at_level(gi, gj, view_level, ocean_level);
+    let oi = oi.min(n - 1) as usize;
+    let oj = oj.min(n - 1) as usize;
+    mask[oj * n as usize + oi]
+}
+
+/// Whole-face ocean masks — domain product for paint (not a store citizen yet).
+#[derive(Default)]
+struct FaceOceanCache {
+    /// `(face, ocean_level, sea_bits, surface_tag, stage_bits)` → mask
+    masks: Mutex<HashMap<(u8, u8, u32, u64, u64), Arc<Vec<bool>>>>,
+}
+
+impl FaceOceanCache {
+    fn get_or_build(
+        &self,
+        face: Face,
+        ocean_level: u8,
+        sea_m: f32,
+        surface_tag: u64,
+        stage_bits: u64,
+        heights: impl FnOnce() -> Vec<f32>,
+    ) -> Arc<Vec<bool>> {
+        let key = (face.index(), ocean_level, sea_m.to_bits(), surface_tag, stage_bits);
+        if let Some(hit) = self.masks.lock().unwrap().get(&key) {
+            return Arc::clone(hit);
+        }
+        let h = heights();
+        let nx = 1usize << ocean_level;
+        debug_assert_eq!(h.len(), nx * nx);
+        let mask = Arc::new(sea_level::ocean_mask(&h, nx, sea_m));
+        self.masks.lock().unwrap().insert(key, Arc::clone(&mask));
+        mask
+    }
+
+    fn clear(&self) {
+        self.masks.lock().unwrap().clear();
+    }
+}
+
 /// Whether a store key's tile can contribute heights to a view patch — pure key
 /// parse, no payload decode.
 fn key_overlaps_patch(key: &str, p: Patch, view_level: u8) -> bool {
@@ -283,6 +348,7 @@ pub fn spawn(
         let mut ladder = Ladder::read(&world, demanded_frames, view_frames);
         let stage_cache = StageSurfaceCache::default();
         let prior_cache = PriorFaceCache::default();
+        let face_ocean_cache = FaceOceanCache::default();
 
         // Census state, refreshed when the listing epoch moves (same-process put
         // generation, or entry-count fingerprint for a builder in another
@@ -334,6 +400,7 @@ pub fn spawn(
                 crate::lens::read_residuals(&store, &roots, &mut chain);
                 census = world.observe().eroded_region_census();
                 regions_cache = None;
+                face_ocean_cache.clear();
                 last_done = None;
                 let _ = tx.send(Msg::Landings(roots.len()));
             }
@@ -512,11 +579,71 @@ pub fn spawn(
             // physics. The region is also the wider domain, so fewer basins are cut
             // by its rim than by a tile's ( #obs-tile-outlets-grade-away-the-basins ).
             // Depression lakes computed per face inside the unit loop (face-local
-            // R only). Ocean is always classified on the *assembled tile* — that
-            // is the surface being painted ( #form-ocean-is-connectivity-not-elevation ).
+            // R only). Ocean is classified on the **face domain** at a bounded
+            // grain, then sampled into the unit ( #form-ocean-is-connectivity-not-elevation
+            // FE(5)/(8) ) — never re-flooded on the postage stamp alone.
+
+            // Precompute face ocean masks (shared Arc) before parallel unit builds.
+            let ocean_level = ocean_adjudication_level(level);
+            let surface_tag = (roots.as_ptr() as u64)
+                ^ ((pure_prior as u64) << 1)
+                ^ ((is_stage as u64) << 2);
+            let stage_bits = if is_stage { tp.to_bits() } else { 0 };
+            let mut face_ocean: HashMap<u8, Arc<Vec<bool>>> = HashMap::new();
+            for unit in &units {
+                if face_ocean.contains_key(&unit.face) {
+                    continue;
+                }
+                let face = Face::from_index(unit.face);
+                let onx = 1usize << ocean_level;
+                let mask = face_ocean_cache.get_or_build(
+                    face,
+                    ocean_level,
+                    sea_m,
+                    surface_tag,
+                    stage_bits,
+                    || {
+                        if is_stage {
+                            if ocean_level == level
+                                && unit.oi == 0
+                                && unit.oj == 0
+                                && unit.nx == onx
+                            {
+                                stage_cache.get_or_build(seed, face, ocean_level, onx, tp)
+                            } else {
+                                let mut t = Vec::with_capacity(onx * onx);
+                                for j in 0..onx as u32 {
+                                    for i in 0..onx as u32 {
+                                        let c = CellId::from_face_ij(face, i, j, ocean_level);
+                                        t.push(
+                                            sea_level::tectonic_surface_at_tp(
+                                                seed,
+                                                c,
+                                                ocean_level,
+                                                tp,
+                                            ) as f32,
+                                        );
+                                    }
+                                }
+                                t
+                            }
+                        } else if pure_prior {
+                            prior_cache.get_or_build(seed, face, ocean_level, onx)
+                        } else {
+                            let face_regs: Vec<_> =
+                                regions.iter().filter(|r| r.face == face).cloned().collect();
+                            world
+                                .observe()
+                                .assemble_surface_tile(face, ocean_level, 0, 0, onx, &face_regs)
+                                .0
+                        }
+                    },
+                );
+                face_ocean.insert(unit.face, mask);
+            }
 
             let faces: Vec<FaceMesh> = std::thread::scope(|s| {
-                let (world, regions, cov, water, cache, prior_cache, ghost, units) = (
+                let (world, regions, cov, water, cache, prior_cache, ghost, units, face_ocean) = (
                     &world,
                     regions,
                     &frame_cov,
@@ -525,6 +652,7 @@ pub fn spawn(
                     &prior_cache,
                     &ghost,
                     &units,
+                    &face_ocean,
                 );
                 let handles: Vec<_> = units
                     .iter()
@@ -683,11 +811,14 @@ pub fn spawn(
                                 }
                                 depression[cj as usize * nx + ci as usize]
                             };
-                            // Ocean on the painted surface — one O(nx²) mask.
-                            let ocean_tile =
-                                vivarium_world::sea_level::ocean_mask(&tile, nx, sea_m);
+                            // Ocean from face-domain mask (sample), not window flood.
+                            let face_mask = face_ocean
+                                .get(&f)
+                                .map(Arc::as_ref)
+                                .expect("face ocean precomputed for unit");
                             let ocean_at = |ci: u32, cj: u32| -> bool {
-                                ocean_tile[cj as usize * nx + ci as usize]
+                                let (gi, gj) = g(ci, cj);
+                                sample_face_ocean(face_mask, ocean_level, gi, gj, level)
                             };
                             let change_at = |ci: u32, cj: u32| -> f32 {
                                 if baseline.is_empty() {
@@ -873,4 +1004,63 @@ pub fn spawn(
             }
         }
     });
+}
+
+#[cfg(test)]
+mod face_ocean_tests {
+    use super::*;
+
+    #[test]
+    fn ocean_adjudication_caps_at_face_max() {
+        assert_eq!(ocean_adjudication_level(7), 7);
+        assert_eq!(ocean_adjudication_level(9), 9);
+        assert_eq!(ocean_adjudication_level(14), FACE_OCEAN_LEVEL_MAX);
+    }
+
+    #[test]
+    fn sample_maps_fine_view_into_coarse_face_mask() {
+        // 2×2 ocean mask at L1: only SW cell is ocean.
+        let mask = vec![true, false, false, false];
+        assert!(sample_face_ocean(&mask, 1, 0, 0, 1));
+        assert!(!sample_face_ocean(&mask, 1, 1, 0, 1));
+        // L2 cell inside SW quadrant → same ocean bit
+        assert!(sample_face_ocean(&mask, 1, 0, 0, 2));
+        assert!(sample_face_ocean(&mask, 1, 1, 1, 2));
+        assert!(!sample_face_ocean(&mask, 1, 2, 0, 2));
+        assert!(!sample_face_ocean(&mask, 1, 3, 3, 2));
+    }
+
+    #[test]
+    fn enclosed_basin_on_window_is_not_ocean_when_face_has_land_ring() {
+        // Face L2 (4×4): rim high, centre low — classic landlocked basin.
+        // Window-local flood would call the centre ocean (touches window rim);
+        // face-domain flood does not (land ring encloses it).
+        let n = 4usize;
+        let sea = 0.0f32;
+        let mut h = vec![10.0f32; n * n];
+        for j in 1..3 {
+            for i in 1..3 {
+                h[j * n + i] = -5.0;
+            }
+        }
+        let face_mask = sea_level::ocean_mask(&h, n, sea);
+        // Centre is submerged but not ocean on the face.
+        assert!(!face_mask[1 * n + 1]);
+        assert!(!face_mask[2 * n + 2]);
+        // A 2×2 window over the centre, flooded alone, would seed from its rim.
+        let mut window = Vec::with_capacity(4);
+        for j in 1..3 {
+            for i in 1..3 {
+                window.push(h[j * n + i]);
+            }
+        }
+        let window_mask = sea_level::ocean_mask(&window, 2, sea);
+        assert!(
+            window_mask.iter().any(|&o| o),
+            "control: window-local flood invents ocean"
+        );
+        // Sampling the face mask at L2 for those cells stays non-ocean.
+        assert!(!sample_face_ocean(&face_mask, 2, 1, 1, 2));
+        assert!(!sample_face_ocean(&face_mask, 2, 2, 2, 2));
+    }
 }

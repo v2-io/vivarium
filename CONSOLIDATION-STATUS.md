@@ -4,7 +4,7 @@
 
 ## The picture, in one paragraph
 
-World-law channel is in good order. P0–P1 fixed the multi-second roots thrash so the globe is **inspectable**. What still blocks honest spot-check of sea/lakes is **role leakage**: close-in explore re-floods `ocean_mask` on the **window**, so ocean zaps with zoom. Phase-3 `closed-water-cycle` must stay **honest red** until ocean is a world domain object — box residual 0 and flux “unmet: none” are encouraging inventory signs, **not** cycle kept. P2/P3 HUD/open grain, then face ocean product, then P4.
+World-law channel is in good order. P0–P1 fixed thrash so the globe is **inspectable**. **Next (Joseph 2026-07-31):** face-domain ocean product (explore samples; no window re-flood) → P3 residual / rebuild as needed → P4 → sill/flux. Phase-3 cycle stays **honest red** with a feel needle; not costume-green from box residual.
 
 ## What is true now (world)
 
