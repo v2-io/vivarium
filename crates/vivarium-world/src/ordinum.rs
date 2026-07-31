@@ -84,6 +84,10 @@ pub struct Promise {
     pub from: Option<String>,
     /// Its falsifiable core. Absent ⇒ un-checkable, and it cannot be called fulfilled.
     pub predicate: Option<String>,
+    /// Author **feel** needle 0–100 (`:progress N`). Not a metric, not relative,
+    /// not maturity. 0 ≈ "hasn't started"; 100 ≈ "I'd paint this green." Does
+    /// **not** set Kept. Optional — absent means no needle shown.
+    pub progress: Option<u8>,
     pub text: String,
 }
 
@@ -179,6 +183,9 @@ impl Ordinum {
                     kept_by: field(rest, ":kept-by"),
                     from: field(rest, ":from"),
                     predicate: None,
+                    progress: field(rest, ":progress").and_then(|v| {
+                        v.parse::<u8>().ok().map(|n| n.min(100))
+                    }),
                     text: String::new(),
                 };
                 if let Some(ph) = o.phases.last_mut() {
@@ -275,6 +282,10 @@ pub fn render_maturity_of(o: &Ordinum) -> String {
         s,
         "  ladder: NOT-STARTED → specified → claimed → KEPT   (Kept is not shown: predicates are prose; a probe must convict it per cycle)"
     );
+    let _ = writeln!(
+        s,
+        "  needle: optional :progress 0–100 is author *feel* (not a metric). 0 ≈ cold start · 100 ≈ green. Does not set Kept."
+    );
 
     let (mut n_claimed, mut n_specified, mut n_notstarted, mut n_broken) = (0, 0, 0, 0);
     let mut queue: Vec<(u32, &str)> = Vec::new(); // specified, no keeper — the ladder's asks
@@ -305,9 +316,20 @@ pub fn render_maturity_of(o: &Ordinum) -> String {
             };
             let uncheckable = if p.is_uncheckable() { "  (un-checkable — no predicate)" } else { "" };
             let class = if p.class.is_empty() { String::new() } else { format!(".{}", p.class) };
+            let needle = match p.progress {
+                Some(n) => {
+                    let filled = (n as usize) / 10;
+                    let bar: String = std::iter::repeat('█')
+                        .take(filled.min(10))
+                        .chain(std::iter::repeat('░').take(10usize.saturating_sub(filled)))
+                        .collect();
+                    format!("  {n:>3} {bar}")
+                }
+                None => String::new(),
+            };
             let _ = writeln!(
                 s,
-                "    [{:<13}] {:<22} {:<12} {keeper}{uncheckable}",
+                "    [{:<13}] {:<22} {:<12} {keeper}{needle}{uncheckable}",
                 m.label(),
                 p.slug,
                 class
@@ -434,5 +456,25 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn progress_needle_is_feel_not_maturity() {
+        let o = Ordinum::parse(
+            r#"
+|phase[x]
+  :num 3
+  :name Primordial
+  |promise[closed-water-cycle].regime :progress 35
+    A closed cycle.
+    |predicate something that can fail.
+"#,
+        );
+        let p = &o.phase(3).unwrap().promises[0];
+        assert_eq!(p.progress, Some(35));
+        assert_eq!(p.maturity(), Maturity::Specified, "needle must not mint Claimed/Kept");
+        let text = render_maturity_of(&o);
+        assert!(text.contains(" 35 "));
+        assert!(text.contains("feel"));
     }
 }

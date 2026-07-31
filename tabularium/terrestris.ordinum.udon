@@ -59,6 +59,11 @@
         falsifiable core; prose now, formal as it sharpens).
       - `:from <charge>` — the charge that generates this promise (composition).
       - `:unlocks <charge>` — a downstream charge this capability enables.
+      - `:progress N` — optional **feel needle** 0–100 for developers/agents
+        (Joseph 2026-07-31). Not a metric, not relative, not maturity. 0 ≈
+        "hasn't started"; 100 ≈ "I'd paint this green." Move it whenever work
+        lands and the feel changes. **Does not set Kept.** Absent = no needle
+        on `vivarium status` (fine).
 
     - PROMISE MATURITY — the acceptance-test discipline. A promise climbs a
       ladder: NAMED (prose only — the big picture laid down) -> SPECIFIED (has
@@ -71,7 +76,8 @@
       predicates are written when we actually need to see them delivered,
       which then guides the coding. The regula conformance audit computes each
       promise's rung and reports the gaps ("promise X: un-checkable — no
-      predicate") beside the fidelity pyramid.
+      predicate") beside the fidelity pyramid. The feel needle (`:progress`)
+      is orthogonal encouragement — red maturity + rising needle is allowed.
 
     - DEFEASANCE — the mechanism of "defeasible". A phase declares ONLY its
       NOVEL promises; inherited promises CONTINUE IMPLICITLY (no re-listing —
@@ -187,10 +193,10 @@
       |promise[diffused-light].regime
         Ambient, highly-diffused light — day and night exist, but the sun is
         not yet seen through the dense sky.
-      |promise[closed-water-cycle].regime :from closed-water-cycle
+      |promise[closed-water-cycle].regime :from closed-water-cycle :progress 30
         A closed, conserved water cycle with its energy-gradient channels.
         |predicate water mass is conserved across reservoirs AND the ocean set is a world domain object (face-or-coarser connectivity, not elevation alone, not re-adjudicated by a view window) AND stock can move between atmosphere / standing / ocean under that shared ocean — algebraic box residual alone does NOT keep this promise (identity conservation is necessary but not sufficient; zoom-dependent ocean paint convicts).
-      |promise[weather-channels].capability :from weather-energy-channels :unlocks modern-weather
+      |promise[weather-channels].capability :from weather-energy-channels :unlocks modern-weather :progress 5
         Basic weather fluid dynamics; the useful-energy / entropy-gradient
         channels later dynamics run on.
       |promise[seeded-asymmetry].capability :kept-by noise :from seeded-asymmetry :unlocks plate-tectonics
@@ -229,14 +235,14 @@
     |charge[proto-biomes] :tag emergent
       Alien proto-biomes, hostile to complex life.
     |promises
-      |promise[emerged-land].state :kept-by isostasy :from emergent-land
+      |promise[emerged-land].state :kept-by isostasy :progress 70 :from emergent-land
         THE LAND ITSELF — continents, relief, and drainage networks; every
         future rain-shadow, watershed, and harbor is drawn here. Kept by the
         isostasy read of the lithosphere column (mass-conserving freeboard —
         `#form-isostasy-column`), 2026-07-24; the strictly-positive rate
         stand-in never could keep it (range/reachability conviction).
         |predicate land rises above sea level, non-volcanic; land-fraction toward the early-Earth target band (survey §6, ~1.8-20%); peak subaerial stand <=2 km (soft; measured on the LIVE post-rock-mass-ledger surface since the 2026-07-24 adoption - the ledger's erosion mass-return + isostatic rebound trims the pre-erosion over-stand toward the band: seed 7 into-band, seed 0 residual ~2025 m from v1 ledger crudeness; #form-isostasy-column FE(9)); modern-like freeboard only ~2.5 Ga (a Ga-ABSOLUTE timing clause: stays not-yet-predicable - the epoch->Ga mapping is a declared crude curve - see below). Record predicate: sea_level::emerged_land_verdict + examples/emerged_land_probe.rs (2026-07-24) - hard time-free clauses convict the live world, both known-bads fail; still Claimed, not Kept (per-cycle verification + separate adjudication owed). DEEP TIME RUNS CRUDELY (2026-07-24): the mantle-thermal cooling nomos drives a memoized epoch chain (mantle_thermal::abyssal_epochs); measured land-fraction emergence is monotone from a ~water-world (hot early-Abyssal) through the in-band present into a cooling late-Abyssal that STAYS in-band (nucleation-growth bounds the cold end 14-19%, no >20% overshoot) - #form-isostasy-column FE(7), mantle_cooling_probe. TEMPORAL CLAUSES NOW SPLIT: the CALIBRATION-FREE ones (monotone emergence, submerged start, in-band entry-and-stay) CONVICT via sea_level::emerged_land_timing_verdict (all three seeds; four synthetic temporal known-bads fail); the Ga-ABSOLUTE literature clauses stay not-yet-predicable until a calibrated rate law earns them. Still Claimed, not Kept.
-      |promise[erosion-substrate].regime :kept-by erosion-tile :from erosion-carving
+      |promise[erosion-substrate].regime :kept-by erosion-tile :from erosion-carving :progress 75
         Fluvial erosion continues running as the geological substrate beneath
         every later phase.
         |predicate erosion runs each geological cycle; its eroded bed is what later phases build on.
