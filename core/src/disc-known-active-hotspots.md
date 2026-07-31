@@ -55,8 +55,8 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
    | **1** | **P0 — Index is hot** — **landed** | — | — |
    | **2** | **P1 — Pull thrash boring** — **landed** | — | — |
    | **3** | **Face ocean product** — **landed 2026-07-31 (explore working set):** adjudicate at ≤L9 whole face; paint samples; never re-flood postage stamp. Store citizen still optional later. | Zoom-stable sea for close-in; `closed-water-cycle` feel 45 | Not weather GCM |
-   | **4** | **P3 residual** — **in progress 2026-07-31:** explore prints fresh/stale erosion under this `src` and names `vivarium build` when fresh=0 (honest pure-prior open is P3(c)). First-light rebuild started (log `/tmp/vivarium-build-logs/first-light-rebuild.log`). After rebuild: zoom past L7 for covering-grain windows over L9 bed | Fluvial unreadable while fresh=0 | Not inventing readable carve from stale keys |
-   | **5** | **P4 — Spot-check gate** — thrash boring **and** sea not zoom-invented **and** fresh carve inspectable after rebuild; declare foundation | — | Not Abyssal complete |
+   | **4** | **P3 residual** — **landed 2026-07-31:** explore fresh/stale banner; first-light rebuilt under current `src` (world git `7216c8dca`, ~3552 fresh erosion). Far globe ≤L7 still pure prior by coverage; **zoom past L7** for L9/L13 covering-grain windows | — | — |
+   | **5** | **P4 — Spot-check gate** — **instrument bar met 2026-07-31** (thrash boring, face-sampled ocean, fresh carve present). **Joseph eyes invited** to confirm fluvial/ocean/depression spot-check; cycle still honest red | Foundation for physics sessions | Not Abyssal complete; not closed-water-cycle Kept |
    | **6** | **Phase-3 `closed-water-cycle`** — honest red + feel needle until face ocean + non-identity predicate can fail and don’t | Costume green forbidden | Not algebraic residual alone |
    | **7** | Sill-graph spill → flux half + matched-ratio arms | After P4 | Gated on P4 |
    | **8** | Blast radii; router; column_at; cold-stage; χ | After P4 | Gated on P4 |

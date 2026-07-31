@@ -4,7 +4,7 @@
 
 ## The picture, in one paragraph
 
-World-law channel is in good order. P0–P1 fixed thrash so the globe is **inspectable**. Face ocean paint **landed**. **Next:** finish first-light rebuild under current `src` (P3), then declare **P4** if thrash stays boring and sea stays zoom-stable with inspectable fluvial. Phase-3 cycle stays **honest red** + feel needle.
+World-law channel is in good order. **Instrument foundation (P0–P3 + face ocean) landed 2026-07-31:** thrash boring, face-sampled ocean paint, first-light rebuilt with **~3552 fresh** erosion under current `src` (world git `7216c8dca`). Far open is still pure prior at ≤L7 by coverage — **zoom past L7** for fluvial. **P4:** instrument bar met; Joseph spot-check invited. Phase-3 cycle stays **honest red** + feel needle.
 
 ## What is true now (world)
 
@@ -14,10 +14,10 @@ World-law channel is in good order. P0–P1 fixed thrash so the globe is **inspe
 
 ## What is true now (instrument)
 
-- **Landed:** generation-hot roots; thrash boring; face-domain ocean **sample** for paint (≤L9); P3 explore banner for fresh/stale; AlreadyCurrent; altitude windows.
-- **Not true yet:** open L7 shows fluvial bed while `src` stale / rebuild in flight — pure prior until fresh carve lands.
+- **Landed:** thrash boring; face-domain ocean sample; first-light rebuilt (~3552 fresh erosion; world `7216c8dca`); explore fresh/stale banner.
+- **Still true:** open ≤L7 whole-globe does not show L9 fluvial — **coverage law**, not thrash. Zoom close for carve.
 - **Not true:** closed water cycle kept — honest red + feel needle.
-- **In flight:** `vivarium build` first-light under current binary (log `/tmp/vivarium-build-logs/first-light-rebuild.log`).
+- **P4:** instrument bar met; eyes invited.
 
 ## Open work
 
