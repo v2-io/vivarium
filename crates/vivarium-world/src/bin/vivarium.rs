@@ -875,6 +875,11 @@ fn cmd_status(rest: &[String]) -> i32 {
         let c = world.observe().eroded_region_census();
         let src = nomotheke::SRC_HASH;
         let src8 = &src[..8.min(src.len())];
+        vivarium_world::hint::sync_erosion_bed(c.fresh, c.stale, src8);
+        // Edge log (set/revoke) before the glance block so origins sit nearby.
+        for ev in vivarium_world::hint::drain_log() {
+            println!("{}", vivarium_world::hint::format_event(&ev));
+        }
         println!();
         println!("── can this binary show eroded land? ─────────────────────────");
         println!(
@@ -885,11 +890,14 @@ fn cmd_status(rest: &[String]) -> i32 {
             // ★ is a real CLI affordance (attention mark). Bevy HUD is the
             // surface that tofu'd glyphs — keep stars/unicode here, ASCII there.
             println!("  ★ REBUILD NEEDED — store has eroded land, none under this source hash");
-            println!("    next:  vivarium build");
         } else if c.fresh == 0 {
-            println!("  next:  vivarium build   (no erosion-tile roots yet)");
+            println!("  eroded land: none yet under this source hash");
         } else {
             println!("  ok — eroded land readable; zoom past L7 in explore for covering grain");
+        }
+        // Stacked active hints (suggestion register — not a job queue).
+        for h in vivarium_world::hint::active() {
+            println!("  Hint: {}  [{}]", h.text, h.at);
         }
         if let Ok(Some(spec)) = WorldSpec::load(&dir) {
             if let Some(b) = &spec.demand.beacon {

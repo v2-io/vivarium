@@ -49,3 +49,4 @@ pub mod audit;
 pub mod ordinum;
 pub mod globe;
 pub mod watch;
+pub mod hint;

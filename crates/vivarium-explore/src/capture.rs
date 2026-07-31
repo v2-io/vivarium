@@ -134,14 +134,13 @@ fn udon_body(
     let _ = writeln!(s, "erosion_fresh: {}", census.fresh);
     let _ = writeln!(s, "erosion_stale: {}", census.stale);
     let _ = writeln!(s, "erosion_total: {}", census.total);
-    let next = if census.fresh == 0 && census.stale > 0 {
-        "vivarium build   # eroded land not readable under this binary"
-    } else if census.fresh == 0 {
-        "vivarium build   # no erosion-tile roots yet"
-    } else {
-        "ok — zoom past L7 for covering-grain fluvial if needed"
-    };
-    let _ = writeln!(s, "next_action: {next:?}");
+    // Keep census and hints in sync for agent dumps (edge-only log elsewhere).
+    vivarium_world::hint::sync_erosion_bed(
+        census.fresh,
+        census.stale,
+        &nomotheke::SRC_HASH[..8.min(nomotheke::SRC_HASH.len())],
+    );
+    s.push_str(&vivarium_world::hint::format_active_udon());
     let _ = writeln!(s, "png: {:?}", png_path.display().to_string());
     let _ = writeln!(s);
 
@@ -252,31 +251,34 @@ fn udon_body(
 
 /// Human-chrome block for "can this program show eroded land?"
 ///
-/// Plain language only — no "CARVE" (not in LEXICON, grabs no attention).
-/// ASCII-only so Bevy text does not tofu middle-dots / stars.
-/// When a rebuild is needed the first line is the scream; the rest is why.
+/// Status fact first (scream when unreadable), then stacked [`hint`](vivarium_world::hint)
+/// lines. ASCII-only for Bevy; no "CARVE". Callers should already have run
+/// [`vivarium_world::hint::sync_erosion_bed`] (or this refreshes it).
 pub fn bed_status_block(census: RegionCensus) -> String {
     let src = &nomotheke::SRC_HASH[..8.min(nomotheke::SRC_HASH.len())];
-    if census.fresh == 0 && census.stale > 0 {
+    vivarium_world::hint::sync_erosion_bed(census.fresh, census.stale, src);
+    let mut s = if census.fresh == 0 && census.stale > 0 {
         format!(
             "*** REBUILD NEEDED ***\n\
              eroded land is in the store but not readable under this program\n\
-             readable now: 0    older builds: {}    src {}\n\
-             next: vivarium build",
+             readable now: 0    older builds: {}    src {}",
             census.stale, src
         )
     } else if census.fresh == 0 {
-        format!(
-            "eroded land: none yet (src {src})\n\
-             next: vivarium build"
-        )
+        format!("eroded land: none yet (src {src})")
     } else {
         format!(
             "eroded land: {} readable under this program (src {})\n\
              older builds ignored: {}",
             census.fresh, src, census.stale
         )
+    };
+    let hints = vivarium_world::hint::format_active();
+    if !hints.is_empty() {
+        s.push('\n');
+        s.push_str(hints.trim_end());
     }
+    s
 }
 
 /// Fixed-width label + value for chrome table rows (8-char label column).

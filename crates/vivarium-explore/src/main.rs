@@ -383,12 +383,14 @@ fn main() {
         "[explore] erosion under this binary src={src8}: {} fresh · {} stale (other src) · {} total",
         erosion_census.fresh, erosion_census.stale, erosion_census.total
     );
+    vivarium_world::hint::sync_erosion_bed(erosion_census.fresh, erosion_census.stale, src8);
+    for ev in vivarium_world::hint::flush_log_to_stderr() {
+        let _ = ev; // already printed; keep for future capture of session log
+    }
     if erosion_census.fresh == 0 && erosion_census.stale > 0 {
         println!(
             "[explore] *** REBUILD NEEDED *** no eroded land is *readable* here — store has \
-             history under other source hashes only. Open globe is honest pure prior (fast).\n\
-             [explore]   vivarium build\n\
-             [explore] then re-open explore (or zoom close after tiles land under the new src)."
+             history under other source hashes only. Open globe is honest pure prior (fast)."
         );
     } else if erosion_census.fresh > 0 {
         println!(
@@ -1353,6 +1355,8 @@ fn hud_update(
     if ex.hud_level == 0 {
         let mut s = String::new();
         s.push_str(&capture::bed_status_block(ex.erosion_census));
+        // After sync inside bed_status_block: edge log (set + revoke).
+        let _ = vivarium_world::hint::flush_log_to_stderr();
         s.push('\n');
         s.push_str(&capture::row("VIEW", &view_line));
         s.push('\n');
@@ -1380,12 +1384,11 @@ fn hud_update(
 
     // --- minimal (paint/lens only) -------------------------------------------
     if ex.hud_level == 2 {
+        let bed = capture::bed_status_block(ex.erosion_census);
+        let _ = vivarium_world::hint::flush_log_to_stderr();
         let mut s = format!(
             "{}\n[{}] {}   H overlay mode",
-            capture::bed_status_block(ex.erosion_census)
-                .lines()
-                .next()
-                .unwrap_or("eroded land"),
+            bed.lines().next().unwrap_or("eroded land"),
             frame.req.paint.name(),
             lens_short
         );
@@ -1403,6 +1406,7 @@ fn hud_update(
     // --- full debug dump (former default) ------------------------------------
     let mut s = String::new();
     s.push_str(&capture::bed_status_block(ex.erosion_census));
+    let _ = vivarium_world::hint::flush_log_to_stderr();
     s.push_str("\n[DEBUG DUMP - H for compact chrome]\n");
     for block in [
         hud::header(&ident.name, ident.seed, frame, &ladder.0, &cov.0, ex.inflight),
