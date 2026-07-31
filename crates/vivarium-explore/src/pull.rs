@@ -95,18 +95,21 @@ impl Patch {
 }
 
 /// Hard cap so a grazing FOV cannot spawn unbounded mesh work.
-pub const MAX_FOV_PANES: usize = 36;
+pub const MAX_FOV_PANES: usize = 48;
 
-/// Sample the camera FOV onto the planet sphere and return the minimal set of
-/// grid-aligned `nx×nx` panes (across cube faces) that cover every hit cell.
+/// Sample the **same camera** the explorer draws with onto the planet sphere
+/// and return grid-aligned `nx×nx` panes covering every hit cell.
 ///
-/// Better than a fixed ortho/diagonal ring: near cube edges the FOV naturally
-/// lands on neighbouring faces, and interior holes are not left black.
+/// Hit → cell uses core [`CubeCoord::from_unit`] (not a separate globe model).
+/// What used to be wrong was the **frustum**: we assumed look-at-centre + fixed
+/// 45° FOV, while `camera_update` blends look-at toward the nadir and widens FOV
+/// when close — so corners of the real glass were never rayed, especially near
+/// cube edges (Joseph 2026-07-31).
 ///
-/// `look` is the unit vector from planet centre toward the eye. Camera looks
-/// toward the planet (`-look`). FOV matches the explore camera (45°).
+/// `eye_dir` = unit vector from planet centre toward the eye (orbit radial).
+/// Must match `view_dir` / `camera_update` nadir blend and FOV.
 pub fn fov_cover_panes(
-    look: [f32; 3],
+    eye_dir: [f32; 3],
     alt_km: f32,
     level: u8,
     nx: usize,
@@ -115,28 +118,43 @@ pub fn fov_cover_panes(
     use bevy::math::Vec3;
     use vivarium_world::sphere::CubeCoord;
 
-    let look = Vec3::from_array(look).normalize_or_zero();
-    let look = if look.length_squared() < 0.5 {
+    let eye_dir = Vec3::from_array(eye_dir).normalize_or_zero();
+    let eye_dir = if eye_dir.length_squared() < 0.5 {
         Vec3::Z
     } else {
-        look
+        eye_dir
     };
     let face_n = 1u32 << level;
     let nx = nx.min(face_n as usize).max(1);
     let nx_u = nx as u32;
 
-    let eye = look * (r_km + alt_km.max(1.0));
-    let forward = (-look).normalize();
-    let world_up = if forward.y.abs() < 0.92 {
-        Vec3::Y
+    let dist = r_km + alt_km.max(1.0);
+    let eye = eye_dir * dist;
+    // Mirror camera_update: blend look-at from planet centre → surface nadir.
+    let nadir_blend = (1.0 - (alt_km.max(1.0) / (1.2 * r_km)).clamp(0.0, 1.0)).powf(1.25);
+    let look_at = eye_dir * (r_km * nadir_blend);
+    let forward = (look_at - eye).normalize_or_zero();
+    let forward = if forward.length_squared() < 0.5 {
+        (-eye_dir).normalize()
     } else {
-        Vec3::X
+        forward
     };
-    let right = forward.cross(world_up).normalize();
+    // Same up rule as camera_update (threshold on *radial*, not forward).
+    let world_up = if eye_dir.y.abs() > 0.98 {
+        Vec3::X
+    } else {
+        Vec3::Y
+    };
+    let right = forward.cross(world_up).normalize_or_zero();
+    let right = if right.length_squared() < 0.5 {
+        forward.cross(Vec3::Z).normalize()
+    } else {
+        right
+    };
     let up = right.cross(forward).normalize();
-    let half = (45f32.to_radians() * 0.5).tan();
-    // Slight overscan so the mesh rim is not right on the screen edge.
-    let half = half * 1.12;
+    // Same FOV as camera_update, plus overscan for mesh skirt / aspect.
+    let fov = (45.0 + 12.0 * nadir_blend).to_radians();
+    let half = (fov * 0.5).tan() * 1.22;
 
     // face → (min_i, max_i, min_j, max_j) inclusive cell bounds
     let mut bounds: HashMap<u8, (u32, u32, u32, u32)> = HashMap::new();
@@ -147,36 +165,49 @@ pub fn fov_cover_panes(
         e.2 = e.2.min(j);
         e.3 = e.3.max(j);
     };
+    let mut push_hit = |hit: Vec3| {
+        let unit = [
+            (hit.x / r_km) as f64,
+            (hit.y / r_km) as f64,
+            (hit.z / r_km) as f64,
+        ];
+        let (face, i, j, _) = CubeCoord::from_unit(unit).cell(level).to_face_ij();
+        push_cell(face.index(), i.min(face_n - 1), j.min(face_n - 1));
+    };
 
-    let samples = 9; // 9×9 rays — enough to catch corners near cube edges
+    // Dense grid + explicit corners (corners are the first thing a square FOV
+    // needs and a coarse grid under-samples near cube-chart folds).
+    let samples = 13;
     for sy in 0..samples {
         for sx in 0..samples {
             let u = (sx as f32 / (samples - 1) as f32) * 2.0 - 1.0;
             let v = (sy as f32 / (samples - 1) as f32) * 2.0 - 1.0;
             let dir = (forward + right * (u * half) + up * (v * half)).normalize();
-            let Some(hit) = ray_sphere_near(eye, dir, r_km) else {
-                continue;
-            };
-            let unit = [
-                hit.x as f64 / r_km as f64,
-                hit.y as f64 / r_km as f64,
-                hit.z as f64 / r_km as f64,
-            ];
-            let (face, i, j, _) = CubeCoord::from_unit(unit).cell(level).to_face_ij();
-            push_cell(face.index(), i.min(face_n - 1), j.min(face_n - 1));
+            if let Some(hit) = ray_sphere_near(eye, dir, r_km) {
+                push_hit(hit);
+            }
         }
     }
-    // Always include the look point.
-    {
-        let unit = [look.x as f64, look.y as f64, look.z as f64];
-        let (face, i, j, _) = CubeCoord::from_unit(unit).cell(level).to_face_ij();
-        push_cell(face.index(), i.min(face_n - 1), j.min(face_n - 1));
-    }
+    // Nadir under the eye (what the camera is aiming at when close).
+    push_hit(eye_dir * r_km);
 
+    // Grid-aligned centre = tile containing the nadir cell (not a floating
+    // Patch::centred, which drifts relative to the FOV mosaic and felt un-centery).
     let centre = {
-        let unit = [look.x as f64, look.y as f64, look.z as f64];
+        let unit = [eye_dir.x as f64, eye_dir.y as f64, eye_dir.z as f64];
         let (face, i, j, _) = CubeCoord::from_unit(unit).cell(level).to_face_ij();
-        Patch::centred(face.index(), level, i, j, nx)
+        let i = i.min(face_n - 1);
+        let j = j.min(face_n - 1);
+        let oi = (i / nx_u) * nx_u;
+        let oj = (j / nx_u) * nx_u;
+        let oi = oi.min(face_n.saturating_sub(nx_u));
+        let oj = oj.min(face_n.saturating_sub(nx_u));
+        Patch {
+            face: face.index(),
+            oi,
+            oj,
+            nx,
+        }
     };
 
     if bounds.is_empty() {
@@ -187,7 +218,7 @@ pub fn fov_cover_panes(
     }
 
     // Margin so FOV edge cells are not on the mesh skirt.
-    let margin = (nx_u / 8).max(4);
+    let margin = (nx_u / 4).max(8);
     let mut panes = Vec::new();
     for (face, (mut i0, mut i1, mut j0, mut j1)) in bounds {
         i0 = i0.saturating_sub(margin);
@@ -200,30 +231,17 @@ pub fn fov_cover_panes(
         let tj1 = j1 / nx_u;
         for ti in ti0..=ti1 {
             for tj in tj0..=tj1 {
-                let oi = ti * nx_u;
-                let oj = tj * nx_u;
-                if oi + nx_u > face_n || oj + nx_u > face_n {
-                    // Last row/col: slide to fit rather than drop coverage.
-                    let oi = oi.min(face_n - nx_u);
-                    let oj = oj.min(face_n - nx_u);
-                    panes.push(Patch {
-                        face,
-                        oi,
-                        oj,
-                        nx,
-                    });
-                } else {
-                    panes.push(Patch {
-                        face,
-                        oi,
-                        oj,
-                        nx,
-                    });
-                }
+                let oi = (ti * nx_u).min(face_n.saturating_sub(nx_u));
+                let oj = (tj * nx_u).min(face_n.saturating_sub(nx_u));
+                panes.push(Patch {
+                    face,
+                    oi,
+                    oj,
+                    nx,
+                });
             }
         }
     }
-    // Dedup (edge slide can collide) and keep centre first for pick stability.
     panes.sort_by_key(|p| (p.face, p.oi, p.oj));
     panes.dedup();
     if !panes.iter().any(|p| *p == centre) {
@@ -233,8 +251,8 @@ pub fn fov_cover_panes(
         panes.insert(0, centre);
     }
     if panes.len() > MAX_FOV_PANES {
-        // Keep centre + nearest panes by centre-cell distance on same face, then
-        // any other-face panes by face index order until cap.
+        // Prefer same-face panes near the nadir tile; still keep other-face
+        // panes (cube-edge FOV) before truncating.
         let cx = centre.oi + nx_u / 2;
         let cy = centre.oj + nx_u / 2;
         let mut rest: Vec<_> = panes.into_iter().filter(|p| *p != centre).collect();
@@ -244,8 +262,17 @@ pub fn fov_cover_panes(
             let dy = (p.oj + nx_u / 2).abs_diff(cy);
             (same, dx + dy, p.face, p.oi, p.oj)
         });
-        rest.truncate(MAX_FOV_PANES - 1);
-        panes = std::iter::once(centre).chain(rest).collect();
+        // Keep all cross-face panes when possible (they're why edges broke).
+        let (cross, same): (Vec<_>, Vec<_>) =
+            rest.into_iter().partition(|p| p.face != centre.face);
+        let mut kept = cross;
+        let budget = MAX_FOV_PANES.saturating_sub(1 + kept.len());
+        kept.extend(same.into_iter().take(budget));
+        // If cross alone exceeded cap, keep nearest cross by face index.
+        if kept.len() > MAX_FOV_PANES - 1 {
+            kept.truncate(MAX_FOV_PANES - 1);
+        }
+        panes = std::iter::once(centre).chain(kept).collect();
     }
 
     WindowCover { centre, panes }
