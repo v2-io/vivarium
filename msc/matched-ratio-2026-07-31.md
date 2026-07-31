@@ -16,3 +16,5 @@
 **Within-ratio spread:** 0.80 → 3.02 m; 1.00 → 0.88 m; 1.60 → 5.53 m.
 
 **Verdict:** Not enough to promote $d/(v\sigma)$ to operating law. Production keeps measured `for_build` ($d{=}16$, stride-as-$\sigma$). Log: `/tmp/matched_ratio_probe.log`.
+
+**Park (2026-07-31 evening, hotlist item 5):** **empirical forever unless a decisive re-run uses FE(7) metrics** (mean elevation error + seam step on span-256 / 300-epoch footprint). Mean $|\Delta h|$ at span 128 saturates under the chaos floor and cannot promote law. No further mean-$|\Delta h|$ arms.

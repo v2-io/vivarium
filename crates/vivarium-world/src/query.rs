@@ -889,6 +889,9 @@ impl<'s> World<'s> {
         if let Some(token) = bed.key_token() {
             k = k.field("bed", token);
         }
+        // Wet-limit inland pond seed (see `water_tile` body). Digit bumps when
+        // the pond law changes without a broader water algorithm bump.
+        k = k.field("pond", "wet1");
         k.with_dep_versions(&WATER)
     }
 
@@ -999,8 +1002,28 @@ impl<'s> World<'s> {
         // its own doc points away from), which left every submarine interior
         // 1106.3 m underfilled against a rim pinned to the true waterline — a
         // deficit no bounded fill can relax (`#obs-water-fill-never-settles`).
+        let ocean_cells = crate::sea_level::ocean_mask(&bed, nx, sea);
         let mut sim =
-            crate::water::WaterSim::new_at_sea(face, level, (oi, oj), nx, cell_m, bed, 2.0, sea);
+            crate::water::WaterSim::new_at_sea(face, level, (oi, oj), nx, cell_m, bed.clone(), 2.0, sea);
+        // **Wet-limit ponding (pond=wet1 era, 2026-07-31).** Ocean freeboard stays
+        // ocean_mask-only. Closed basins get spill-level standing water from the
+        // same bed article — the field depression paint already draws
+        // (`DrainageSurface::standing_water`). Not climate balance (P−E), not a
+        // longer SW march: `#obs-water-fill-never-settles` forbids pretending
+        // 200 steps settle lakes. Key field `pond=wet1` + WATER `src=`; rebuild
+        // water phase to see ponds. (`#disc-known-active-hotspots` rank 10.)
+        {
+            let mut fl = erosion::Fluvial::from_surface(self.seed, face, level, oi, oj, nx, |_| 0.0)
+                .with_heights(bed);
+            let pond = fl.drainage_surface().standing_water;
+            debug_assert_eq!(pond.len(), sim.depth.len());
+            for i in 0..sim.depth.len() {
+                if !ocean_cells[i] && pond[i] > sim.depth[i] {
+                    sim.depth[i] = pond[i];
+                }
+            }
+            sim.rebaseline_budget();
+        }
         let p = crate::water::WaterParams {
             precip: precip_rate,
             evaporation: 2.0e-4, // scaled with the accelerated cycle

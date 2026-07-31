@@ -44,7 +44,7 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
    Related as "the sphere is real at joins"; **different repairs.**
 
-5. **Highest-leverage next — revised 2026-07-31 late afternoon (Joseph eyes on dry pits adjudicated).** Ideation rank only; parity definition: `#disc-explorer-instrument-parity`. **Instrument parity closed for now.** **Chrome / hints parked** (out-of-band research). **Fresh-cohort eyes: done** (capture `20665-190901`). **Next cut: standing-water ponding path** (distinct from FE(9) sill re-measure).
+5. **Highest-leverage next — revised 2026-07-31 evening (hotlist 1–10 burn).** Ideation rank only. **Instrument parity closed.** **Chrome/hints parked.** Eyes + dual-paint convictor done. **Burn landed:** wet-limit ponding wire (`pond=wet1`), FE(9) first re-measure, matched-ratio park, `vivarium deps` audit. **Rebuild under new `src=` in flight or owed** (any lib touch rekeys).
 
    **Parity bar.** P4: orbit/zoom and inspect fluvial/ocean/depression; weirdness is physics or paint-law — **not** thrash and **not** ethereal sea. **Joseph 2026-07-31:** lattice gone, high-fidelity performance acceptable, FOV stamps good; L14-as-fBm is a lawful wonder — **P4 done-for-now**.
 
@@ -68,17 +68,17 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
    | Rank | Action | Why high leverage | Not this instead |
    | --- | --- | --- | --- |
    | **1–5** | **P0–P4** — **done / parked** | Spot-check usable | Not reopening thrash |
-   | **6** | **Sill + flux Jacobi wire** — **done** (`sill1`/`flux1`); FE(9) lake-sized **bed** re-measure still open | Non-local fluvial datum | Not “makes lakes wet” |
-   | **7** | **Matched-ratio probe** — **run once** (empirical) | Schedule science | Not law promotion |
-   | **8** | **Rebuild under current binary** — **done** | Fresh cohort | — |
-   | **8b** | **Chrome / hints / capture** — **done / parked** | Attention channel | Not HUD polish while research pending |
-   | **9** | **Eyes on fresh bed** — **done** (capture `20665-190901`); dry-pit adjudication above | Physics can convict | — |
-   | **10** | **Standing-water ponding path** — spill-level wet equilibrium (or named lake model) so closed bed basins can hold visible water | Matches Joseph’s eyes; unblocks “looks like lakes” | Not smaller water cells; not +N SW steps without step-size law; not FE(9) alone |
-   | **11** | **FE(9) sill / lake-sized *bed* re-measure** under production `sill1` keys | Convicts fluvial spill structure | Not a substitute for ponding |
-   | **12** | Phase-3 / router / χ / cold-stage — **one** after 10–11 progress | World piece | Not all four |
-   | demote | “Basins too small for water cells” as primary diagnosis; chrome polish; Caspian (answered); demand spool; costume-green; more SW steps as lake fix | — | — |
+   | **6** | **Sill + flux Jacobi wire** — **done** (`sill1`/`flux1`) | Non-local fluvial datum | — |
+   | **7** | **Matched-ratio** — **parked empirical** (2026-07-31 evening) | Schedule science closed as law candidate | Not more mean$\lvert\Delta h\rvert$ arms |
+   | **8** | **Rebuild + eyes + dual paint** — **done** | Dry-pit adjudication + capacity convictor | — |
+   | **8b** | **Chrome / hints / capture** — **done / parked** | Attention channel | Not HUD polish |
+   | **9** | **Ponding wet-limit init** — **wired** (`water_tile` seeds `standing_water` for non-ocean; key `pond=wet1`) | Product-visible ponds without SW-settle fiction | Not climate P−E / FSM yet; **rebuild water (full world) owed** |
+   | **10** | **FE(9) first re-measure** — **landed** (`sill_fe9_probe`: SILL1 *reduces* closed-basin inventory vs PLAIN/REF on one L13 footprint) | Sizes inject effect | Not multi-grain law; not ponding |
+   | **11** | **`vivarium deps` audit** — **landed** (read-set census; first-light shows erosion-tile cohort mostly unwired pre-witness) | Cheap dependency-tracking rung | Not full fold-or-check |
+   | **12** | Tile-edge FE(4) 3.25× re-measure under flux1; flux C+1; phase-3 Kept; router (b) adopt; χ re-measure; watch world-time / cold-stage | Residuals | Not all at once |
+   | demote | “Basins too small for water cells”; chrome polish; more SW steps as lake fix; matched-ratio law theater | — | — |
 
-   **Sequence (present).** P4 ✓ → sill/flux wire ✓ → rebuild ✓ → eyes ✓ → **ponding path (10)** and/or **FE(9) bed re-measure (11)** → one world piece.
+   **Sequence (present).** … → eyes ✓ → **ponding wire ✓** → **FE(9) first measure ✓** → **deps audit ✓** → **rebuild under new `src=`** → eyes on paint 3 vs 6 → residual cluster 12 one-at-a-time.
 
    **Phase floor.** Honest red on cycle closure; encouraging signs stay loud. Leakage → stricter role split.
 
@@ -97,20 +97,21 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
    | **Cold this week** | Isostasy + cooling chain; stage-chain instrument; provenance tooling | Safe for ordinary quotes. |
    | **first-light store** | **Local git `aa13710ca`** | `~/.cache/vivarium/globe-world`. Commit with every rebuild. |
 
-7. **Dependency-tracking mechanism — first rungs built 2026-07-29 (late).** Witnessed read-sets + `Observatory` type split shipped. **Open:** wiring region-exchange interiors / stage ladders / epoch reductions; audit command that diffs read-sets across cohorts; full fold-or-check-into-key design. Distinct from kernel-era probe registry.
+7. **Dependency-tracking mechanism.** Rungs 1–2 (witness frames + Observatory) + **`vivarium deps` census (2026-07-31 evening)**. First-light snapshot: ~30k roots deps-recorded (climate/itopo/water), **erosion-tile 0/160158** (pre-witness cohort — rebuild under current binary will re-wire as keys recompute). **Still open:** force exchange-interior / epoch-reduction deps always; cohort-diff mode; fold-or-check-into-key enforcement.
 
-8. **Instrument / ops notes (revised 2026-07-31 late afternoon).**
-   - **P0–P4 closed for now** (Joseph).
-   - **Chrome + hints + capture:** parked. Law: `#ops-operator-hints`, `#disc-explorer-human-chrome`, `#disc-explorer-debug-capture`.
-   - **Cycle still honest red** (phase-3 not Kept).
-   - **Next physics:** **standing-water ponding (rank 10)**; FE(9) bed re-measure (11) as separate fluvial check; then one world piece.
-   - **World VCS + provenance:** `src=1cce2aa4…`, world-git `aa13710ca` (`bin/provenance`).
+8. **Instrument / ops notes (revised 2026-07-31 evening).**
+   - **P0–P4 / chrome / eyes:** parked or done.
+   - **Ponding:** wet-limit seed in `query::water_tile` (`pond=wet1`). Not Kept cycle.
+   - **FE(9):** first footprint measured — see form-same-level ES.
+   - **Cycle still honest red.**
+   - **Next:** finish rebuild → paint 3 vs 6 on known pits → residual cluster (tile-edge re-measure, flux C+1, router b, χ, watch world-time).
+   - **Provenance:** re-run `bin/provenance` after rebuild (lib edit moved `SRC_HASH`).
 
 ## Epistemic Status
 
-**Max attainable: discussion-grade** as maintained ideation — completeness is impossible; honesty about dated judgment is the bar.
+**Max attainable: discussion-grade** as maintained ideation.
 
-**Currently `discussion-grade`.** **2026-07-31 late afternoon:** eyes + dry-pit adjudication landed; next is ponding path (not grain). Stage `draft`.
+**Currently `discussion-grade`.** **2026-07-31 evening:** hotlist burn landed ponding wire + FE(9) first measure + deps audit + matched-ratio park. Stage `draft`.
 
 ## Discussion
 
@@ -126,6 +127,6 @@ The molten-code half remains useful when digests move this fast — but FE(6) is
 - **Retirement path for FE(6) only:** `DECISIONS[kernel-era-keys-and-the-probe-registry]` tiers 1–2; until then hand-kept is accepted.
 - **Companions:** #disc-open-problem-census ; `CONSOLIDATION-STATUS.md` (not canon; core wins on conflict).
 - **Do not** promote FE(5) rows into claim segments by copy-paste; promote by building or by writing a real observation/formulation that can convict.
-- **2026-07-31 re-true method (late afternoon):** status + provenance + Joseph capture `20665-190901`. **Present:** sill/flux wire + rebuild + eyes. **Still open:** ponding path; FE(9) bed re-measure; C+1 flux; volume-aware hierarchy. **Adjudicated closed as primary:** “water cells too big for basin boundaries.”
-- **Hint channel check after rebuild (2026-07-31):** post-rebuild `erosion-readable`; no ★ REBUILD.
-- **Cheap convictor if re-opened:** same view paint **6** (depression capacity) vs **3** (water depth) on a named pit — capacity without depth confirms bed-hole / dry-water split.
+- **2026-07-31 evening burn:** `pond=wet1` wire; `sill_fe9_probe` numbers; `vivarium deps`; matched-ratio park. Goal log: `msc/goal-hotlist-1-10-2026-07-31.md`.
+- **Convictor:** surface vs depression captures `20665-190901` / `20665-194441` closed dry-pit split before ponding wire.
+- **Adjudicated closed as primary:** “water cells too small/big.”

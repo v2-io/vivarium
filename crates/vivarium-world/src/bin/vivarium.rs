@@ -82,6 +82,7 @@ fn main() {
         Some("new") => cmd_new(&args[1..]),
         Some("build") => cmd_build(&args[1..]),
         Some("status") => cmd_status(&args[1..]),
+        Some("deps") => cmd_deps(&args[1..]),
         Some("info") => cmd_info(&args[1..]),
         Some("watch") => cmd_watch(&args[1..]),
         Some("demand") => cmd_demand(&args[1..]),
@@ -153,6 +154,10 @@ COMMANDS
 
   status [dir]                  demand + fidelity pyramid + water budget + flux
                                 audit + ordinum maturity
+  deps [dir] [--prefix P] [--show N]
+                                witnessed read-set audit: how many roots recorded
+                                deps, sample keys, optional dump of N deps lines
+                                ( #form-depend-by-key-never-latest ; hotlist 10)
   info [dir] [--width W] [--lon0 DEG] [--color|--no-color]
                                 one-shot whole-sphere globe, coloured by build state
   attach [dir]                  follow a running build's log (Ctrl-C detaches;
@@ -728,6 +733,107 @@ extern "C" {
 }
 
 // ---- instruments ------------------------------------------------------------
+
+/// `vivarium deps` — witnessed read-set census (dependency-tracking audit rung).
+///
+/// Does not rekey anything. Surfaces which nomos roots recorded `deps` lines and
+/// can dump a sample for grepping under-keyed or cohort-divergent paths.
+fn cmd_deps(rest: &[String]) -> i32 {
+    // Strip flag values so announce_world never treats `--show 3` as a world dir.
+    let mut world_rest: Vec<String> = Vec::new();
+    let mut i = 0;
+    while i < rest.len() {
+        if rest[i] == "--prefix" || rest[i] == "--show" {
+            i += 2;
+        } else if rest[i].starts_with('-') {
+            i += 1;
+        } else {
+            world_rest.push(rest[i].clone());
+            i += 1;
+        }
+    }
+    let dir = announce_world(&world_rest);
+    let store = match Store::open_read_only(&dir) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("store error: {e}");
+            return 1;
+        }
+    };
+    let roots = match store.roots() {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("census error: {e}");
+            return 1;
+        }
+    };
+    let prefix = rest
+        .iter()
+        .position(|a| a == "--prefix")
+        .and_then(|i| rest.get(i + 1))
+        .map(|s| s.as_str())
+        .unwrap_or("");
+    let show_n: usize = rest
+        .iter()
+        .position(|a| a == "--show")
+        .and_then(|i| rest.get(i + 1))
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(3);
+
+    let mut recorded = 0usize;
+    let mut missing = 0usize;
+    let mut by_nomos: std::collections::BTreeMap<String, (usize, usize)> =
+        std::collections::BTreeMap::new();
+    let mut samples: Vec<&vivarium_world::store::RootEntry> = Vec::new();
+    for r in &roots {
+        if r.key.is_empty() {
+            continue;
+        }
+        if !prefix.is_empty() && !r.key.starts_with(prefix) {
+            continue;
+        }
+        let nomos = r.key.split('@').next().unwrap_or("?").to_string();
+        let e = by_nomos.entry(nomos).or_default();
+        match &r.deps {
+            Some(_) => {
+                recorded += 1;
+                e.0 += 1;
+                if samples.len() < show_n {
+                    samples.push(r);
+                }
+            }
+            None => {
+                missing += 1;
+                e.1 += 1;
+            }
+        }
+    }
+    println!("witnessed read-set audit  (prefix={:?})", if prefix.is_empty() { "*" } else { prefix });
+    println!(
+        "  roots scanned: {}  deps-recorded: {}  unwired/missing: {}",
+        recorded + missing,
+        recorded,
+        missing
+    );
+    println!("  by nomos (recorded / missing):");
+    for (nomos, (ok, miss)) in &by_nomos {
+        println!("    {nomos:<22} {ok:>7} / {miss:<7}");
+    }
+    if !samples.is_empty() {
+        println!("\n  sample (up to {show_n} recorded roots):");
+        for r in samples {
+            let n = r.deps.as_ref().map(|d| d.len()).unwrap_or(0);
+            println!("    key: {}", r.key);
+            println!("      deps ({n}):");
+            if let Some(deps) = &r.deps {
+                for d in deps {
+                    println!("        - {d}");
+                }
+            }
+        }
+    }
+    0
+}
 
 fn cmd_status(rest: &[String]) -> i32 {
     let dir = announce_world(rest);
