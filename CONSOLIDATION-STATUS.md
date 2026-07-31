@@ -4,7 +4,7 @@
 
 ## The picture, in one paragraph
 
-World-law channel is in good order. **Instrument foundation (P0–P3 + face ocean) landed 2026-07-31:** thrash boring, face-sampled ocean paint, first-light rebuilt with **~3552 fresh** erosion under current `src` (world git `7216c8dca`). Far open is still pure prior at ≤L7 by coverage — **zoom past L7** for fluvial. **P4:** instrument bar met; Joseph spot-check invited. Phase-3 cycle stays **honest red** + feel needle.
+World-law channel is in good order. **Instrument foundation P0–P4 done-for-now 2026-07-31 night (Joseph):** thrash boring, face-sampled ocean, lattice cover fix, FOV stamps, high-fid performance acceptable. Far open ≤L7 is pure prior by coverage — zoom for fluvial. Phase-3 cycle stays **honest red** + feel needle. **Next world cut:** sill-graph (object+FE(9) tests landed) → wire → flux half.
 
 ## What is true now (world)
 
@@ -17,30 +17,31 @@ World-law channel is in good order. **Instrument foundation (P0–P3 + face ocea
 - **Landed:** thrash boring; face-domain ocean sample; first-light rebuilt (~3552 fresh erosion; world `7216c8dca`); explore fresh/stale banner.
 - **Still true:** open ≤L7 whole-globe does not show L9 fluvial — **coverage law**, not thrash. Zoom close for carve.
 - **Not true:** closed water cycle kept — honest red + feel needle.
-- **P4:** instrument bar met; eyes invited.
+- **P4:** done-for-now (Joseph 2026-07-31 night) — not certified perfect.
 
 ## Open work
 
-### A. Instrument parity (P0→P4)
+### A. Instrument parity (P0→P4) — closed for now
 
 | ID | Milestone | Done when |
 | --- | --- | --- |
 | **P0** | Index is hot | **landed** |
 | **P1** | Pull thrash boring | **landed** |
-| **P2** | Intent legible | HUD: globe vs window, level, carve/prior/mixed |
-| **P3** | Open view usable | covering level or honest prior + zoom-to-carve |
-| **P4** | Spot-check gate | inspect fluvial/ocean/depression; weirdness → physics first **and** sea not zoom-invented |
+| **P2** | Intent legible | HUD residual polish |
+| **P3** | Open view usable | **landed** (zoom past L7 for carve) |
+| **P4** | Spot-check gate | **done-for-now** (Joseph) |
 
-### B. Ocean object + phase-3 honesty (with A; blocks honest P4 lakes/sea)
+### B. Ocean object + phase-3 honesty
 
-1. **Face (or store) ocean product** — view samples; no window re-flood. Compute: once per bed epoch, not per frame (FE(8)).  
-2. **Phase-3 `closed-water-cycle` — honest red** until domain-stable ocean + convicting predicate. Encouraging signs elsewhere stay loud without clearing the gate.  
-3. **Leakage rule:** view change invents a world object → tighten role split, do not soften the world claim.
+1. **Face ocean product** — **landed** (explore working set).  
+2. **Phase-3 `closed-water-cycle` — honest red** until convicting predicate.  
+3. **Leakage rule:** view invents world object → tighten role split.
 
-### C. World pieces (after P4)
+### C. World pieces (after P4) — active
 
-1. Sill-graph spill → flux half (+ matched-ratio arms)  
-2. Re-measure blast radii; router adopt/park; column_at residual; cold-stage; χ path  
+1. **Sill-graph** — object + FE(9) tests **landed** (`sill_graph.rs`); **wire into Jacobi + memo** next → then flux half (+ matched-ratio arms)  
+2. Re-measure; router adopt/park; column_at residual; cold-stage; χ path — one at a time after 1  
+
 
 ### D. Demoted
 

@@ -33,6 +33,7 @@ pub mod mantle_thermal;
 pub mod sea_level;
 pub mod erosion_return;
 pub mod erosion;
+pub mod sill_graph;
 pub mod water;
 pub mod sample;
 pub mod measure;

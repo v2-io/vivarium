@@ -44,25 +44,23 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
    Related as "the sphere is real at joins"; **different repairs.**
 
-5. **Highest-leverage next — re-sealed 2026-07-31 (Joseph: pencil priority and proceed).** Ideation rank only; parity definition: `#disc-explorer-instrument-parity`. **Next cut: face ocean product** (not more explorer chrome, not sill/flux, not weather GCM). P0–P1 done; P2 largely free (HUD already legible); P3 open-grain rides rebuild/`src` freshness; **P4 waits on zoom-stable sea.**
+5. **Highest-leverage next — revised 2026-07-31 night (Joseph: P4 done-for-now; burn sill-graph).** Ideation rank only; parity definition: `#disc-explorer-instrument-parity`. **Instrument parity closed for now** (not certified perfect). **Next cut: sill-graph → flux half.**
 
-   **Parity bar.** P4: orbit/zoom and inspect fluvial/ocean/depression; weirdness is physics or paint-law — **not** thrash and **not** ethereal sea. Until P4, instrument honesty outranks new world features when attention conflicts.
+   **Parity bar.** P4: orbit/zoom and inspect fluvial/ocean/depression; weirdness is physics or paint-law — **not** thrash and **not** ethereal sea. **Joseph 2026-07-31:** lattice gone, high-fidelity performance acceptable, FOV stamps good; L14-as-fBm is a lawful wonder (coverage/stale/prior), not instrument failure — **P4 done-for-now**.
 
-   **What already landed (not reopened).** Mixed-tier view FE(8); pad/NaN; chart-edge direction resample; shared `ocean_mask` pure function; level-filter; face-local R; altitude windows; latest-wins; P0 roots hot; P1 thrash boring; feel needle `:progress`. Water settle remains **not** the lake blocker.
+   **What already landed (not reopened).** Mixed-tier view FE(8); pad/NaN; chart-edge direction resample; shared `ocean_mask` pure function; level-filter; face-local R; altitude windows; latest-wins; P0 roots hot; P1 thrash boring; feel needle `:progress`; face ocean sample; tile-cover half-open lattice fix. Water settle remains **not** the lake blocker.
 
    | Rank | Action | Why high leverage | Not this instead |
    | --- | --- | --- | --- |
-   | **1** | **P0 — Index is hot** — **landed** | — | — |
-   | **2** | **P1 — Pull thrash boring** — **landed** | — | — |
-   | **3** | **Face ocean product** — **landed 2026-07-31 (explore working set):** adjudicate at ≤L9 whole face; paint samples; never re-flood postage stamp. Store citizen still optional later. | Zoom-stable sea for close-in; `closed-water-cycle` feel 50 | Not weather GCM |
-   | **4** | **P3 residual** — **landed 2026-07-31:** explore fresh/stale banner; first-light rebuilt under current `src` (world git `7216c8dca`, ~3552 fresh erosion). Far globe ≤L7 still pure prior by coverage; **zoom past L7** for L9/L13 covering-grain windows | — | — |
-   | **5** | **P4 — Spot-check gate** — **instrument bar met 2026-07-31** (thrash boring, face-sampled ocean, fresh carve present). **Joseph eyes invited** to confirm fluvial/ocean/depression spot-check; cycle still honest red | Foundation for physics sessions | Not Abyssal complete; not closed-water-cycle Kept |
-   | **6** | **Phase-3 `closed-water-cycle`** — honest red + feel needle until face ocean + non-identity predicate can fail and don’t | Costume green forbidden | Not algebraic residual alone |
-   | **7** | **Basin fill visible / volume-aware lakes** — water field load fixed (not buried under beacon coverage level); next: sill-graph for cross-tile lake consistency when eyes find wrong empties | Joseph wants to *see* basins fill | Not water settle as “the” lake blocker story alone |
-   | **8** | Blast radii; router; column_at; cold-stage; χ | After P4 | Gated on P4 |
-   | demote | Water settle as lake blocker; Caspian (answered); demand spool; regula-as-new-audit; explorer polish not serving P3–P4; costume-green cycle | — | — |
+   | **1–5** | **P0–P4 instrument ladder** — **landed / P4 done-for-now 2026-07-31 night** (Joseph eyes) | Spot-check usable | Not reopening chrome |
+   | **6** | **Sill-graph object** — **types + extract + FE(9) convicting tests landed** (`sill_graph.rs`); still open: store key, Jacobi wire | Non-local seam datum; scalar refuted | Not flux-first |
+   | **7** | **Wire sill-graph into Jacobi + production memo** | Cross-tile lake consistency | Not volume-aware hierarchy yet |
+   | **8** | **Flux half** (after sill) | Trunk starvation / catchment | Not matched-ratio first |
+   | **9** | Matched-ratio re-measure; rebuild cohort | Operating \((d,\sigma)\) | — |
+   | **10** | Phase-3 cycle predicate / router / χ / cold-stage — one at a time after 9 | — | Not all four |
+   | demote | Water settle as lake blocker; Caspian (answered); demand spool; costume-green cycle; explorer polish not serving physics | — | — |
 
-   **Sequence (Joseph 2026-07-31).** (1) Face ocean sample path → (2) P3/rebuild as needed → (3) P4 declare → (4) sill/flux and deeper cycle. P2 HUD is residual polish, not a blocking milestone.
+   **Sequence (2026-07-31 night).** P4 done-for-now → sill-graph (object ✓, wire next) → flux half → re-measure/rebuild → one world piece.
 
    **Phase floor.** Honest red on cycle closure; encouraging signs (P0/P1, shared mask fn, inventory box, feel needle) stay loud. Leakage → stricter role split.
 
@@ -82,17 +80,17 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
 7. **Dependency-tracking mechanism — first rungs built 2026-07-29 (late).** Witnessed read-sets + `Observatory` type split shipped. **Open:** wiring region-exchange interiors / stage ladders / epoch reductions; audit command that diffs read-sets across cohorts; full fold-or-check-into-key design. Rank **7** (sill + flux, post-P4) should land WITH witnesses from birth. Distinct from kernel-era probe registry (measurement drift vs key completeness).
 
-8. **Instrument / ops notes (revised 2026-07-31 — P3 rebuild landed).**
-   - **P0–P3 closed:** thrash boring; face-sampled ocean; first-light rebuilt (~3552 fresh erosion; world `7216c8dca`).
-   - **P4:** instrument bar met — **Joseph eyes invited** (zoom past L7 for fluvial). Cycle still honest red.
-   - **Next physics:** sill/flux after eyes OK, or free parallel capacity.
-   - **World VCS + provenance:** digests only from `bin/provenance`.
+8. **Instrument / ops notes (revised 2026-07-31 night — P4 done-for-now).**
+   - **P0–P4 closed for now** (Joseph): thrash boring; face ocean; lattice fix; FOV stamps; high-fid performance OK.
+   - **Cycle still honest red** (phase-3 not Kept).
+   - **Next physics:** sill-graph wire → flux half (`sill_graph` module + FE(9) tests landed).
+   - **World VCS + provenance:** digests only from `bin/provenance`. Rebuild under current `src` may be in flight.
 
 ## Epistemic Status
 
 **Max attainable: discussion-grade** as maintained ideation — completeness is impossible; honesty about dated judgment is the bar.
 
-**Currently `discussion-grade`.** **2026-07-31 late:** face ocean + P3 rebuild landed; **P4 instrument bar met — invite Joseph eyes**; then sill/flux. Stage `draft`.
+**Currently `discussion-grade`.** **2026-07-31 night:** P4 done-for-now; sill-graph object+tests landed; wire/flux next. Stage `draft`.
 
 ## Discussion
 

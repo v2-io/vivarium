@@ -502,8 +502,9 @@ impl<'s> World<'s> {
     /// [`Source::Computed`] if any tile missed and [`Source::Hit`] if every tile
     /// was already present under the schedule's keys.
     ///
-    /// **Not yet:** flux half of the seam, spill-level scalar for straddling
-    /// basins, demand-driven single-tile cone with `ρ`, cube-edge $d\ge 2$ resampling.
+    /// **Not yet:** sill-graph exchange on the seam (object exists in
+    /// [`crate::sill_graph`] — not wired here), flux half, demand-driven
+    /// single-tile cone with `ρ`.
     pub fn erosion_region_exchanged(
         &self,
         face: Face,
