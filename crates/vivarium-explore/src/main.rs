@@ -869,6 +869,15 @@ fn lens_update(
     }
 }
 
+/// Altitude below which a fine region window is allowed (fraction of planet
+/// radius). Above this the view is always a **whole globe** at ≤ [`LEVEL_GLOBE_MAX`].
+///
+/// The screenshot failure mode this encodes: at ~3900 km altitude the old code
+/// still opened an L9 region window because level alone forced windowing — a
+/// postage stamp on black while the HUD said "updating" for 6+ seconds. Window
+/// is a *close-in* mode, not a level mode.
+const CLOSE_ALT_FRAC: f32 = 0.28;
+
 /// Resolution-on-zoom. **Latest request always wins** — the worker drains its
 /// queue to the newest `Request` before each build, so a multi-second pull
 /// never forces the viewer to watch every intermediate zoom level. The old
@@ -877,15 +886,18 @@ fn lens_update(
 fn request_update(orbit: Res<Orbit>, mut ex: ResMut<Explorer>, tx: Res<ReqTx>) {
     let r = radius_km();
     let alt = (orbit.dist - r).max(20.0);
+    let close = alt < CLOSE_ALT_FRAC * r;
 
     if ex.auto_level {
         // Cell size tracks altitude so screen-space grain stays roughly constant.
         // Step *at most one level toward the target* so a fast scroll does not
         // jump L6→L13 and force a pathologically expensive first rebuild.
+        // Far from the surface, never target above the whole-globe ceiling.
         let quarter = r * std::f32::consts::FRAC_PI_2;
-        let target_cell = (alt * 0.008).max(0.15); // km; slightly coarser than before
+        let target_cell = (alt * 0.008).max(0.15); // km
         let raw = (quarter / target_cell).log2().ceil() as i32;
-        let target = raw.clamp(LEVEL_MIN as i32, LEVEL_MAX as i32) as u8;
+        let hi = if close { LEVEL_MAX } else { LEVEL_GLOBE_MAX };
+        let target = raw.clamp(LEVEL_MIN as i32, hi as i32) as u8;
         if target > ex.level {
             ex.level += 1;
         } else if target < ex.level {
@@ -893,16 +905,24 @@ fn request_update(orbit: Res<Orbit>, mut ex: ResMut<Explorer>, tx: Res<ReqTx>) {
         }
     }
 
-    // Window when past the globe ceiling *or* when close enough that a full
-    // sphere is mostly off-screen — a full-globe remesh at low altitude is paid
-    // for faces you cannot see.
-    let want_window = ex.level > LEVEL_GLOBE_MAX || alt < 0.35 * r;
+    // **Mesh level:** far out, clamp to the globe ceiling even if the user
+    // manually raised level with `]` — otherwise we open a postage-stamp window
+    // on a face you cannot even see well from this altitude.
+    let mesh_level = if close {
+        ex.level
+    } else {
+        ex.level.min(LEVEL_GLOBE_MAX)
+    };
+
+    // Window only when close *and* finer than the whole-globe ceiling. Never
+    // window just because level is high while still far from the surface.
+    let want_window = close && mesh_level > LEVEL_GLOBE_MAX;
     let mut patch = want_window.then(|| {
         let d = view_dir(&orbit);
         let (face, i, j, _) =
-            CubeCoord::from_unit([d.x as f64, d.y as f64, d.z as f64]).cell(ex.level).to_face_ij();
-        let nx = patch_nx_for(alt, ex.level, r);
-        pull::Patch::centred(face.index(), ex.level, i, j, nx)
+            CubeCoord::from_unit([d.x as f64, d.y as f64, d.z as f64]).cell(mesh_level).to_face_ij();
+        let nx = patch_nx_for(alt, mesh_level, r);
+        pull::Patch::centred(face.index(), mesh_level, i, j, nx)
     });
     // **Sticky window.** Without this, every pixel of orbit drag recentres the
     // patch and enqueues a full remesh — the view "crawls" while thrashing the
@@ -910,7 +930,7 @@ fn request_update(orbit: Res<Orbit>, mut ex: ResMut<Explorer>, tx: Res<ReqTx>) {
     // band (~1/8 of the window), or when level / size / face changed.
     if let (Some(p), Some(prev_req)) = (patch, ex.requested) {
         if let Some(prev) = prev_req.patch {
-            if p.face == prev.face && p.nx == prev.nx && prev_req.level == ex.level {
+            if p.face == prev.face && p.nx == prev.nx && prev_req.level == mesh_level {
                 let slack = (p.nx as u32 / 8).max(8);
                 let di = p.oi.abs_diff(prev.oi);
                 let dj = p.oj.abs_diff(prev.oj);
@@ -921,7 +941,7 @@ fn request_update(orbit: Res<Orbit>, mut ex: ResMut<Explorer>, tx: Res<ReqTx>) {
         }
     }
     let want = Request {
-        level: ex.level,
+        level: mesh_level,
         patch,
         cohort: ex.cohort,
         exag: EXAG_STEPS[ex.exag_i],

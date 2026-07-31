@@ -172,6 +172,54 @@ fn stage_surface_tile(seed: u64, face: Face, level: u8, nx: usize, tp: f64) -> V
     tile
 }
 
+/// Whether a store key's tile can contribute heights to a view patch — pure key
+/// parse, no payload decode.
+fn key_overlaps_patch(key: &str, p: Patch, view_level: u8) -> bool {
+    let face = match watch::key_field(key, "face").and_then(|v| v.parse::<u8>().ok()) {
+        Some(f) => f,
+        None => return false,
+    };
+    if face != p.face {
+        return false;
+    }
+    let level = match watch::key_field(key, "level").and_then(|v| v.parse::<u8>().ok()) {
+        Some(l) => l,
+        None => return false,
+    };
+    let oi = match watch::key_field(key, "oi").and_then(|v| v.parse::<u32>().ok()) {
+        Some(v) => v,
+        None => return false,
+    };
+    let oj = match watch::key_field(key, "oj").and_then(|v| v.parse::<u32>().ok()) {
+        Some(v) => v,
+        None => return false,
+    };
+    let nx = match watch::key_field(key, "nx").and_then(|v| v.parse::<u32>().ok()) {
+        Some(v) => v,
+        None => return false,
+    };
+    let (roi, roj, rw, rh) = bounds_at_level(level, oi, oj, nx, view_level);
+    let (poi, poj, pw, ph) = (p.oi, p.oj, p.nx as u32, p.nx as u32);
+    // Expand so halo/ghost edges still find a neighbour region.
+    let expand = 2u32;
+    let roi = roi.saturating_sub(expand);
+    let roj = roj.saturating_sub(expand);
+    let rw = rw + 2 * expand;
+    let rh = rh + 2 * expand;
+    roi < poi + pw && roi + rw > poi && roj < poj + ph && roj + rh > poj
+}
+
+/// Axis-aligned bounds of a square tile, re-expressed at `to_level`.
+fn bounds_at_level(from_level: u8, oi: u32, oj: u32, nx: u32, to_level: u8) -> (u32, u32, u32, u32) {
+    if to_level >= from_level {
+        let s = 1u32 << (to_level - from_level);
+        (oi * s, oj * s, nx * s, nx * s)
+    } else {
+        let s = 1u32 << (from_level - to_level);
+        (oi / s, oj / s, (nx + s - 1) / s, (nx + s - 1) / s)
+    }
+}
+
 /// Spawn the worker. It owns the store handle for the process's lifetime; the
 /// ECS side owns nothing but meshes and camera state ( #form-core-view-wall
 /// FE(2): a view may hold camera state, meshes, and HUD state, and no
@@ -278,8 +326,26 @@ pub fn spawn(
                 _ => (roots.clone(), Coverage::parse(&roots)),
             };
 
+            // **Key-side frustum before decode.** A whole-planet L9 build is
+            // ~400 region *payloads*. Decoding and ocean-masking all of them
+            // for a 182² window is why a "cheap" region pull still took 6+ s
+            // (Joseph screenshot 2026-07-31). Reject by key bounds first; the
+            // fidelity ladder still gets every overlapping coarse/fine tile.
+            let patch = req.patch;
+            let view_level = req.level;
+            let key_in_view = |k: &str| -> bool {
+                match patch {
+                    None => true,
+                    Some(p) => key_overlaps_patch(k, p, view_level),
+                }
+            };
             let regions = match req.lens {
-                Lens::Present => world.observe().load_current_eroded_regions(),
+                Lens::Present => {
+                    let cur = vivarium_world::nomotheke::SRC_HASH;
+                    world.observe().load_eroded_regions_where(|k| {
+                        watch::key_field(k, "src") == Some(cur) && key_in_view(k)
+                    })
+                }
                 Lens::Stage(_) => Vec::new(),
                 // One world-moment: this cohort's source tree, this exact epoch.
                 // Both fields are required — the epoch alone would assemble
@@ -292,6 +358,7 @@ pub fn spawn(
                                 == Some(lvl)
                             && watch::key_field(k, "epochs").and_then(|v| v.parse::<u32>().ok())
                                 == Some(epoch)
+                            && key_in_view(k)
                     }),
                     None => Vec::new(),
                 },
@@ -300,7 +367,7 @@ pub fn spawn(
                         landings = watch::landings(&dir).unwrap_or_default();
                     }
                     let keys: BTreeSet<String> = crate::lens::replay_key_set(&landings, n);
-                    world.observe().load_eroded_regions_where(|k| keys.contains(k))
+                    world.observe().load_eroded_regions_where(|k| keys.contains(k) && key_in_view(k))
                 }
             };
             let census = world.observe().eroded_region_census();

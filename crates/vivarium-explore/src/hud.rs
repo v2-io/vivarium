@@ -260,10 +260,10 @@ pub fn header(
         if cell_km >= 1.0 { format!("{cell_km:.1} km/cell") } else { format!("{:.0} m/cell", cell_km * 1000.0) },
         match frame.req.patch {
             Some(p) => format!(
-                "REGION WINDOW {}x{} cells on face {} at ({}, {}) -- one window into one face, not the globe",
+                "CLOSE-IN WINDOW {}×{} on face {} @ ({},{}) — not the whole planet",
                 p.nx, p.nx, p.face, p.oi, p.oj
             ),
-            None => format!("whole globe, over an L{} build", cov.level),
+            None => format!("WHOLE GLOBE (over an L{} store build)", cov.level),
         },
         frame.req.exag,
         f.pull_s,
