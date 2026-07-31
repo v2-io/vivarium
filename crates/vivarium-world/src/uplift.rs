@@ -67,14 +67,28 @@ pub fn uplift_rate_m_per_epoch(seed: u64, cell: CellId) -> f64 {
 /// Indices past the face chart are clamped (halo windows at cube edges;
 /// cross-face resampling is still open).
 pub fn uplift_rate_tile(seed: u64, face: Face, level: u8, oi: u32, oj: u32, nx: usize) -> Vec<f32> {
-    let last = (1u32 << level).saturating_sub(1);
+    uplift_rate_tile_at(seed, face, level, oi as i64, oj as i64, nx)
+}
+
+/// [`uplift_rate_tile`] over a **signed** origin, for a halo window padded off
+/// the low side of the chart.
+///
+/// This exists because alignment has to be repaired for every field in a window
+/// at once. A window whose heights are padded to a negative origin while its
+/// uplift is built from a clamped one puts terrain and its driver `d` cells out
+/// of register — which is worse than both being slid together, and is the trap a
+/// partial repair of `#obs-halo-windows-overhang-the-chart-and-mint-nan` FE(8)
+/// would walk into. Off-chart cells still take their *value* from the clamped
+/// in-chart cell, exactly as before; only the addressing is honest.
+pub fn uplift_rate_tile_at(seed: u64, face: Face, level: u8, oi: i64, oj: i64, nx: usize) -> Vec<f32> {
+    let last = ((1u32 << level) as i64) - 1;
     let mut out = Vec::with_capacity(nx * nx);
-    for j in 0..nx as u32 {
-        for i in 0..nx as u32 {
+    for j in 0..nx as i64 {
+        for i in 0..nx as i64 {
             let cell = CellId::from_face_ij(
                 face,
-                oi.saturating_add(i).min(last),
-                oj.saturating_add(j).min(last),
+                (oi + i).clamp(0, last) as u32,
+                (oj + j).clamp(0, last) as u32,
                 level,
             );
             out.push(uplift_rate_m_per_epoch(seed, cell) as f32);

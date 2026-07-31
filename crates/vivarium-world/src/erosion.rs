@@ -600,6 +600,26 @@ impl Fluvial {
     /// the coarse tiers below it (the §7.2 downscaling seam: the fine sim's
     /// initial condition is the downscaled coarse end-state + detail increment).
     pub fn from_surface(seed: u64, face: Face, level: u8, oi: u32, oj: u32, nx: usize, surf: impl Fn(CellId) -> f64) -> Self {
+        Self::from_surface_at(seed, face, level, oi as i64, oj as i64, nx, surf)
+    }
+
+    /// [`Self::from_surface`] over a **signed** origin, so a window that starts
+    /// off the low side of the chart can be *padded* rather than slid.
+    ///
+    /// A halo window's origin is `region_o + t·tile_n − d`, negative for the
+    /// first tile in each axis. With an unsigned origin the caller had no way to
+    /// say so and clamped to zero — which moves the window instead of extending
+    /// it, so the tile's interior no longer sits at halo offset `d` and the carve
+    /// publishes ground from `d` cells away. That failure is finite and plausible
+    /// and therefore silent, which is why it outlived the NaN it sat beside
+    /// ( #obs-halo-windows-overhang-the-chart-and-mint-nan FE(8)).
+    ///
+    /// Off-chart cells still take their **height** from the clamped in-chart cell
+    /// — cross-face resampling remains open ( #form-cellid-chunk-patch ) — while
+    /// **geometry** comes from the signed index, for the reason FE(6) of that
+    /// segment gives: a repeated position is not an approximation of anything.
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_surface_at(seed: u64, face: Face, level: u8, oi: i64, oj: i64, nx: usize, surf: impl Fn(CellId) -> f64) -> Self {
         let radius = crate::planet::Planet::EARTH.radius_m;
         let cell_m = crate::sample::cell_size_m(level, radius) as f32;
         // Face extent at this level — halo windows for edge tiles can ask past
@@ -635,15 +655,14 @@ impl Fluvial {
                 // parametrisation. It is a smooth, slightly distorted
                 // continuation, and it is not a substitute for real cross-face
                 // geometry; it is what makes the metric possible at all.
-                let ri = oi.saturating_add(x as u32);
-                let rj = oj.saturating_add(y as u32);
-                let (gi, gj) = (ri.min(last), rj.min(last));
+                let ri = oi + x as i64;
+                let rj = oj + y as i64;
+                let (gi, gj) = (ri.clamp(0, last as i64) as u32, rj.clamp(0, last as i64) as u32);
                 let cell = CellId::from_face_ij(face, gi, gj, level);
                 h[y * nx + x] = surf(cell) as f32;
                 cell_area[y * nx + x] =
-                    crate::measure::cell_area_m2(face, ri as u64, rj as u64, level, radius) as f32;
-                centers[y * nx + x] =
-                    crate::measure::cell_center_unit(face, ri as u64, rj as u64, level);
+                    crate::measure::cell_area_m2_i(face, ri, rj, level, radius) as f32;
+                centers[y * nx + x] = crate::measure::cell_center_unit_i(face, ri, rj, level);
             }
         }
         Self {
@@ -655,12 +674,12 @@ impl Fluvial {
             drainage: vec![0.0; nx * nx],
             face,
             level,
-            origin: (oi, oj),
+            origin: (oi.max(0) as u32, oj.max(0) as u32),
             seed,
             uplift_rate: vec![0.0; nx * nx],
             precip_weight: vec![1.0; nx * nx],
             last_delta_m: f32::INFINITY,
-            edge: Self::inferred_edge_contract(level, oi, oj, nx),
+            edge: Self::inferred_edge_contract(level, oi.max(0) as u32, oj.max(0) as u32, nx),
         }
     }
 
@@ -2313,6 +2332,50 @@ mod fluvial_tests {
             "{zero_pairs} adjacent cell pairs are 0.0 m apart in a window overhanging the chart — \
              distinct cells sharing a centre, which every slope and flux then divides by"
         );
+    }
+
+    /// **A padded window must sit where it says it does.** With a signed origin
+    /// the cell at window offset `(d, d)` is the tile's own first cell — that is
+    /// what makes the halo a *pad*. Clamping a negative origin to zero slides the
+    /// window instead, and every cell then reports ground `d` away while looking
+    /// entirely ordinary: no NaN, no discontinuity, nothing for a test of values
+    /// to catch. So the invariant is checked on **position**, which is the only
+    /// place the difference is visible
+    /// ( #obs-halo-windows-overhang-the-chart-and-mint-nan FE(8)).
+    #[test]
+    fn a_padded_window_places_the_tile_origin_at_the_halo_offset() {
+        let level = 6u8;
+        let d = 3i64;
+        let nx = 12usize;
+        let face = Face::XPos;
+        // The first tile of a region: origin backed off by the halo depth, so it
+        // begins off the low side of the chart.
+        let f = Fluvial::from_surface_at(0, face, level, -d, -d, nx, |_| 1000.0);
+
+        let want = crate::measure::cell_center_unit(face, 0, 0, level);
+        let got = f.centers[(d as usize) * nx + d as usize];
+        assert_eq!(
+            got, want,
+            "window offset ({d},{d}) is not the tile's own origin cell — the window slid \
+             instead of padding, so this tile is carved from ground {d} cells away"
+        );
+
+        // And the clamped alternative is measurably wrong, not merely different:
+        // built with the origin clamped to zero — what the builder did — a
+        // *different* cell sits at the halo offset, and that is the whole defect.
+        let slid = Fluvial::from_surface(0, face, level, 0, 0, nx, |_| 1000.0);
+        assert_ne!(
+            slid.centers[(d as usize) * nx + d as usize],
+            want,
+            "clamping the origin to zero happens to land the right cell here, so this test \
+             cannot tell padding from sliding and does not convict anything"
+        );
+
+        // And the pad is real geometry, not repetition: the cell before the chart
+        // edge sits a full cell-width from the one at it.
+        let a = f.centers[(d as usize) * nx + (d as usize - 1)];
+        let dist = crate::measure::gc_dist_m(a, want, crate::planet::Planet::EARTH.radius_m);
+        assert!(dist > 0.0, "padded cell shares a centre with the chart-edge cell");
     }
 
     /// Discharge must actually consume the precipitation field. This is the guard

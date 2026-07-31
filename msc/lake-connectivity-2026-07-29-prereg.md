@@ -79,3 +79,26 @@ wall in the ocean mask and inflates NaN cell counts. With the mint repaired ther
 are no NaN walls, so that clause loses its subject; what it predicted is that the
 *mechanism existed*, which this rebuild cannot confirm retrospectively. Recording
 honestly that P9 is **not** decidable by this run — the attribution stays inferred.
+
+---
+
+# Pre-registration 3 — pad, don't slide (2026-07-30)
+
+Written before the rebuild. The high-edge repair moved 18.4% of erosion payloads
+(the last row and column of tiles per face). The low edge is the mirror case:
+only the **first** row and column have a negative origin.
+
+**P10 — a similar fraction moves, and by the same arithmetic.** 15 of 64 tiles
+per face touch the low edge (8 + 8 − 1), so ~23% before exchange propagation.
+Predict **15–30%** of `erosion-tile` payloads change. Materially more would mean
+the padding reaches windows I think are interior; materially less would mean the
+slide was somehow already compensated.
+
+**P11 — `water-tile` changes wherever its bed did**, roughly in proportion.
+
+**P12 — stored `uplift-tile`, `initial-topography`, `climate`, `mantle-thermal`
+unchanged.** The signed uplift path is used *inside* the carve; the stored
+uplift nomos is a separate call that no longer routes through it.
+
+**P13 — no new non-finite cells.** The geometry is now signed on both edges;
+`nan_census` should still report 0 for the new cohort.

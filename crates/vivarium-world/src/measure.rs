@@ -11,6 +11,21 @@ use crate::sphere::Face;
 /// Cell `(i, j)` spans corners `(i,j) .. (i+1, j+1)`.
 #[inline]
 pub fn corner_uv(i: u64, j: u64, level: u8) -> (f64, f64) {
+    corner_uv_i(i as i64, j as i64, level)
+}
+
+/// [`corner_uv`] over **signed** grid coordinates, so a cell off the low side of
+/// the chart can be named at all.
+///
+/// A halo window on a region perimeter has origin `region_o + t·tile_n − d`,
+/// which is negative for the first tile in each axis. The unsigned form cannot
+/// express that, so callers clamped the origin to zero — which does not pad the
+/// window, it *slides* it, and the tile is then carved from ground it does not
+/// occupy ( #obs-halo-windows-overhang-the-chart-and-mint-nan FE(8)). The map is
+/// affine in `i`, so nothing about negative indices is a special case here; only
+/// the type was.
+#[inline]
+pub fn corner_uv_i(i: i64, j: i64, level: u8) -> (f64, f64) {
     let n = (1u64 << level) as f64;
     (2.0 * (i as f64) / n - 1.0, 2.0 * (j as f64) / n - 1.0)
 }
@@ -47,8 +62,13 @@ pub fn corner_uv(i: u64, j: u64, level: u8) -> (f64, f64) {
 /// difference reformulation is the load-bearing part. Probe:
 /// `examples/solid_angle_precision.rs` measures all three against the quadrature.
 pub fn cell_solid_angle(_face: Face, i: u64, j: u64, level: u8) -> f64 {
-    let (u0, v0) = corner_uv(i, j, level);
-    let (u1, v1) = corner_uv(i + 1, j + 1, level);
+    cell_solid_angle_i(_face, i as i64, j as i64, level)
+}
+
+/// [`cell_solid_angle`] over signed grid coordinates — see [`corner_uv_i`].
+pub fn cell_solid_angle_i(_face: Face, i: i64, j: i64, level: u8) -> f64 {
+    let (u0, v0) = corner_uv_i(i, j, level);
+    let (u1, v1) = corner_uv_i(i + 1, j + 1, level);
     let p = |u: f64, v: f64| -> [f64; 3] {
         crate::sphere::CubeCoord { face: Face::ZPos, u, v }.to_unit()
     };
@@ -80,10 +100,22 @@ pub fn cell_area_m2(face: Face, i: u64, j: u64, level: u8, radius_m: f64) -> f64
     cell_solid_angle(face, i, j, level) * radius_m * radius_m
 }
 
+/// [`cell_area_m2`] over signed grid coordinates — see [`corner_uv_i`].
+#[inline]
+pub fn cell_area_m2_i(face: Face, i: i64, j: i64, level: u8, radius_m: f64) -> f64 {
+    cell_solid_angle_i(face, i, j, level) * radius_m * radius_m
+}
+
 /// Unit direction vector at the **centre** of cell `(face, i, j)` at `level`.
 /// (The equiangular `tan` map; face-relative — feeds true neighbour distances.)
 #[inline]
 pub fn cell_center_unit(face: Face, i: u64, j: u64, level: u8) -> [f64; 3] {
+    cell_center_unit_i(face, i as i64, j as i64, level)
+}
+
+/// [`cell_center_unit`] over signed grid coordinates — see [`corner_uv_i`].
+#[inline]
+pub fn cell_center_unit_i(face: Face, i: i64, j: i64, level: u8) -> [f64; 3] {
     let n = (1u64 << level) as f64;
     let u = 2.0 * (i as f64 + 0.5) / n - 1.0;
     let v = 2.0 * (j as f64 + 0.5) / n - 1.0;

@@ -626,11 +626,16 @@ impl<'s> World<'s> {
         let seed = self.seed;
         let face_last = ((1u32 << level) as i64) - 1;
         let mk_window = |oi: i64, oj: i64, nx: usize| -> Fluvial {
-            let oi_u = oi.max(0) as u32;
-            let oj_u = oj.max(0) as u32;
+            // **Pad, do not slide.** A halo origin is `region_o + t*tile_n - d`,
+            // negative for the first tile in each axis; clamping it to zero moved
+            // the whole window and published ground `d` cells from where the tile
+            // claims to be. Every field in the window takes the signed origin, so
+            // heights, uplift and precip stay in register with each other — a
+            // window padded in one field and slid in another is worse than one
+            // slid consistently ( #obs-halo-windows-overhang-the-chart-and-mint-nan FE(8)).
             let surf = |cell: CellId| -> f64 { gen::initial_topography_m(seed, cell, level) };
-            let mut f = Fluvial::from_surface(seed, face, level, oi_u, oj_u, nx, surf);
-            f.set_uplift_rate(crate::uplift::uplift_rate_tile(seed, face, level, oi_u, oj_u, nx));
+            let mut f = Fluvial::from_surface_at(seed, face, level, oi, oj, nx, surf);
+            f.set_uplift_rate(crate::uplift::uplift_rate_tile_at(seed, face, level, oi, oj, nx));
             let mut w = Vec::with_capacity(nx * nx);
             for j in 0..nx as i64 {
                 for i in 0..nx as i64 {
