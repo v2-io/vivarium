@@ -356,11 +356,18 @@ pub fn spawn(
             } else {
                 Vec::new()
             };
+            // Ocean mask per region — same domain honesty as standing water
+            // ( #form-ocean-is-connectivity-not-elevation ). Always paid: every
+            // paint mode needs the coast, and a flood-fill over a region is
+            // cheap next to mesh build.
+            let region_ocean: Vec<Vec<bool>> =
+                regions.iter().map(|r| r.ocean_mask()).collect();
 
             let faces: Vec<FaceMesh> = std::thread::scope(|s| {
                 let (world, regions, cov, water, cache, ghost, units) =
                     (&world, &regions, &frame_cov, &water, &stage_cache, &ghost, &units);
                 let region_lakes = &region_lakes;
+                let region_ocean = &region_ocean;
                 let handles: Vec<_> = units
                     .iter()
                     .map(|&unit| {
@@ -530,6 +537,23 @@ pub fn spawn(
                                 }
                                 depression[cj as usize * nx + ci as usize]
                             };
+                            // Sample ocean from the covering region's mask (finest first).
+                            // Uncovered cells: no invented ocean (threshold alone is the lie).
+                            let mut ocean_tile = vec![false; nx * nx];
+                            for j in 0..nx {
+                                for i in 0..nx {
+                                    let (gi, gj) = g(i as u32, j as u32);
+                                    let cell = CellId::from_face_ij(face, gi, gj, level);
+                                    for (ri, r) in regions.iter().enumerate().rev() {
+                                        let Some(k) = r.carved_index(cell) else { continue };
+                                        ocean_tile[j * nx + i] = region_ocean[ri][k];
+                                        break;
+                                    }
+                                }
+                            }
+                            let ocean_at = |ci: u32, cj: u32| -> bool {
+                                ocean_tile[cj as usize * nx + ci as usize]
+                            };
                             let change_at = |ci: u32, cj: u32| -> f32 {
                                 if baseline.is_empty() {
                                     return 0.0;
@@ -578,7 +602,7 @@ pub fn spawn(
                                         let d = water_at(i, j);
                                         if d > WET_M {
                                             wc += 1;
-                                            if h > sea_m {
+                                            if !ocean_at(i, j) {
                                                 iw += 1;
                                             }
                                         }
@@ -604,6 +628,7 @@ pub fn spawn(
                                 depression_max_m,
                                 change: &change_at,
                                 change_scale_m: req.change_scale_m,
+                                is_ocean: &ocean_at,
                             });
                             (
                                 fm,

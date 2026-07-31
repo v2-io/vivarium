@@ -35,7 +35,29 @@ pub fn column_from_surface(cell: CellId, surface_m: f64, soil_m: f64) -> Column 
 }
 
 /// [`column_from_surface`] with an explicit sea-level datum (m above bedrock).
+///
+/// **Ocean water depth is only filled when `is_ocean` is true.** Being under the
+/// datum makes a cell *submerged*; it makes it *ocean* only when the ocean can
+/// reach it ( #form-ocean-is-connectivity-not-elevation ). Callers that only
+/// have a point height and no domain should prefer
+/// [`column_from_surface_at_sea_classified`] once they know, or leave
+/// `is_ocean = false` and let a later fill assign lake water — inventing ocean
+/// depth from the threshold alone is the Caspian class of error.
 pub fn column_from_surface_at_sea(cell: CellId, surface_m: f64, soil_m: f64, sea_m: f64) -> Column {
+    // Legacy entry: treats every submerged cell as ocean. Prefer the classified
+    // form. Kept so existing tests/call sites that only mean "pour to a height"
+    // still compile; production paths must pass the shared mask.
+    column_from_surface_at_sea_classified(cell, surface_m, soil_m, sea_m, surface_m < sea_m)
+}
+
+/// Assemble a column with an explicit **ocean classification** (not a height test).
+pub fn column_from_surface_at_sea_classified(
+    cell: CellId,
+    surface_m: f64,
+    soil_m: f64,
+    sea_m: f64,
+    is_ocean: bool,
+) -> Column {
     let surface_m = surface_m.max(0.0);
     let soil = soil_m.clamp(0.0, surface_m);
     let bedrock = surface_m - soil;
@@ -45,10 +67,17 @@ pub fn column_from_surface_at_sea(cell: CellId, surface_m: f64, soil_m: f64, sea
         strata.push(Stratum::new(MaterialId::Undifferentiated(Category::Igneous), bedrock, 0.0));
     }
     if soil > 0.0 {
-        let saturation = if surface_m < sea_m { 1.0 } else { 0.3 };
+        // Saturated when under open ocean or standing water; for a bare
+        // pointwise assembly we only know the ocean flag.
+        let saturation = if is_ocean || surface_m < sea_m { 1.0 } else { 0.3 };
         strata.push(Stratum::new(MaterialId::Kind(Kind::Soil), soil, saturation));
     }
-    let water = (sea_m - surface_m).max(0.0);
+    // Ocean standing depth only — lakes are not manufactured by the waterline.
+    let water = if is_ocean {
+        (sea_m - surface_m).max(0.0)
+    } else {
+        0.0
+    };
     Column {
         tile: cell,
         strata,
@@ -93,12 +122,16 @@ pub fn initial_topography_m(seed: u64, cell: CellId, nyquist_level: u8) -> f64 {
 }
 
 pub fn baseline_column(seed: u64, cell: CellId) -> Column {
+    // Pointwise baseline has no domain for connectivity — cannot honestly mark
+    // ocean. Assembles dry column geometry; ocean water is a domain-scoped
+    // field ( #form-ocean-is-connectivity-not-elevation ).
     let sea = crate::sea_level::derived_sea_level_m(seed);
-    column_from_surface_at_sea(
+    column_from_surface_at_sea_classified(
         cell,
         initial_topography_m(seed, cell, cell.level()),
         2.0,
         sea,
+        false,
     )
 }
 

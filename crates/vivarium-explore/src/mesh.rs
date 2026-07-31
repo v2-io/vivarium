@@ -222,12 +222,15 @@ pub struct FaceInput<'a> {
     /// Returns 0 when the change channel is not being computed this frame.
     pub change: &'a dyn Fn(u32, u32) -> f32,
     pub change_scale_m: f32,
+    /// Whether the ocean reaches this cell (connectivity mask).
+    pub is_ocean: &'a dyn Fn(u32, u32) -> bool,
 }
 
 /// Build one face's mesh. Geometry: corners projected onto the sphere at
-/// `R + max(0, h − sea) · exag` — the ocean renders as the smooth sea-level
-/// sphere (bathymetry is colour-only), which is what "show me the landmasses
-/// above water" means geometrically.
+/// `R + freeboard · exag`. **Open ocean** is the smooth sea-level sphere
+/// (bathymetry is colour-only). **Landlocked floors below the datum** keep
+/// their true freeboard so endorheic basins are visible pits rather than false
+/// sea surface ( #form-ocean-is-connectivity-not-elevation ).
 pub fn build_face(input: &FaceInput) -> (FaceMesh, SeamStats) {
     let FaceInput {
         face,
@@ -247,6 +250,7 @@ pub fn build_face(input: &FaceInput) -> (FaceMesh, SeamStats) {
         depression_max_m,
         change,
         change_scale_m,
+        is_ocean,
     } = *input;
     let face_n = 1usize << level;
     let n1 = nx + 1;
@@ -267,7 +271,17 @@ pub fn build_face(input: &FaceInput) -> (FaceMesh, SeamStats) {
             let v = ((oj as f64 + gj as f64 - 1.0) / face_n as f64) * 2.0 - 1.0;
             let d = CubeCoord { face, u, v }.to_unit();
             let hm = h[gidx(gi, gj)];
-            let r = (r_km + ((hm - sea_m).max(0.0) / 1000.0) * exag) as f64;
+            // Corner samples the cell it is the upper-left of (same clamp as colour).
+            let (oci, ocj) = (
+                (gi.saturating_sub(1)).min(nx - 1) as u32,
+                (gj.saturating_sub(1)).min(nx - 1) as u32,
+            );
+            let freeboard_m = if is_ocean(oci, ocj) {
+                (hm - sea_m).max(0.0)
+            } else {
+                hm - sea_m
+            };
+            let r = (r_km + (freeboard_m / 1000.0) * exag) as f64;
             gpos[gidx(gi, gj)] = Vec3::new((d[0] * r) as f32, (d[1] * r) as f32, (d[2] * r) as f32);
         }
     }
@@ -327,6 +341,7 @@ pub fn build_face(input: &FaceInput) -> (FaceMesh, SeamStats) {
                 CellFacts {
                     h_m: h[g],
                     sea_m,
+                    is_ocean: is_ocean(ci, cj),
                     state: st,
                     flags,
                     water_m: water(ci, cj),

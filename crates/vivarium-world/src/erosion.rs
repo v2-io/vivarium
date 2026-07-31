@@ -571,10 +571,9 @@ pub struct DrainageSurface {
     /// `#form-derived-sea-level` Working Notes). Volume-limited filling is a
     /// further rung and needs a P−E field this project does not yet own.
     ///
-    /// **What it cannot express at all:** a landlocked basin whose floor dips
-    /// below derived sea level. [`Fluvial::outlets`] classifies sea by elevation
-    /// threshold rather than connectivity, so such a basin is already an outlet
-    /// and holds nothing here.
+    /// Landlocked below-datum basins *are* expressible here once ocean is
+    /// connectivity ( #form-ocean-is-connectivity-not-elevation ); they stand
+    /// full to their spill under the wet-limit assumption.
     pub standing_water: Vec<f32>,
     pub stats: DrainageStats,
 }
@@ -843,34 +842,9 @@ impl Fluvial {
         // basins. Prior art frames the ocean the same way — "a designated sink
         // region or the map edge" (Barnes/Callaghan/Wickert 2021, Fill-Spill-Merge;
         // `msc/research-lem-sota/lake-and-settle-sota-2026-07-29.md`).
-        let submerged = |i: usize| self.h[i] <= sea;
-        let mut ocean = vec![false; nx * nx];
-        let mut stack: Vec<usize> = Vec::new();
-        for y in 0..nx {
-            for x in 0..nx {
-                if Self::is_edge(nx, x, y) {
-                    let i = y * nx + x;
-                    if submerged(i) && !ocean[i] {
-                        ocean[i] = true;
-                        stack.push(i);
-                    }
-                }
-            }
-        }
-        while let Some(i) = stack.pop() {
-            let (x, y) = (i % nx, i / nx);
-            for (dx, dy) in NEIGHBORS {
-                let (xp, yp) = (x as i32 + dx, y as i32 + dy);
-                if xp < 0 || yp < 0 || xp >= nx as i32 || yp >= nx as i32 {
-                    continue;
-                }
-                let j = yp as usize * nx + xp as usize;
-                if !ocean[j] && submerged(j) {
-                    ocean[j] = true;
-                    stack.push(j);
-                }
-            }
-        }
+        // Shared mask — one function for every consumer that means "is this sea?"
+        // ( #form-ocean-is-connectivity-not-elevation ; `sea_level::ocean_mask` ).
+        let ocean = sea_level::ocean_mask(&self.h, nx, sea);
 
         let mut out = vec![false; nx * nx];
         for y in 0..nx {
@@ -3145,6 +3119,17 @@ impl ErodedRegion {
         f.drainage_surface().standing_water
     }
 
+    /// **Ocean mask over this region** — submerged cells the ocean reaches
+    /// ( #form-ocean-is-connectivity-not-elevation ). Same domain honesty as
+    /// [`Self::standing_water`]: the region is the unit, not a re-cut tile.
+    ///
+    /// Row-major `nx × nx`, indexable by [`Self::carved_index`]. Pure function of
+    /// the stored bed and the derived waterline; does not advance the world.
+    pub fn ocean_mask(&self) -> Vec<bool> {
+        let sea = sea_level::derived_sea_level_m(self.seed) as f32;
+        sea_level::ocean_mask(&self.h, self.nx, sea)
+    }
+
     pub fn surface_m(&self, cell: CellId) -> Option<f64> {
         let (gx, gy) = self.grid_pos(cell)?;
         let level = cell.to_face_ij().3;
@@ -3233,6 +3218,16 @@ pub fn tier_at(cell: CellId, regions: &[ErodedRegion]) -> Option<u8> {
 
 /// A column through the fidelity ladder: the finest materialized tier that covers
 /// the cell, the baseline prior elsewhere.
+///
+/// **Ocean classification uses the covering region's shared mask** when a region
+/// answers; uncovered cells get no invented ocean water (threshold alone is the
+/// Caspian class of error — #form-ocean-is-connectivity-not-elevation ).
 pub fn column_at(seed: u64, cell: CellId, regions: &[ErodedRegion]) -> crate::column::Column {
-    gen::column_from_surface(cell, surface_at(seed, cell, regions), 2.0)
+    let h = surface_at(seed, cell, regions);
+    let sea = sea_level::derived_sea_level_m(seed);
+    let is_ocean = regions.iter().rev().find_map(|r| {
+        let k = r.carved_index(cell)?;
+        Some(r.ocean_mask()[k])
+    }).unwrap_or(false);
+    gen::column_from_surface_at_sea_classified(cell, h, 2.0, sea, is_ocean)
 }

@@ -25,11 +25,11 @@ The claim channel is **110 segments** (counted 2026-07-31) and the closed loop s
 
 *Aligned with `#disc-known-active-hotspots` FE(5) same day — that segment carries the argument; this is the residual ladder.*
 
-1. **Shared ocean mask (hotspot rank 1).** Connectivity lives only in `erosion::outlets`. Five other sites still threshold by height: explorer surface and water paints, terminal `globe` reader, water-kernel edge/initial fill, and `gen::column_from_surface_at_sea` (the column is where every system meets). Lift once; consume many times — including future plate/crust work.
+1. **Sill-graph spill object, then flux half (hotspot rank 1).** Same-level datum path shipped; spill scalar constructively refuted; sill graph unbuilt; flux rounds ordered after it. Also what a seam-straddling lake needs. Land with witnessed read-sets from birth.
 
-2. **Sill-graph spill object, then flux half (rank 1b).** Same-level datum path shipped; spill scalar constructively refuted; sill graph unbuilt; flux rounds ordered after it. Also what a seam-straddling lake needs. Land with witnessed read-sets from birth.
+   **1b. Cheap companion:** matched-ratio $d/(v\sigma)$ arms on `halo_exchange_probe` — one run, can upgrade operating point from adopted to derived.
 
-   **2b. Cheap companion:** matched-ratio $d/(v\sigma)$ arms on `halo_exchange_probe` (rank 1c) — one run, can upgrade operating point from adopted to derived.
+   **Shared ocean mask — LANDED 2026-07-31.** `sea_level::ocean_mask` shared across router, water fill, globe, explorer, column. Residual: store-memoized planet article for plates; FE(4) window bias.
 
 3. **Phase floor that gates (rank 2).** `vivarium status` *is* the conformance report. Nothing gates work on the ladder; no promise reaches KEPT on a prose-only predicate. Best first customer: a phase-3 specified promise that can actually run (queue includes `closed-water-cycle`). Do **not** invent a regula artifact or re-declare target phase. Read status first — 2026-07-30 thrash was almost all inventing instruments that already ship.
 

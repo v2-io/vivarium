@@ -120,8 +120,8 @@ impl Paint {
     pub fn legend(self) -> &'static str {
         match self {
             Paint::Surface => {
-                "colour = elevation vs the sea datum (blue = below it). This mode says nothing about \
-                 whether what you see was built or inferred -- press 2 for that"
+                "colour = hypsometry: blue = OCEAN (connectivity, not every cell below the datum); \
+                 landlocked below-datum floors are low land. Press 2 for build state, 6 for lake fill"
             }
             Paint::Provenance => {
                 "colour = BUILD-STATE from the store census: grey unbuilt (fated prior only) | \
@@ -169,6 +169,10 @@ impl Paint {
 pub struct CellFacts {
     pub h_m: f32,
     pub sea_m: f32,
+    /// Whether the **ocean** reaches this cell (connectivity, not elevation —
+    /// #form-ocean-is-connectivity-not-elevation ). Below-datum landlocked
+    /// basins are false here.
+    pub is_ocean: bool,
     pub state: BuildState,
     pub flags: vivarium_world::watch::TileFlags,
     /// Standing-water depth (m) from the built water field; 0 where none.
@@ -206,16 +210,20 @@ fn lin(c: [f32; 3]) -> [f32; 4] {
     [f(c[0]), f(c[1]), f(c[2]), 1.0]
 }
 
-/// Hypsometric ramp: water is a depth ramp (shelf → abyss), land runs green →
-/// tan → brown → snow. The shoreline is where the datum says it is — colour, not
-/// artistry, decides land from water.
-fn hypsometric(h_m: f32, sea_m: f32) -> [f32; 3] {
+/// Hypsometric ramp: **ocean** is a depth ramp (shelf → abyss); land (including
+/// landlocked below-datum basins) runs green → tan → brown → snow. The shoreline
+/// is where the *ocean* reaches — not every cell under the waterline
+/// ( #form-ocean-is-connectivity-not-elevation ). A Caspian floor below the
+/// datum is dry terrain colour, not open-ocean blue.
+fn hypsometric(h_m: f32, sea_m: f32, is_ocean: bool) -> [f32; 3] {
     let rel = h_m - sea_m;
-    if rel <= 0.0 {
-        let t = (-rel / 3800.0).clamp(0.0, 1.0).powf(0.65);
+    if is_ocean {
+        let t = ((-rel).max(0.0) / 3800.0).clamp(0.0, 1.0).powf(0.65);
         lerp3([0.25, 0.49, 0.62], [0.015, 0.07, 0.20], t)
     } else if rel < 350.0 {
-        lerp3([0.30, 0.47, 0.24], [0.45, 0.52, 0.27], rel / 350.0)
+        // Includes freeboard ≤ 0 landlocked floors — they read as low land.
+        let t = ((rel + 500.0) / 850.0).clamp(0.0, 1.0);
+        lerp3([0.22, 0.32, 0.18], [0.45, 0.52, 0.27], t)
     } else if rel < 1300.0 {
         lerp3([0.45, 0.52, 0.27], [0.61, 0.53, 0.36], (rel - 350.0) / 950.0)
     } else if rel < 2300.0 {
@@ -275,7 +283,7 @@ fn seam_overlay(c: [f32; 3], excess_m: f32, isolated: bool) -> [f32; 3] {
 
 pub fn shade(mode: Paint, f: CellFacts) -> [f32; 4] {
     let c = match mode {
-        Paint::Surface => hypsometric(f.h_m, f.sea_m),
+        Paint::Surface => hypsometric(f.h_m, f.sea_m, f.is_ocean),
 
         Paint::Provenance => {
             // Provisional overrides the ladder: bytes written under waived flux
@@ -296,10 +304,9 @@ pub fn shade(mode: Paint, f: CellFacts) -> [f32; 4] {
                     BuildState::Watered => [0.25, 0.62, 0.34],
                 }
             };
-            // Below the datum the same state reads darker, so the coastline is
-            // still legible and the provenance blocks do not float free of the
-            // geography they describe.
-            if f.h_m <= f.sea_m {
+            // Open ocean darkens the provenance block so the coast is legible;
+            // landlocked below-datum basins keep the land block (they are not sea).
+            if f.is_ocean {
                 lerp3([0.05, 0.08, 0.14], base, 0.45)
             } else {
                 relief_modulate(base, f.h_m, f.sea_m)
@@ -307,7 +314,8 @@ pub fn shade(mode: Paint, f: CellFacts) -> [f32; 4] {
         }
 
         Paint::Water => {
-            let inland = f.h_m > f.sea_m;
+            // Inland = not ocean (connectivity). A lake below the datum is inland.
+            let inland = !f.is_ocean;
             if f.water_m <= crate::water::WET_M {
                 // Dry: neutral grey by relief, so the water reads as the subject.
                 let g = 0.22 + 0.30 * ((f.h_m - f.sea_m) / 3500.0).clamp(0.0, 1.0);
@@ -452,6 +460,7 @@ mod tests {
         CellFacts {
             h_m,
             sea_m: 0.0,
+            is_ocean: h_m <= 0.0,
             state: BuildState::Eroded,
             flags: Default::default(),
             water_m,
@@ -462,6 +471,38 @@ mod tests {
             depression_m,
             depression_max_m: 300.0,
         }
+    }
+
+    /// A landlocked floor below the datum must not paint as open-ocean blue
+    /// ( #form-ocean-is-connectivity-not-elevation ).
+    #[test]
+    fn landlocked_below_datum_is_not_ocean_blue() {
+        let crater = CellFacts {
+            h_m: -200.0,
+            sea_m: 0.0,
+            is_ocean: false,
+            state: BuildState::Eroded,
+            flags: Default::default(),
+            water_m: 0.0,
+            seam_excess_m: 0.0,
+            water_max_m: 1.0,
+            change_m: 0.0,
+            change_scale_m: 200.0,
+            depression_m: 0.0,
+            depression_max_m: 1.0,
+        };
+        let open_sea = CellFacts { is_ocean: true, ..crater };
+        let c_crater = shade(Paint::Surface, crater);
+        let c_sea = shade(Paint::Surface, open_sea);
+        // Open ocean is deep blue (strong B, weak R); crater floor is land green/brown.
+        assert!(
+            c_sea[2] > c_sea[0] + 0.05,
+            "open ocean should be blue-dominant, got {c_sea:?}"
+        );
+        assert!(
+            c_crater[1] + c_crater[0] > c_crater[2],
+            "landlocked floor must not paint as ocean blue, got {c_crater:?}"
+        );
     }
 
     /// **The depression paint must not be mistakable for the water paint**, and

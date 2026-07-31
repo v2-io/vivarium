@@ -295,6 +295,10 @@ pub struct WaterSim {
     /// Counted reservoirs (m of water, cell-area units): conservation partners.
     pub atmosphere: f64,
     pub ocean: f64,
+    /// Shared ocean mask over `bed` at construction ( #form-ocean-is-connectivity-not-elevation ).
+    /// Recomputed only if the bed footprint changes; used by initial fill and
+    /// the rim hold so the water kernel never re-implements a height threshold.
+    ocean_cells: Vec<bool>,
     /// The conserved total at construction — the budget-drift baseline.
     initial_total: f64,
     /// Froude stats captured INSIDE the last step, at the instant and against
@@ -330,7 +334,16 @@ impl WaterSim {
     pub fn new_at_sea(face: Face, level: u8, origin: (u32, u32), nx: usize, cell_m: f32, bed: Vec<f32>, atmosphere_m: f64, sea: f32) -> Self {
         assert_eq!(bed.len(), nx * nx);
         let z = vec![0.0f32; nx * nx];
-        let depth: Vec<f32> = bed.iter().map(|&b| (sea - b).max(0.0)).collect();
+        // Initial fill only where the *ocean* reaches — not every cell below the
+        // datum. A landlocked below-datum basin filled to the waterline is a
+        // manufactured ocean ( #form-ocean-is-connectivity-not-elevation ); the
+        // shared mask is the same object the router and the views use.
+        let ocean_cells = crate::sea_level::ocean_mask(&bed, nx, sea);
+        let depth: Vec<f32> = bed
+            .iter()
+            .enumerate()
+            .map(|(i, &b)| if ocean_cells[i] { (sea - b).max(0.0) } else { 0.0 })
+            .collect();
         let mut this = Self {
             nx,
             cell_m,
@@ -347,6 +360,7 @@ impl WaterSim {
             armor: z.clone(),
             atmosphere: atmosphere_m * (nx * nx) as f64,
             ocean: 0.0,
+            ocean_cells,
             last_froude: (0.0, 0.0),
             last_clips: Clips::default(),
             initial_total: 0.0,
@@ -913,11 +927,18 @@ impl WaterSim {
         self.hold_edge_sea(p.sea_m);
     }
 
-    /// Hold edge cells with bed at/below sea at the waterline, exchange counted.
+    /// Hold *ocean* edge cells at the waterline, exchange counted.
+    ///
+    /// Edge cells that are merely below the datum but landlocked (a lake cut by
+    /// the tile rim under FE(4)) are not the world ocean and are not held. On a
+    /// domain whose rim is the only ocean seed, every submerged edge cell is
+    /// ocean by construction of [`crate::sea_level::ocean_mask`] — so this is
+    /// equivalent to the old threshold for that common case, and stricter for
+    /// the Caspian class.
     fn hold_edge_sea(&mut self, sea: f32) {
         let nx = self.nx;
         let hold = |i: usize, s: &mut Self| {
-            if s.bed[i] <= sea {
+            if s.ocean_cells[i] {
                 let target = sea - s.bed[i];
                 s.ocean += (s.depth[i] - target) as f64;
                 s.depth[i] = target;

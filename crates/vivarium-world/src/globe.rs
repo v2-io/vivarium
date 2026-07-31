@@ -166,7 +166,22 @@ pub fn render(
                 BuildState::Unbuilt => gen::initial_topography_m(world.seed(), cell, level),
             };
 
-            let ocean = elev < sea;
+            // Ocean is connectivity, not elevation ( #form-ocean-is-connectivity-not-elevation ).
+            // For eroded/watered tiles the shared mask runs over the tile's stored
+            // bed; unbuilt tiles have no domain article and fall back to the
+            // height test with that honesty declared in the glyph path only.
+            let ocean = match st {
+                BuildState::Watered | BuildState::Eroded => {
+                    let epochs = *cov.erosion.get(&(f, oi, oj)).unwrap_or(&0);
+                    let tile = eroded_cache
+                        .entry((f, oi, oj))
+                        .or_insert_with(|| world.observe().surface_prefer_eroded(face, level, oi, oj, nx, epochs).0);
+                    let mask = crate::sea_level::ocean_mask(tile, nx, sea as f32);
+                    let (di, dj) = ((ci - oi) as usize, (cj - oj) as usize);
+                    mask.get(dj * nx + di).copied().unwrap_or(elev < sea)
+                }
+                _ => elev < sea,
+            };
             // Glyph: colour mode → relief ramp (colour carries state); plain
             // mode → state glyph (the deliverable survives with no colour).
             let ch = if color {

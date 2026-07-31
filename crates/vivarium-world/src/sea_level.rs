@@ -23,6 +23,82 @@ use crate::time::Time;
 /// to be cheap; fine enough that the inverted level is stable for v0.
 pub(crate) const SAMPLE_LEVEL: u8 = 8;
 
+// ── Ocean vs submerged ( #form-ocean-is-connectivity-not-elevation ) ─────────
+//
+// Sea level is a height. The *ocean* is not the set of cells below it. A cell is
+// **submerged** when its bed lies under the waterline; it is **ocean** only when
+// the ocean can reach it through submerged cells. Landlocked below-datum basins
+// are lakes (or dry lakebeds), not sea — classifying them as ocean made every
+// drain-seeded reader empty them (the Caspian class).
+//
+// This is the **shared** mask: one pure function every consumer must call. The
+// fluvial router was the first site; paints, the terminal globe, the water
+// kernel's initial fill, and the column assembler are the rest. Do not re-derive
+// a threshold test beside a call site that means "is this the sea?"
+
+/// Bed at or below the waterline — *submerged*, not necessarily ocean.
+#[inline]
+pub fn is_submerged(h_m: f32, sea_m: f32) -> bool {
+    h_m <= sea_m
+}
+
+/// **Ocean mask** over a rectangular domain of heights (row-major `nx × nx`).
+///
+/// A cell is ocean iff it is submerged and reaches the domain boundary through
+/// submerged cells (eight-connected). Deterministic: boolean flood from the
+/// boundary, independent of visit order.
+///
+/// **Declared scope** ( #form-ocean-is-connectivity-not-elevation FE(4) ): honesty
+/// is only as wide as the domain. An enclosed sea larger than the window touches
+/// the rim and is read as ocean. A whole cube face adjudicates the planet's real
+/// basins; a tile is biased toward calling lakes sea.
+///
+/// # Panics
+/// When `h.len() != nx * nx`.
+pub fn ocean_mask(h: &[f32], nx: usize, sea_m: f32) -> Vec<bool> {
+    assert_eq!(h.len(), nx * nx, "ocean_mask: height field is not nx×nx");
+    let n = nx * nx;
+    let mut ocean = vec![false; n];
+    let mut stack: Vec<usize> = Vec::new();
+    // Seed: every submerged cell on the domain boundary.
+    for y in 0..nx {
+        for x in 0..nx {
+            if x == 0 || y == 0 || x + 1 == nx || y + 1 == nx {
+                let i = y * nx + x;
+                if is_submerged(h[i], sea_m) {
+                    ocean[i] = true;
+                    stack.push(i);
+                }
+            }
+        }
+    }
+    const NEI: [(i32, i32); 8] = [
+        (-1, -1),
+        (0, -1),
+        (1, -1),
+        (-1, 0),
+        (1, 0),
+        (-1, 1),
+        (0, 1),
+        (1, 1),
+    ];
+    while let Some(i) = stack.pop() {
+        let (x, y) = (i % nx, i / nx);
+        for (dx, dy) in NEI {
+            let (xp, yp) = (x as i32 + dx, y as i32 + dy);
+            if xp < 0 || yp < 0 || xp >= nx as i32 || yp >= nx as i32 {
+                continue;
+            }
+            let j = yp as usize * nx + xp as usize;
+            if !ocean[j] && is_submerged(h[j], sea_m) {
+                ocean[j] = true;
+                stack.push(j);
+            }
+        }
+    }
+    ocean
+}
+
 /// Sea level (m above bedrock datum) for this world-seed at the **present-
 /// Abyssal** epoch: ocean stock poured into the **live (post-rock-mass-ledger)**
 /// tectonic surface at the live mantle temperature `MANTLE_TP_C`. Pure function
@@ -821,5 +897,48 @@ mod tests {
         // resolution); the relief clause discriminates stands past 2000 m
         // (live peaks 1.7–2.4 km sit right at that edge, so it resolves the
         // ~hundreds-of-metres overshoot, not merely gross violations).
+    }
+
+    /// Dual-arm conviction for the shared ocean mask ( #form-ocean-is-connectivity-not-elevation ).
+    /// (a) Enclosed crater below the datum is *not* ocean. (b) Rim-connected sea *is*.
+    #[test]
+    fn ocean_mask_is_connectivity_not_elevation() {
+        let nx = 32usize;
+        let sea = 1000.0f32;
+        let mut h = vec![sea + 200.0; nx * nx]; // dry land
+        // Connected sea along the left edge.
+        for y in 0..nx {
+            for x in 0..4 {
+                h[y * nx + x] = sea - 100.0;
+            }
+        }
+        // Landlocked crater in the interior, floor below the datum.
+        for y in 12..20 {
+            for x in 12..20 {
+                h[y * nx + x] = sea - 50.0;
+            }
+        }
+        let m = ocean_mask(&h, nx, sea);
+        assert!(m[0], "rim-connected sea cell must be ocean");
+        assert!(
+            !m[16 * nx + 16],
+            "enclosed crater below the datum must not be ocean — that is the Caspian class"
+        );
+        // Threshold would have called the crater ocean; the shared mask must not.
+        assert!(is_submerged(h[16 * nx + 16], sea));
+        assert!(!m[16 * nx + 16]);
+    }
+
+    #[test]
+    fn ocean_mask_is_deterministic() {
+        let nx = 16usize;
+        let sea = 0.0f32;
+        let mut h = vec![10.0f32; nx * nx];
+        for i in 0..nx {
+            h[i] = -5.0;
+        }
+        let a = ocean_mask(&h, nx, sea);
+        let b = ocean_mask(&h, nx, sea);
+        assert_eq!(a, b);
     }
 }
