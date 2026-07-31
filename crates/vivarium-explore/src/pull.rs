@@ -31,7 +31,7 @@ use vivarium_world::lithosphere;
 use vivarium_world::query::World;
 use vivarium_world::sea_level;
 use vivarium_world::sphere::{CellId, CubeCoord, Face};
-use vivarium_world::store::Store;
+use vivarium_world::store::{RootEntry, Store};
 use vivarium_world::watch::{self, BuildState, Coverage, TileFlags};
 
 use crate::lens::{Chain, FrameFacts, Ladder, Lens, SeaProvenance};
@@ -101,7 +101,10 @@ pub struct Frame {
     pub seam: SeamStats,
     pub facts: FrameFacts,
     /// Roots this frame's census was read from, for the honesty block.
-    pub roots: Vec<vivarium_world::store::RootEntry>,
+    /// Shared Arc — do not clone ~10⁵ entries into every frame (P1).
+    pub roots: Arc<Vec<vivarium_world::store::RootEntry>>,
+    /// Coverage parsed once for this roots epoch (ECS must not re-parse).
+    pub coverage: Coverage,
     /// Freshly-observed ladder residency (a builder in another terminal may have
     /// landed stages since the last frame).
     pub ladder_built: Vec<bool>,
@@ -115,6 +118,8 @@ pub enum Msg {
     Frame(Box<Frame>),
     /// The store's root count changed — a builder is working.
     Landings(usize),
+    /// Request equals the last completed frame — clear inflight without remesh.
+    AlreadyCurrent(Request),
 }
 
 /// Deep-time surfaces already built, keyed by `(face, level, T_p bits)`.
@@ -183,6 +188,27 @@ fn prior_face_tile(seed: u64, face: Face, level: u8, nx: usize) -> Vec<f32> {
         }
     }
     tile
+}
+
+/// Whole-face prior tiles for pure-prior open views — same (seed, face, level)
+/// is bit-identical; without this, every orbit/level settle re-pays O(6·nx²) fBm.
+#[derive(Default)]
+struct PriorFaceCache {
+    tiles: Mutex<HashMap<(u8, u8), Vec<f32>>>,
+}
+
+impl PriorFaceCache {
+    fn get_or_build(&self, seed: u64, face: Face, level: u8, nx: usize) -> Vec<f32> {
+        let key = (face.index(), level);
+        if let Some(hit) = self.tiles.lock().unwrap().get(&key) {
+            if hit.len() == nx * nx {
+                return hit.clone();
+            }
+        }
+        let tile = prior_face_tile(seed, face, level, nx);
+        self.tiles.lock().unwrap().insert(key, tile.clone());
+        tile
+    }
 }
 
 /// Whether a store key's tile can contribute heights to a view patch — pure key
@@ -256,6 +282,7 @@ pub fn spawn(
         let world = World::new(&store, seed);
         let mut ladder = Ladder::read(&world, demanded_frames, view_frames);
         let stage_cache = StageSurfaceCache::default();
+        let prior_cache = PriorFaceCache::default();
 
         // Census state, refreshed when the listing epoch moves (same-process put
         // generation, or entry-count fingerprint for a builder in another
@@ -268,9 +295,17 @@ pub fn spawn(
         let mut landings: Vec<watch::Landing> = Vec::new();
         let mut chain = Chain::read(&roots, 0);
         crate::lens::read_residuals(&store, &roots, &mut chain);
+        let mut census = world.observe().eroded_region_census();
         // Full roots/ readdir is O(archive); only for live builder watch, not every pull.
         let mut last_external_check = Instant::now();
         const EXTERNAL_CENSUS_INTERVAL: Duration = Duration::from_secs(1);
+        // P1: skip rebuild when the drained request equals the last completed one
+        // (orbit float noise can re-enqueue an identical picture).
+        let mut last_done: Option<Request> = None;
+        // Regions cache: load_eroded_regions walks the whole listing; only redo
+        // when roots epoch or surface-selection fields change.
+        let mut regions_cache: Option<(Request, Arc<Vec<RootEntry>>, Vec<vivarium_world::erosion::ErodedRegion>)> =
+            None;
 
         while let Ok(first) = rx.recv() {
             // **Latest request wins.** While a multi-second mesh builds, the UI
@@ -297,11 +332,21 @@ pub fn spawn(
                 ladder.refresh_residency(&world);
                 chain = Chain::read(&roots, chain.sel);
                 crate::lens::read_residuals(&store, &roots, &mut chain);
+                census = world.observe().eroded_region_census();
+                regions_cache = None;
+                last_done = None;
                 let _ = tx.send(Msg::Landings(roots.len()));
             }
             if !chain.all.is_empty() && req.cohort % chain.all.len() != chain.sel {
                 chain = Chain::read(&roots, req.cohort);
                 crate::lens::read_residuals(&store, &roots, &mut chain);
+                regions_cache = None;
+            }
+
+            // Already drew this exact request — clear inflight without remesh.
+            if last_done == Some(req) {
+                let _ = tx.send(Msg::AlreadyCurrent(req));
+                continue;
             }
 
             let level = req.level;
@@ -330,19 +375,17 @@ pub fn spawn(
                 }
             };
 
-            // The census this frame is described by. In replay it is the prefix,
-            // so the overlay ages with the picture instead of describing the
-            // finished world over a half-built one.
-            let (frame_roots, frame_cov): (Vec<_>, Coverage) = match req.lens {
+            // Present path reuses the epoch coverage; replay rebuilds a prefix census.
+            let (frame_roots, frame_cov): (Arc<Vec<_>>, Coverage) = match req.lens {
                 Lens::Replay(n) => {
                     if landings.is_empty() {
                         landings = watch::landings(&dir).unwrap_or_default();
                     }
                     let rs = crate::lens::replay_roots(&landings, n);
                     let c = Coverage::parse(&rs);
-                    (rs, c)
+                    (Arc::new(rs), c)
                 }
-                _ => (roots.as_ref().clone(), Coverage::parse(&roots)),
+                _ => (Arc::clone(&roots), cov.clone()),
             };
 
             // **Key-side reject before decode.** Two filters, both free string
@@ -372,38 +415,54 @@ pub fn spawn(
                     Some(p) => key_overlaps_patch(k, p, view_level),
                 }
             };
-            let regions = match req.lens {
-                Lens::Present => {
-                    let cur = vivarium_world::nomotheke::SRC_HASH;
-                    world.observe().load_eroded_regions_where(|k| {
-                        watch::key_field(k, "src") == Some(cur) && key_in_view(k)
-                    })
-                }
-                Lens::Stage(_) => Vec::new(),
-                // One world-moment: this cohort's source tree, this exact epoch.
-                // Both fields are required — the epoch alone would assemble
-                // stages from two different kernels into one surface, and the
-                // source alone is the whole settle history at once.
-                Lens::Erosion(i) => match chain.stage_predicate(i) {
-                    Some((src, lvl, epoch)) => world.observe().load_eroded_regions_where(|k| {
-                        watch::key_field(k, "src") == Some(src.as_str())
-                            && watch::key_field(k, "level").and_then(|v| v.parse::<u8>().ok())
-                                == Some(lvl)
-                            && watch::key_field(k, "epochs").and_then(|v| v.parse::<u32>().ok())
-                                == Some(epoch)
-                            && key_in_view(k)
-                    }),
-                    None => Vec::new(),
-                },
-                Lens::Replay(n) => {
-                    if landings.is_empty() {
-                        landings = watch::landings(&dir).unwrap_or_default();
-                    }
-                    let keys: BTreeSet<String> = crate::lens::replay_key_set(&landings, n);
-                    world.observe().load_eroded_regions_where(|k| keys.contains(k) && key_in_view(k))
-                }
+            // Region load key: lens + level + patch (not paint/exag — those do not
+            // change which tiles decode). Invalidate when roots Arc moves.
+            let regions_req = Request {
+                paint: Paint::Surface, // paint does not affect region load
+                exag: 0.0,
+                change_scale_m: 0.0,
+                ..req
             };
-            let census = world.observe().eroded_region_census();
+            let need_region_load = match regions_cache.as_ref() {
+                Some((cached_req, cached_roots, _)) => {
+                    *cached_req != regions_req || !Arc::ptr_eq(cached_roots, &roots)
+                }
+                None => true,
+            };
+            if need_region_load {
+                let regs = match req.lens {
+                    Lens::Present => {
+                        let cur = vivarium_world::nomotheke::SRC_HASH;
+                        world.observe().load_eroded_regions_where(|k| {
+                            watch::key_field(k, "src") == Some(cur) && key_in_view(k)
+                        })
+                    }
+                    Lens::Stage(_) => Vec::new(),
+                    // One world-moment: this cohort's source tree, this exact epoch.
+                    Lens::Erosion(i) => match chain.stage_predicate(i) {
+                        Some((src, lvl, epoch)) => world.observe().load_eroded_regions_where(|k| {
+                            watch::key_field(k, "src") == Some(src.as_str())
+                                && watch::key_field(k, "level").and_then(|v| v.parse::<u8>().ok())
+                                    == Some(lvl)
+                                && watch::key_field(k, "epochs").and_then(|v| v.parse::<u32>().ok())
+                                    == Some(epoch)
+                                && key_in_view(k)
+                        }),
+                        None => Vec::new(),
+                    },
+                    Lens::Replay(n) => {
+                        if landings.is_empty() {
+                            landings = watch::landings(&dir).unwrap_or_default();
+                        }
+                        let keys: BTreeSet<String> = crate::lens::replay_key_set(&landings, n);
+                        world
+                            .observe()
+                            .load_eroded_regions_where(|k| keys.contains(k) && key_in_view(k))
+                    }
+                };
+                regions_cache = Some((regions_req, Arc::clone(&roots), regs));
+            }
+            let regions = regions_cache.as_ref().map(|(_, _, r)| r.as_slice()).unwrap_or(&[]);
             let pure_prior = regions.is_empty() && !matches!(req.lens, Lens::Stage(_));
 
             // The ghost ring lies on neighbouring faces, so it must come from the
@@ -457,8 +516,16 @@ pub fn spawn(
             // is the surface being painted ( #form-ocean-is-connectivity-not-elevation ).
 
             let faces: Vec<FaceMesh> = std::thread::scope(|s| {
-                let (world, regions, cov, water, cache, ghost, units) =
-                    (&world, &regions, &frame_cov, &water, &stage_cache, &ghost, &units);
+                let (world, regions, cov, water, cache, prior_cache, ghost, units) = (
+                    &world,
+                    regions,
+                    &frame_cov,
+                    &water,
+                    &stage_cache,
+                    &prior_cache,
+                    &ghost,
+                    &units,
+                );
                 let handles: Vec<_> = units
                     .iter()
                     .map(|&unit| {
@@ -490,7 +557,7 @@ pub fn spawn(
                                     t
                                 }
                                 _ if pure_prior && oi == 0 && oj == 0 && nx == 1usize << level => {
-                                    prior_face_tile(seed, face, level, nx)
+                                    prior_cache.get_or_build(seed, face, level, nx)
                                 }
                                 _ if pure_prior => {
                                     let mut t = Vec::with_capacity(nx * nx);
@@ -796,9 +863,11 @@ pub fn spawn(
                 seam,
                 facts,
                 roots: frame_roots,
+                coverage: frame_cov,
                 ladder_built: ladder.built.clone(),
                 chain: chain.clone(),
             };
+            last_done = Some(req);
             if tx.send(Msg::Frame(Box::new(frame))).is_err() {
                 return; // window closed
             }

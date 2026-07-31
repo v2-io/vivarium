@@ -88,6 +88,7 @@ impl BuildState {
 /// argument applies across renderers: coverage computed twice is coverage that
 /// will eventually disagree with itself, and then the two instruments report
 /// different worlds while both look authoritative.
+#[derive(Clone)]
 pub struct Coverage {
     /// The deepest level any surface tile reached — what a viewer is looking at.
     pub level: u8,

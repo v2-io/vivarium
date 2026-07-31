@@ -59,5 +59,6 @@ Physics-first ordering remains defensible: a truthful bed is worth more than a s
 
 - **Companion rank surface:** `#disc-known-active-hotspots` FE(5) carries the living order of work; this segment carries the **parity definition** so rank rows can complete without re-arguing the bar.
 - **P0 landed 2026-07-31:** `Store::roots_shared` + generation counter on `put`; pull uses shared `Arc` and throttled `roots_invalidate_if_external` (1 s) for builder-beside-explore. First-light: cold ~2.2 s / 146k roots; warm hit ~ns. Done-when (working-set cheap after first open) holds for the thrash path; cold open still pays one scan.
+- **P1 landed 2026-07-31:** observe paths use `roots_shared` (no ~10⁵-entry clone per load/census); pull caches coverage/regions/prior faces; `Msg::AlreadyCurrent` when request equals last completed; Frame carries `Arc` roots + pre-parsed coverage (ECS does not re-walk). Steady camera after settle should not chain multi-second “updating view…”. First load still pays Coverage parse + region scan once (~25 ms each on first-light when empty).
 - **Do not** expand P0–P4 into full daemon/spool/quadtree without a new parity failure.
 - **Peer audit 2026-07-31:** seal-with-fixes applied — generation vocabulary for P0; P3 prefers (b)/(c) before overview product (a); world-rank rows after P4; stale “1b” rank labels retired in hotspots companion.

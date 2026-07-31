@@ -27,7 +27,7 @@ Order: P0 → P1 (P2 can ride) → P3 → declare P4. Definition: `#disc-explore
 | ID | Milestone | Done when |
 | --- | --- | --- |
 | **P0** | Index is hot | **landed** generation-backed `roots_shared`; warm ~ns; cold open still one full scan |
-| **P1** | Pull thrash boring | Steady view ≪ 1 s updates on first-light L7 present once index warm |
+| **P1** | Pull thrash boring | **landed** no full-census clone/reparse per settle; region+prior caches; AlreadyCurrent |
 | **P2** | Intent legible | HUD: globe vs window, level, carve/prior/mixed — stable |
 | **P3** | Open view usable | Prefer open at covering level **or** instant honest prior + zoom-to-carve; coarse overview product only if needed |
 | **P4** | Spot-check gate | Can inspect fluvial/ocean/depression without thrash; weirdness → physics first |

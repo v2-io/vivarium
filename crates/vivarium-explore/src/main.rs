@@ -997,6 +997,11 @@ fn apply_frames(
             match rx.try_recv() {
                 Ok(Msg::Frame(f)) => last_frame = Some(f),
                 Ok(Msg::Landings(_)) => {}
+                Ok(Msg::AlreadyCurrent(r)) => {
+                    if ex.requested == Some(r) {
+                        ex.inflight = false;
+                    }
+                }
                 Err(_) => break,
             }
         }
@@ -1010,7 +1015,8 @@ fn apply_frames(
     }
     ladder.0.built = frame.ladder_built.clone();
     chain.0 = frame.chain.clone();
-    cov.0 = Coverage::parse(&frame.roots);
+    // Worker already parsed coverage for this roots epoch — do not re-walk ~10⁵ keys.
+    cov.0 = frame.coverage.clone();
     // A stage index that outlived a shrinking chain would silently address a
     // different moment. Clamp rather than reset, so a builder landing new stages
     // mid-scrub keeps you where you were looking.

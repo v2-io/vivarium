@@ -81,7 +81,7 @@ impl<'w, 's> Observatory<'w, 's> {
         nx: usize,
         epochs: u32,
     ) -> Option<(Vec<f32>, Source)> {
-        let Ok(roots) = self.w.store_ref().roots() else {
+        let Ok(roots) = self.w.store_ref().roots_shared() else {
             return None;
         };
         let face_s = face.index().to_string();
@@ -94,7 +94,7 @@ impl<'w, 's> Observatory<'w, 's> {
         // (rank, key, provisional, h) — higher rank wins; inside a rank the
         // lexicographically smallest key wins (deterministic across stores).
         let mut best: Option<(u8, &str, bool, Vec<f32>)> = None;
-        for r in &roots {
+        for r in roots.iter() {
             if !r.key.starts_with("erosion-tile@") {
                 continue;
             }
@@ -164,11 +164,11 @@ impl<'w, 's> Observatory<'w, 's> {
     /// filter on this, so a stale tile is loaded and shown as if current unless
     /// the caller consults this census / uses [`Self::load_current_eroded_regions`].
     pub fn eroded_region_census(&self) -> RegionCensus {
-        let Ok(roots) = self.w.store_ref().roots() else {
+        let Ok(roots) = self.w.store_ref().roots_shared() else {
             return RegionCensus::default();
         };
         let mut c = RegionCensus::default();
-        for r in &roots {
+        for r in roots.iter() {
             if !r.key.starts_with("erosion-tile@") {
                 continue;
             }
@@ -235,14 +235,15 @@ impl<'w, 's> Observatory<'w, 's> {
     /// schedule key beats a plain edge-sink key (exchange adoption), and any
     /// remaining tie breaks by lexicographically smallest key.
     pub fn load_eroded_regions_where(&self, keep: impl Fn(&str) -> bool) -> Vec<ErodedRegion> {
-        let Ok(roots) = self.w.store_ref().roots() else {
+        // Shared listing — do not clone ~10⁵ RootEntry per load (explore thrash).
+        let Ok(roots) = self.w.store_ref().roots_shared() else {
             return Vec::new();
         };
         // Tile identity → (epochs, halo_rank, key, region); BTree for deterministic order.
         type TileAt = (u8, u8, u32, u32, usize); // (face, level, oi, oj, nx)
         let mut latest: std::collections::BTreeMap<TileAt, (u32, u8, String, ErodedRegion)> =
             std::collections::BTreeMap::new();
-        for r in roots {
+        for r in roots.iter() {
             if !r.key.starts_with("erosion-tile@") {
                 continue;
             }
@@ -350,7 +351,7 @@ impl<'w, 's> Observatory<'w, 's> {
         erosion_epochs: u32,
         steps: u32,
     ) -> Option<(Vec<f32>, Source)> {
-        let roots = self.w.store_ref().roots().ok()?;
+        let roots = self.w.store_ref().roots_shared().ok()?;
         let want = [
             ("seed", self.w.seed().to_string()),
             ("face", face.index().to_string()),
@@ -365,7 +366,7 @@ impl<'w, 's> Observatory<'w, 's> {
             ("src", crate::nomotheke::SRC_HASH.to_string()),
         ];
         let mut best: Option<(u8, &str, bool, &str)> = None; // rank, key, provisional, object
-        for r in &roots {
+        for r in roots.iter() {
             if !r.key.starts_with("water-tile@") {
                 continue;
             }
