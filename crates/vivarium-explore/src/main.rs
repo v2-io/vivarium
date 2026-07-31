@@ -357,6 +357,9 @@ fn main() {
     let water = WaterField::load(&world, &cov);
     let mut chain = Chain::read(&roots, 0);
     lens::read_residuals(&store, &roots, &mut chain);
+    // Fresh vs stale under *this* binary — P3 bar is carve coverage, not tile count.
+    let erosion_census = world.observe().eroded_region_census();
+    let src8 = &vivarium_world::nomotheke::SRC_HASH[..8.min(vivarium_world::nomotheke::SRC_HASH.len())];
     println!(
         "[explore] vivium \"{}\" (seed {:#018x}) at {} -- {} roots, {} tiles at L{}, ladder {} stages ({} built)",
         spec.name,
@@ -368,6 +371,23 @@ fn main() {
         ladder.len(),
         ladder.built_count()
     );
+    println!(
+        "[explore] erosion under this binary src={src8}: {} fresh · {} stale (other src) · {} total",
+        erosion_census.fresh, erosion_census.stale, erosion_census.total
+    );
+    if erosion_census.fresh == 0 && erosion_census.stale > 0 {
+        println!(
+            "[explore] P3: no fluvial bed is *readable* here — store has carve history, but none under \
+             this source hash. Open globe is honest pure prior (fast). For fluvial spot-check:\n\
+             [explore]   vivarium build\n\
+             [explore] then re-open explore (or zoom close after tiles land under the new src)."
+        );
+    } else if erosion_census.fresh > 0 {
+        println!(
+            "[explore] P3: fresh carve is present — far view stays ≤L{LEVEL_GLOBE_MAX} whole-globe \
+             (prior or coarse); zoom close past L{LEVEL_GLOBE_MAX} for covering-grain windows over the bed."
+        );
+    }
     match chain.cohort.as_ref() {
         Some(c) => println!(
             "[explore] erosion settle history: {} materialized stages, epochs {:?}, {} tiles at L{}, src {}{}\n\
@@ -382,9 +402,8 @@ fn main() {
                 " (this binary's source)".to_string()
             } else {
                 format!(
-                    " -- NOT this binary's source ({}). A previous world's history; \
-                     the HUD says so on every frame.",
-                    &vivarium_world::nomotheke::SRC_HASH[..8]
+                    " -- NOT this binary's source ({src8}). A previous world's history; \
+                     the HUD says so on every frame."
                 )
             }
         ),

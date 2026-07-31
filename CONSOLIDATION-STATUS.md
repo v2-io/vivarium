@@ -4,7 +4,7 @@
 
 ## The picture, in one paragraph
 
-World-law channel is in good order. P0–P1 fixed thrash so the globe is **inspectable**. **Next (Joseph 2026-07-31):** face-domain ocean product (explore samples; no window re-flood) → P3 residual / rebuild as needed → P4 → sill/flux. Phase-3 cycle stays **honest red** with a feel needle; not costume-green from box residual.
+World-law channel is in good order. P0–P1 fixed thrash so the globe is **inspectable**. Face ocean paint **landed**. **Next:** finish first-light rebuild under current `src` (P3), then declare **P4** if thrash stays boring and sea stays zoom-stable with inspectable fluvial. Phase-3 cycle stays **honest red** + feel needle.
 
 ## What is true now (world)
 
