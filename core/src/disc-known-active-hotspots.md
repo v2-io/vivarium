@@ -5,6 +5,7 @@ status: discussion-grade
 stage: draft
 depends:
   - disc-open-problem-census
+  - disc-explorer-instrument-parity
   - form-complete-content-addressed-key
   - norm-caught-disciplines-become-mechanisms
 ---
@@ -43,27 +44,26 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
    Related as "the sphere is real at joins"; **different repairs.**
 
-5. **Highest-leverage next — revised 2026-07-31 (session re-true against code + `vivarium status` + store cohort).** Ideation rank only. Verified present-tense facts used below: source `ea1f5b4`, store `src=4fdc95afbe11c785` (4786 roots), world git `f1b321a14`; status tally **6 claimed · 4 specified · 22 not-started**, target phase 4.
+5. **Highest-leverage next — sealed 2026-07-31 (evening): instrument parity first, then world pieces.** Ideation rank only; parity **definition** lives in `#disc-explorer-instrument-parity` (P0–P4). Joseph acceptance: zoomable (limited) **performant** globe; LoD heterogeneity only if wholesale switch cannot meet the bar; **spot-check physics must be possible** (no multi-second thrash conflating paint with bed).
 
-   **What landed since the previous rank (not open anymore).** Ocean connectivity in the *router* ( #form-ocean-is-connectivity-not-elevation , changelog `2026-07-29-04`); mixed-tier view paths ( #form-fidelity-ladder FE(8), `2026-07-30-02`); standing water sampled at carve level; pad-not-slide region origins (`2026-07-30-03`); geometry-vs-data clamp split that zeroed 83 NaN roots (`2026-07-30-01`); **direction-based chart-edge height resample** on `Fluvial::from_surface_at` and the exchange prior (`2026-07-30-04`, test `an_off_chart_halo_cell_resamples_the_neighbouring_face`); grain-dependence guard for contract disagreement (`the_contract_disagreement_is_grain_dependent`); `bin/provenance` + `bin/check-provenance`. Water settle remains **not** the lake blocker.
+   **Parity bar (stop-condition for the instrument strand).** P4 in `#disc-explorer-instrument-parity`: can orbit/zoom to a limit and inspect fluvial/ocean/depression on a built cohort; weird pictures are primarily **physics or paint-law** questions. Until P4, instrument honesty **outranks** new world features when session attention conflicts.
+
+   **What already landed (not reopened).** Mixed-tier view FE(8); pad/NaN; chart-edge direction resample; shared `ocean_mask`; ocean paint on assembled tile; level-filter before decode; face-local R; altitude-gated windows; latest-wins drain; provenance tooling. Water settle remains **not** the lake blocker.
 
    | Rank | Action | Why high leverage | Not this instead |
    | --- | --- | --- | --- |
-   | **done** | ~~Reader computing across tiers~~ — landed 2026-07-30 ( #form-fidelity-ladder FE(8) ). Painted lakes were the prior; carve-level mesh + standing-water sample now match | — | — |
-   | **done** | ~~Pad-slide / NaN halo pair~~ — landed 2026-07-30 ( #obs-halo-windows-overhang-the-chart-and-mint-nan ). First tile no longer carves ground 16 cells away; 83 non-finite roots → 0 | — | — |
-   | **done** | ~~Fluvial chart-edge *height* rim-repeat~~ — direction resample production path 2026-07-30 ( #obs-chart-edge-halo-clamps-to-the-face FE(1) ). Residual is **in the key**, uplift still clamps, stated spacing imprecision | — | — |
-   | **done** | ~~Shared ocean mask~~ — **landed 2026-07-31** ( #form-ocean-is-connectivity-not-elevation ). `sea_level::ocean_mask` is the single pure function; router, water fill/hold, globe, explorer paints+mesh freeboard, and `column_at` all consume it. Residual: store-memoized planet/face article for plate work; FE(4) window bias unchanged | — | — |
-   | **1** | **Sill-graph spill object, then flux half** on same-level seams ( #form-same-level-halo-exchange FE(9) then FE(1) ) — sill graph not per-basin scalar (constructively refuted); Bangerth-style keyable flux rounds after; witnessed read-sets from birth | Completes the seam *and* adjudicates basins that straddle a tile ( #form-ocean-is-connectivity-not-elevation FE(4) ). Datum path already in production; this is the next physics object on that family | Not more Jacobi diagnosis; not chart-edge work (different family) |
-   | **1b** | **Matched-ratio $d/(v\sigma)$ arms on `halo_exchange_probe`** (dossier §4.1) | One run; can upgrade FE(6) operating point from adopted to derived; informs rank 1 | Cheap; do not expand into a full re-pricing sweep |
-   | **2** | **Make one phase-3 promise *run and gate*** — not invent a regula, not invent `status`. `vivarium status` already prints every rung; queue of specified-no-keeper starts with `closed-water-cycle` (phase 3) while phase 4's `emerged-land` / `erosion-substrate` sit at `claimed`. Precedent: `emerged-land` has a Record predicate that convicts (`sea_level::emerged_land_verdict`). Missing: **nothing gates build/work on the ladder**, and **no promise reaches KEPT while its predicate stays prose-only** | Turns the floor from reported to load-bearing. Re-verified 2026-07-31: tally 6 claimed / 4 specified / 22 not-started; weather-channels NOT-STARTED is the ladder working (no predicate ⇒ cannot be fulfilled), not a hole | Not writing predicates for every NOT-STARTED promise; not declaring a second target phase (manifest already has `order=terrestris`, `target_phase=4`). **Read `vivarium status` before any proposal here** — rank-1 thrash on 2026-07-30 was almost all "I invented a missing instrument that ships" |
-   | **3** | **Re-measure blast radii under *current* keys** — connectivity's unexplained 30% / 94% beacon move is still open; pad-slide and chart-edge each added their own pre-reg misses (7% vs 30–45% on resample). Partial mechanism for the 7%: overhang necessary not sufficient (~21% of band-changed tiles publish) | Unexplained payload moves in newest law are where second defects hide; quoting the 30% figure cold is era-wrong after three rebuilds | Not a third prose guess; re-run instruments on `src=4fdc95af…` |
-   | **4** | **Router adopt/park** — diagonal-kill + transmissivity under probes, or explicitly park Coatléven ( #obs-routing-curl-spiral FE(6c) priced) | Another sweep without a decision is low leverage | Not the basin/lake spine |
-   | **5** | **`column_at` / uncovered-cell fidelity residual** — `column_at` still builds from the *detailed* surface; uncovered cells still fall to own-level prior ( #form-fidelity-ladder WN) | Same phantom one layer down, in the object every system meets | Not a second view paint fix |
-   | **6** | **One cold-stage stage-parallel carve** ( #form-erosion-at-a-cooling-stage ) | Target measured; design clear | Not chain-carried |
-   | **7** | **χ instrument path** — sediment budget + hillslope-off + post-fill G-sweep | Rate half is a continuous no-go | Does not unlock lakes |
-   | demote | Water settle *as lake blocker*; Caspian census (**answered**); demand spool; store-backed nav; panel-seam metric-freeze; ML surrogate; "build a regula audit" (status *is* the report — the gap is gating + KEPT) | Superseded or lower multiplier | — |
+   | **1** | **P0 — Index is hot** — generation-backed `Store::roots` (counter on `put`; census/load share one scan per generation). Measured: ~10⁵ root files, full re-read multi-second, often **×2–3 per pull** | Without this, every “updating view…” pays O(archive) before any height sample. Memo store already holds values; the **index** was never hot. Not a second philosophy of caching — the missing half of `#form-store-as-save` under interactive load. Generation (not OS mtime) is the listing epoch | Not more LoD policy; not sill/flux yet |
+   | **2** | **P1 — Pull thrash is boring** — after P0, settle request policy so steady camera does not chain multi-second updates; target ≪ 1 s for first-light L7 whole-globe present once index is warm | Joseph: framerate of *drawn* mesh is fine; the pain is endless multi-second updates of the wrong thing | Not a full quadtree |
+   | **3** | **P2+P3 — Intent legible + open view usable** — HUD always WHOLE GLOBE vs CLOSE-IN WINDOW + carve/prior/mixed; prefer open at covering level **(b)** or instant honest prior + zoom-to-carve **(c)**; coarse overview product **(a)** only if needed (see parity segment) | Today open L7 is 100% prior while L9 carve sits in store — cannot spot-check fluvial without fighting the instrument | Not finishing every explorer-intent wishlist item |
+   | **4** | **P4 — Spot-check gate** — declare parity when P0–P3 hold and physics can be inspected on first-light without thrash | The “we are at foundation” milestone | Not Abyssal completion |
+   | **5** | **Sill-graph spill → flux half** ( #form-same-level-halo-exchange FE(9)/(1) ) + matched-ratio arms | Next **world piece** after eyes work; cross-tile lakes / seam completion | **Gated on P4** (unless parallel free agent and no attention conflict) |
+   | **6** | **Phase-3 promise run+gate** (`closed-water-cycle` path); status already reports | Floor load-bearing | **Gated on P4** (same exception) |
+   | **7** | Re-measure blast radii; router adopt/park; `column_at` residual; cold-stage; χ path | Physics backlog after foundation | **Gated on P4** — not while instrument thrash still blocks spot-check |
+   | demote | Water settle as lake blocker; Caspian census (answered); demand spool; “build regula audit”; full quadtree-as-first-step; explorer polish that does not serve P0–P4 | Superseded or premature | — |
 
-   **Phase floor (supporting note, not a second rank table).** Status prints NOT-STARTED → specified → claimed → KEPT and `(un-checkable — no predicate)` where the ordinum maturity rule applies. There is **no false green**. The real tension is phase-4 claimed work sitting while phase-3 `closed-water-cycle` is only specified and `weather-channels` has not started — reported every run, gated by nothing. That is rank 2, not a license to hand-write predicates for every named promise.
+   **LoD under acceptance.** Prefer performant **wholesale** level switch within P1 budget. Add **heterogeneous** LoD (coarse shell + fine patch, multi-block pin) only if wholesale cannot show carve grain under P1. Full quadtree is out of scope for parity.
+
+   **Phase floor (unchanged fact).** Status: no false green; phase-4 claimed while phase-3 `closed-water-cycle` only specified — rank 6 work, not a license to hand-write every predicate.
 
 6. **Molten ground (era-volatile code) — supporting half, revised 2026-07-31.** Before quoting a measured emergent statistic, check whether its ground is warm; if so, carry the era or re-measure (`DECISIONS[kernel-era-keys-and-the-probe-registry]` is the mechanization program; this list covers the gap until that ships). Before briefing an agent into a warm region, say it is warm.
 
@@ -79,20 +79,19 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
    | **Cold this week** | Isostasy column + cooling chain; stage-chain instrument (no-exchange path); provenance tooling | Ordinary quotes safe when grounded only there. |
    | **first-light store** | **Local git at `f1b321a14`** | `~/.cache/vivarium/globe-world`. Commit with every changelog-owed rebuild. |
 
-7. **Dependency-tracking mechanism — first rungs built 2026-07-29 (late).** Witnessed read-sets + `Observatory` type split shipped. **Open:** wiring region-exchange interiors / stage ladders / epoch reductions; audit command that diffs read-sets across cohorts; full fold-or-check-into-key design. Rank 1b (sill + flux) should land WITH witnesses from birth. Distinct from kernel-era probe registry (measurement drift vs key completeness).
+7. **Dependency-tracking mechanism — first rungs built 2026-07-29 (late).** Witnessed read-sets + `Observatory` type split shipped. **Open:** wiring region-exchange interiors / stage ladders / epoch reductions; audit command that diffs read-sets across cohorts; full fold-or-check-into-key design. Rank **5** (sill + flux, post-P4) should land WITH witnesses from birth. Distinct from kernel-era probe registry (measurement drift vs key completeness).
 
-8. **Instrument / ops notes (revised 2026-07-31).** Not leverage rank:
-   - **Explorer LoD + column-block hot path (2026-07-31).** Latest-wins drain; nadir look; L7 globe ceiling; altitude-gated windows; sticky patch. **Asymptotics:** reject `region.level > view.level` before decode (L9 tiles never load for an L7 overview); pure-prior path O(C)+tile `ocean_mask` when R is empty; face-local R when carve covers. 400 tiles was never the problem — O(C·R) with useless R was. Residual: store-side coarse restriction so far views can show the L9 bed; multi-res shell under a window; full column strata as block payload (`#form-column-control-volume` WN).
-   - **Explorer rendering-bug backlog: still deliberately parked for chase.** Specimen "uncarved-prior tile shifted against carve lattice" is a **candidate of the pad-slide defect** (plausible landscape, wrong place) — re-check under current store before treating as live rendering debt. DEEP TIME default-on-open remains unreproduced.
-   - **World VCS + provenance:** commit store with changelog rebuilds; paste digests only from `bin/provenance` (fabrication class is mechanized — `bin/check-provenance` in `bin/check`).
-   - **Pending audit:** `audits/grok-final-overview-2026-07-28.md` still not in `.integrated/` — Q7 grain guard landed; full report needs per-#ops-audit-integration verification, not inheritance from the report header.
-   - **Stale code comments still in tree (debt, not open physics):** early `from_surface_at` docblock lines that still say height rim-repeat is open contradict the body; `query::erosion_region_exchanged` "Not yet: cube-edge resampling" is over-broad (path resamples; key does not). Prefer the segments + tests over those comments until cleaned.
+8. **Instrument / ops notes (revised 2026-07-31 evening).** Leverage for explore is **rank 1–4** above (P0–P4), not demoted polish.
+   - **Measured thrash (P0 evidence):** first-light `roots/` ~10⁵ files; full content re-read multi-second; pull path called `roots()` more than once per update. Prior L7 alone ~0.24 s — not the multi-second tax. GPU framerate of whatever *is* drawn is not the complaint.
+   - **Partial explore cuts already landed** (level filter, face-local R, tile ocean, altitude windows, latest-wins) — necessary, **not sufficient** for P0–P4.
+   - **World VCS + provenance:** commit store with changelog rebuilds; digests only from `bin/provenance`.
+   - **Pending audit:** `audits/grok-final-overview-2026-07-28.md` still not fully `#ops-audit-integration`.
 
 ## Epistemic Status
 
 **Max attainable: discussion-grade** as maintained ideation — completeness is impossible; honesty about dated judgment is the bar.
 
-**Currently `discussion-grade`.** FE(5)/FE(6) re-trued **2026-07-31** after the shared ocean mask land (`00c9726`, cohort `src=f0a56097577e8971`). Rank 1 is now **sill-graph / flux** on the same-level family. Phase-floor work remains rank 2. Outside-reader rank not Joseph-ratified. Stage `draft`.
+**Currently `discussion-grade`.** FE(5) **sealed 2026-07-31 evening** with Joseph: instrument parity P0–P4 first (`#disc-explorer-instrument-parity`); sill/flux and phase-gate resume after P4. Outside-reader rank not required for this seal. Stage `draft`.
 
 ## Discussion
 

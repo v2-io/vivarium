@@ -1,56 +1,53 @@
 # Consolidation status — big-picture intuition
 
-*Body re-trued 2026-07-31 against code, `vivarium status`, `bin/provenance`, and world git `f1b321a14` / `src=4fdc95afbe11c785`. **Not claim canon.** When this file disagrees with `core/`, core wins. Ranked next-work with rationale lives in `#disc-known-active-hotspots` (also re-trued same day).*
+*Body re-trued 2026-07-31 evening. **Not claim canon.** When this file disagrees with `core/`, core wins. Living rank: `#disc-known-active-hotspots`. Parity bar: `#disc-explorer-instrument-parity`.*
 
 ## The picture, in one paragraph
 
-The claim channel is **110 segments** (counted 2026-07-31) and the closed loop still holds: instrument → convict → relocate the mystery → delete the old story. What the 2026-07-29/30 arc added is a **truth stack for standing water and seams**, not a feature checklist. Lakes needed the sea to stop being a height test and the view to stop drawing the uncarved prior — not a longer water settle. The bed can hold water (fill restored as routing surface); connectivity makes landlocked basins non-ocean in the *router*; the globe's painted million km³ of lakes were the prior and now read 0 with a reason. Halo work moved from design → production datum path → silent pad-slide and NaN geometry defects → direction resample on the fluvial chart edge. The lies still live are **five independent ocean thresholds, the missing sill/flux seam object, and a floor that reports without gating** — not "no lakes" and not "missing regula audit" (`vivarium status` already prints every promise rung).
+The **world-law** channel is in good order (~110 segments) and the 2026-07-28–31 physics arc closed a real loop: stage chains, fill-restore, ocean-as-connectivity, mixed-tier refuse prior-as-physics, halo datum, pad/NaN, chart-edge resample, shared `ocean_mask`. What that arc did **not** close is **instrument maturity**: the memo store holds the bed, but explore’s hot path still often **re-censuses ~10⁵ roots** (multi-second) and opens at a grain where the L9 carve **cannot cover** the mesh — so you cannot tell paint thrash from physics. Parity milestones **P0–P4** (`#disc-explorer-instrument-parity`) are now the foundation bar: until spot-check is possible, instrument honesty outranks new world features when attention conflicts.
 
-## What is true now, and measured
+## What is true now (world)
 
-- **Core/view wall is a mechanism.** Read-only store refuses puts; explorer shows refused-write count. `#form-core-view-wall` FE(6).
-- **One view crate** (`vivarium-explore`); Bevy never enters the world frame.
-- **Deep time** evaluates the cooling law at more temperatures — never tweening.
-- **Fill restored** — closed basins survive the carve ( `#obs-lakes-are-routed-over-not-carved-away` ).
-- **Ocean is connectivity in the router** ( `#form-ocean-is-connectivity-not-elevation` ) — 1165 standing bodies / 976 865 km³ measured at whole-face L8 under the wet-limit fill. Caspian *class* exists; Caspian *census-as-open* is answered.
-- **Mixed-tier view paths refuse the prior as physics** ( `#form-fidelity-ladder` FE(8) ) — `surface_at_carved`, carve-level standing water, prior-at-carve-level for change paint.
-- **Same-level halo datum path in production** — `HaloSchedule` + region in key; Jacobi region build; view prefers halo; water names its bed article.
-- **Pad-not-slide + NaN geometry clamp split** — 83 non-finite erosion roots → 0; first tile of each region no longer carves ground 16 cells away.
-- **Chart-edge height resample by direction** on fluvial windows and exchange prior (not yet in the key; uplift still clamps data).
-- **Two convergence no-gos still hold as form:** water settle never stationarizes at the pinned timestep (not the lake path); erosion residual is driver-bound. χ-shape criterion measured.
-- **Provenance tooling** — `bin/provenance` prints the table; `bin/check-provenance` refuses unresolvable digests/embeds.
-- **Current first-light cohort (2026-07-31):** seed `17425063241017297386`, `src=4fdc95afbe11c785`, world git `f1b321a14`, source `ea1f5b4`, target phase 4. Status: **6 claimed · 4 specified · 22 not-started**.
+- Core/view wall is a mechanism; one explore crate; deep time by cooling law not tween.
+- Fill restored; ocean connectivity in router + shared mask function; mixed-tier view FE(8); halo production datum; pad/NaN; chart-edge direction resample (key residual).
+- Provenance tooling; first-light under local world git.
 
-## Open work, in rough order of what unblocks what
+## What is true now (instrument — incomplete)
 
-*Aligned with `#disc-known-active-hotspots` FE(5) same day — that segment carries the argument; this is the residual ladder.*
+- Latest-wins pull drain; altitude-gated windows; level filter before decode; face-local regions; tile-local ocean on assembled surface (restores open-view water color).
+- **Not true:** multi-second “updating view…” is fixed — dominant cost is **full roots re-read**, not triangles and not “400 tiles.”
+- **Not true:** open L7 whole-globe shows the fluvial bed — 100% prior by coverage rule until P3 product or level policy.
 
-1. **Sill-graph spill object, then flux half (hotspot rank 1).** Same-level datum path shipped; spill scalar constructively refuted; sill graph unbuilt; flux rounds ordered after it. Also what a seam-straddling lake needs. Land with witnessed read-sets from birth.
+## Open work (foundation → world pieces)
 
-   **1b. Cheap companion:** matched-ratio $d/(v\sigma)$ arms on `halo_exchange_probe` — one run, can upgrade operating point from adopted to derived.
+### A. Instrument parity (do first — P0→P4)
 
-   **Shared ocean mask — LANDED 2026-07-31.** `sea_level::ocean_mask` shared across router, water fill, globe, explorer, column. Residual: store-memoized planet article for plates; FE(4) window bias.
+Order: P0 → P1 (P2 can ride) → P3 → declare P4. Definition: `#disc-explorer-instrument-parity`.
 
-3. **Phase floor that gates (rank 2).** `vivarium status` *is* the conformance report. Nothing gates work on the ladder; no promise reaches KEPT on a prose-only predicate. Best first customer: a phase-3 specified promise that can actually run (queue includes `closed-water-cycle`). Do **not** invent a regula artifact or re-declare target phase. Read status first — 2026-07-30 thrash was almost all inventing instruments that already ship.
+| ID | Milestone | Done when |
+| --- | --- | --- |
+| **P0** | Index is hot | generation-backed `roots`/census; one scan per store generation; no multi-s full re-read per update |
+| **P1** | Pull thrash boring | Steady view ≪ 1 s updates on first-light L7 present once index warm |
+| **P2** | Intent legible | HUD: globe vs window, level, carve/prior/mixed — stable |
+| **P3** | Open view usable | Prefer open at covering level **or** instant honest prior + zoom-to-carve; coarse overview product only if needed |
+| **P4** | Spot-check gate | Can inspect fluvial/ocean/depression without thrash; weirdness → physics first |
 
-4. **Re-measure blast radii under current keys (rank 3).** Connectivity's 30% / 94% beacon move still unexplained; pad and resample each scored their own pre-reg. Do not quote those figures as present-tense without a re-run on `src=4fdc95af…`.
+**LoD:** prefer fast wholesale switch; heterogeneous LoD only if needed for P1 at carve grain. No full quadtree required for P4.
 
-5. **Router adopt-or-park (rank 4).** FE(6c) priced; diagonal-kill + transmissivity wins on the live tree. Decision, not another open-ended sweep.
+### B. World pieces (resume after P4; parallel free capacity only if it does not starve A)
 
-6. **Fidelity residual one layer down (rank 5).** `column_at` still builds from the detailed surface; uncovered cells still fall to own-level prior. Same phantom class as FE(8), not a paint bug.
+1. Sill-graph spill → flux half (+ matched-ratio arms)  
+2. Phase-3 promise run+gate  
+3. Re-measure blast radii; router adopt/park; column_at residual; cold-stage; χ path  
 
-7. **Cold-stage stage-parallel carve (rank 6)** — design and target measured ( `#form-erosion-at-a-cooling-stage` ); not built.
 
-8. **χ instrument path (rank 7)** — shape criterion exists; sediment-budget + hillslope-off + G-sweep still owed. Does not unlock lakes.
+### C. Demoted / lower multiplier
 
-9. **Standing, lower multiplier / demoted:** water settle *as lake blocker*; demand spool; store-backed nav; panel-seam metric-freeze; ML surrogates; explorer LoD rework (Joseph requisition — after truth layer quiets further); full water-kernel ε / scheme ladder (still real for transients, not for standing water on screen); GC of superseded-`SRC_HASH` generations; assumptions reverse-guard; `audits/grok-final-overview-2026-07-28.md` still pending full `#ops-audit-integration` (Q7 guard only).
+Water settle as lake blocker; Caspian census (answered); demand spool; regula-as-new-audit; explore wishlist beyond P0–P4 until parity holds.
 
-**Chart-edge residual (not a top ladder item):** production fluvial path resamples by direction; residual is declare-in-key, uplift clamp parity, stated spacing imprecision. Different seam family from same-level tile flux ( `#form-seam-families` ).
+## The rhythm
 
-## The rhythm this file protects
+Claim → convict → strengthen before soften → replace.  
+**Addendum 2026-07-31:** a depiction instrument that cannot run at working-set cost is not a soft failure of “graphics” — it blocks `#norm-probes-before-claims` in the only channel humans use to *see* the probes.
 
-Claim or named gap in core → convict where possible → strengthen before soften → demote rival prose → name residuals honestly.
-
-Two lessons still load-bearing. **The artifacts record what was decided; the transcripts record why.** And: **when the ask is for something visible, the visible thing is the deliverable** — with the 2026-07-30 corollary: **when you think the project lacks an instrument, run the command first** (`vivarium status`, `bin/provenance`, the view's own affordance list).
-
-*Last intuition pass: 2026-07-31 (full ladder re-true after ocean connectivity, mixed-tier, pad/NaN/resample night, and hotspot rank thrash). Prior 2026-07-29 body is history — it still called water settle the lake blocker and Caspian an open census.*
+*Last intuition pass: 2026-07-31 evening (parity seal).*
