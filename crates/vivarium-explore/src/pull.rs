@@ -41,18 +41,14 @@ use crate::water::{WaterField, WET_M};
 
 /// One build request. Equality is what suppresses redundant rebuilds, so every
 /// field here is something a *different picture* depends on.
-#[derive(Clone, Copy, PartialEq, Debug)]
+///
+/// Not `Copy`: close-in carries a variable pane list (FOV cover).
+#[derive(Clone, PartialEq, Debug)]
 pub struct Request {
     pub level: u8,
-    /// `None` = the whole globe, six faces. `Some` = **centre window** into one
-    /// face (the pull expands orthogonal same-face neighbours — see
-    /// [`Patch::ortho_ring`]). L13 whole faces are not a mesh; the ring is.
-    ///
-    /// The window is not a different renderer. It is the same mesher with a
-    /// non-zero origin ( `mesh::FaceInput` ), because a globe path and a region
-    /// path that share no meshing code will disagree about the world, and the
-    /// disagreement will look like terrain.
-    pub patch: Option<Patch>,
+    /// `None` = the whole globe, six faces. `Some` = close-in mosaic whose
+    /// panes exactly cover the camera FOV on the sphere (may span cube faces).
+    pub window: Option<WindowCover>,
     pub exag: f32,
     pub paint: Paint,
     pub lens: Lens,
@@ -62,6 +58,15 @@ pub struct Request {
     /// Full-scale for the change ramp (m) — a different scale is a different
     /// picture, so it belongs in the equality that suppresses rebuilds.
     pub change_scale_m: f32,
+}
+
+/// Close-in mosaic: sticky centre + exact FOV-covering panes.
+#[derive(Clone, PartialEq, Debug)]
+pub struct WindowCover {
+    /// Look-point centre pane (sticky identity / HUD).
+    pub centre: Patch,
+    /// Grid-aligned `nx×nx` panes that cover the sampled FOV (all faces hit).
+    pub panes: Vec<Patch>,
 }
 
 /// A window `nx × nx` into one face's cell grid at `(oi, oj)`, at the request's
@@ -87,33 +92,187 @@ impl Patch {
         let hi = face_n - nx as u32;
         Patch { face, oi: i.saturating_sub(half).min(hi), oj: j.saturating_sub(half).min(hi), nx }
     }
+}
 
-    /// Centre pane plus up to **4 orthogonal** same-face neighbours (N/S/E/W),
-    /// each `nx×nx`, slid to stay on the face. Diagonals deferred until cost is
-    /// re-measured. Used for L10+ close-in so the view is not a lone postage stamp.
-    pub fn ortho_ring(self, level: u8) -> Vec<Patch> {
-        let face_n = 1u32 << level;
-        let step = self.nx as u32;
-        let mut out = vec![self];
-        for (di, dj) in [(0i32, -1), (0, 1), (-1, 0), (1, 0)] {
-            let oi = self.oi as i64 + di as i64 * step as i64;
-            let oj = self.oj as i64 + dj as i64 * step as i64;
-            if oi < 0 || oj < 0 {
+/// Hard cap so a grazing FOV cannot spawn unbounded mesh work.
+pub const MAX_FOV_PANES: usize = 36;
+
+/// Sample the camera FOV onto the planet sphere and return the minimal set of
+/// grid-aligned `nx×nx` panes (across cube faces) that cover every hit cell.
+///
+/// Better than a fixed ortho/diagonal ring: near cube edges the FOV naturally
+/// lands on neighbouring faces, and interior holes are not left black.
+///
+/// `look` is the unit vector from planet centre toward the eye. Camera looks
+/// toward the planet (`-look`). FOV matches the explore camera (45°).
+pub fn fov_cover_panes(
+    look: [f32; 3],
+    alt_km: f32,
+    level: u8,
+    nx: usize,
+    r_km: f32,
+) -> WindowCover {
+    use bevy::math::Vec3;
+    use vivarium_world::sphere::CubeCoord;
+
+    let look = Vec3::from_array(look).normalize_or_zero();
+    let look = if look.length_squared() < 0.5 {
+        Vec3::Z
+    } else {
+        look
+    };
+    let face_n = 1u32 << level;
+    let nx = nx.min(face_n as usize).max(1);
+    let nx_u = nx as u32;
+
+    let eye = look * (r_km + alt_km.max(1.0));
+    let forward = (-look).normalize();
+    let world_up = if forward.y.abs() < 0.92 {
+        Vec3::Y
+    } else {
+        Vec3::X
+    };
+    let right = forward.cross(world_up).normalize();
+    let up = right.cross(forward).normalize();
+    let half = (45f32.to_radians() * 0.5).tan();
+    // Slight overscan so the mesh rim is not right on the screen edge.
+    let half = half * 1.12;
+
+    // face → (min_i, max_i, min_j, max_j) inclusive cell bounds
+    let mut bounds: HashMap<u8, (u32, u32, u32, u32)> = HashMap::new();
+    let mut push_cell = |face: u8, i: u32, j: u32| {
+        let e = bounds.entry(face).or_insert((i, i, j, j));
+        e.0 = e.0.min(i);
+        e.1 = e.1.max(i);
+        e.2 = e.2.min(j);
+        e.3 = e.3.max(j);
+    };
+
+    let samples = 9; // 9×9 rays — enough to catch corners near cube edges
+    for sy in 0..samples {
+        for sx in 0..samples {
+            let u = (sx as f32 / (samples - 1) as f32) * 2.0 - 1.0;
+            let v = (sy as f32 / (samples - 1) as f32) * 2.0 - 1.0;
+            let dir = (forward + right * (u * half) + up * (v * half)).normalize();
+            let Some(hit) = ray_sphere_near(eye, dir, r_km) else {
                 continue;
-            }
-            let (oi, oj) = (oi as u32, oj as u32);
-            if oi + step > face_n || oj + step > face_n {
-                continue;
-            }
-            out.push(Patch {
-                face: self.face,
-                oi,
-                oj,
-                nx: self.nx,
-            });
+            };
+            let unit = [
+                hit.x as f64 / r_km as f64,
+                hit.y as f64 / r_km as f64,
+                hit.z as f64 / r_km as f64,
+            ];
+            let (face, i, j, _) = CubeCoord::from_unit(unit).cell(level).to_face_ij();
+            push_cell(face.index(), i.min(face_n - 1), j.min(face_n - 1));
         }
-        out
     }
+    // Always include the look point.
+    {
+        let unit = [look.x as f64, look.y as f64, look.z as f64];
+        let (face, i, j, _) = CubeCoord::from_unit(unit).cell(level).to_face_ij();
+        push_cell(face.index(), i.min(face_n - 1), j.min(face_n - 1));
+    }
+
+    let centre = {
+        let unit = [look.x as f64, look.y as f64, look.z as f64];
+        let (face, i, j, _) = CubeCoord::from_unit(unit).cell(level).to_face_ij();
+        Patch::centred(face.index(), level, i, j, nx)
+    };
+
+    if bounds.is_empty() {
+        return WindowCover {
+            centre,
+            panes: vec![centre],
+        };
+    }
+
+    // Margin so FOV edge cells are not on the mesh skirt.
+    let margin = (nx_u / 8).max(4);
+    let mut panes = Vec::new();
+    for (face, (mut i0, mut i1, mut j0, mut j1)) in bounds {
+        i0 = i0.saturating_sub(margin);
+        j0 = j0.saturating_sub(margin);
+        i1 = (i1 + margin).min(face_n - 1);
+        j1 = (j1 + margin).min(face_n - 1);
+        let ti0 = i0 / nx_u;
+        let ti1 = i1 / nx_u;
+        let tj0 = j0 / nx_u;
+        let tj1 = j1 / nx_u;
+        for ti in ti0..=ti1 {
+            for tj in tj0..=tj1 {
+                let oi = ti * nx_u;
+                let oj = tj * nx_u;
+                if oi + nx_u > face_n || oj + nx_u > face_n {
+                    // Last row/col: slide to fit rather than drop coverage.
+                    let oi = oi.min(face_n - nx_u);
+                    let oj = oj.min(face_n - nx_u);
+                    panes.push(Patch {
+                        face,
+                        oi,
+                        oj,
+                        nx,
+                    });
+                } else {
+                    panes.push(Patch {
+                        face,
+                        oi,
+                        oj,
+                        nx,
+                    });
+                }
+            }
+        }
+    }
+    // Dedup (edge slide can collide) and keep centre first for pick stability.
+    panes.sort_by_key(|p| (p.face, p.oi, p.oj));
+    panes.dedup();
+    if !panes.iter().any(|p| *p == centre) {
+        panes.insert(0, centre);
+    } else {
+        panes.retain(|p| *p != centre);
+        panes.insert(0, centre);
+    }
+    if panes.len() > MAX_FOV_PANES {
+        // Keep centre + nearest panes by centre-cell distance on same face, then
+        // any other-face panes by face index order until cap.
+        let cx = centre.oi + nx_u / 2;
+        let cy = centre.oj + nx_u / 2;
+        let mut rest: Vec<_> = panes.into_iter().filter(|p| *p != centre).collect();
+        rest.sort_by_key(|p| {
+            let same = if p.face == centre.face { 0u8 } else { 1 };
+            let dx = (p.oi + nx_u / 2).abs_diff(cx);
+            let dy = (p.oj + nx_u / 2).abs_diff(cy);
+            (same, dx + dy, p.face, p.oi, p.oj)
+        });
+        rest.truncate(MAX_FOV_PANES - 1);
+        panes = std::iter::once(centre).chain(rest).collect();
+    }
+
+    WindowCover { centre, panes }
+}
+
+/// Near intersection of ray (origin, dir) with sphere of radius `r` at origin.
+/// Returns hit position, or None if the ray misses the planet disk.
+fn ray_sphere_near(origin: bevy::math::Vec3, dir: bevy::math::Vec3, r: f32) -> Option<bevy::math::Vec3> {
+    use bevy::math::Vec3;
+    let dir = dir.normalize();
+    let b = 2.0 * origin.dot(dir);
+    let c = origin.length_squared() - r * r;
+    let disc = b * b - 4.0 * c;
+    if disc < 0.0 {
+        return None;
+    }
+    let s = disc.sqrt();
+    let t0 = (-b - s) * 0.5;
+    let t1 = (-b + s) * 0.5;
+    let t = if t0 > 1e-3 {
+        t0
+    } else if t1 > 1e-3 {
+        t1
+    } else {
+        return None;
+    };
+    Some(origin + dir * t)
 }
 
 /// A completed frame: six meshes plus everything the HUD needs to describe them.
@@ -439,16 +598,15 @@ pub fn spawn(
             }
 
             // Already drew this exact request — clear inflight without remesh.
-            if last_done == Some(req) {
-                let _ = tx.send(Msg::AlreadyCurrent(req));
+            if last_done.as_ref() == Some(&req) {
+                let _ = tx.send(Msg::AlreadyCurrent(req.clone()));
                 continue;
             }
 
             let level = req.level;
-            // The unit of work: either six whole faces, or a centre window plus
-            // orthogonal same-face neighbours (postage stamp → small mosaic).
-            let units: Vec<Patch> = match req.patch {
-                Some(p) => p.ortho_ring(level),
+            // The unit of work: six whole faces, or FOV-exact mosaic panes.
+            let units: Vec<Patch> = match &req.window {
+                Some(w) => w.panes.clone(),
                 None => {
                     let n = 1usize << level;
                     (0u8..6).map(|f| Patch { face: f, oi: 0, oj: 0, nx: n }).collect()
@@ -503,19 +661,21 @@ pub fn spawn(
                 if rl > view_level {
                     return false;
                 }
-                // Whole globe, or any pane of the close-in ring.
-                if req.patch.is_none() {
+                // Whole globe, or any pane of the FOV cover.
+                if req.window.is_none() {
                     return true;
                 }
                 units.iter().any(|p| key_overlaps_patch(k, *p, view_level))
             };
-            // Region load key: lens + level + patch (not paint/exag — those do not
-            // change which tiles decode). Invalidate when roots Arc moves.
+            // Region load key: lens + level + panes (not paint/exag).
             let regions_req = Request {
-                paint: Paint::Surface, // paint does not affect region load
+                paint: Paint::Surface,
                 exag: 0.0,
                 change_scale_m: 0.0,
-                ..req
+                window: req.window.clone(),
+                level: req.level,
+                lens: req.lens,
+                cohort: req.cohort,
             };
             let need_region_load = match regions_cache.as_ref() {
                 Some((cached_req, cached_roots, _)) => {
@@ -1016,7 +1176,7 @@ pub fn spawn(
             };
 
             let frame = Frame {
-                req,
+                req: req.clone(),
                 faces,
                 tiles,
                 seam,
@@ -1035,27 +1195,33 @@ pub fn spawn(
 }
 
 #[cfg(test)]
-mod patch_ring_tests {
+mod fov_cover_tests {
     use super::*;
 
     #[test]
-    fn ortho_ring_is_centre_plus_up_to_four() {
-        // Interior centre: full 5-pane ring.
-        let c = Patch { face: 0, oi: 256, oj: 256, nx: 128 };
-        let ring = c.ortho_ring(12); // face 4096 wide
-        assert_eq!(ring.len(), 5);
-        assert_eq!(ring[0], c);
-        assert!(ring.iter().any(|p| p.oi == 256 && p.oj == 128)); // N
-        assert!(ring.iter().any(|p| p.oi == 256 && p.oj == 384)); // S
-        assert!(ring.iter().any(|p| p.oi == 128 && p.oj == 256)); // W
-        assert!(ring.iter().any(|p| p.oi == 384 && p.oj == 256)); // E
+    fn fov_cover_includes_centre_and_stays_bounded() {
+        // Look along +Z (face ZPos-ish); modest altitude, L10, 128 panes.
+        let w = fov_cover_panes([0.0, 0.0, 1.0], 80.0, 10, 128, 6371.0);
+        assert!(!w.panes.is_empty());
+        assert_eq!(w.panes[0], w.centre);
+        assert!(w.panes.len() <= MAX_FOV_PANES);
+        // Centre face should dominate for a face-centered look.
+        assert!(w.panes.iter().filter(|p| p.face == w.centre.face).count() >= 1);
     }
 
     #[test]
-    fn ortho_ring_clips_at_face_edge() {
-        let c = Patch { face: 2, oi: 0, oj: 0, nx: 128 };
-        let ring = c.ortho_ring(10);
-        assert_eq!(ring.len(), 3, "only E and S stay on-face"); // centre + E + S
+    fn fov_cover_can_span_cube_edges() {
+        // Look near a cube edge/corner so samples hit more than one face.
+        let look = {
+            let v = bevy::math::Vec3::new(1.0, 1.0, 1.0).normalize();
+            [v.x, v.y, v.z]
+        };
+        let w = fov_cover_panes(look, 120.0, 11, 128, 6371.0);
+        let faces: std::collections::BTreeSet<_> = w.panes.iter().map(|p| p.face).collect();
+        assert!(
+            faces.len() >= 2,
+            "near-corner FOV should hit ≥2 faces, got {faces:?}"
+        );
     }
 }
 

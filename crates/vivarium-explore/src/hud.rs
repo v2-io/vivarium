@@ -253,12 +253,19 @@ pub fn header(
         "view L{} (~{}) {}  |  relief x{:.0}  |  pull {:.2}s  |  land {:.1}%",
         frame.req.level,
         if cell_km >= 1.0 { format!("{cell_km:.1} km/cell") } else { format!("{:.0} m/cell", cell_km * 1000.0) },
-        match frame.req.patch {
-            Some(p) => {
-                let n_panes = frame.faces.len().max(1);
+        match &frame.req.window {
+            Some(w) => {
+                let faces: std::collections::BTreeSet<_> =
+                    w.panes.iter().map(|p| p.face).collect();
                 format!(
-                    "CLOSE-IN {}×{} centre face {} @ ({},{}) + ortho ring ({} panes) — not the whole planet",
-                    p.nx, p.nx, p.face, p.oi, p.oj, n_panes
+                    "CLOSE-IN FOV cover {}×{} · centre face {} @ ({},{}) · {} panes / {} face(s) — not whole planet",
+                    w.centre.nx,
+                    w.centre.nx,
+                    w.centre.face,
+                    w.centre.oi,
+                    w.centre.oj,
+                    w.panes.len(),
+                    faces.len()
                 )
             }
             None => format!("WHOLE GLOBE (over an L{} store build)", cov.level),

@@ -937,32 +937,32 @@ fn request_update(orbit: Res<Orbit>, mut ex: ResMut<Explorer>, tx: Res<ReqTx>) {
     // once LEVEL_GLOBE_MAX is 9). L8/L9 stay whole-globe so the level ladder
     // is continuous rather than L7-globe → postage-stamp.
     let want_window = close && mesh_level > LEVEL_GLOBE_MAX;
-    let mut patch = want_window.then(|| {
-        let d = view_dir(&orbit);
-        let (face, i, j, _) =
-            CubeCoord::from_unit([d.x as f64, d.y as f64, d.z as f64]).cell(mesh_level).to_face_ij();
+    let d = view_dir(&orbit);
+    let mut window = want_window.then(|| {
         let nx = patch_nx_for(alt, mesh_level, r);
-        pull::Patch::centred(face.index(), mesh_level, i, j, nx)
+        pull::fov_cover_panes([d.x, d.y, d.z], alt, mesh_level, nx, r)
     });
-    // **Sticky window.** Without this, every pixel of orbit drag recentres the
-    // patch and enqueues a full remesh — the view "crawls" while thrashing the
-    // pull thread. Only slide the window when the look point has left a slack
-    // band (~1/8 of the window), or when level / size / face changed.
-    if let (Some(p), Some(prev_req)) = (patch, ex.requested) {
-        if let Some(prev) = prev_req.patch {
-            if p.face == prev.face && p.nx == prev.nx && prev_req.level == mesh_level {
-                let slack = (p.nx as u32 / 8).max(8);
-                let di = p.oi.abs_diff(prev.oi);
-                let dj = p.oj.abs_diff(prev.oj);
+    // **Sticky cover.** Without this, every pixel of orbit drag recomputes the
+    // FOV mosaic and enqueues a remesh. Freeze the whole pane set while the
+    // look centre stays inside a slack band of the previous centre.
+    if let (Some(cov), Some(prev_req)) = (&window, &ex.requested) {
+        if let Some(prev) = &prev_req.window {
+            if prev.centre.face == cov.centre.face
+                && prev.centre.nx == cov.centre.nx
+                && prev_req.level == mesh_level
+            {
+                let slack = (cov.centre.nx as u32 / 8).max(8);
+                let di = cov.centre.oi.abs_diff(prev.centre.oi);
+                let dj = cov.centre.oj.abs_diff(prev.centre.oj);
                 if di < slack && dj < slack {
-                    patch = Some(prev);
+                    window = Some(prev.clone());
                 }
             }
         }
     }
     let want = Request {
         level: mesh_level,
-        patch,
+        window,
         cohort: ex.cohort,
         exag: EXAG_STEPS[ex.exag_i],
         paint: ex.paint,
@@ -971,7 +971,7 @@ fn request_update(orbit: Res<Orbit>, mut ex: ResMut<Explorer>, tx: Res<ReqTx>) {
     };
     // Always enqueue the latest want. The worker keeps only the last request
     // when several pile up during a slow build.
-    if ex.requested != Some(want) && tx.0.send(want).is_ok() {
+    if ex.requested.as_ref() != Some(&want) && tx.0.send(want.clone()).is_ok() {
         ex.requested = Some(want);
         ex.inflight = true;
     }
@@ -1018,7 +1018,7 @@ fn apply_frames(
                 Ok(Msg::Frame(f)) => last_frame = Some(f),
                 Ok(Msg::Landings(_)) => {}
                 Ok(Msg::AlreadyCurrent(r)) => {
-                    if ex.requested == Some(r) {
+                    if ex.requested.as_ref() == Some(&r) {
                         ex.inflight = false;
                     }
                 }
@@ -1030,7 +1030,7 @@ fn apply_frames(
 
     // Inflight clears only when the frame matches the latest request we sent —
     // otherwise a slower older build finished after a newer one was enqueued.
-    if ex.requested == Some(frame.req) {
+    if ex.requested.as_ref() == Some(&frame.req) {
         ex.inflight = false;
     }
     ladder.0.built = frame.ladder_built.clone();
@@ -1168,16 +1168,12 @@ fn current_pick(
     // means translating into the window, and reporting nothing when the cursor
     // is outside it — an honest miss rather than a plausible number from the
     // wrong place.
-    let (tile, ti, tj, nx) = match frame.req.patch {
-        Some(centre) => {
-            // Close-in is a centre pane + ortho ring; tiles[] matches that order.
-            if centre.face != f {
-                return None;
-            }
-            let ring = centre.ortho_ring(level);
+    let (tile, ti, tj, nx) = match &frame.req.window {
+        Some(w) => {
+            // tiles[] is parallel to FOV panes (centre first).
             let mut hit = None;
-            for (idx, p) in ring.iter().enumerate() {
-                if i < p.oi || j < p.oj {
+            for (idx, p) in w.panes.iter().enumerate() {
+                if p.face != f || i < p.oi || j < p.oj {
                     continue;
                 }
                 let (ti, tj) = ((i - p.oi) as usize, (j - p.oj) as usize);
