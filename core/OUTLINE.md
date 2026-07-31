@@ -83,6 +83,8 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | discussion | Ops Critical | [#disc-check-the-ladder](src/disc-check-the-ladder.md) | Check the phase ladder before modern-Earth priors | draft |
 | discussion | Ops | [#disc-known-active-hotspots](src/disc-known-active-hotspots.md) | Evolving next-work ideation with rationale (leverage rank); molten-code notes secondary — not geography, not claim law | draft |
 | discussion | Ops Critical | [#disc-explorer-instrument-parity](src/disc-explorer-instrument-parity.md) | Minimal explorer↔world honesty bar (P0–P4); when eyes can convict the bed; not full LOD roadmap | draft |
+| discussion | Ops | [#disc-explorer-human-chrome](src/disc-explorer-human-chrome.md) | Human glance chrome (chips); dense on-globe text is not a HUD; attention is instrument honesty | draft |
+| discussion | Ops | [#disc-explorer-debug-capture](src/disc-explorer-debug-capture.md) | Debug dump as durable capture pairs (udon+png); sightings prototype; vs changelog landing captures | draft |
 | | | | *(#gap) Epistemology ladder / weak-tier-in-canon* | missing |
 | | | | *(#gap) Strengthen-before-soften as vivarium segment* | missing |
 | | | | *(#gap) Full ETHICS segmentation (harm triple, redeemer, …) — incl. the three BDD stress-test gaps with no live carrier (Joseph, 2026-07-29): exo-governance vs exo-access split; mourning-at-Adaptive-tier; the truth-death safety account. Ice: `.super-archive/from-archive/taxonomy-bdd-stress-test.md`* | missing |
