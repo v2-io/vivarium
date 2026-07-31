@@ -1169,15 +1169,27 @@ fn current_pick(
     // is outside it — an honest miss rather than a plausible number from the
     // wrong place.
     let (tile, ti, tj, nx) = match frame.req.patch {
-        Some(p) => {
-            if p.face != f || i < p.oi || j < p.oj {
+        Some(centre) => {
+            // Close-in is a centre pane + ortho ring; tiles[] matches that order.
+            if centre.face != f {
                 return None;
             }
-            let (ti, tj) = ((i - p.oi) as usize, (j - p.oj) as usize);
-            if ti >= p.nx || tj >= p.nx {
-                return None;
+            let ring = centre.ortho_ring(level);
+            let mut hit = None;
+            for (idx, p) in ring.iter().enumerate() {
+                if i < p.oi || j < p.oj {
+                    continue;
+                }
+                let (ti, tj) = ((i - p.oi) as usize, (j - p.oj) as usize);
+                if ti >= p.nx || tj >= p.nx {
+                    continue;
+                }
+                if let Some(tile) = frame.tiles.get(idx) {
+                    hit = Some((tile, ti, tj, p.nx));
+                    break;
+                }
             }
-            (frame.tiles.first()?, ti, tj, p.nx)
+            hit?
         }
         None => {
             let nx = 1usize << level;
