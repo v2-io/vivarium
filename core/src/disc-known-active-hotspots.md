@@ -55,7 +55,7 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
    | **1–5** | **P0–P4 instrument ladder** — **landed / P4 done-for-now 2026-07-31 night** (Joseph eyes) | Spot-check usable | Not reopening chrome |
    | **6** | **Sill + flux Jacobi wire** — **landed 2026-07-31 night** (`sill1` + `flux1`); lake-sized FE(9) re-measure still open | Non-local datum + catchment | Not volume hierarchy |
    | **7** | **Matched-ratio probe** — **run once** (within-ratio spreads 0.9–5.5 m; empirical only — not law) | Schedule science | Not operating-law promotion |
-   | **8** | **Rebuild under sill1+flux1** — in flight | Fresh cohort | — |
+   | **8** | **Rebuild under sill1+flux1** — **landed** (first-light complete) | Fresh cohort | — |
    | **9** | Phase-3 / router / χ / cold-stage — one after rebuild eyes | — | Not all four |
    | demote | Water settle as lake blocker; Caspian (answered); demand spool; costume-green cycle; explorer polish not serving physics | — | — |
 
