@@ -2456,6 +2456,50 @@ mod fluvial_tests {
         );
     }
 
+    /// **The boundary contract's cost is grain-dependent, and this fires if that
+    /// stops being true.** Audit finding Q7 (Grok, 2026-07-28) named the gap: the
+    /// grain dependence was measured and written in prose, and nothing convicted
+    /// it — so a fine-grain number could be quoted as planet law with no test
+    /// objecting ( #norm-caught-disciplines-become-mechanisms ).
+    ///
+    /// Measured before this assertion was written, same origin and epochs, 64²
+    /// each: **L13 26.4 m, L11 9.7 m, L9 7.0 m** mean $\lvert\Delta h\rvert$
+    /// between the two contracts. The margin asserted is deliberately loose —
+    /// the finding is the *direction and order of magnitude*, not the constants.
+    ///
+    /// **What was NOT found, and is why this tests grain rather than extent:**
+    /// at fixed grain the disagreement is *not* monotone in window size (L13 at
+    /// 32/64/96 cells gives 38.3 / 26.4 / 35.5 m). The intuitive "smaller window,
+    /// more edge effect" is false here; the dependence that survives measurement
+    /// is on cell size.
+    #[test]
+    fn the_contract_disagreement_is_grain_dependent() {
+        let sea = crate::sea_level::derived_sea_level_m(0) as f32;
+        let disagree = |level: u8| -> f32 {
+            let mk = |c: EdgeContract| {
+                let mut f = Fluvial::from_surface(0, Face::XPos, level, 6512, 1552, 64, |cl| {
+                    gen::initial_topography_m(0, cl, level)
+                });
+                let lo = f.h.iter().cloned().fold(f32::INFINITY, f32::min);
+                for h in f.h.iter_mut() {
+                    *h += sea + 600.0 - lo;
+                }
+                f.set_edge_contract(c);
+                f.erode(&FluvialParams { epochs: 30, ..Default::default() });
+                f.h.clone()
+            };
+            let (a, b) = (mk(EdgeContract::BaseLevelSink), mk(EdgeContract::NoFluxWall));
+            a.iter().zip(b.iter()).map(|(x, y)| (x - y).abs()).sum::<f32>() / a.len() as f32
+        };
+        let (fine, coarse) = (disagree(13), disagree(9));
+        assert!(
+            fine > 2.0 * coarse,
+            "contract choice costs {fine:.1} m at L13 and {coarse:.1} m at L9 — the grain \
+             dependence that forbids quoting a fine-grain contract number as planet law is \
+             gone, so either the contracts converged or a measured claim has gone stale"
+        );
+    }
+
     /// Discharge must actually consume the precipitation field. This is the guard
     /// on the honesty note in [`Fluvial::drainage_surface`]: `from_region` leaves
     /// `precip_weight` at ones, so a caller who forgets to supply climate is

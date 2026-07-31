@@ -96,3 +96,15 @@ Stage chains #form-time-indexed-stage-chains · χ #obs-chi-shape-is-erosions-cr
 Between first orientation and end of day, vivarium closed erosion's missing interior, rebuilt the fluvial kernel under measured defects (fill restore, EdgeContract, χ, column-derivative uplift), established same-level seams as a two-object measured problem with a non-local spill twist, and left a residual ladder of halo+flux, water time, and era carve — with the claim channel practicing integration-as-replacement under concurrent writers.
 
 *Report compiled for Fable from outside-reader passes; no fix-pass implied. Tree holder owns present-truth and build order.*
+
+---
+
+## Disposition trail (appended; the report body above is the auditor's, unedited)
+
+**Q7 — grain dependence has no self-firing guard: CLOSED, 2026-07-30.**
+
+*Verified* independently rather than inherited: `the_two_contracts_carve_different_worlds` already guarded that the contracts differ, and nothing asserted the difference is grain-*dependent*, which is Q7's actual content. *Adjudicated:* fix. *Integrated:* `the_contract_disagreement_is_grain_dependent` (0.46 s, in `bin/check`) asserts several-fold more disagreement at L13 than L9 — measured L13 26.4 m, L11 9.7 m, L9 7.0 m — with the finding recorded in `#obs-tile-outlets-grade-away-the-basins` Working Notes.
+
+An incidental result from building it, also recorded there: at fixed grain the disagreement is **not** monotone in window size (L13 at 32/64/96 cells → 38.3 / 26.4 / 35.5 m). The intuitive "smaller window, more edge effect" is false here; a guard written from intuition would have asserted the wrong relation.
+
+**This report stays in `audits/` and has NOT moved to `.integrated/`.** Per `#ops-audit-integration` FE(2) the move requires all three gates across the *whole* finding set, and only Q7 was verified here against present code — Q1–Q12's same-day fix-pass is inherited from the report's own header, which is exactly what "not inherited from the report alone" forbids. The remaining work is verification of the already-fixed findings, not adjudication of open ones.
