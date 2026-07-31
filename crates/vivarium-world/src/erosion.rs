@@ -657,12 +657,42 @@ impl Fluvial {
                 // geometry; it is what makes the metric possible at all.
                 let ri = oi + x as i64;
                 let rj = oj + y as i64;
-                let (gi, gj) = (ri.clamp(0, last as i64) as u32, rj.clamp(0, last as i64) as u32);
-                let cell = CellId::from_face_ij(face, gi, gj, level);
+                let dir = crate::measure::cell_center_unit_i(face, ri, rj, level);
+                // **Off the chart, resample by DIRECTION.** The equiangular map
+                // extrapolates, so this cell's centre is a real point on the
+                // sphere — one that lies on a neighbouring face. Ask which cell
+                // actually contains that point and read its height there.
+                //
+                // This is the "declared resampling" #obs-chart-edge-halo-clamps-to-the-face
+                // FE(2) says a d ≥ 2 halo requires, and that clause's measurement
+                // is what rules out the cheaper thing rather than this: copying
+                // neighbour-face *indices* mismatches on 200/256 edge cells at
+                // depth 2 and 232/256 by depth 4, because the two grids co-align
+                // only on the shared edge. A direction does not have that problem
+                // — it names a place, not a coordinate in someone else's chart.
+                //
+                // It also closes an incoherence this constructor otherwise
+                // carries: since the geometry became honest, an off-chart cell
+                // had an extrapolated *position* and a repeated rim *height*, so
+                // the value described a different location than the coordinates
+                // did. Position and data now name the same point.
+                //
+                // NOT exact, and the imprecision is stated: extrapolating one
+                // face's parametrisation past its edge distorts spacing, so far
+                // out the direction can land a cell off from an ideal
+                // correspondence. It is a real neighbouring place rather than the
+                // right one to the cell — strictly better than a repeated rim,
+                // and not a substitute for a resampling declared in the key.
+                let off = ri < 0 || rj < 0 || ri > last as i64 || rj > last as i64;
+                let cell = if off {
+                    crate::sphere::CubeCoord::from_unit(dir).cell(level)
+                } else {
+                    CellId::from_face_ij(face, ri as u32, rj as u32, level)
+                };
                 h[y * nx + x] = surf(cell) as f32;
                 cell_area[y * nx + x] =
                     crate::measure::cell_area_m2_i(face, ri, rj, level, radius) as f32;
-                centers[y * nx + x] = crate::measure::cell_center_unit_i(face, ri, rj, level);
+                centers[y * nx + x] = dir;
             }
         }
         Self {
@@ -2376,6 +2406,54 @@ mod fluvial_tests {
         let a = f.centers[(d as usize) * nx + (d as usize - 1)];
         let dist = crate::measure::gc_dist_m(a, want, crate::planet::Planet::EARTH.radius_m);
         assert!(dist > 0.0, "padded cell shares a centre with the chart-edge cell");
+    }
+
+    /// **An off-chart halo cell reads the terrain that is actually there.** Its
+    /// centre extrapolates to a real point on the sphere, which lies on a
+    /// neighbouring face; the height must come from the cell that contains that
+    /// point, not from the rim cell whose index the clamp used to reuse.
+    ///
+    /// The second arm is what makes this a conviction: the resampled value must
+    /// **differ** from the clamped one. Without it the test would pass on a
+    /// construction where the rim happens to answer correctly, and would convict
+    /// nothing ( #obs-chart-edge-halo-clamps-to-the-face FE(2)).
+    #[test]
+    fn an_off_chart_halo_cell_resamples_the_neighbouring_face() {
+        let level = 6u8;
+        let face = Face::XPos;
+        let n = 1u32 << level;
+        let nx = 8usize;
+        // A window running off the high edge, so its last columns are off-chart.
+        let oi = (n - 4) as i64;
+        let f = Fluvial::from_surface_at(0, face, level, oi, 8, nx, |c| {
+            // A surface that varies per cell AND per face, so a wrong face or a
+            // repeated index is visible in the value.
+            let (fc, i, j, _) = c.to_face_ij();
+            (fc.index() as f64) * 1e6 + (i as f64) * 1e3 + j as f64
+        });
+
+        // Column 4 is the first off-chart one (oi + 4 == n).
+        let off_val = f.h[2 * nx + 4];
+        let (ff, fi, fj, _) = crate::sphere::CubeCoord::from_unit(
+            crate::measure::cell_center_unit_i(face, oi + 4, 8 + 2, level),
+        )
+        .cell(level)
+        .to_face_ij();
+        let want = (ff.index() as f64) * 1e6 + (fi as f64) * 1e3 + fj as f64;
+        assert_eq!(off_val as f64, want, "off-chart cell did not read its own direction's cell");
+        assert_ne!(
+            ff,
+            face,
+            "the extrapolated centre stayed on the same face, so this construction does not \
+             actually cross an edge and the test convicts nothing"
+        );
+
+        // And it is not the clamped rim value — the defect this replaces.
+        let rim = f.h[2 * nx + 3];
+        assert_ne!(
+            off_val, rim,
+            "off-chart cell repeated the rim cell: the resample is not in force"
+        );
     }
 
     /// Discharge must actually consume the precipitation field. This is the guard

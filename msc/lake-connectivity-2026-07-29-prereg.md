@@ -102,3 +102,23 @@ uplift nomos is a separate call that no longer routes through it.
 
 **P13 — no new non-finite cells.** The geometry is now signed on both edges;
 `nan_census` should still report 0 for the new cohort.
+
+---
+
+# Pre-registration 4 — resample the off-chart halo (2026-07-30)
+
+Off-chart cells stop repeating the rim index and read the cell their own
+extrapolated direction lands in. Written before the rebuild.
+
+**P14 — 30–45% of `erosion-tile` payloads change.** Every tile whose window
+overhangs is affected, which is the union of the two edge sets: 28 of 64 per
+face by naive count (43.75%), and both previous edge repairs came in somewhat
+under their naive count (high edge 23.4% naive → 18.4% measured), so the union
+should land under 43.75% too. Above 45% would mean the resample is reaching
+windows that do not overhang.
+
+**P15 — still zero non-finite cells.** A resampled direction always lands in a
+real cell, so nothing here can divide by a degenerate metric.
+
+**P16 — `initial-topography` unchanged.** The resample happens inside the carve;
+the stored topography nomos does not route through it.

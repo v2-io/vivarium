@@ -650,9 +650,17 @@ impl<'s> World<'s> {
             f
         };
         let prior = |i: i64, j: i64| -> f32 {
-            let gi = i.clamp(0, face_last) as u32;
-            let gj = j.clamp(0, face_last) as u32;
-            let cell = CellId::from_face_ij(face, gi, gj, level);
+            // Same resample as the window constructor: off the chart, the cell's
+            // own direction names a real place on a neighbouring face, and the
+            // prior is read there rather than from a repeated rim index. Leaving
+            // this clamped while the windows resample would put the exchange's
+            // outside-the-block filler in disagreement with the windows it fills.
+            let cell = if i < 0 || j < 0 || i > face_last || j > face_last {
+                let dir = crate::measure::cell_center_unit_i(face, i, j, level);
+                crate::sphere::CubeCoord::from_unit(dir).cell(level)
+            } else {
+                CellId::from_face_ij(face, i as u32, j as u32, level)
+            };
             gen::initial_topography_m(seed, cell, level) as f32
         };
 
