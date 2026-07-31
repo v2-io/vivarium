@@ -35,6 +35,7 @@ Calling a column a heightfield pixel collapses conservation, rendering, and coll
 
 ## Working Notes
 
+- **Explore hot-path spine (2026-07-31, first cut):** multi-LOD *working set* is not yet full strata columns, but the explorer now treats **face-local region blocks** + **level-gated load** as the spine of a pull: (1) reject store keys with `region.level > view.level` before decode (they can never `covers`); (2) pure-prior fast path when the filter empties R — O(C) fBm + one `ocean_mask` on the assembled tile, not O(C·R) archive scan; (3) when R is non-empty, assemble/sample **per face** only. Durable spine remains the content-addressed store (`#form-store-as-save`); this is RAM/query discipline over it. Still open: true coarse **restriction products** in the store so L7 overview can show an L9 carve without lying; full `Column`/`Stratum` schema as the block payload.
 - **Dual homes demoted:** DESIGN-MATERIAL graduated (`#form-column-control-volume / #form-material-property-interface / #form-cellid-chunk-patch`); REDUX §14; ARCHITECTURE §5 column sentence. DECISIONS column-is-a-control-volume remains ratification history, not claim home.
 - **Do not invent** a fixed property schema or close the point/mean/band-limited fork without Joseph or a convicting design.
 - **TENTATIVE schema shapes (from graduated MATERIAL §7/§9 — reserve, do not harden):**

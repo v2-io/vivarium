@@ -172,6 +172,18 @@ fn stage_surface_tile(seed: u64, face: Face, level: u8, nx: usize, tp: f64) -> V
     tile
 }
 
+/// Whole-face uncarved prior at `level` — O(nx²) fBm, no region archive walk.
+fn prior_face_tile(seed: u64, face: Face, level: u8, nx: usize) -> Vec<f32> {
+    let mut tile = Vec::with_capacity(nx * nx);
+    for j in 0..nx as u32 {
+        for i in 0..nx as u32 {
+            let cell = CellId::from_face_ij(face, i, j, level);
+            tile.push(vivarium_world::gen::initial_topography_m(seed, cell, level) as f32);
+        }
+    }
+    tile
+}
+
 /// Whether a store key's tile can contribute heights to a view patch — pure key
 /// parse, no payload decode.
 fn key_overlaps_patch(key: &str, p: Patch, view_level: u8) -> bool {
@@ -326,14 +338,28 @@ pub fn spawn(
                 _ => (roots.clone(), Coverage::parse(&roots)),
             };
 
-            // **Key-side frustum before decode.** A whole-planet L9 build is
-            // ~400 region *payloads*. Decoding and ocean-masking all of them
-            // for a 182² window is why a "cheap" region pull still took 6+ s
-            // (Joseph screenshot 2026-07-31). Reject by key bounds first; the
-            // fidelity ladder still gets every overlapping coarse/fine tile.
+            // **Key-side reject before decode.** Two filters, both free string
+            // parses on the root list (hundreds of keys is nothing; hundreds of
+            // *decoded* 64² payloads is the multi-second path):
+            //
+            // 1. **Level:** a region at L answers only cells at level ≥ L
+            //    (`ErodedRegion::grid_pos`). L9 tiles can never cover an L7 view
+            //    cell — loading them for a far globe was pure waste (open-view
+            //    6+ s while painting 100% prior).
+            // 2. **Patch frustum:** window mode only needs overlapping tiles.
+            //
+            // 400 tiles is a tiny R. The wrong family was O(C·R) with R useless,
+            // not "400 is large."
             let patch = req.patch;
             let view_level = req.level;
             let key_in_view = |k: &str| -> bool {
+                let Some(rl) = watch::key_field(k, "level").and_then(|v| v.parse::<u8>().ok()) else {
+                    return false;
+                };
+                // Region level must be ≤ view level or it cannot cover any cell.
+                if rl > view_level {
+                    return false;
+                }
                 match patch {
                     None => true,
                     Some(p) => key_overlaps_patch(k, p, view_level),
@@ -371,21 +397,12 @@ pub fn spawn(
                 }
             };
             let census = world.observe().eroded_region_census();
+            let pure_prior = regions.is_empty() && !matches!(req.lens, Lens::Stage(_));
 
             // The ghost ring lies on neighbouring faces, so it must come from the
             // same law the in-face tile came from, or the seam instrument would
             // measure the gap between two different surfaces rather than the
             // world's own discontinuity.
-            //
-            // **It reads the loaded regions.** For a whole-face unit the ghost
-            // ring falls on other faces, where a carved tile usually is not — so
-            // this was written as the bare prior and the shortcut cost nothing
-            // visible. For a *window* into a face the ghost ring is ordinary
-            // in-face terrain, carved like everything around it, and the prior
-            // there would put a one-cell moat of uncarved ground around every
-            // patch: a manufactured discontinuity, at exactly the scale a fine
-            // view exists to inspect. Reading the regions is the same law the
-            // in-face tile came from, which is what this comment always asked for.
             let is_stage = matches!(req.lens, Lens::Stage(_));
             let regions_ref = &regions;
             let ghost = move |face: Face, ci: i64, cj: i64, level: u8| -> f32 {
@@ -396,6 +413,8 @@ pub fn spawn(
                 let cell = CubeCoord::from_unit(dir).cell(level);
                 if is_stage {
                     sea_level::tectonic_surface_at_tp(seed, cell, level, tp) as f32
+                } else if pure_prior || regions_ref.is_empty() {
+                    vivarium_world::gen::initial_topography_m(seed, cell, level) as f32
                 } else {
                     vivarium_world::erosion::surface_at_carved(seed, cell, regions_ref) as f32
                 }
@@ -426,28 +445,23 @@ pub fn spawn(
             // rendered physics*; recomputing on the drawn surface is a second
             // physics. The region is also the wider domain, so fewer basins are cut
             // by its rim than by a tile's ( #obs-tile-outlets-grade-away-the-basins ).
-            let region_lakes: Vec<Vec<f32>> = if req.paint.needs_depression() {
-                regions.iter().map(|r| r.standing_water()).collect()
-            } else {
-                Vec::new()
-            };
-            // Ocean mask per region — same domain honesty as standing water
-            // ( #form-ocean-is-connectivity-not-elevation ). Flood-fill is cheap
-            // next to mesh build; still only run once per pull, not per cell.
-            let region_ocean: Vec<Vec<bool>> =
-                regions.iter().map(|r| r.ocean_mask()).collect();
+            // Depression lakes computed per face inside the unit loop (face-local
+            // R only). Ocean is always classified on the *assembled tile* — that
+            // is the surface being painted ( #form-ocean-is-connectivity-not-elevation ).
 
             let faces: Vec<FaceMesh> = std::thread::scope(|s| {
                 let (world, regions, cov, water, cache, ghost, units) =
                     (&world, &regions, &frame_cov, &water, &stage_cache, &ghost, &units);
-                let region_lakes = &region_lakes;
-                let region_ocean = &region_ocean;
                 let handles: Vec<_> = units
                     .iter()
                     .map(|&unit| {
                         s.spawn(move || {
                             let (f, oi, oj, nx) = (unit.face, unit.oi, unit.oj, unit.nx);
                             let face = Face::from_index(f);
+                            // Column-block spine (explore hot path): only regions
+                            // on this face participate in per-cell walks.
+                            let face_regions: Vec<vivarium_world::erosion::ErodedRegion> =
+                                regions.iter().filter(|r| r.face == face).cloned().collect();
                             let tile = match req.lens {
                                 // The deep-time cache is keyed by whole face; a
                                 // window is computed directly rather than cached,
@@ -468,7 +482,26 @@ pub fn spawn(
                                     }
                                     t
                                 }
-                                _ => world.observe().assemble_surface_tile(face, level, oi, oj, nx, regions).0,
+                                _ if pure_prior && oi == 0 && oj == 0 && nx == 1usize << level => {
+                                    prior_face_tile(seed, face, level, nx)
+                                }
+                                _ if pure_prior => {
+                                    let mut t = Vec::with_capacity(nx * nx);
+                                    for j in 0..nx as u32 {
+                                        for i in 0..nx as u32 {
+                                            let c = CellId::from_face_ij(face, oi + i, oj + j, level);
+                                            t.push(
+                                                vivarium_world::gen::initial_topography_m(seed, c, level)
+                                                    as f32,
+                                            );
+                                        }
+                                    }
+                                    t
+                                }
+                                _ => world
+                                    .observe()
+                                    .assemble_surface_tile(face, level, oi, oj, nx, &face_regions)
+                                    .0,
                             };
 
                             // Every per-cell query below is asked in FACE cells,
@@ -519,12 +552,11 @@ pub fn spawn(
                                         let (gi, gj) = g(i, j);
                                         let cid = CellId::from_face_ij(face, gi, gj, level);
                                         b.push(
-                                            // Baseline for the SIGNED change paint, at the band
-                                            // the carve ran on -- differencing a carve-level
-                                            // surface against a finer prior would report the
-                                            // missing detail band as erosion
-                                            // ( `prior_at_carve_level` ).
-                                            vivarium_world::erosion::prior_at_carve_level(seed, cid, regions) as f32
+                                            vivarium_world::erosion::prior_at_carve_level(
+                                                seed,
+                                                cid,
+                                                &face_regions,
+                                            ) as f32,
                                         );
                                     }
                                 }
@@ -534,52 +566,25 @@ pub fn spawn(
                             };
                             let (mut dep_cells, mut dep_capacity_m3, mut dep_deepest_m) =
                                 (0usize, 0.0f64, 0.0f32);
-                            // The depression channel: what the DRAWN surface
-                            // could hold. Run through `Fluvial::drainage_surface`
-                            // — the same reader `base_level_probe`,
-                            // `discharge_probe` and the unit tests use — so the
-                            // picture and the numbers cannot drift apart. The
-                            // reader saves and restores the heights it reads
-                            // (`drainage_surface_restores_the_world_it_read`), so
-                            // it cannot advance anything, and it opens no store.
-                            //
-                            // The contract is set to NoFluxWall EXPLICITLY rather
-                            // than inferred. A window short of a whole face infers
-                            // `BaseLevelSink`, which makes the window's own rim an
-                            // outlet and drains every basin that reaches it — the
-                            // reader would then report ~0 capacity and the paint
-                            // would be black for a reason that is about the reader
-                            // rather than the world ( #form-declared-boundary-contract ;
-                            // the same understatement measured at
-                            // #obs-tile-outlets-grade-away-the-basins FE(5), where a
-                            // sink-contract reader read 19.67% against a wall
-                            // reader's 63.5%). The wall has its own bias — it hands
-                            // the window no outlet at all when there is no coast in
-                            // it — and the HUD says which one is up.
-                            let depression: Vec<f32> = if req.paint.needs_depression() {
-                                // Sample each region's own standing-water field.
-                                // Regions are ordered coarse → fine by contract, so
-                                // finest-first here mirrors `erosion::surface_at`.
-                                // A drawn cell no region covers gets ZERO rather than
-                                // a value read off the prior — that refusal is the
-                                // point, and its size is already on the HUD as the
-                                // prior-fallback fraction, which counts exactly these
-                                // cells.
+                            // Depression: wet-limit on covering carve regions only
+                            // (face-local). Pure-prior views report zero — there is
+                            // no process bed to fill; the prior's closed form is not
+                            // a lake census.
+                            let depression: Vec<f32> = if req.paint.needs_depression()
+                                && !face_regions.is_empty()
+                            {
+                                let face_lakes: Vec<Vec<f32>> =
+                                    face_regions.iter().map(|r| r.standing_water()).collect();
                                 let radius = vivarium_world::planet::Planet::EARTH.radius_m;
                                 let mut out = vec![0.0f32; nx * nx];
                                 for j in 0..nx {
                                     for i in 0..nx {
                                         let (gi, gj) = g(i as u32, j as u32);
                                         let cell = CellId::from_face_ij(face, gi, gj, level);
-                                        for (ri, r) in regions.iter().enumerate().rev() {
+                                        for (ri, r) in face_regions.iter().enumerate().rev() {
                                             let Some(k) = r.carved_index(cell) else { continue };
-                                            let d = region_lakes[ri][k];
+                                            let d = face_lakes[ri][k];
                                             out[j * nx + i] = d;
-                                            // Stats over the DRAWN cells, so depth is
-                                            // piecewise-constant at carve resolution
-                                            // and the volume is that step function's
-                                            // integral — not a finer measurement than
-                                            // the carve supports.
                                             if d > 1.0 {
                                                 dep_cells += 1;
                                                 dep_capacity_m3 += d as f64
@@ -592,13 +597,6 @@ pub fn spawn(
                                         }
                                     }
                                 }
-                                // The field is `standing_water`, not `fill_depth`:
-                                // the physical spill-level depth with the
-                                // flat-orienting ε excluded, which is the quantity
-                                // this mode's own description names ("filled to its
-                                // spill point"). The raise reports 4418 of 9216
-                                // cells wet on a flat that holds nothing
-                                // (`examples/lake_surface_probe` B).
                                 out
                             } else {
                                 Vec::new()
@@ -611,20 +609,9 @@ pub fn spawn(
                                 }
                                 depression[cj as usize * nx + ci as usize]
                             };
-                            // Sample ocean from the covering region's mask (finest first).
-                            // Uncovered cells: no invented ocean (threshold alone is the lie).
-                            let mut ocean_tile = vec![false; nx * nx];
-                            for j in 0..nx {
-                                for i in 0..nx {
-                                    let (gi, gj) = g(i as u32, j as u32);
-                                    let cell = CellId::from_face_ij(face, gi, gj, level);
-                                    for (ri, r) in regions.iter().enumerate().rev() {
-                                        let Some(k) = r.carved_index(cell) else { continue };
-                                        ocean_tile[j * nx + i] = region_ocean[ri][k];
-                                        break;
-                                    }
-                                }
-                            }
+                            // Ocean on the painted surface — one O(nx²) mask.
+                            let ocean_tile =
+                                vivarium_world::sea_level::ocean_mask(&tile, nx, sea_m);
                             let ocean_at = |ci: u32, cj: u32| -> bool {
                                 ocean_tile[cj as usize * nx + ci as usize]
                             };
@@ -667,11 +654,16 @@ pub fn spawn(
                                         }
                                     }
                                     if !is_stage {
-                                        let (gi, gj) = g(i, j);
-                                        let cid = CellId::from_face_ij(face, gi, gj, level);
-                                        match vivarium_world::erosion::tier_at(cid, regions) {
-                                            Some(t) => *tiers.entry(t).or_default() += 1,
-                                            None => fb += 1,
+                                        if pure_prior || face_regions.is_empty() {
+                                            fb += 1;
+                                        } else {
+                                            let (gi, gj) = g(i, j);
+                                            let cid = CellId::from_face_ij(face, gi, gj, level);
+                                            match vivarium_world::erosion::tier_at(cid, &face_regions)
+                                            {
+                                                Some(t) => *tiers.entry(t).or_default() += 1,
+                                                None => fb += 1,
+                                            }
                                         }
                                         let d = water_at(i, j);
                                         if d > WET_M {
@@ -752,7 +744,13 @@ pub fn spawn(
             });
 
             let facts = FrameFacts {
-                eroded_tiles: regions.len(),
+                // When the level filter empties `regions`, still report store-fresh
+                // carve count so the HUD can say "tiles exist but none apply."
+                eroded_tiles: if regions.is_empty() {
+                    census.fresh
+                } else {
+                    regions.len()
+                },
                 stale_tiles: census.stale,
                 prior_fallback_frac: prior_fallback as f32 / total.max(1) as f32,
                 land_frac: land as f32 / total.max(1) as f32,
