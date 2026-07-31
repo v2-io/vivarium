@@ -69,8 +69,8 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
    | Region | State | Era note |
    | --- | --- | --- |
-   | **`erosion.rs` / `query.rs` / chart-edge + pad path** | **Warm — post-rebuild cohort** | Current first-light: `src=4fdc95afbe11c785`, world git `f1b321a14`, source `ea1f5b4`. Direction resample + pad-not-slide both live. **Every drainage / halo / region-carve statistic measured before this cohort is suspect** until re-run. Changelogs `2026-07-30-0{1,3,4}`. |
-   | **`erosion.rs::outlets` / standing water / globe** | **Warm — connectivity era nested under the above** | Ocean = connectivity in the router only ( #form-ocean-is-connectivity-not-elevation ). Pre-connectivity drainage stats and pre-pad/resample halo stats are both era-stale. |
+   | **`erosion.rs` / `query.rs` / chart-edge + pad path** | **Warm — post-rebuild cohort** | Current first-light: `src=f0a56097577e8971`, world git `6ca02be83`, source `00c9726`. Direction resample + pad-not-slide + **shared ocean mask** live. **Every drainage / halo / ocean-classified statistic measured before this cohort is suspect** until re-run. |
+   | **`sea_level::ocean_mask` / water fill / explore paints** | **JUST RE-KEYED — shared mask 2026-07-31** | One pure function; water initial fill no longer pours the waterline into landlocked basins. Changelog `2026-07-31-01`. |
    | **`query.rs` / builder (halo keys)** | **Adopted, warm** | Exchange region + water `BedArticle` in keys; view prefers halo; compute names its article. Null-diff eras under earlier `src=` do not license quoting new structural numbers without re-measure. |
    | **`water.rs`** | Wave landed, cooling | Implicit friction + Jarrett static sealed; §5 cap-off ladder still pre-fix. Not the lake path. |
    | **`measure.rs` signed geometry** | Warm (pad path) | `cell_*_i` i64 forms; area/solid-angle consumers must not mix eras across the pad re-key. |
@@ -92,7 +92,7 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
 **Max attainable: discussion-grade** as maintained ideation — completeness is impossible; honesty about dated judgment is the bar.
 
-**Currently `discussion-grade`.** FE(5)/FE(6)/FE(8) re-trued **2026-07-31** against running `vivarium status`, `bin/provenance`, world git, and code paths for ocean classification, chart-edge sample, pad origin, and flux/spill absence. Rank 1 is **shared ocean mask** (physics multi-consumer), not the thrice-rewritten governance guess from 2026-07-30. Phase-floor work remains high leverage as rank 2. Outside-reader rank not Joseph-ratified. Stage `draft`.
+**Currently `discussion-grade`.** FE(5)/FE(6) re-trued **2026-07-31** after the shared ocean mask land (`00c9726`, cohort `src=f0a56097577e8971`). Rank 1 is now **sill-graph / flux** on the same-level family. Phase-floor work remains rank 2. Outside-reader rank not Joseph-ratified. Stage `draft`.
 
 ## Discussion
 
