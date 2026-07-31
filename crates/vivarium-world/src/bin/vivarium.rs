@@ -882,7 +882,9 @@ fn cmd_status(rest: &[String]) -> i32 {
             c.fresh, c.stale, c.total
         );
         if c.fresh == 0 && c.stale > 0 {
-            println!("  *** REBUILD NEEDED ***  store has eroded land, none under this source hash");
+            // ★ is a real CLI affordance (attention mark). Bevy HUD is the
+            // surface that tofu'd glyphs — keep stars/unicode here, ASCII there.
+            println!("  ★ REBUILD NEEDED — store has eroded land, none under this source hash");
             println!("    next:  vivarium build");
         } else if c.fresh == 0 {
             println!("  next:  vivarium build   (no erosion-tile roots yet)");
