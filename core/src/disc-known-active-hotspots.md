@@ -54,7 +54,7 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
    | --- | --- | --- | --- |
    | **1** | **P0 — Index is hot** — **landed** | — | — |
    | **2** | **P1 — Pull thrash boring** — **landed** | — | — |
-   | **3** | **Face ocean product** — **landed 2026-07-31 (explore working set):** adjudicate at ≤L9 whole face; paint samples; never re-flood postage stamp. Store citizen still optional later. | Zoom-stable sea for close-in; `closed-water-cycle` feel 45 | Not weather GCM |
+   | **3** | **Face ocean product** — **landed 2026-07-31 (explore working set):** adjudicate at ≤L9 whole face; paint samples; never re-flood postage stamp. Store citizen still optional later. | Zoom-stable sea for close-in; `closed-water-cycle` feel 50 | Not weather GCM |
    | **4** | **P3 residual** — **landed 2026-07-31:** explore fresh/stale banner; first-light rebuilt under current `src` (world git `7216c8dca`, ~3552 fresh erosion). Far globe ≤L7 still pure prior by coverage; **zoom past L7** for L9/L13 covering-grain windows | — | — |
    | **5** | **P4 — Spot-check gate** — **instrument bar met 2026-07-31** (thrash boring, face-sampled ocean, fresh carve present). **Joseph eyes invited** to confirm fluvial/ocean/depression spot-check; cycle still honest red | Foundation for physics sessions | Not Abyssal complete; not closed-water-cycle Kept |
    | **6** | **Phase-3 `closed-water-cycle`** — honest red + feel needle until face ocean + non-identity predicate can fail and don’t | Costume green forbidden | Not algebraic residual alone |
@@ -70,7 +70,7 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
    | Region | State | Era note |
    | --- | --- | --- |
-   | **`erosion.rs` / `query.rs` / chart-edge + pad path** | **Warm — post-rebuild cohort** | Current first-light: `src=f0a56097577e8971`, world git `6ca02be83`, source `00c9726`. Direction resample + pad-not-slide + **shared ocean mask** live. **Every drainage / halo / ocean-classified statistic measured before this cohort is suspect** until re-run. |
+   | **`erosion.rs` / `query.rs` / chart-edge + pad path** | **Warm — post-rebuild cohort** | First-light **rebuilt 2026-07-31** world git `7216c8dca` (~3552 fresh erosion under current `src`). Pre-rebuild stats are suspect until re-run. |
    | **`sea_level::ocean_mask` / water fill / explore paints** | **JUST RE-KEYED — shared mask 2026-07-31** | One pure function; water initial fill no longer pours the waterline into landlocked basins. Changelog `2026-07-31-01`. |
    | **`query.rs` / builder (halo keys)** | **Adopted, warm** | Exchange region + water `BedArticle` in keys; view prefers halo; compute names its article. Null-diff eras under earlier `src=` do not license quoting new structural numbers without re-measure. |
    | **`water.rs`** | Wave landed, cooling | Implicit friction + Jarrett static sealed; §5 cap-off ladder still pre-fix. Not the lake path. |
@@ -78,23 +78,21 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
    | **`uplift.rs` chart edge** | **Still clamps data** | Fluvial windows resample; uplift off-chart still rim-clamp — residual mismatch risk if a future consumer assumes both share the resample policy. |
    | **Router remedy stack** | Step (b) pending | Diagonal-kill + transmissivity measured CUBE winner; fan curl/spiral numbers predate it. |
    | **Cold this week** | Isostasy column + cooling chain; stage-chain instrument (no-exchange path); provenance tooling | Ordinary quotes safe when grounded only there. |
-   | **first-light store** | **Local git at `f1b321a14`** | `~/.cache/vivarium/globe-world`. Commit with every changelog-owed rebuild. |
+   | **first-light store** | **Local git `7216c8dca`** | `~/.cache/vivarium/globe-world`. Commit with every changelog-owed rebuild. |
 
-7. **Dependency-tracking mechanism — first rungs built 2026-07-29 (late).** Witnessed read-sets + `Observatory` type split shipped. **Open:** wiring region-exchange interiors / stage ladders / epoch reductions; audit command that diffs read-sets across cohorts; full fold-or-check-into-key design. Rank **5** (sill + flux, post-P4) should land WITH witnesses from birth. Distinct from kernel-era probe registry (measurement drift vs key completeness).
+7. **Dependency-tracking mechanism — first rungs built 2026-07-29 (late).** Witnessed read-sets + `Observatory` type split shipped. **Open:** wiring region-exchange interiors / stage ladders / epoch reductions; audit command that diffs read-sets across cohorts; full fold-or-check-into-key design. Rank **7** (sill + flux, post-P4) should land WITH witnesses from birth. Distinct from kernel-era probe registry (measurement drift vs key completeness).
 
-8. **Instrument / ops notes (revised 2026-07-31 — face ocean next).**
-   - **P0+P1 landed.** Probes: `roots_bench`, `pull_hot_bench`.
-   - **Face ocean explore path landed:** ≤L9 face mask + sample into windows (kill zoom-zap for paint). Store memo still optional.
-   - **Next:** P3 residual (covering level / rebuild under current `src`) → P4 declare when thrash + sea stable.
-   - **Encouraging:** thrash fixed; face-sampled ocean paint; inventory residual 0; feel needle on cycle.
-   - **Honest red:** cycle not Kept; no store ocean citizen yet; rebuild may still be needed for fluvial.
-   - **World VCS + provenance:** commit store with changelog rebuilds; digests only from `bin/provenance`.
+8. **Instrument / ops notes (revised 2026-07-31 — P3 rebuild landed).**
+   - **P0–P3 closed:** thrash boring; face-sampled ocean; first-light rebuilt (~3552 fresh erosion; world `7216c8dca`).
+   - **P4:** instrument bar met — **Joseph eyes invited** (zoom past L7 for fluvial). Cycle still honest red.
+   - **Next physics:** sill/flux after eyes OK, or free parallel capacity.
+   - **World VCS + provenance:** digests only from `bin/provenance`.
 
 ## Epistemic Status
 
 **Max attainable: discussion-grade** as maintained ideation — completeness is impossible; honesty about dated judgment is the bar.
 
-**Currently `discussion-grade`.** Priority penciled **2026-07-31** with Joseph: **face ocean product next**, then P3 residual / P4, then sill/flux. Stage `draft`.
+**Currently `discussion-grade`.** **2026-07-31 late:** face ocean + P3 rebuild landed; **P4 instrument bar met — invite Joseph eyes**; then sill/flux. Stage `draft`.
 
 ## Discussion
 
