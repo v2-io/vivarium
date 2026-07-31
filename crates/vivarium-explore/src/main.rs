@@ -178,6 +178,8 @@ struct Explorer {
     notice_until: f32,
     /// Erosion fresh/stale under this binary — refreshed when the frame updates.
     erosion_census: vivarium_world::query::RegionCensus,
+    /// `?` / `/` toggles keybinding legend (off by default).
+    show_keys: bool,
 }
 
 #[derive(Resource)]
@@ -301,7 +303,8 @@ The store is opened READ-ONLY. This binary cannot author a world citizen; the
 HUD shows the refused-write count so the wall is a number, not a promise.
 
 Press C to capture: writes captures/*-vivarium-info.v0.1.0.udon + .png (and a
-classic sighting md). Default overlay is CARVE chips; H cycles human / debug / minimal.
+classic sighting md). Same form via VIVARIUM_SHOT for agent autoshot.
+Default overlay is compact chrome; H cycles human / debug / minimal. ? toggles keys.
 ";
 
 fn main() {
@@ -382,15 +385,15 @@ fn main() {
     );
     if erosion_census.fresh == 0 && erosion_census.stale > 0 {
         println!(
-            "[explore] P3: no fluvial bed is *readable* here — store has carve history, but none under \
-             this source hash. Open globe is honest pure prior (fast). For fluvial spot-check:\n\
+            "[explore] *** REBUILD NEEDED *** no eroded land is *readable* here — store has \
+             history under other source hashes only. Open globe is honest pure prior (fast).\n\
              [explore]   vivarium build\n\
              [explore] then re-open explore (or zoom close after tiles land under the new src)."
         );
     } else if erosion_census.fresh > 0 {
         println!(
-            "[explore] P3: fresh carve is present — far view stays ≤L{LEVEL_GLOBE_MAX} whole-globe \
-             (prior or coarse); zoom close past L{LEVEL_GLOBE_MAX} for covering-grain windows over the bed."
+            "[explore] eroded land readable — far view stays ≤L{LEVEL_GLOBE_MAX} whole-globe \
+             (prior or coarse); zoom close past L{LEVEL_GLOBE_MAX} for covering-grain windows."
         );
     }
     match chain.cohort.as_ref() {
@@ -488,6 +491,7 @@ fn main() {
             notice: String::new(),
             notice_until: 0.0,
             erosion_census,
+            show_keys: false,
         })
         .insert_resource(Ident {
             name: spec.name.clone(),
@@ -721,6 +725,10 @@ fn input_update(
     }
     if keys.just_pressed(KeyCode::KeyH) {
         ex.hud_level = (ex.hud_level + 1) % 3;
+    }
+    // `?` is Shift+/ on US keyboards; Bevy reports Slash for both.
+    if keys.just_pressed(KeyCode::Slash) {
+        ex.show_keys = !ex.show_keys;
     }
     if keys.just_pressed(KeyCode::Escape) {
         exit.write(AppExit::Success);
@@ -1270,13 +1278,6 @@ fn hud_update(
     } else {
         "WHOLE"
     };
-    let beacon_chip = match &ident.demand.demand.beacon {
-        Some(b) => format!(
-            "BEACON f{} L{} ({},{}) {}x{}",
-            b.face, b.level, b.oi, b.oj, b.tiles, b.tiles
-        ),
-        None => "BEACON none".into(),
-    };
     let surface_chip = {
         let view = frame.req.level;
         let coarse: usize = frame
@@ -1294,60 +1295,83 @@ fn hud_update(
             .unwrap_or(0);
         let cells = frame.facts.cells.max(1);
         if frame.facts.tier_cells.is_empty() || frame.facts.prior_fallback_frac > 0.95 {
-            "SURFACE prior".into()
+            "prior (no eroded surface here)".into()
         } else if coarse * 100 / cells > 5 && at * 100 / cells > 5 {
-            "SURFACE mixed".into()
+            "mixed grain".into()
         } else if at * 100 / cells >= 50 {
-            format!("SURFACE carve L{view}")
+            format!("eroded at L{view}")
         } else {
-            "SURFACE coarse-cover".into()
+            "coarse cover".into()
         }
+    };
+
+    let dir = Vec3::new(
+        orbit.pitch.cos() * orbit.yaw.cos(),
+        orbit.pitch.sin(),
+        orbit.pitch.cos() * orbit.yaw.sin(),
+    );
+    let geo = CubeCoord::from_unit([dir.x as f64, dir.y as f64, dir.z as f64]).to_geo();
+    let place = format!(
+        "{:.0} km  {:.1}{} {:.1}{}",
+        alt,
+        geo.lat.to_degrees().abs(),
+        if geo.lat >= 0.0 { "N" } else { "S" },
+        geo.lon.to_degrees().abs(),
+        if geo.lon >= 0.0 { "E" } else { "W" },
+    );
+    let pick_line = match current_pick(&windows, &cam, frame, &cov.0, &water.0) {
+        Some(p) => format!(
+            "F{} L{} i={} j={}  {:+.0} m  [{}]{}",
+            p.face,
+            p.level,
+            p.i,
+            p.j,
+            p.elev_m - frame.facts.sea_m,
+            p.state.label(),
+            if p.provisional { " PROV" } else { "" },
+        ),
+        None => "(point at the planet)".into(),
+    };
+    let view_line = format!(
+        "L{}  {}  {}  paint {}  x{:.0}{}",
+        frame.req.level,
+        window_chip,
+        lens_short,
+        frame.req.paint.name(),
+        frame.req.exag,
+        if ex.inflight { "  UPDATING" } else { "" },
+    );
+    let beacon_val = match &ident.demand.demand.beacon {
+        Some(b) => format!(
+            "f{} L{} ({},{}) {}x{} tiles",
+            b.face, b.level, b.oi, b.oj, b.tiles, b.tiles
+        ),
+        None => "none".into(),
     };
 
     // --- human chrome (default) ----------------------------------------------
     if ex.hud_level == 0 {
         let mut s = String::new();
-        s.push_str(&capture::carve_chip(ex.erosion_census));
+        s.push_str(&capture::bed_status_block(ex.erosion_census));
         s.push('\n');
-        s.push_str(&format!(
-            "VIEW  L{} · {window_chip} · {} · paint {} · relief ×{:.0}{}\n",
-            frame.req.level,
-            lens_short,
-            frame.req.paint.name(),
-            frame.req.exag,
-            if ex.inflight { " · updating…" } else { "" },
-        ));
-        s.push_str(&format!("{surface_chip}  ·  {beacon_chip}\n"));
-        let dir = Vec3::new(
-            orbit.pitch.cos() * orbit.yaw.cos(),
-            orbit.pitch.sin(),
-            orbit.pitch.cos() * orbit.yaw.sin(),
-        );
-        let geo = CubeCoord::from_unit([dir.x as f64, dir.y as f64, dir.z as f64]).to_geo();
-        s.push_str(&format!(
-            "alt {:.0} km  {:.1}{} {:.1}{}",
-            alt,
-            geo.lat.to_degrees().abs(),
-            if geo.lat >= 0.0 { "N" } else { "S" },
-            geo.lon.to_degrees().abs(),
-            if geo.lon >= 0.0 { "E" } else { "W" },
-        ));
-        if let Some(p) = current_pick(&windows, &cam, frame, &cov.0, &water.0) {
-            s.push_str(&format!(
-                "  ·  pick F{} L{} i={} j={}  {:+.0} m rel  [{}]\n",
-                p.face,
-                p.level,
-                p.i,
-                p.j,
-                p.elev_m - frame.facts.sea_m,
-                p.state.label(),
-            ));
+        s.push_str(&capture::row("VIEW", &view_line));
+        s.push('\n');
+        s.push_str(&capture::row("SEEN", &surface_chip));
+        s.push('\n');
+        s.push_str(&capture::row("PLACE", &place));
+        s.push('\n');
+        s.push_str(&capture::row("PICK", &pick_line));
+        s.push('\n');
+        s.push_str(&capture::row("BEACON", &beacon_val));
+        s.push('\n');
+        if ex.show_keys {
+            s.push_str(&capture::key_legend());
         } else {
+            s.push_str(&capture::row("?", "keys"));
             s.push('\n');
         }
-        s.push_str("H: human→debug→min  ·  C capture  ·  G/B cohort  ·  TAB paint\n");
         if time.elapsed_secs() < ex.notice_until {
-            s.push_str("\n");
+            s.push('\n');
             s.push_str(&ex.notice);
         }
         text.0 = s;
@@ -1356,22 +1380,30 @@ fn hud_update(
 
     // --- minimal (paint/lens only) -------------------------------------------
     if ex.hud_level == 2 {
-        text.0 = format!(
-            "[{}] {}   H: human chrome",
+        let mut s = format!(
+            "{}\n[{}] {}   H overlay mode",
+            capture::bed_status_block(ex.erosion_census)
+                .lines()
+                .next()
+                .unwrap_or("eroded land"),
             frame.req.paint.name(),
             lens_short
         );
-        if time.elapsed_secs() < ex.notice_until {
-            text.0.push_str("\n");
-            text.0.push_str(&ex.notice);
+        if ex.show_keys {
+            s.push_str(&capture::key_legend());
         }
+        if time.elapsed_secs() < ex.notice_until {
+            s.push('\n');
+            s.push_str(&ex.notice);
+        }
+        text.0 = s;
         return;
     }
 
     // --- full debug dump (former default) ------------------------------------
     let mut s = String::new();
-    s.push_str(&capture::carve_chip(ex.erosion_census));
-    s.push_str("  [DEBUG DUMP — H for human chrome]\n");
+    s.push_str(&capture::bed_status_block(ex.erosion_census));
+    s.push_str("\n[DEBUG DUMP - H for compact chrome]\n");
     for block in [
         hud::header(&ident.name, ident.seed, frame, &ladder.0, &cov.0, ex.inflight),
         hud::census(frame, &cov.0),
@@ -1463,8 +1495,11 @@ fn hud_update(
         s.push('\n');
     }
     s.push('\n');
-    s.push_str(&hud::keys(frame.req.paint));
-    s.push_str("\nH: debug→minimal→human  ·  C capture pair\n");
+    if ex.show_keys {
+        s.push_str(&capture::key_legend());
+    } else {
+        s.push_str("H: human/debug/minimal  ·  C capture  ·  ? keys\n");
+    }
 
     if time.elapsed_secs() < ex.notice_until {
         s.push_str("\n\n");
@@ -1590,28 +1625,42 @@ fn take_pending_shot(mut commands: Commands, mut pending: ResMut<PendingShot>, m
     *skip = false;
 }
 
-/// `VIVARIUM_SHOT=<path>` — wait for the first frame to land, screenshot, exit.
+/// `VIVARIUM_SHOT` — wait for the first frame, write the **same capture pair as C**
+/// (`captures/*-vivarium-info.v0.1.0.udon` + `.png`), then exit.
 ///
-/// The verification idiom, kept because a session that ships a renderer without
-/// looking at its output has not verified anything ( #norm-declaration-must-convict
-/// applied to the author rather than the code). Pair with `VIVARIUM_STAGE=<i>`
-/// and `--paint MODE` to shoot a specific lens.
+/// Value forms:
+/// - `1` / `true` / `yes` / `auto` → stamp under world `captures/`
+/// - a filesystem path (contains `/` or ends in `.png`) → PNG at that path;
+///   udon still lands in `captures/` and records the actual PNG path
 ///
+/// Pair with `VIVARIUM_STAGE=<i>`, `VIVARIUM_EROSION=<i>`, `--paint MODE`.
 /// Optional `VIVARIUM_SHOT_DELAY=<secs>` (default **4.0**): settle after the first
-/// frame before shooting. The first landed `Frame` can still be a black viewport
-/// while the GPU mesh is one frame behind the pull; 1.2 s was not enough on
-/// Metal (2026-07-29 black-capture specimen).
+/// frame (Metal black-capture specimen, 2026-07-29).
+#[allow(clippy::too_many_arguments)]
 fn autoshot(
     time: Res<Time>,
-    ex: Res<Explorer>,
+    orbit: Res<Orbit>,
+    sun: Res<Sun>,
+    mut ex: ResMut<Explorer>,
+    ident: Res<Ident>,
+    ladder: Res<LadderRes>,
+    cov: Res<CovRes>,
+    water: Res<WaterRes>,
+    mut pending: ResMut<PendingShot>,
+    windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
+    cam: Query<(&Camera, &GlobalTransform), With<ExploreCam>>,
     mut commands: Commands,
     mut armed_at: Local<Option<f32>>,
     mut shot: Local<bool>,
     mut exit: MessageWriter<AppExit>,
 ) {
-    let Some(path) = std::env::var_os("VIVARIUM_SHOT") else {
+    let Some(raw) = std::env::var_os("VIVARIUM_SHOT") else {
         return;
     };
+    let raw = raw.to_string_lossy();
+    if raw.is_empty() {
+        return;
+    }
     let delay = std::env::var("VIVARIUM_SHOT_DELAY")
         .ok()
         .and_then(|s| s.parse::<f32>().ok())
@@ -1625,12 +1674,83 @@ fn autoshot(
         return;
     };
     if !*shot && t > t0 + delay {
-        eprintln!(
-            "[explore] SHOT {} (settled {delay:.1}s after first frame)",
-            PathBuf::from(&path).display()
+        let Some(frame) = ex.frame.as_deref() else {
+            return;
+        };
+        let dir = Vec3::new(
+            orbit.pitch.cos() * orbit.yaw.cos(),
+            orbit.pitch.sin(),
+            orbit.pitch.cos() * orbit.yaw.sin(),
         );
-        commands.spawn(Screenshot::primary_window()).observe(save_to_disk(PathBuf::from(path)));
-        *shot = true;
+        let geo = CubeCoord::from_unit([dir.x as f64, dir.y as f64, dir.z as f64]).to_geo();
+        let stage = match frame.req.lens {
+            Lens::Stage(i) => Some(sighting::StagePosition {
+                idx: i,
+                total: ladder.0.len(),
+                age_ga: ladder.0.ages_ga.get(i).copied().unwrap_or(0.0),
+                tp_c: ladder.0.tps.get(i).copied().unwrap_or(0.0),
+                built: ladder.0.built.get(i).copied().unwrap_or(false),
+                playing: ex.playing,
+            }),
+            _ => None,
+        };
+        let vantage = sighting::Vantage {
+            world_name: ident.name.clone(),
+            seed: ident.seed,
+            world_dir: ident.dir.clone(),
+            centre_lat_deg: geo.lat.to_degrees(),
+            centre_lon_deg: geo.lon.to_degrees(),
+            altitude_km: orbit.dist - radius_km(),
+            pick: current_pick(&windows, &cam, frame, &cov.0, &water.0),
+            stage,
+            sun_day: sun.day,
+            sun_hour: sun.hour,
+            headlight: sun.headlight,
+        };
+        let unmodelled = hud::unmodelled(frame, &ladder.0, &cov.0);
+        let depiction = hud::depiction(frame, sun.headlight);
+        // Optional explicit PNG path for scripts; else stamp under captures/.
+        let png_override = {
+            let looks_like_path = raw.contains('/')
+                || raw.contains('\\')
+                || raw.ends_with(".png")
+                || raw.starts_with('.');
+            let token = matches!(raw.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "auto");
+            if looks_like_path && !token {
+                Some(PathBuf::from(raw.as_ref()))
+            } else {
+                None
+            }
+        };
+        match capture::write_with_png(
+            frame,
+            &vantage,
+            ex.erosion_census,
+            Some(&ident.demand),
+            &unmodelled,
+            &depiction,
+            png_override,
+        ) {
+            Ok((info, png)) => {
+                eprintln!(
+                    "[explore] SHOT capture {} (settled {delay:.1}s after first frame)",
+                    info.display()
+                );
+                eprintln!("[explore]   screenshot → {}", png.display());
+                ex.notice = format!("AUTOSHOT  {}\n  + {}", info.display(), png.display());
+                ex.notice_until = time.elapsed_secs() + 8.0;
+                // Immediate screenshot (no notice frame required for agent runs).
+                let _ = pending.0.take();
+                commands
+                    .spawn(Screenshot::primary_window())
+                    .observe(save_to_disk(png));
+                *shot = true;
+            }
+            Err(e) => {
+                eprintln!("[explore] SHOT capture failed: {e}");
+                *shot = true; // exit anyway so agents do not hang
+            }
+        }
     }
     if *shot && t > t0 + delay + 1.6 {
         exit.write(AppExit::Success);

@@ -46,6 +46,9 @@ fn stamp() -> String {
 
 /// Write capture pair + optional classic sighting md.
 /// Returns `(info_udon_path, png_path)` for the pending screenshot.
+///
+/// `png_override`: when `Some`, the PNG lands there (and the udon records that
+/// path). When `None`, both files use a stamp under [`captures_dir`].
 pub fn write(
     frame: &Frame,
     v: &Vantage,
@@ -54,12 +57,36 @@ pub fn write(
     unmodelled: &[String],
     depiction: &[String],
 ) -> Result<(PathBuf, PathBuf), String> {
+    write_with_png(frame, v, census, demand, unmodelled, depiction, None)
+}
+
+/// Like [`write`], but place the PNG at `png_override` when provided.
+pub fn write_with_png(
+    frame: &Frame,
+    v: &Vantage,
+    census: RegionCensus,
+    demand: Option<&WorldSpec>,
+    unmodelled: &[String],
+    depiction: &[String],
+    png_override: Option<PathBuf>,
+) -> Result<(PathBuf, PathBuf), String> {
     let dir = captures_dir(&v.world_dir);
     std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     let stamp = stamp();
     let stem = format!("{stamp}");
     let info_path = dir.join(format!("{stem}-{INFO_SCHEMA}.udon"));
-    let png_path = dir.join(format!("{stem}.png"));
+    let png_path = match png_override {
+        Some(p) => {
+            if let Some(parent) = p.parent() {
+                if !parent.as_os_str().is_empty() {
+                    std::fs::create_dir_all(parent)
+                        .map_err(|e| format!("{}: {e}", parent.display()))?;
+                }
+            }
+            p
+        }
+        None => dir.join(format!("{stem}.png")),
+    };
     let body = udon_body(frame, v, census, demand, unmodelled, depiction, &png_path, &stamp);
     std::fs::write(&info_path, body).map_err(|e| format!("{}: {e}", info_path.display()))?;
 
@@ -108,7 +135,7 @@ fn udon_body(
     let _ = writeln!(s, "erosion_stale: {}", census.stale);
     let _ = writeln!(s, "erosion_total: {}", census.total);
     let next = if census.fresh == 0 && census.stale > 0 {
-        "vivarium build   # no carve readable under this binary"
+        "vivarium build   # eroded land not readable under this binary"
     } else if census.fresh == 0 {
         "vivarium build   # no erosion-tile roots yet"
     } else {
@@ -223,20 +250,70 @@ fn udon_body(
     s
 }
 
-/// One-line human chip for CARVE state.
-pub fn carve_chip(census: RegionCensus) -> String {
+/// Human-chrome block for "can this program show eroded land?"
+///
+/// Plain language only — no "CARVE" (not in LEXICON, grabs no attention).
+/// ASCII-only so Bevy text does not tofu middle-dots / stars.
+/// When a rebuild is needed the first line is the scream; the rest is why.
+pub fn bed_status_block(census: RegionCensus) -> String {
     let src = &nomotheke::SRC_HASH[..8.min(nomotheke::SRC_HASH.len())];
     if census.fresh == 0 && census.stale > 0 {
         format!(
-            "CARVE ★ REBUILD  fresh 0 · stale {} · src={src}  →  vivarium build",
-            census.stale
+            "*** REBUILD NEEDED ***\n\
+             eroded land is in the store but not readable under this program\n\
+             readable now: 0    older builds: {}    src {}\n\
+             next: vivarium build",
+            census.stale, src
         )
     } else if census.fresh == 0 {
-        format!("CARVE  fresh 0 · stale 0 · src={src}  (no erosion roots)")
+        format!(
+            "eroded land: none yet (src {src})\n\
+             next: vivarium build"
+        )
     } else {
         format!(
-            "CARVE  fresh {} · stale {} · src={src}",
-            census.fresh, census.stale
+            "eroded land: {} readable under this program (src {})\n\
+             older builds ignored: {}",
+            census.fresh, src, census.stale
         )
     }
+}
+
+/// Fixed-width label + value for chrome table rows (8-char label column).
+pub fn row(label: &str, value: &str) -> String {
+    format!("{label:<8}{value}")
+}
+
+/// Two-column keybinding legend for the explore HUD (`?` toggle, off by default).
+/// Aligned so the eye can scan the action column.
+pub fn key_legend() -> String {
+    let rows: &[(&str, &str)] = &[
+        ("drag", "orbit"),
+        ("wheel", "zoom (close-in = region window)"),
+        ("[ ]", "level - / +"),
+        ("A", "auto-level"),
+        ("X", "relief exaggeration"),
+        ("O / R", "pole / reset view"),
+        ("B / G", "go to selected chain / cycle chains"),
+        ("1-6 TAB", "paint (surf / prov / water / seam / chg / dep)"),
+        ("Z", "change-paint scale"),
+        ("P", "present surface"),
+        ("E", "erosion settle history (world-time)"),
+        ("T", "deep time (mantle cooling)"),
+        ("V", "replay (build history)"),
+        ("K J/L", "play-pause / step stage"),
+        (", . N M", "hour -+ / day -+"),
+        ("Y", "headlight on-off"),
+        ("H", "overlay: human / debug / minimal"),
+        ("C", "capture (udon + png in captures/)"),
+        ("?", "this key legend"),
+        ("Esc", "quit"),
+    ];
+    let mut s = String::from("\n");
+    s.push_str(&row("KEYS", "(? again to hide)\n"));
+    for (k, v) in rows {
+        // key column 10 chars, then action — vertical alignment across rows
+        let _ = std::fmt::Write::write_fmt(&mut s, format_args!("  {k:<10}  {v}\n"));
+    }
+    s
 }
