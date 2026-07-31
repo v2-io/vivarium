@@ -762,6 +762,36 @@ fn cmd_status(rest: &[String]) -> i32 {
             return 1;
         }
     };
+    // --- Human lead block (#disc-explorer-human-chrome / debug-capture) ------
+    // Glance-grade: can *this* binary show carved land? Pyramid is archaeology.
+    {
+        let world = World::new(&store, seed);
+        let c = world.observe().eroded_region_census();
+        let src = nomotheke::SRC_HASH;
+        let src8 = &src[..8.min(src.len())];
+        println!();
+        println!("── can this binary show carved land? ─────────────────────────");
+        println!("  src={src8}…  erosion-tile: fresh {} · stale {} · total {}", c.fresh, c.stale, c.total);
+        if c.fresh == 0 && c.stale > 0 {
+            println!("  ★ REBUILD NEEDED — store has carve history, none under this source hash");
+            println!("    next:  vivarium build");
+        } else if c.fresh == 0 {
+            println!("  next:  vivarium build   (no erosion-tile roots yet)");
+        } else {
+            println!("  ok — fresh carve present; zoom past L7 in explore for covering grain");
+        }
+        if let Ok(Some(spec)) = WorldSpec::load(&dir) {
+            if let Some(b) = &spec.demand.beacon {
+                println!(
+                    "  demand beacon: f{} L{} ({},{}) {}×{} tiles · {} epochs / stride {}",
+                    b.face, b.level, b.oi, b.oj, b.tiles, b.tiles, b.epochs, b.stride
+                );
+            } else {
+                println!("  demand beacon: none");
+            }
+        }
+        println!("──────────────────────────────────────────────────────────────");
+    }
     let roots = match store.roots() {
         Ok(r) => r,
         Err(e) => {

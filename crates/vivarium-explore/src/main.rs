@@ -18,10 +18,10 @@
 //!    see can be trusted. See `lens::Ladder`.
 //! 2. **Absences must be visible as absences.** Anything not modelled is stated
 //!    on the HUD, derived from the live law where it can be. See `hud::unmodelled`.
-//! 3. **A hunch must be capturable in the moment.** `C` writes a sighting — a
-//!    dump of everything true at that instant, which is what turns *"the lakes
-//!    looked wrong"* into something a probe can be written against. See
-//!    `sighting`.
+//! 3. **A hunch must be capturable in the moment.** `C` writes a **capture pair**
+//!    (`captures/*-vivarium-info.v0.1.0.udon` + `.png`) plus a classic sighting
+//!    md (`#disc-explorer-debug-capture`). Default chrome is status chips
+//!    (`#disc-explorer-human-chrome`); `H` cycles human → debug dump → minimal.
 //!
 //! **The wall.** `vivarium-world` has no idea Bevy exists (dependency direction),
 //! and this binary opens the store through `Store::open_read_only`, so it cannot
@@ -35,6 +35,7 @@ mod lens;
 mod mesh;
 mod paint;
 mod pull;
+mod capture;
 mod sighting;
 mod water;
 
@@ -170,10 +171,13 @@ struct Explorer {
     /// guaranteed to be between the observer and the world, so it tiers: an
     /// explorer whose HUD covers the planet has defeated the detector it exists
     /// to serve.
+    /// 0 = human chrome (chips), 1 = full debug dump, 2 = minimal paint/lens.
     hud_level: u8,
-    /// A transient line under the HUD (sighting written, etc.).
+    /// A transient line under the HUD (capture written, etc.).
     notice: String,
     notice_until: f32,
+    /// Erosion fresh/stale under this binary — refreshed when the frame updates.
+    erosion_census: vivarium_world::query::RegionCensus,
 }
 
 #[derive(Resource)]
@@ -181,6 +185,8 @@ struct Ident {
     name: String,
     seed: u64,
     dir: PathBuf,
+    /// Manifest prescription (beacon, level, …) for captures and chrome.
+    demand: vivarium_world::spec::WorldSpec,
 }
 
 #[derive(Resource)]
@@ -200,7 +206,7 @@ struct WaterRes(WaterField);
 struct ReqTx(Sender<Request>);
 #[derive(Resource)]
 struct MsgRx(Mutex<Receiver<Msg>>);
-/// Pending screenshot path for a sighting, taken one frame after the markdown.
+/// Pending screenshot path for a capture, taken one frame after the dump.
 #[derive(Resource, Default)]
 struct PendingShot(Option<PathBuf>);
 
@@ -294,9 +300,8 @@ THE TWO TIME AXES
 The store is opened READ-ONLY. This binary cannot author a world citizen; the
 HUD shows the refused-write count so the wall is a number, not a promise.
 
-Press C at any moment something looks wrong: it writes a sighting (everything
-true at that instant, plus a screenshot) that a probe can later be written
-against.
+Press C to capture: writes captures/*-vivarium-info.v0.1.0.udon + .png (and a
+classic sighting md). Default overlay is CARVE chips; H cycles human / debug / minimal.
 ";
 
 fn main() {
@@ -479,11 +484,17 @@ fn main() {
             requested: None,
             inflight: false,
             frame: None,
-            hud_level: 0,
+            hud_level: 0, // human chrome default (#disc-explorer-human-chrome)
             notice: String::new(),
             notice_until: 0.0,
+            erosion_census,
         })
-        .insert_resource(Ident { name: spec.name, seed: spec.seed, dir })
+        .insert_resource(Ident {
+            name: spec.name.clone(),
+            seed: spec.seed,
+            dir,
+            demand: spec.clone(),
+        })
         .insert_resource(LadderRes(ladder))
         .insert_resource(ChainRes(chain))
         .insert_resource(CovRes(cov))
@@ -1235,34 +1246,132 @@ fn hud_update(
         text.0 = "reading the store...".into();
         return;
     };
-    if ex.hud_level == 2 {
-        text.0 = format!(
-            "[{}] {}   H: overlay",
-            frame.req.paint.name(),
-            match frame.req.lens {
-                Lens::Present => "present".to_string(),
-                Lens::Stage(i) => format!(
-                    "{:.2} Ga  T_p {:.0}C  stage {}/{}",
-                    ladder.0.ages_ga.get(i).copied().unwrap_or(0.0),
-                    ladder.0.tps.get(i).copied().unwrap_or(0.0),
-                    i + 1,
-                    ladder.0.len()
-                ),
-                Lens::Erosion(i) => format!(
-                    "erosion epoch {}  stage {}/{}",
-                    frame.facts.stage_epoch.unwrap_or(0),
-                    i + 1,
-                    frame.chain.len()
-                ),
-                Lens::Replay(n) => format!("replay {n} roots"),
-            }
-        );
-        return;
-    };
     let r = radius_km();
     let alt = orbit.dist - r;
+    let lens_short = match frame.req.lens {
+        Lens::Present => "present".to_string(),
+        Lens::Stage(i) => format!(
+            "{:.2} Ga T_p{:.0}C {}/{}",
+            ladder.0.ages_ga.get(i).copied().unwrap_or(0.0),
+            ladder.0.tps.get(i).copied().unwrap_or(0.0),
+            i + 1,
+            ladder.0.len()
+        ),
+        Lens::Erosion(i) => format!(
+            "erosion e{} {}/{}",
+            frame.facts.stage_epoch.unwrap_or(0),
+            i + 1,
+            frame.chain.len()
+        ),
+        Lens::Replay(n) => format!("replay {n}"),
+    };
+    let window_chip = if frame.req.window.is_some() {
+        "CLOSE-IN"
+    } else {
+        "WHOLE"
+    };
+    let beacon_chip = match &ident.demand.demand.beacon {
+        Some(b) => format!(
+            "BEACON f{} L{} ({},{}) {}x{}",
+            b.face, b.level, b.oi, b.oj, b.tiles, b.tiles
+        ),
+        None => "BEACON none".into(),
+    };
+    let surface_chip = {
+        let view = frame.req.level;
+        let coarse: usize = frame
+            .facts
+            .tier_cells
+            .iter()
+            .filter(|(&t, _)| t < view)
+            .map(|(_, &n)| n)
+            .sum();
+        let at: usize = frame
+            .facts
+            .tier_cells
+            .get(&view)
+            .copied()
+            .unwrap_or(0);
+        let cells = frame.facts.cells.max(1);
+        if frame.facts.tier_cells.is_empty() || frame.facts.prior_fallback_frac > 0.95 {
+            "SURFACE prior".into()
+        } else if coarse * 100 / cells > 5 && at * 100 / cells > 5 {
+            "SURFACE mixed".into()
+        } else if at * 100 / cells >= 50 {
+            format!("SURFACE carve L{view}")
+        } else {
+            "SURFACE coarse-cover".into()
+        }
+    };
 
+    // --- human chrome (default) ----------------------------------------------
+    if ex.hud_level == 0 {
+        let mut s = String::new();
+        s.push_str(&capture::carve_chip(ex.erosion_census));
+        s.push('\n');
+        s.push_str(&format!(
+            "VIEW  L{} · {window_chip} · {} · paint {} · relief ×{:.0}{}\n",
+            frame.req.level,
+            lens_short,
+            frame.req.paint.name(),
+            frame.req.exag,
+            if ex.inflight { " · updating…" } else { "" },
+        ));
+        s.push_str(&format!("{surface_chip}  ·  {beacon_chip}\n"));
+        let dir = Vec3::new(
+            orbit.pitch.cos() * orbit.yaw.cos(),
+            orbit.pitch.sin(),
+            orbit.pitch.cos() * orbit.yaw.sin(),
+        );
+        let geo = CubeCoord::from_unit([dir.x as f64, dir.y as f64, dir.z as f64]).to_geo();
+        s.push_str(&format!(
+            "alt {:.0} km  {:.1}{} {:.1}{}",
+            alt,
+            geo.lat.to_degrees().abs(),
+            if geo.lat >= 0.0 { "N" } else { "S" },
+            geo.lon.to_degrees().abs(),
+            if geo.lon >= 0.0 { "E" } else { "W" },
+        ));
+        if let Some(p) = current_pick(&windows, &cam, frame, &cov.0, &water.0) {
+            s.push_str(&format!(
+                "  ·  pick F{} L{} i={} j={}  {:+.0} m rel  [{}]\n",
+                p.face,
+                p.level,
+                p.i,
+                p.j,
+                p.elev_m - frame.facts.sea_m,
+                p.state.label(),
+            ));
+        } else {
+            s.push('\n');
+        }
+        s.push_str("H: human→debug→min  ·  C capture  ·  G/B cohort  ·  TAB paint\n");
+        if time.elapsed_secs() < ex.notice_until {
+            s.push_str("\n");
+            s.push_str(&ex.notice);
+        }
+        text.0 = s;
+        return;
+    }
+
+    // --- minimal (paint/lens only) -------------------------------------------
+    if ex.hud_level == 2 {
+        text.0 = format!(
+            "[{}] {}   H: human chrome",
+            frame.req.paint.name(),
+            lens_short
+        );
+        if time.elapsed_secs() < ex.notice_until {
+            text.0.push_str("\n");
+            text.0.push_str(&ex.notice);
+        }
+        return;
+    }
+
+    // --- full debug dump (former default) ------------------------------------
     let mut s = String::new();
+    s.push_str(&capture::carve_chip(ex.erosion_census));
+    s.push_str("  [DEBUG DUMP — H for human chrome]\n");
     for block in [
         hud::header(&ident.name, ident.seed, frame, &ladder.0, &cov.0, ex.inflight),
         hud::census(frame, &cov.0),
@@ -1291,7 +1400,6 @@ fn hud_update(
         ));
     }
 
-    // Where the eye is, and what is under the cursor.
     let dir = Vec3::new(
         orbit.pitch.cos() * orbit.yaw.cos(),
         orbit.pitch.sin(),
@@ -1340,29 +1448,23 @@ fn hud_update(
     }
 
     let unmodelled = hud::unmodelled(frame, &ladder.0, &cov.0);
-    if ex.hud_level == 1 {
+    s.push('\n');
+    s.push_str(hud::honesty(&frame.roots).trim_end());
+    s.push_str("\n\nNOT MODELLED (so your eye is not chasing an absence):\n");
+    for line in &unmodelled {
+        s.push_str("  - ");
+        s.push_str(&wrap(line, HUD_COLS, "    "));
         s.push('\n');
-        s.push_str(hud::honesty(&frame.roots).trim_end());
-        s.push_str("\n\nNOT MODELLED (so your eye is not chasing an absence):\n");
-        for line in &unmodelled {
-            s.push_str("  - ");
-            s.push_str(&wrap(line, HUD_COLS, "    "));
-            s.push('\n');
-        }
-        s.push_str("\nDEPICTION -- what is on screen without a world referent ( #norm-no-depiction-without-referent ):\n");
-        for line in hud::depiction(frame, sun.headlight) {
-            s.push_str("  - ");
-            s.push_str(&wrap(&line, HUD_COLS, "    "));
-            s.push('\n');
-        }
-        s.push('\n');
-        s.push_str(&hud::keys(frame.req.paint));
-    } else {
-        s.push_str(&format!(
-            "\nH: {} things this world does NOT model, and the store census   |   TAB paint  T deep time  V replay  C sighting  H hide\n",
-            unmodelled.len()
-        ));
     }
+    s.push_str("\nDEPICTION -- what is on screen without a world referent ( #norm-no-depiction-without-referent ):\n");
+    for line in hud::depiction(frame, sun.headlight) {
+        s.push_str("  - ");
+        s.push_str(&wrap(&line, HUD_COLS, "    "));
+        s.push('\n');
+    }
+    s.push('\n');
+    s.push_str(&hud::keys(frame.req.paint));
+    s.push_str("\nH: debug→minimal→human  ·  C capture pair\n");
 
     if time.elapsed_secs() < ex.notice_until {
         s.push_str("\n\n");
@@ -1391,8 +1493,7 @@ fn wrap(text: &str, width: usize, indent: &str) -> String {
     out
 }
 
-/// **C** — capture a sighting. The affordance that turns "that looked wrong"
-/// into something a probe can be written against.
+/// **C** — capture pair (udon + png) + classic sighting md.
 #[allow(clippy::too_many_arguments)]
 fn capture_sighting(
     time: Res<Time>,
@@ -1446,23 +1547,35 @@ fn capture_sighting(
     };
     let unmodelled = hud::unmodelled(frame, &ladder.0, &cov.0);
     let depiction = hud::depiction(frame, sun.headlight);
-    let (notice, shot) = match sighting::write(frame, &vantage, &unmodelled, &depiction) {
-        Ok(path) => {
-            println!("[explore] sighting written: {}", path.display());
+    let (notice, shot) = match capture::write(
+        frame,
+        &vantage,
+        ex.erosion_census,
+        Some(&ident.demand),
+        &unmodelled,
+        &depiction,
+    ) {
+        Ok((info, png)) => {
+            println!("[explore] capture written: {}", info.display());
+            println!("[explore]   screenshot → {}", png.display());
             (
-                format!("SIGHTING WRITTEN  {}\n(fill in 'What looked wrong' -- everything else is already captured)", path.display()),
-                Some(path.with_extension("png")),
+                format!(
+                    "CAPTURED  {}\n  + {}\n(C again anytime · agent: last files in captures/)",
+                    info.display(),
+                    png.display()
+                ),
+                Some(png),
             )
         }
-        Err(e) => (format!("SIGHTING FAILED: {e}"), None),
+        Err(e) => (format!("CAPTURE FAILED: {e}"), None),
     };
     ex.notice = notice;
-    ex.notice_until = time.elapsed_secs() + 6.0;
+    ex.notice_until = time.elapsed_secs() + 8.0;
     pending.0 = shot;
 }
 
-/// The screenshot is taken the frame *after* the markdown, so the "SIGHTING
-/// WRITTEN" notice is not itself in the picture.
+/// The screenshot is taken the frame *after* the dump, so the notice is not
+/// required in the picture.
 fn take_pending_shot(mut commands: Commands, mut pending: ResMut<PendingShot>, mut skip: Local<bool>) {
     let Some(path) = pending.0.clone() else {
         *skip = false;

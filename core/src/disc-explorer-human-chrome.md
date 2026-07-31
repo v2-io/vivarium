@@ -77,5 +77,6 @@ Human chrome is deliberately **smaller** than the debug dump. Completeness lives
 
 - **Code homes:** `crates/vivarium-explore/` (`hud.rs`, `main.rs` keys, `sighting.rs`); `watch::ErosionCohort`; `observe::eroded_region_census`.
 - **Order of build (ideal):** (1) capture pair promotion — #disc-explorer-debug-capture ; (2) default chrome = chips, dump off or `H`/flag only ; (3) status lead block shares CARVE chip data.
+- **First iteration shipped 2026-07-31 (awaiting Joseph check):** default `hud_level=0` chips (CARVE / VIEW / SURFACE / BEACON / pick); `H` cycles human→debug dump→minimal; `vivarium status` lead block fresh/stale/REBUILD/beacon before pyramid.
 - **Do not** "fix" attention by lengthening the dump. **Do not** auto-rebuild on stale without an explicit policy decision.
 - **Hotlist:** ideation rank for chrome/capture lives in #disc-known-active-hotspots when Joseph re-prioritizes after this segment lands.

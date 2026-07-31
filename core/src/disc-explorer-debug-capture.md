@@ -72,5 +72,6 @@ Versioned udon matters for agents: markdown bodies drift; a `v0.N.N` schema can 
 
 - **Code:** `sighting.rs`, `main.rs` (PendingShot, autoshot `VIVARIUM_SHOT`), `hud.rs` (dump to relegate), `observe::eroded_region_census`.
 - **Build order:** promote sighting → `captures/` + udon schema v0.1.0 → default-off dump → status lead block shared with capture header.
+- **First iteration shipped 2026-07-31 (awaiting Joseph check):** `C` → `capture::write` under `<world>/captures/` (or `$VIVARIUM_CAPTURES`): `{stamp}-vivarium-info.v0.1.0.udon` + `{stamp}.png`; still writes classic `sightings/` md for free-form notes.
 - **Do not** invent a second parallel "screenshot tool" beside sightings — **evolve** the sighting path.
 - Companion: #disc-explorer-human-chrome (glance); #disc-explorer-instrument-parity (P0–P4 bar); #ops-changelog-is-the-acceptance-check (landing captures).
