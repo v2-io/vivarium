@@ -84,6 +84,6 @@ Chrome owns *glance*; capture owns *durable dump*; this segment owns *what a sug
 
 - **Code home:** `crates/vivarium-world/src/hint.rs` (process-global active set + edge log); consumers: `vivarium status` lead, explore startup + HUD, `capture::write` / `bed_status_block`.
 - **Autoshot:** `VIVARIUM_SHOT` writes the same capture pair as `C` (including `hints:`).
-- **Soft-ok hint** (`erosion-readable`) may be retired to silence if it becomes chrome noise — that is a product call, not a claim failure.
+- **Verified 2026-07-31 afternoon (post first-light rebuild under `src=1cce2aa4…`):** pre-rebuild status set `erosion-stale-src` + ★ REBUILD; post-rebuild status set `erosion-readable` only, **no** rebuild scream (`fresh 13368 · stale 118854`). Edge log origin `vivarium.rs:878`. Soft-ok hint may still be retired to silence if chrome-noisy.
 - **Do not** grow a parallel “suggestions” table in explore only; new conditions call `hint::set` / `clear` (or a small sync helper) with a stable id.
 - Companions: #disc-explorer-human-chrome · #disc-explorer-debug-capture · #norm-caught-disciplines-become-mechanisms (provenance specimen).

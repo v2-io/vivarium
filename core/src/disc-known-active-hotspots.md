@@ -44,52 +44,56 @@ It is **not** claim canon, not a build plan Joseph has ratified, and not a secon
 
    Related as "the sphere is real at joins"; **different repairs.**
 
-5. **Highest-leverage next — revised 2026-07-31 night (Joseph: P4 done-for-now; burn sill-graph).** Ideation rank only; parity definition: `#disc-explorer-instrument-parity`. **Instrument parity closed for now** (not certified perfect). **Next cut: sill-graph → flux half.**
+5. **Highest-leverage next — revised 2026-07-31 afternoon (rebuild + chrome/hints parked).** Ideation rank only; parity definition: `#disc-explorer-instrument-parity`. **Instrument parity closed for now** (not certified perfect). **Chrome / hints parked** (Joseph 2026-07-31: acceptable until out-of-band research wraps). **Next cut: world physics eyes + FE(9) lake re-measure under fresh cohort.**
 
    **Parity bar.** P4: orbit/zoom and inspect fluvial/ocean/depression; weirdness is physics or paint-law — **not** thrash and **not** ethereal sea. **Joseph 2026-07-31:** lattice gone, high-fidelity performance acceptable, FOV stamps good; L14-as-fBm is a lawful wonder (coverage/stale/prior), not instrument failure — **P4 done-for-now**.
 
-   **What already landed (not reopened).** Mixed-tier view FE(8); pad/NaN; chart-edge direction resample; shared `ocean_mask` pure function; level-filter; face-local R; altitude windows; latest-wins; P0 roots hot; P1 thrash boring; feel needle `:progress`; face ocean sample; tile-cover half-open lattice fix. Water settle remains **not** the lake blocker.
+   **What already landed (not reopened).** Mixed-tier view FE(8); pad/NaN; chart-edge direction resample; shared `ocean_mask` pure function; level-filter; face-local R; altitude windows; latest-wins; P0 roots hot; P1 thrash boring; feel needle `:progress`; face ocean sample; tile-cover half-open lattice fix; **sill1+flux1 Jacobi inject**; **matched-ratio probe (one run)**; **human chrome + `#ops-operator-hints` + capture pairs + autoshot**; **first-light rebuild under `src=1cce2aa4…`**. Water settle remains **not** the lake blocker.
 
    | Rank | Action | Why high leverage | Not this instead |
    | --- | --- | --- | --- |
-   | **1–5** | **P0–P4 instrument ladder** — **landed / P4 done-for-now 2026-07-31 night** (Joseph eyes) | Spot-check usable | Not reopening chrome |
-   | **6** | **Sill + flux Jacobi wire** — **landed 2026-07-31 night** (`sill1` + `flux1`); lake-sized FE(9) re-measure still open | Non-local datum + catchment | Not volume hierarchy |
-   | **7** | **Matched-ratio probe** — **run once** (within-ratio spreads 0.9–5.5 m; empirical only — not law) | Schedule science | Not operating-law promotion |
-   | **8** | **Rebuild under sill1+flux1** — **landed** (first-light complete) | Fresh cohort | — |
-   | **9** | Phase-3 / router / χ / cold-stage — one after rebuild eyes | — | Not all four |
-   | demote | Water settle as lake blocker; Caspian (answered); demand spool; costume-green cycle; explorer polish not serving physics | — | — |
+   | **1–5** | **P0–P4 instrument ladder** — **landed / P4 done-for-now** | Spot-check usable | Not reopening thrash |
+   | **6** | **Sill + flux Jacobi wire** — **landed** (`sill1` + `flux1` in halo key); lake-sized FE(9) **re-measure still open** | Non-local datum + catchment | Not volume hierarchy yet |
+   | **7** | **Matched-ratio probe** — **run once** (spreads 0.9–5.5 m; empirical — not law) | Schedule science | Not promoting $d/(v\sigma)$ |
+   | **8** | **Rebuild under sill1+flux1 + post-hint binary** — **landed 2026-07-31 afternoon** | Fresh cohort eyes | — |
+   | **8b** | **Chrome / operator hints / capture** — **landed; parked** (HUD redesign later; out-of-band research) | Attention channel exists | Not more HUD polish this session |
+   | **9** | **Eyes on fresh bed** — explore beacon L13 under current `src`; FE(9) lake / sill re-measure if weird | Physics can convict again | Not more instrument scaffolding |
+   | **10** | Phase-3 / router / χ / cold-stage — **one** after 9 | World piece | Not all four |
+   | demote | Water settle as lake blocker; Caspian (answered); demand spool; costume-green cycle; chrome polish while research pending | — | — |
 
-   **Sequence (2026-07-31 night).** P4 done-for-now → sill-graph (object ✓, wire next) → flux half → re-measure/rebuild → one world piece.
+   **Sequence (present).** P4 ✓ → sill/flux wire ✓ → rebuild ✓ → **eyes + FE(9) re-measure** → pick one world piece (router / χ / phase-3 / cold-stage).
 
-   **Phase floor.** Honest red on cycle closure; encouraging signs (P0/P1, shared mask fn, inventory box, feel needle) stay loud. Leakage → stricter role split.
+   **Phase floor.** Honest red on cycle closure; encouraging signs stay loud. Leakage → stricter role split.
 
-6. **Molten ground (era-volatile code) — supporting half, revised 2026-07-31.** Before quoting a measured emergent statistic, check whether its ground is warm; if so, carry the era or re-measure (`DECISIONS[kernel-era-keys-and-the-probe-registry]` is the mechanization program; this list covers the gap until that ships). Before briefing an agent into a warm region, say it is warm.
+6. **Molten ground (era-volatile code) — supporting half, revised 2026-07-31 afternoon.** Before quoting a measured emergent statistic, check whether its ground is warm; if so, carry the era or re-measure. Before briefing an agent into a warm region, say it is warm.
 
    | Region | State | Era note |
    | --- | --- | --- |
-   | **`erosion.rs` / `query.rs` / chart-edge + pad path** | **Warm — post-rebuild cohort** | First-light **rebuilt 2026-07-31** world git `7216c8dca` (~3552 fresh erosion under current `src`). Pre-rebuild stats are suspect until re-run. |
-   | **`sea_level::ocean_mask` / water fill / explore paints** | **JUST RE-KEYED — shared mask 2026-07-31** | One pure function; water initial fill no longer pours the waterline into landlocked basins. Changelog `2026-07-31-01`. |
-   | **`query.rs` / builder (halo keys)** | **Adopted, warm** | Exchange region + water `BedArticle` in keys; view prefers halo; compute names its article. Null-diff eras under earlier `src=` do not license quoting new structural numbers without re-measure. |
-   | **`water.rs`** | Wave landed, cooling | Implicit friction + Jarrett static sealed; §5 cap-off ladder still pre-fix. Not the lake path. |
-   | **`measure.rs` signed geometry** | Warm (pad path) | `cell_*_i` i64 forms; area/solid-angle consumers must not mix eras across the pad re-key. |
-   | **`uplift.rs` chart edge** | **Still clamps data** | Fluvial windows resample; uplift off-chart still rim-clamp — residual mismatch risk if a future consumer assumes both share the resample policy. |
-   | **Router remedy stack** | Step (b) pending | Diagonal-kill + transmissivity measured CUBE winner; fan curl/spiral numbers predate it. |
-   | **Cold this week** | Isostasy column + cooling chain; stage-chain instrument (no-exchange path); provenance tooling | Ordinary quotes safe when grounded only there. |
-   | **first-light store** | **Local git `7216c8dca`** | `~/.cache/vivarium/globe-world`. Commit with every changelog-owed rebuild. |
+   | **`erosion.rs` / `query.rs` / sill+flux inject** | **Warm — post-rebuild cohort** | First-light **rebuilt 2026-07-31 afternoon** under `src=1cce2aa4…`: **fresh 13368** erosion-tile, stale 118854 retained. World git **`aa13710ca`**. Pre-this-rebuild stats are suspect. |
+   | **`sea_level::ocean_mask` / water fill / explore paints** | Cooling | Shared mask 2026-07-31; changelog `2026-07-31-01`. |
+   | **`query.rs` / builder (halo keys)** | **Adopted, warm** | `sill1,flux1` in `BedArticle::Halo` key token; view prefers halo. |
+   | **`hint.rs` / explore chrome / capture** | **New, cool enough to quote** | Operator hints edge-log verified: post-rebuild → `erosion-readable`, no ★ REBUILD. Parked pending research. |
+   | **`water.rs`** | Wave landed, cooling | Not the lake path. |
+   | **`measure.rs` signed geometry** | Warm (pad path) | Do not mix eras across pad re-key. |
+   | **`uplift.rs` chart edge** | **Still clamps data** | Fluvial resample; uplift still rim-clamp. |
+   | **Router remedy stack** | Step (b) pending | Fan numbers predate CUBE winner. |
+   | **Cold this week** | Isostasy + cooling chain; stage-chain instrument; provenance tooling | Safe for ordinary quotes. |
+   | **first-light store** | **Local git `aa13710ca`** | `~/.cache/vivarium/globe-world`. Commit with every rebuild. |
 
-7. **Dependency-tracking mechanism — first rungs built 2026-07-29 (late).** Witnessed read-sets + `Observatory` type split shipped. **Open:** wiring region-exchange interiors / stage ladders / epoch reductions; audit command that diffs read-sets across cohorts; full fold-or-check-into-key design. Rank **7** (sill + flux, post-P4) should land WITH witnesses from birth. Distinct from kernel-era probe registry (measurement drift vs key completeness).
+7. **Dependency-tracking mechanism — first rungs built 2026-07-29 (late).** Witnessed read-sets + `Observatory` type split shipped. **Open:** wiring region-exchange interiors / stage ladders / epoch reductions; audit command that diffs read-sets across cohorts; full fold-or-check-into-key design. Distinct from kernel-era probe registry.
 
-8. **Instrument / ops notes (revised 2026-07-31 night — P4 done-for-now).**
-   - **P0–P4 closed for now** (Joseph): thrash boring; face ocean; lattice fix; FOV stamps; high-fid performance OK.
+8. **Instrument / ops notes (revised 2026-07-31 afternoon).**
+   - **P0–P4 closed for now** (Joseph).
+   - **Chrome + hints + capture pairs + autoshot:** first cut **acceptable / parked** (Joseph: out-of-band research; HUD redesign later). Law: `#ops-operator-hints`, `#disc-explorer-human-chrome`, `#disc-explorer-debug-capture`.
    - **Cycle still honest red** (phase-3 not Kept).
-   - **Next physics:** sill-graph wire → flux half (`sill_graph` module + FE(9) tests landed).
-   - **World VCS + provenance:** digests only from `bin/provenance`. Rebuild under current `src` may be in flight.
+   - **Next physics:** eyes on fresh sill1+flux1 bed; FE(9) lake-sized re-measure; then one of router / χ / phase-3 / cold-stage.
+   - **World VCS + provenance:** digests only from `bin/provenance`. Current: `src=1cce2aa4…`, world-git `aa13710ca`.
 
 ## Epistemic Status
 
 **Max attainable: discussion-grade** as maintained ideation — completeness is impossible; honesty about dated judgment is the bar.
 
-**Currently `discussion-grade`.** **2026-07-31 night:** P4 done-for-now; sill-graph object+tests landed; wire/flux next. Stage `draft`.
+**Currently `discussion-grade`.** **2026-07-31 afternoon:** rebuild landed; chrome/hints parked; next is physics eyes + FE(9) re-measure. Stage `draft`.
 
 ## Discussion
 
@@ -105,4 +109,5 @@ The molten-code half remains useful when digests move this fast — but FE(6) is
 - **Retirement path for FE(6) only:** `DECISIONS[kernel-era-keys-and-the-probe-registry]` tiers 1–2; until then hand-kept is accepted.
 - **Companions:** #disc-open-problem-census ; `CONSOLIDATION-STATUS.md` (not canon; core wins on conflict).
 - **Do not** promote FE(5) rows into claim segments by copy-paste; promote by building or by writing a real observation/formulation that can convict.
-- **2026-07-31 re-true method (updated night):** code grep of threshold sites; status promise ladder; provenance table. **Present:** `sill_graph` module + FE(9) tests. **Still absent:** production sill wire / store memo; `SpillLevel` exchange type (must not reappear); `FluxRound`. Halo pad/resample tests: `an_off_chart_halo_cell_resamples_the_neighbouring_face`, `a_padded_window_places_the_tile_origin_at_the_halo_offset`.
+- **2026-07-31 re-true method (updated afternoon):** status census + `bin/provenance` + world-git. **Present:** `sill_graph` + FE(9) tests + Jacobi inject (`sill1`); `flux_record` first wire (`flux1`); first-light rebuilt under `src=1cce2aa4…` (fresh 13368). **Still open:** lake-sized FE(9) re-measure; C+1 multi-round flux exactness; volume-aware hierarchy; `SpillLevel` exchange type must not reappear. Halo pad/resample tests exist for chart-edge family.
+- **Hint channel check after rebuild (2026-07-31):** no ★ REBUILD; `[hint] set erosion-readable @ vivarium.rs:878`; capture `hints:` should match active set (no `next_action`).
