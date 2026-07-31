@@ -56,6 +56,9 @@ pub struct SillGraph {
     /// Perimeter cells that could meet a neighbour: `(local_cell_index, bed_m,
     /// basin_id)`.
     pub perimeter_portals: Vec<(usize, f32, u32)>,
+    /// Per-cell basin label at extract time (`OUTLET` for outlet terminals).
+    /// Empty when the graph was assembled without a field.
+    pub cell_basin: Vec<u32>,
 }
 
 const NEIGHBORS: [(i32, i32); 8] = [
@@ -285,9 +288,12 @@ impl SillGraph {
         }
 
         let mut perimeter_portals = Vec::new();
+        let mut cell_basin = vec![OUTLET; n];
         for i in 0..n {
+            let lab = term_label(terminal[i]);
+            cell_basin[i] = lab;
             if is_edge(i) {
-                perimeter_portals.push((i, h[i], term_label(terminal[i])));
+                perimeter_portals.push((i, h[i], lab));
             }
         }
 
@@ -295,7 +301,33 @@ impl SillGraph {
             basins,
             edges,
             perimeter_portals,
+            cell_basin,
         }
+    }
+
+    /// Per-cell absolute water-surface elevation (m) from flooding this graph:
+    /// basin cells get their spill level; outlet / non-basin cells get their bed.
+    ///
+    /// Length equals [`Self::cell_basin`]. Used to inject a region-consistent
+    /// spill datum into tile windows (`#form-same-level-halo-exchange` FE(9) wire).
+    pub fn spill_surface(&self, bed: &[f32]) -> Vec<f32> {
+        assert_eq!(
+            bed.len(),
+            self.cell_basin.len(),
+            "spill_surface: bed and cell_basin length must match"
+        );
+        let levels: HashMap<u32, f32> = self.spill_levels().into_iter().collect();
+        self.cell_basin
+            .iter()
+            .enumerate()
+            .map(|(i, &b)| {
+                if b == OUTLET {
+                    bed[i]
+                } else {
+                    levels.get(&b).copied().unwrap_or(bed[i]).max(bed[i])
+                }
+            })
+            .collect()
     }
 
     /// Flood this graph as Priority-Flood on basins: each basin's spill level is
@@ -393,6 +425,7 @@ impl SillGraph {
             basins,
             edges,
             perimeter_portals: Vec::new(),
+            cell_basin: Vec::new(),
         }
     }
 }
@@ -535,6 +568,18 @@ mod tests {
             g.basins.is_empty(),
             "flat with outlet row should have no pits: {g:?}"
         );
+    }
+
+    /// Region extract + spill_surface: FE(9) pits both stand at 8.
+    #[test]
+    fn fe9_spill_surface_raises_both_pits_to_eight() {
+        let (h, nx, outlets) = fe9_as_field();
+        let g = SillGraph::extract_rect(&h, nx, 1, &outlets);
+        let surf = g.spill_surface(&h);
+        // Cell 2 (pit A floor 2) and cell 5 (pit B floor 1) should both report 8.
+        assert!((surf[2] - 8.0).abs() < 1e-3, "A surface {}, want 8", surf[2]);
+        assert!((surf[5] - 8.0).abs() < 1e-3, "B surface {}, want 8", surf[5]);
+        assert_eq!(g.cell_basin.len(), h.len());
     }
 
     #[test]

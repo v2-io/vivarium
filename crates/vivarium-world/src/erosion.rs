@@ -347,8 +347,10 @@ impl BedArticle {
     pub fn key_token(&self) -> Option<String> {
         match self {
             BedArticle::EdgeSink => None,
+            // `sill1` = region sill-graph spill inject (FE(9) wire, 2026-07-31).
+            // Changing that algorithm must bump the digit so beds do not alias.
             BedArticle::Halo { schedule: s, region: r } => Some(format!(
-                "halo,d{},s{},r{},o{}+{},t{}x{}",
+                "halo,d{},s{},r{},o{}+{},t{}x{},sill1",
                 s.depth, s.cadence, s.cone_rho, r.oi, r.oj, r.tiles_i, r.tiles_j
             )),
         }
@@ -403,6 +405,12 @@ pub struct Fluvial {
     /// field behaves exactly as the geometry-inferred policy did; change it with
     /// [`Fluvial::set_edge_contract`].
     edge: EdgeContract,
+    /// Region-assembled absolute spill surface (m) from the sill graph
+    /// (`#form-same-level-halo-exchange` FE(9) wire). Length `nx²` when set —
+    /// each cell's water surface must reach at least this level after local
+    /// Priority-Flood so straddling lakes agree across tile windows. `None`
+    /// for plain single-tile carves.
+    region_spill: Option<Vec<f32>>,
 }
 
 const NEIGHBORS: [(i32, i32); 8] =
@@ -709,7 +717,17 @@ impl Fluvial {
             precip_weight: vec![1.0; nx * nx],
             last_delta_m: f32::INFINITY,
             edge: Self::inferred_edge_contract(level, oi.max(0) as u32, oj.max(0) as u32, nx),
+            region_spill: None,
         }
+    }
+
+    /// Inject a region-assembled spill surface (absolute water elevation, m) for
+    /// the next [`Self::erode`] epochs — FE(9) Jacobi wire. Length must be `nx²`.
+    pub fn set_region_spill(&mut self, spill: Option<Vec<f32>>) {
+        if let Some(ref s) = spill {
+            assert_eq!(s.len(), self.nx * self.nx, "region_spill length must be nx²");
+        }
+        self.region_spill = spill;
     }
 
     /// The contract geometry implies — a whole cube face (`oi = oj = 0`,
@@ -952,6 +970,23 @@ impl Fluvial {
                 self.h[j] = self.h[j].max(elev + EPS);
                 heap.push(Cell { elev: self.h[j], spill: spill_j, seq, i: j });
                 seq += 1;
+            }
+        }
+        // FE(9) wire: raise standing water / routing surface to the region-
+        // assembled spill so straddling basins do not freeze at the tile sill.
+        if let Some(ref rs) = self.region_spill {
+            for i in 0..nx * nx {
+                if outlets[i] {
+                    continue;
+                }
+                let target = rs[i];
+                if target > bed[i] {
+                    let w = target - bed[i];
+                    if w > water[i] {
+                        water[i] = w;
+                        self.h[i] = self.h[i].max(target + EPS);
+                    }
+                }
             }
         }
         water
@@ -2869,6 +2904,13 @@ pub struct ExchangedTile {
 /// returned. This is the production path the probe was the instrument for —
 /// still region-scoped (not a single-tile pull with a dependency cone).
 ///
+/// **Sill-graph wire (FE(9)).** After each cadence assemble of interior beds, a
+/// sill graph is extracted over the **whole region** (coast / ocean outlets
+/// only — not per-tile edge sinks), flooded, and the absolute spill surface is
+/// written into each window's interior via [`Fluvial::set_region_spill`] before
+/// the next erode chunk. That is the non-local half of the boundary datum;
+/// the local half remains the elevation halo refill.
+///
 /// `mk_window(oi, oj, nx)` must return a fully driven [`Fluvial`] (surface,
 /// uplift, precip) whose origin is `(oi, oj)` and side `nx`. Origins may be
 /// slightly negative after halo expansion; the maker is responsible for
@@ -2994,9 +3036,105 @@ pub fn carve_region_jacobi_exchange(
             for (t, f) in tiles.iter_mut().enumerate() {
                 refill(&assembled, t, f);
             }
+            // FE(9): region sill graph on the assembled interiors → inject spill
+            // surface into each window before the next erode chunk.
+            inject_region_sill_spill(
+                &mut tiles,
+                &assembled,
+                region_oi,
+                region_oj,
+                tile_n,
+                tiles_i,
+                tiles_j,
+                d,
+            );
         }
     }
     out
+}
+
+/// Extract a sill graph over the assembled region bed, flood it, and write the
+/// absolute spill surface into each tile window's interior cells.
+fn inject_region_sill_spill(
+    tiles: &mut [Fluvial],
+    assembled: &[f32],
+    region_oi: i64,
+    region_oj: i64,
+    tile_n: usize,
+    tiles_i: usize,
+    tiles_j: usize,
+    d: usize,
+) {
+    let span_i = tile_n * tiles_i;
+    let span_j = tile_n * tiles_j;
+    if span_i == 0 || span_j == 0 || assembled.len() != span_i * span_j {
+        return;
+    }
+    // Outlets: region perimeter always (region-scale base level). When the
+    // assembled field is square, also mark ocean-connected submerged cells
+    // (`ocean_mask` is square-only today).
+    let mut outlets = vec![false; span_i * span_j];
+    for y in 0..span_j {
+        for x in 0..span_i {
+            if x == 0 || y == 0 || x + 1 == span_i || y + 1 == span_j {
+                outlets[y * span_i + x] = true;
+            }
+        }
+    }
+    if span_i == span_j {
+        if let Some(f) = tiles.first() {
+            let sea = crate::sea_level::derived_sea_level_m(f.seed) as f32;
+            let ocean = crate::sea_level::ocean_mask(assembled, span_i, sea);
+            for (o, &is_ocean) in outlets.iter_mut().zip(ocean.iter()) {
+                *o = *o || is_ocean;
+            }
+        }
+    }
+    let g = crate::sill_graph::SillGraph::extract_rect(assembled, span_i, span_j, &outlets);
+    if g.basins.is_empty() {
+        for f in tiles.iter_mut() {
+            f.set_region_spill(None);
+        }
+        return;
+    }
+    let surface = g.spill_surface(assembled);
+    let win = tile_n + 2 * d;
+    for tj in 0..tiles_j {
+        for ti in 0..tiles_i {
+            let t = tj * tiles_i + ti;
+            let mut spill_win = vec![0.0f32; win * win];
+            // Interior gets region spill; halo cells leave 0 (bed-only; not used
+            // for ownership — fill only applies spill above bed).
+            for j in 0..tile_n {
+                for i in 0..tile_n {
+                    let gx = ti * tile_n + i;
+                    let gy = tj * tile_n + j;
+                    let s = surface[gy * span_i + gx];
+                    spill_win[(d + j) * win + (d + i)] = s;
+                }
+            }
+            // Halo: copy from region surface where in-block, else bed (no-op).
+            let bi = (ti * tile_n) as i64 - d as i64;
+            let bj = (tj * tile_n) as i64 - d as i64;
+            for j in 0..win {
+                for i in 0..win {
+                    if i >= d && i < d + tile_n && j >= d && j < d + tile_n {
+                        continue;
+                    }
+                    let gx = bi + i as i64;
+                    let gy = bj + j as i64;
+                    if gx >= 0 && gy >= 0 && (gx as usize) < span_i && (gy as usize) < span_j {
+                        spill_win[j * win + i] = surface[gy as usize * span_i + gx as usize];
+                    } else {
+                        // Off-region: no forced spill (use local bed only).
+                        spill_win[j * win + i] = f32::NEG_INFINITY;
+                    }
+                }
+            }
+            let _ = (region_oi, region_oj); // origins reserved for future keying
+            tiles[t].set_region_spill(Some(spill_win));
+        }
+    }
 }
 
 /// A finished erosion run, sampleable at ANY finer level: within the region, a

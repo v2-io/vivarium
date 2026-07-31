@@ -8,8 +8,8 @@
 
 | # | Task | Status |
 |---|---|---|
-| 1 | Present-true stale segments (agent drift list) | **in progress** |
-| 2 | Wire sill-graph into Jacobi + real memo/key | pending |
+| 1 | Present-true stale segments (agent drift list) | **done** |
+| 2 | Wire sill-graph into Jacobi + real memo/key | **done** (inject + `sill1` key; lake re-measure still open) |
 | 3 | Flux-half record (per seam/stage, keyed) | pending |
 | 4 | Flux-half in carve loop | pending |
 | 5 | Matched-ratio re-measure (`halo_exchange_probe`) | pending |
@@ -33,3 +33,4 @@
 ## Log
 
 - **2026-07-31 night:** Goal set. P4 done-for-now. `sill_graph` object+FE(9) tests already landed (`b4caf10`). Present-true pass starts.
+- **2026-07-31 night:** Present-true committed. Jacobi sill inject: region extract → spill surface → `Fluvial::region_spill` between cadence chunks; halo key `sill1`. Next: flux half.
