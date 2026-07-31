@@ -313,14 +313,13 @@ pub struct FrameFacts {
     pub stage_epoch: Option<u32>,
     pub stage_tiles: usize,
     /// Drawn cells by the **fidelity tier that answered them** — the region's
-    /// level, not the view's ( #form-fidelity-ladder ).
+    /// level, not the view's ( #form-fidelity-ladder FE(8) ).
     ///
-    /// This is the countable half of the trap a fine view walks into. A coarse
-    /// region still answers a fine cell: `ErodedRegion::surface_m` returns a
-    /// bilinear read of the coarse carve *plus the fine prior's detail
-    /// re-added*. So a view at L13 over an L9 carve is full of kilometre-scale
-    /// relief, and none of it came from a fluvial kernel run at that scale.
-    /// Nothing looks wrong — which is why the census has to say it.
+    /// Depiction uses `surface_at_carved` (carve only). A coarse tier still
+    /// *covers* a fine cell, but the mesh is stair-stepped at the carve grain —
+    /// it does **not** re-add fine prior detail. The census says which carve
+    /// answered so absence of a fine run is legible, not so a phantom band is
+    /// excused.
     pub tier_cells: std::collections::BTreeMap<u8, usize>,
     /// Total cells drawn this frame, the denominator for every fraction here.
     pub cells: usize,

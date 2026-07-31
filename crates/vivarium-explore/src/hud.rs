@@ -401,25 +401,24 @@ pub fn timeline(ladder: &Ladder, idx: usize, width: usize) -> String {
 /// **Which fidelity tier drew each cell** — the one line a fine view cannot do
 /// without.
 ///
-/// The trap it closes is the exact mirror of #obs-coarse-view-draws-the-uncarved-prior,
-/// and it is worse because it is invisible rather than merely silent. A coarse
-/// view over a fine build draws the *uncarved prior* and looks unremarkable. A
-/// fine view over a coarse build draws something that looks *better*: an
-/// `ErodedRegion` answers any cell at its own level or finer, and its answer at
-/// a finer level is a bilinear read of the coarse carve **plus the fine prior's
-/// detail re-added** ( #form-fidelity-ladder ). So a view at L13 over an L9 carve
-/// is full of kilometre-scale relief, correctly derived, that no fluvial kernel
-/// ever computed — valleys with no drainage behind them. An eye trained on real
-/// landscapes will read them as fluvial, because that is what they look like.
+/// **Present law ( #form-fidelity-ladder FE(8) ).** The mesh samples
+/// `surface_at_carved`: the stored carve only — no fine-prior detail re-added.
+/// A fine view over a coarser carve is therefore **stair-stepped at the carve's
+/// grain** (nearest/carved cell). That is the honest picture of absence, not a
+/// second world layer. Re-adding prior detail as decoration was retired
+/// (`DECISIONS[a-view-renders-the-physics-and-adds-no-terms]`).
 ///
-/// Nothing about the picture says so. This line does.
+/// **Still said out loud:** (1) fraction answered by each carve tier vs the view
+/// level; (2) uncovered cells still fall back to the uncarved prior at the
+/// *view* level — a named residual, not silent paint; (3) fluvial structure at
+/// the view grain requires a beacon/run at that grain.
 pub fn tier_line(frame: &Frame) -> String {
     let f = &frame.facts;
     let view = frame.req.level;
     if f.tier_cells.is_empty() {
         return format!(
             "carve tiers: NONE -- every cell on screen is the uncarved prior at L{view} \
-             ({:.0}% of drawn cells)",
+             ({:.0}% of drawn cells) — no erosion root covers this frame",
             f.prior_fallback_frac * 100.0
         );
     }
@@ -439,19 +438,28 @@ pub fn tier_line(frame: &Frame) -> String {
     let coarse: usize = f.tier_cells.iter().filter(|(&t, _)| t < view).map(|(_, &n)| n).sum();
     let warning = if pct(coarse) > 1.0 {
         format!(
-            "  <<< {:.0}% of what you see is a COARSER carve sampled finely: bilinear over the carve, \
-             with the fine prior's detail re-added ( #form-fidelity-ladder ). The small-scale relief there \
-             is REAL law and was NOT produced by a fluvial run at this scale -- valleys with no drainage \
-             behind them. `vivarium build` a beacon at this level is what changes that",
+            "  <<< {:.0}% of drawn cells are covered only by a COARSER carve (mesh samples \
+             surface_at_carved — stair-step at carve grain, NO fine-prior detail re-added; \
+             #form-fidelity-ladder FE(8)). Relief finer than that carve is ABSENT from the \
+             bed, not invented. `vivarium build` a beacon at L{view} is what puts fluvial \
+             structure at this grain",
             pct(coarse)
         )
     } else {
         String::new()
     };
+    let uncovered = if f.prior_fallback_frac > 0.005 {
+        format!(
+            " | uncovered→prior-at-view {:.0}% (residual: no carve; falls back to uncarved prior \
+             at L{view}, not a sub-grid closure)",
+            f.prior_fallback_frac * 100.0
+        )
+    } else {
+        format!(" | uncarved prior {:.0}%", f.prior_fallback_frac * 100.0)
+    };
     format!(
-        "carve tiers drawing this frame: {} | uncarved prior {:.0}%{warning}",
-        parts.join(" · "),
-        f.prior_fallback_frac * 100.0
+        "carve tiers drawing this frame: {}{uncovered}{warning}",
+        parts.join(" · ")
     )
 }
 

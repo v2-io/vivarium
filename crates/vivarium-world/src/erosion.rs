@@ -104,6 +104,53 @@ mod tests {
         );
     }
 
+    /// Depiction must not re-inject fine prior detail over a coarser carve
+    /// ( #form-fidelity-ladder FE(8) ). `surface_at` still does that for *seeding*;
+    /// `surface_at_carved` is what views sample — constant on a flat carved
+    /// plateau even when the prior has structure at the finer level.
+    #[test]
+    fn fine_view_over_coarse_carve_depicts_carve_not_prior_detail() {
+        let (seed, level, nx) = (11u64, 9u8, 8usize);
+        let (face, oi, oj) = (Face::ZPos, 128u32, 128u32);
+        let carved = 4_200.0f32;
+        let region = ErodedRegion {
+            seed,
+            face,
+            level,
+            oi,
+            oj,
+            nx,
+            h: vec![carved; nx * nx],
+        };
+        let regions = [region];
+        // One level finer, same place (child of oi+2, oj+2).
+        let fine = CellId::from_face_ij(face, (oi + 2) * 2, (oj + 2) * 2, level + 1);
+        assert_eq!(tier_at(fine, &regions), Some(level), "coarse region must cover the fine cell");
+        let depicted = surface_at_carved(seed, fine, &regions);
+        let seeded = surface_at(seed, fine, &regions);
+        let prior_fine = gen::initial_topography_m(seed, fine, level + 1);
+        let prior_coarse = gen::initial_topography_m(seed, fine, level);
+        let detail = prior_fine - prior_coarse;
+        // Flat carved plateau: carved sample is exactly the constant.
+        assert!(
+            (depicted - carved as f64).abs() < 1e-5,
+            "depiction must be the carve ({carved}), got {depicted}"
+        );
+        // Seeding path still adds the prior's fine band (nonzero almost everywhere).
+        if detail.abs() > 1e-6 {
+            assert!(
+                (seeded - carved as f64 - detail).abs() < 1e-3,
+                "seeding surface_at should be carve+detail; got {seeded}, expect ~{}",
+                carved as f64 + detail
+            );
+            assert!(
+                (depicted - seeded).abs() > 1e-3,
+                "depiction and seeding paths must diverge when detail is nonzero \
+                 (depicted={depicted} seeded={seeded} detail={detail}) — else FE(8) is dead"
+            );
+        }
+    }
+
     // origin far from 0 so the halo (origin-1 …) is in-range and `fill` populates it.
     fn patch(w: usize) -> Patch<f32> {
         Patch::new(Face::ZPos, 12, 100, 100, w, 1)

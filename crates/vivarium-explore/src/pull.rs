@@ -783,19 +783,11 @@ pub fn spawn(
                 (0usize, 0.0f64, 0.0f32);
 
             // **Standing water is computed at the level that RAN, once per region.**
-            // Not per drawn unit: a reader over the drawn surface computes a
-            // derived physical quantity on a surface no rung produced — bilinear
-            // over the carve plus the prior's detail increment — and the answer is
-            // then mostly undrained prior dimples rather than basins (measured 8.5×
-            // on `examples/lake_surface_probe`; #form-fidelity-ladder FE(7)–(9)).
-            // Sampling the region's own field down to the view is a *view of the
-            // rendered physics*; recomputing on the drawn surface is a second
-            // physics. The region is also the wider domain, so fewer basins are cut
-            // by its rim than by a tile's ( #obs-tile-outlets-grade-away-the-basins ).
-            // Depression lakes computed per face inside the unit loop (face-local
-            // R only). Ocean is classified on the **face domain** at a bounded
-            // grain, then sampled into the unit ( #form-ocean-is-connectivity-not-elevation
-            // FE(5)/(8) ) — never re-flooded on the postage stamp alone.
+            // Not per drawn unit: recomputing on a fine mesh would be a second
+            // physics ( #form-fidelity-ladder FE(7)–(9) ). The mesh itself is
+            // `surface_at_carved` (no prior-detail inject). Region-level water is
+            // a *view of the rendered physics*. Ocean: face domain, not postage
+            // stamp ( #form-ocean-is-connectivity-not-elevation FE(5)/(8) ).
 
             // Precompute face ocean masks (shared Arc) before parallel unit builds.
             let ocean_level = ocean_adjudication_level(level);
@@ -1046,14 +1038,10 @@ pub fn spawn(
                             let (mut l, mut fb, mut iw, mut wc) = (0usize, 0usize, 0usize, 0usize);
                             let (mut cs, mut cmin, mut cmax) = (0.0f64, 0.0f32, 0.0f32);
                             let (mut ri, mut fa) = (0usize, 0usize);
-                            // Which fidelity tier answered, per cell. On a fine
-                            // view over a coarse build this is the whole story:
-                            // #form-fidelity-ladder means a coarse region still
-                            // ANSWERS a fine cell (bilinear carve plus the fine
-                            // prior's detail re-added), so the picture is full of
-                            // fine relief that no fluvial kernel ever computed.
-                            // Nothing looks wrong. Counting the tiers is the only
-                            // thing that says so.
+                            // Which fidelity tier *covers* each cell (carve level).
+                            // Mesh = surface_at_carved (FE(8)): coarse cover ⇒
+                            // stair-step at carve grain, not prior freckles.
+                            // Census makes that legible when the view is finer.
                             let mut tiers: std::collections::BTreeMap<u8, usize> = Default::default();
                             for j in 0..nx as u32 {
                                 for i in 0..nx as u32 {
