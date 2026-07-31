@@ -52,7 +52,7 @@ The operator's fovea is on the globe. That is the far-field condition.
 
 ### The deeper problem: an overlay is in the cost regime by construction
 
-Fadden, Ververs & Wickens (1998), 18-experiment meta-analysis [E, secondary — chase the original]: pooled overlay-vs-separate detection is statistically indistinguishable (p=.215). Split by **expectancy**, a reliable effect appears (Z=1.968, p<.026): overlays *help* detection of events the operator expects and *cost* detection of events they don't.
+Fadden, Ververs & Wickens (1998), 18-experiment meta-analysis [E, **secondary-within-source** — these numbers come from a 2004 NASA survey reporting the 1998 study, not from the study itself; chase the original]: pooled overlay-vs-separate detection is statistically indistinguishable (p=.215). Split by **expectancy**, a reliable effect appears (Z=1.968, p<.026 — **the survey document itself misprints the sign as "p>.026"**; the flag travels with the number) : overlays *help* detection of events the operator expects and *cost* detection of events they don't.
 
 `vivarium explore` exists to catch violations **nobody declared in advance**. That is the cost regime, by definition of the instrument's purpose. This is the single sharpest boundary condition in the corpus and it applies to the whole idea of chrome-over-globe, not to any particular chip.
 
