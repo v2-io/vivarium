@@ -6,6 +6,7 @@ stage: draft
 depends:
   - disc-explorer-instrument-parity
   - disc-explorer-debug-capture
+  - ops-operator-hints
   - form-core-view-wall
   - norm-no-depiction-without-referent
   - form-fidelity-ladder
@@ -42,24 +43,24 @@ The live block of text over `vivarium explore` is not a **HUD** in the product s
    | `vivarium status` pyramid | Archive census by level/nomos | **Not** "can this binary show carve?" |
    | Sighting key → md+png | Prototype capture pair | #disc-explorer-debug-capture |
 
-5. **Target human chrome (v1 ideal — not sealed law).** Stable strip or corner chips, same layout every frame:
+5. **Target human chrome (v1 ideal — not sealed law).** Stable strip or corner rows, same layout every frame:
 
-   | Chip | Content | Severity |
+   | Row | Content | Severity |
    |---|---|---|
-   | **CARVE** | `fresh N · stale M` under this `src=` (short hash) | **Red / unmissable when N=0 and M>0** |
-   | **VIEW** | mesh level · WHOLE / CLOSE-IN | Always |
-   | **SURFACE** | carve / prior / mixed (tier summary one token) | Always |
-   | **BEACON** | demand beacon present? face+level or `none` | Always |
-   | **PAINT** | current paint mode | Always |
-   | **REBUILD?** | only when fresh=0 & store has stale erosion | Sticky until dismissed or rebuild |
+   | **Bed / rebuild** | Status fact: can this program show eroded land? (`fresh` / `stale` under `src=`) — scream when unreadable; plain language, not “CARVE” | **Red / unmissable when fresh=0 and stale>0** |
+   | **Hints** | Stacked `Hint: …` lines from the active set ( #ops-operator-hints ) — recovery suggestions, not status facts | When any hint is live |
+   | **VIEW** | mesh level · WHOLE / CLOSE-IN · lens · paint · relief | Always |
+   | **SEEN** | prior / mixed / eroded-at-L / coarse-cover | Always |
+   | **PLACE / PICK** | altitude, lat/lon; cell under cursor | Always |
+   | **BEACON** | demand beacon face+level or `none` | Always |
 
-   Optional: short notice toast on capture write (3–5 s). **No** unmodelled essay, no full tier prose, no rewrapping multi-paragraph body on default chrome.
+   Optional: short notice toast on capture write (3–5 s). **`?` toggles key legend** (off by default; table-aligned). **No** unmodelled essay, no full tier prose, no rewrapping multi-paragraph body on default chrome. `H` cycles human chrome → debug dump → minimal.
 
 6. **Findability stays first-class chrome, not dump.** Fine cohorts are ~10⁻³ of globe area. **B** framing from store census (not typed coords) and **G** cohort cycle remain product keys. Ideal: chip or icon when selected cohort is off-screen ("L13 window — press B").
 
-7. **CLI companion (one glance block).** `vivarium status` should **lead** with the same human question as the CARVE chip — demand one-liner, `src=` short, fresh/stale counts, next action — **before** the fidelity pyramid. Pyramid remains useful archaeology; it must not be the only surface. Detail of CLI layout may co-live with #disc-explorer-debug-capture FE on capture schema if status dumps the same struct.
+7. **CLI companion (one glance block, bottom of long status).** CLI attention on long dumps is **bottom-up** — the rebuild / eroded-land block and active **hints** sit after pyramid/flux/ordinum archaeology, not buried at the top. Same human question as chrome bed-status: `src=`, fresh/stale, `★ REBUILD NEEDED` when unreadable, then stacked `Hint: …` with origins ( #ops-operator-hints ). Unicode attention marks are fine on the **terminal**; Bevy HUD stays ASCII until fonts catch up.
 
-8. **Out of bounds for this segment.** Paint-law physics, FOV/mesh policy as world law, full keybinding redesign, game HUD aesthetics, daemon/spool. Depiction accessor law is #form-fidelity-ladder FE(8). Parity *bar* remains #disc-explorer-instrument-parity .
+8. **Out of bounds for this segment.** Paint-law physics, FOV/mesh policy as world law, full keybinding redesign, game HUD aesthetics, daemon/spool. Depiction accessor law is #form-fidelity-ladder FE(8). Parity *bar* remains #disc-explorer-instrument-parity . Hint speech-act and edge-log rules live only at #ops-operator-hints — this segment owns *where* they show in chrome, not *what a hint is*.
 
 ## Epistemic Status
 
@@ -75,8 +76,8 @@ Human chrome is deliberately **smaller** than the debug dump. Completeness lives
 
 ## Working Notes
 
-- **Code homes:** `crates/vivarium-explore/` (`hud.rs`, `main.rs` keys, `sighting.rs`); `watch::ErosionCohort`; `observe::eroded_region_census`.
-- **Order of build (ideal):** (1) capture pair promotion — #disc-explorer-debug-capture ; (2) default chrome = chips, dump off or `H`/flag only ; (3) status lead block shares CARVE chip data.
-- **First iteration shipped 2026-07-31 (awaiting Joseph check):** default `hud_level=0` chips (CARVE / VIEW / SURFACE / BEACON / pick); `H` cycles human→debug dump→minimal; `vivarium status` lead block fresh/stale/REBUILD/beacon before pyramid.
+- **Code homes:** `crates/vivarium-explore/` (`main.rs` chrome, `capture.rs` bed block + key legend, `hud.rs` debug dump); `vivarium_world::hint`; `watch::ErosionCohort`; `observe::eroded_region_census`.
+- **Order of build (ideal):** (1) capture pairs — #disc-explorer-debug-capture ; (2) default chrome = compact rows + hint stack, dump on `H` ; (3) status bottom block shares bed fact + #ops-operator-hints .
+- **Present (2026-07-31):** default `hud_level=0` — rebuild scream + VIEW/SEEN/PLACE/PICK/BEACON table + `?` keys; `H` human→debug→minimal; status **bottom** lead with `★` + hints; no CARVE jargon.
 - **Do not** "fix" attention by lengthening the dump. **Do not** auto-rebuild on stale without an explicit policy decision.
 - **Hotlist:** ideation rank for chrome/capture lives in #disc-known-active-hotspots when Joseph re-prioritizes after this segment lands.
