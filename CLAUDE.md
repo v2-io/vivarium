@@ -1,5 +1,13 @@
 # vivarium — agent orientation
 
+## Orientation gate (before any commit)
+
+Compaction (and ordinary overconfidence) can leave a *feeling* of orientation that is not the substance. When you believe you are ready, run the gate — do not invent your own substitute.
+
+See [`ORIENT.md`](ORIENT.md): `bin/try-me` → `bin/prove-me` → put the printed token in the commit message.
+
+**Joseph override only:** `ORIENT_SKIP=1 git commit …`
+
 ## Telos (read first)
 
 **Claim segments in `core/src/` are the sole source of truth for project claims.** The slug is the identity; [`core/OUTLINE.md`](core/OUTLINE.md) is the ordering; [`FORMAT.md`](FORMAT.md) is the rules. Everything else — design prose, architecture notes, spikes, views, session narratives — is substrate, instrument, or view until its claims live in a segment.
