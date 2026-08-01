@@ -99,3 +99,21 @@ grade**, **does not unseal**, and **does not burn** while time remains:
 
 A real graded attempt (≥3 substantial `|answer` bodies) that scores under the
 bar still burns as usual.
+
+## After you have commit credentials
+
+A pass is not only a license to leave. Among the **first legitimate uses** of
+commit access — before greenfield wander — are improvements the free-read or
+quiz made obvious:
+
+1. **Segment repairs** — formatting, staleness, dual-home residue, wording that
+   was ambiguous or mid-clause when it showed up as a quiz unit.
+2. **Orientation-tool repairs** — `try-me` / `prove-me` / `orient-rank` /
+   chunking / udon surface / this manual.
+3. **Working Notes on `#ops-orientation-gate`** when you see a needed
+   improvement and do **not** have time to implement it — date the note, name
+   the symptom, leave enough for the next mind. That segment is the durable
+   backlog for prove-related residue (not chat memory alone).
+
+Claim home for the gate process: `#ops-orientation-gate`. This file stays the
+short operator manual.
