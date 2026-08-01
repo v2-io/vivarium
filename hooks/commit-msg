@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# Orientation pass must be valid (time window). No orient:TOKEN in message.
+# Commit message must carry orient:<session_id>; that session must still match
+# its prove-me compaction generation (see bin/orient-check).
 set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 if [[ -z "$ROOT" || ! -x "$ROOT/bin/orient-check" ]]; then
   ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 fi
 cd "$ROOT"
-exec bin/orient-check verify-msg
+MSG="${1:-}"
+exec bin/orient-check verify-msg "$MSG"
