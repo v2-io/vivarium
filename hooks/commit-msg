@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Require orient:<token> from bin/prove-me (one-shot, not survivable by disk alone).
+# Orientation pass must be valid (time window). No orient:TOKEN in message.
 set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 if [[ -z "$ROOT" || ! -x "$ROOT/bin/orient-check" ]]; then
   ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 fi
 cd "$ROOT"
-exec bin/orient-check verify-msg "$1"
+exec bin/orient-check verify-msg

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# commit-msg: require orient:<token> matching one-shot pass (hash on disk only).
+# Gate: valid orientation pass (time window after prove-me).
+# Used by pre-commit / commit-msg. No per-commit token — multi-commit + multi-
+# compaction runs share one pass until it expires.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PASS="$ROOT/.orient/pass"
@@ -12,9 +14,7 @@ fi
 
 if [[ ! -f "$PASS" ]]; then
   echo "orient-check: no pass — refuse" >&2
-  echo "  bin/try-me && bin/prove-me answers.txt" >&2
-  echo "  commit message must include orient:<token from prove-me>" >&2
-  echo "  See ORIENT.md" >&2
+  echo "  When ready: bin/try-me && bin/prove-me …  (see ORIENT.md)" >&2
   exit 1
 fi
 
@@ -23,50 +23,27 @@ read_pass_field() {
 }
 
 PASS_EXP=$(read_pass_field expires)
-PASS_HASH=$(read_pass_field token_sha256)
 PASS_USES=$(read_pass_field uses_left)
 PASS_PROV=$(read_pass_field provisional)
 now=$(date +%s)
 
-if [[ -z "$PASS_EXP" || -z "$PASS_HASH" ]]; then
+if [[ -z "$PASS_EXP" ]]; then
   echo "orient-check: malformed pass" >&2
   exit 1
 fi
 if (( now > PASS_EXP )); then
-  echo "orient-check: pass expired — bin/try-me && bin/prove-me" >&2
+  echo "orient-check: pass expired — run bin/try-me && bin/prove-me again" >&2
   exit 1
 fi
-# uses_left may be 0 or 1
-if [[ "${PASS_USES:-0}" -lt 1 ]]; then
-  echo "orient-check: pass already used — bin/try-me && bin/prove-me" >&2
+# uses_left: -1 or missing = unlimited until expires; 0 = spent (legacy one-shot)
+if [[ -n "${PASS_USES}" && "${PASS_USES}" != "-1" && "${PASS_USES}" -lt 1 ]]; then
+  echo "orient-check: pass exhausted — run bin/try-me && bin/prove-me again" >&2
   exit 1
 fi
 
-if [[ "$MODE" == "status" ]]; then
-  echo "orient-check: pass present (uses_left=$PASS_USES provisional=$PASS_PROV expires_in=$((PASS_EXP-now))s)"
-  echo "orient-check: commit message must contain orient:<token from prove-me stdout>"
-  exit 0
-fi
-
-if [[ "$MODE" == "verify-msg" ]]; then
-  msgfile="${2:-}"
-  [[ -f "$msgfile" ]] || { echo "orient-check: missing commit message file" >&2; exit 1; }
-  token=$(grep -oE 'orient:[0-9a-f]{32}' "$msgfile" | head -1 | sed 's/^orient://' || true)
-  if [[ -z "$token" ]]; then
-    echo "orient-check: commit message must contain orient:<32-hex from prove-me>" >&2
-    exit 1
-  fi
-  if command -v shasum >/dev/null 2>&1; then
-    got=$(printf '%s' "$token" | shasum -a 256 | awk '{print $1}')
-  else
-    got=$(printf '%s' "$token" | sha256sum | awk '{print $1}')
-  fi
-  if [[ "$got" != "$PASS_HASH" ]]; then
-    echo "orient-check: token does not match current pass (stale/wrong/forgotten after compaction)" >&2
-    exit 1
-  fi
-  python3 -c "import json;p=json.load(open('$PASS'));p['uses_left']=0;json.dump(p,open('$PASS','w'),indent=2);open('$PASS','a').write('\n')"
-  echo "orient-check: ok — one-shot token consumed"
+if [[ "$MODE" == "status" || "$MODE" == "verify-msg" ]]; then
+  # verify-msg: no token required (v3); keep subcommand so hooks stay compatible
+  echo "orient-check: ok (provisional=${PASS_PROV:-} expires_in=$((PASS_EXP-now))s)"
   exit 0
 fi
 

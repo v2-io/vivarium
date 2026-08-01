@@ -29,7 +29,8 @@ TEST_PATH = ORIENT / "test.jsonl"
 BURNED = ORIENT / "burned"
 SEAL_LIST = ORIENT / "sealed_paths"
 SAMPLE_N = int(os.environ.get("ORIENT_SAMPLE_N", "12"))
-TEST_TTL = int(os.environ.get("ORIENT_TEST_TTL_SEC", "300"))
+# Time to finish the quiz after try-me — not the commit-access window.
+TEST_TTL = int(os.environ.get("ORIENT_TEST_TTL_SEC", "1800"))  # 30m
 PREFIX_WORDS = int(os.environ.get("ORIENT_PREFIX_WORDS", "6"))
 
 

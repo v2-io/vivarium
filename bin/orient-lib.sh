@@ -13,9 +13,10 @@ SEAL_LIST="$ORIENT_DIR/sealed_paths"
 # Outline alone is not enough; the trap is confident outline-only "orientation."
 ORIENT_SEAL_GLOB='core/src/**/*.md'
 
-STUDY_TTL_SEC="${ORIENT_STUDY_TTL_SEC:-7200}"
-PASS_TTL_SEC="${ORIENT_PASS_TTL_SEC:-1800}"   # 30m — short; one-shot commit
-TEST_TTL_SEC="${ORIENT_TEST_TTL_SEC:-300}"   # 5m to complete prove after try-me
+# Access window after prove-me (multi-commit / multi-compaction). Not one-shot.
+PASS_TTL_SEC="${ORIENT_PASS_TTL_SEC:-43200}"  # 12h
+# Time to finish the quiz after try-me only.
+TEST_TTL_SEC="${ORIENT_TEST_TTL_SEC:-1800}"  # 30m
 SAMPLE_N="${ORIENT_SAMPLE_N:-12}"
 
 orient_die() { echo "orient: $*" >&2; exit 1; }

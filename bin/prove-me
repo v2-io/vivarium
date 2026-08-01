@@ -17,7 +17,6 @@ import hashlib
 import json
 import os
 import re
-import secrets
 import stat
 import sys
 import time
@@ -198,19 +197,21 @@ def main() -> None:
         )
         sys.exit(1)
 
-    # One-shot token: shown once; only hash stored. Commit message must carry it.
-    token = secrets.token_hex(16)
-    token_hash = sha256_text(token)
+    # Access window: long enough for multi-compaction runs and hours between
+    # commits by the same oriented agent. Not one-shot — re-prove when expired
+    # or when you no longer trust the orientation (e.g. new mind, cold start).
+    # Default 12h; override ORIENT_PASS_TTL_SEC.
+    pass_ttl = int(os.environ.get("ORIENT_PASS_TTL_SEC", str(12 * 3600)))
     ORIENT.mkdir(parents=True, exist_ok=True)
     pass_doc = {
-        "version": 2,
+        "version": 3,
         "ts": now,
-        "expires": now + int(os.environ.get("ORIENT_PASS_TTL_SEC", "1800")),
+        "expires": now + pass_ttl,
         "test_id": test_id,
-        "token_sha256": token_hash,
         "provisional": provisional,
         "score": f"{correct}/{n}",
-        "uses_left": 1,
+        # unlimited commits until expires (not per-commit one-shot)
+        "uses_left": -1,
     }
     PASS_FILE.write_text(json.dumps(pass_doc, indent=2) + "\n", encoding="utf-8")
     # burn this test_id so the same sheet cannot be re-proved
@@ -219,18 +220,15 @@ def main() -> None:
     TEST_PATH.unlink(missing_ok=True)
 
     kind = "PROVISIONAL" if provisional else "FULL"
+    hours = pass_ttl / 3600.0
     print(file=sys.stderr)
     print(f"prove-me: {kind} PASS ({correct}/{n})", file=sys.stderr)
-    print("prove-me: put this exact token in your commit message:", file=sys.stderr)
-    print(file=sys.stderr)
-    print(f"orient:{token}")
-    print(file=sys.stderr)
     print(
-        "prove-me: one-shot — token is burned after a successful commit.\n"
-        "          After context compaction you will not remember it; re-run try-me/prove-me.\n"
-        "          Disk does not store the raw token (only its hash).",
+        f"prove-me: commit access until unix {pass_doc['expires']} "
+        f"(~{hours:.1f}h; ORIENT_PASS_TTL_SEC).",
         file=sys.stderr,
     )
+    print("prove-me: re-run try-me / prove-me when that window ends.", file=sys.stderr)
 
 
 if __name__ == "__main__":
