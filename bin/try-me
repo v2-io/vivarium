@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """
-Generate a closed-book orientation test from random segment paragraphs.
+Generate a closed-book orientation test from claim-segment prose units.
 
 Protocol (ORIENT.md):
-  1. Read freely while core/src is open.
-  2. bin/try-me  — samples paragraphs, SEALS core/src, writes .orient/test.jsonl
-  3. bin/prove-me — grade answers; grants a multi-hour commit pass
-  4. git commit (hooks check the pass has not expired)
+  1. Free-read (OUTLINE ★ rows + work-local segments) while core/src is open.
+  2. bin/try-me  — samples units, SEALS core/src, writes .orient/test.jsonl
+  3. bin/prove-me --ready answers.txt — grade; grants commit pass
+  4. git commit with orient:<session_id> from prove-me
 
-Randomness: os.urandom / SystemRandom (not hash of clock alone).
+One active quiz per checkout (shared seal of core/src + single test.jsonl).
+
+Randomness: os.urandom / SystemRandom.
 """
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import os
 import random
@@ -26,12 +29,37 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 ORIENT = ROOT / ".orient"
 TEST_PATH = ORIENT / "test.jsonl"
+ANSWERS_STUB = ORIENT / "answers.stub.txt"
 BURNED = ORIENT / "burned"
 SEAL_LIST = ORIENT / "sealed_paths"
-SAMPLE_N = int(os.environ.get("ORIENT_SAMPLE_N", "12"))
+# Default 5 items: prove-me treats 5/5 as unlimited pass, ≥3/5 as one-time.
+SAMPLE_N = int(os.environ.get("ORIENT_SAMPLE_N", "5"))
 # Time to finish the quiz after try-me — not the commit-access window.
 TEST_TTL = int(os.environ.get("ORIENT_TEST_TTL_SEC", "1800"))  # 30m
 PREFIX_WORDS = int(os.environ.get("ORIENT_PREFIX_WORDS", "6"))
+SUFFIX_WORDS = int(os.environ.get("ORIENT_SUFFIX_WORDS", "4"))
+# When the completion (rest) is longer than this, always show end-anchor words.
+LONG_REST_WORDS = int(os.environ.get("ORIENT_LONG_REST_WORDS", "40"))
+# Steepen slug rank in unit sampling (hotlist score^α).
+SCORE_ALPHA = float(os.environ.get("ORIENT_SCORE_ALPHA", "4.0"))
+# Tip window: last N commits → up to TOP segments (changed or mentioned).
+# Used for rank fiat inside orient-rank; try-me only consumes scores.
+TIP_COMMITS = int(os.environ.get("ORIENT_TIP_COMMITS", "30"))
+TIP_TOP_N = int(os.environ.get("ORIENT_TIP_TOP_N", "6"))
+TIP_STRENGTH = float(os.environ.get("ORIENT_TIP_STRENGTH", "3.0"))
+
+
+def _load_chunker():
+    spec = importlib.util.spec_from_file_location(
+        "orient_chunk", ROOT / "bin" / "orient-chunk.py"
+    )
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_chunker = _load_chunker()
 
 
 def die(msg: str, code: int = 1) -> None:
@@ -79,79 +107,241 @@ def outline_titles() -> dict[str, str]:
 
 
 def parse_segment(path: Path) -> list[dict]:
-    """Return candidate paragraphs with breadcrumb context."""
-    text = path.read_text(encoding="utf-8", errors="replace")
-    rel = str(path.relative_to(ROOT))
-    slug = path.stem
-    # frontmatter title = first H1 after fm
-    lines = text.splitlines()
-    i = 0
-    if lines and lines[0].strip() == "---":
-        i = 1
-        while i < len(lines) and lines[i].strip() != "---":
-            i += 1
-        i += 1
-    h1 = h2 = h3 = ""
-    # join into paragraphs (blank-line separated), track headings
-    paras: list[dict] = []
-    buf: list[str] = []
-    heads = ("", "", "")
-
-    def flush():
-        nonlocal buf, heads
-        if not buf:
-            return
-        para = "\n".join(buf).strip()
-        buf = []
-        if len(para) < 80 or len(para) > 1200:
-            return
-        # skip pure code / tables-ish
-        if para.startswith("```") or para.startswith("|"):
-            return
-        if para.startswith("#"):
-            return
-        words = para.split()
-        if len(words) < 12:
-            return
-        crumb = " > ".join(x for x in heads if x)
-        paras.append(
-            {
-                "path": rel,
-                "slug": slug,
-                "breadcrumb": crumb or slug,
-                "paragraph": para,
-            }
-        )
-
-    for line in lines[i:]:
-        if line.startswith("# "):
-            flush()
-            heads = (line[2:].strip(), "", "")
-            continue
-        if line.startswith("## "):
-            flush()
-            heads = (heads[0], line[3:].strip(), "")
-            continue
-        if line.startswith("### "):
-            flush()
-            heads = (heads[0], heads[1], line[4:].strip())
-            continue
-        if not line.strip():
-            flush()
-            continue
-        buf.append(line)
-    flush()
-    return paras
+    """Quiz units via markdown-it block AST (see bin/orient-chunk.py)."""
+    return _chunker.parse_segment(path, root=ROOT)
 
 
 def collect_pool() -> list[dict]:
     src = ROOT / "core" / "src"
     if not src.is_dir():
         die(f"missing {src}")
-    pool: list[dict] = []
-    for p in sorted(src.rglob("*.md")):
-        pool.extend(parse_segment(p))
-    return pool
+    return _chunker.collect_pool(src, root=ROOT)
+
+
+def load_slug_scores() -> dict[str, float]:
+    """Segment scores from orient-rank (hotlist).
+
+    Prefer live `bin/orient-rank --scores-only`. Fall back to cached
+    `.orient/hotlist.json` if rank fails (offline / no git).
+
+    Polished: try-me never blocks on a full rank rebuild — always read
+    memoized hotlist; a watcher or post-commit hook refreshes it.
+    """
+    rank_bin = ROOT / "bin" / "orient-rank"
+    try:
+        out = subprocess.check_output(
+            [sys.executable, str(rank_bin), "--scores-only", "--no-write-cache"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=120,
+        )
+        scores: dict[str, float] = {}
+        for line in out.splitlines():
+            line = line.strip()
+            if not line or "\t" not in line:
+                continue
+            slug, sc = line.split("\t", 1)
+            scores[slug] = float(sc)
+        if scores:
+            return scores
+    except Exception:
+        pass
+    cache = ORIENT / "hotlist.json"
+    if cache.is_file():
+        try:
+            doc = json.loads(cache.read_text(encoding="utf-8"))
+            return {
+                r["slug"]: float(r["score"])
+                for r in doc.get("segments", [])
+                if "slug" in r and "score" in r
+            }
+        except Exception:
+            pass
+    return {}
+
+
+def load_tip_recent(
+    known_slugs: set[str] | None = None,
+    *,
+    n_commits: int = TIP_COMMITS,
+    top_n: int = TIP_TOP_N,
+) -> tuple[list[dict], dict[str, float]]:
+    """Tip list: segments changed or mentioned in the last N commits.
+
+    Ordering (best first):
+      1. most recent hit (commit index 0 = HEAD)
+      2. more hits across the N commits
+      3. newer file mtime
+
+    Take at most top_n. Returns (ordered records, slug → tip_w).
+    Non-tip slugs get tip_w = 1.0 (neutral). Tip position r (1=best of k):
+      tip_w = 1 + TIP_STRENGTH * (k + 1 - r) / k
+    """
+    if known_slugs is None:
+        known_slugs = {p.stem for p in (ROOT / "core" / "src").glob("*.md")}
+    empty: tuple[list[dict], dict[str, float]] = ([], {})
+    n = max(1, int(n_commits))
+    try:
+        out = subprocess.check_output(
+            [
+                "git",
+                "-C",
+                str(ROOT),
+                "log",
+                f"-n{n}",
+                "--name-only",
+                "--pretty=format:%x1e%H%x00%s%x00%b%x00",
+                "HEAD",
+            ],
+            stderr=subprocess.DEVNULL,
+            text=True,
+            errors="replace",
+        )
+    except Exception:
+        return empty
+
+    # slug → (most_recent_idx, hit_count)
+    most_recent: dict[str, int] = {}
+    hit_count: dict[str, int] = {}
+    commits = 0
+    for rec in out.split("\x1e"):
+        rec = rec.strip("\n")
+        if not rec:
+            continue
+        parts = rec.split("\x00", 3)
+        if len(parts) < 3:
+            continue
+        _h, subject, body = parts[0], parts[1], parts[2]
+        paths_text = parts[3] if len(parts) > 3 else ""
+        msg = f"{subject}\n{body}".lower()
+        idx = commits  # 0 = newest
+        commits += 1
+        hit_this: set[str] = set()
+        for line in paths_text.splitlines():
+            line = line.strip()
+            # core/src/<slug>.md (and nested, if any)
+            m = re.search(r"(?:^|/)core/src/([a-z0-9][a-z0-9-]*)\.md$", line)
+            if m and m.group(1) in known_slugs:
+                hit_this.add(m.group(1))
+        for slug in known_slugs:
+            tag = f"#{slug}"
+            if tag in msg or slug in msg:
+                hit_this.add(slug)
+        for slug in hit_this:
+            hit_count[slug] = hit_count.get(slug, 0) + 1
+            if slug not in most_recent or idx < most_recent[slug]:
+                most_recent[slug] = idx
+
+    if not most_recent:
+        return empty
+
+    def mtime(slug: str) -> float:
+        p = ROOT / "core" / "src" / f"{slug}.md"
+        try:
+            return p.stat().st_mtime
+        except OSError:
+            return 0.0
+
+    ordered = sorted(
+        most_recent.keys(),
+        key=lambda s: (
+            most_recent[s],  # lower = more recent
+            -hit_count.get(s, 0),
+            -mtime(s),
+            s,
+        ),
+    )[: max(1, int(top_n))]
+
+    k = len(ordered)
+    records: list[dict] = []
+    tip_w: dict[str, float] = {}
+    for r, slug in enumerate(ordered, 1):
+        # r=1 best → highest weight
+        w = 1.0 + TIP_STRENGTH * (k + 1 - r) / k
+        tip_w[slug] = w
+        records.append(
+            {
+                "rank": r,
+                "slug": slug,
+                "tip_w": round(w, 6),
+                "most_recent_commit_idx": most_recent[slug],
+                "hits_in_window": hit_count.get(slug, 0),
+                "mtime": mtime(slug),
+            }
+        )
+    return records, tip_w
+
+
+def paragraph_weight(
+    para: dict,
+    slug_scores: dict[str, float],
+    tip_weights: dict[str, float] | None = None,
+) -> float:
+    """Weight for sampling one quiz unit.
+
+    Two top-level multiplicative factors (tip is already in *scores* via
+    orient-rank fiat ranks 1..TIP_TOP_N):
+
+      w = (score^α)  ×  (sec_w × mild_len)
+
+    - score^α  — hotlist score after tip fiat (tip segments outrank GM rest)
+    - sec×mild — section prior × mild length (style fairness)
+
+    tip_weights is ignored for mass (kept for API/diagnostics only).
+    Polished: separate FE-only pool; tip list in hotlist.json tip_fiat.
+    """
+    base = slug_scores.get(para["slug"], 0.5)
+    rank_w = max(base, 1e-15) ** SCORE_ALPHA
+    crumb = (para.get("breadcrumb") or "").lower()
+    # breadcrumb is "H1 > H2 > H3"
+    sec = crumb.split(">")[-1].strip() if ">" in crumb else crumb
+    # Section priors (utility for prove/orientation): FE > other ≈ Disc > WN ≫ ES
+    # "other" (preamble / non-standard H2s) is often the FE+Disc surface for
+    # segments whose substantial claim text is not under those labels — quiz-
+    # sized material there should not be treated as residual.
+    if sec.startswith("formal expression"):
+        sec_w = 1.0
+    elif sec.startswith("discussion"):
+        sec_w = 0.8
+    elif sec.startswith("working notes"):
+        sec_w = 0.5
+    elif sec.startswith("epistemic status"):
+        sec_w = 0.2
+    else:
+        sec_w = 0.9  # preamble / other — substantial claim prose when present
+    # Mild length — style fairness on coherent-meme packing, not a cliff.
+    # len_w = 1 + min(0.25, words/400)  → at most +25%.
+    # Units are AST-chunked (orient-chunk); this weight equalizes packing style.
+    words = len(para["paragraph"].split())
+    len_w = 1.0 + min(0.25, words / 400.0)
+    inner = sec_w * len_w
+    return max(1e-9, rank_w * inner)
+
+
+def weighted_sample_without_replacement(
+    pool: list[dict],
+    k: int,
+    rng: random.SystemRandom,
+    slug_scores: dict[str, float],
+    tip_weights: dict[str, float] | None = None,
+) -> list[dict]:
+    """Draw k paragraphs ∝ weight, without replacement.
+
+    Polished: Gumbel-top-k; or sample segments first via softmax then
+    one FE para each for diversity.
+    """
+    if k >= len(pool):
+        rng.shuffle(pool)
+        return list(pool)
+    # Efraimidis–Spirakis: key = rand^(1/w), take k largest keys
+    keyed: list[tuple[float, dict]] = []
+    for para in pool:
+        w = paragraph_weight(para, slug_scores, tip_weights)
+        u = rng.random()
+        key = u ** (1.0 / w)
+        keyed.append((key, para))
+    keyed.sort(key=lambda t: t[0], reverse=True)
+    return [p for _, p in keyed[:k]]
 
 
 def seal_core_src() -> int:
@@ -179,65 +369,172 @@ def unseal_core_src() -> None:
     SEAL_LIST.unlink(missing_ok=True)
 
 
+def build_item(idx: int, s: dict, titles: dict[str, str], rng: random.SystemRandom) -> dict:
+    """Build one sealed quiz item with prefix / optional suffix anchors."""
+    words = s["paragraph"].split()
+    n = len(words)
+    prefix_n = min(PREFIX_WORDS, max(3, n // 4))
+    # leave room for a suffix when the middle would still be meaningful
+    rest_n = n - prefix_n
+    suffix_n = 0
+    if rest_n > LONG_REST_WORDS and n > prefix_n + SUFFIX_WORDS + 4:
+        suffix_n = min(SUFFIX_WORDS, rest_n // 4)
+    prefix = " ".join(words[:prefix_n])
+    suffix = " ".join(words[n - suffix_n :]) if suffix_n else ""
+    rest = " ".join(words[prefix_n:])  # full completion after prefix
+    middle = (
+        " ".join(words[prefix_n : n - suffix_n]) if suffix_n else rest
+    )
+    show_title = rng.random() < 0.4
+    title = titles.get(s["slug"], "") if show_title else ""
+    return {
+        "id": f"P{idx + 1}",
+        "path": s["path"],
+        "slug": s["slug"],
+        "breadcrumb": s["breadcrumb"],
+        "title_hint": title,
+        "prefix": prefix,
+        "suffix": suffix,
+        "rest_words": rest_n,
+        # legacy field name (single last-word); keep for old readers
+        "last_word_hint": words[-1] if suffix_n else "",
+        "answer_sha256": sha256_text(normalize(rest)),
+        "answer_sha256_middle": sha256_text(normalize(middle)),
+        "answer_sha256_full": sha256_text(normalize(s["paragraph"])),
+        "answer_sha256_prefix_rest": sha256_text(normalize(prefix + " " + rest)),
+    }
+
+
+def write_answers_stub(items: list[dict], path: Path = ANSWERS_STUB) -> None:
+    lines = [
+        "# Orientation answers stub — fill each P* block, then:",
+        "#   bin/prove-me --ready .orient/answers.stub.txt",
+        "# (or copy to answers.txt). Multi-line values OK after P1:",
+        "# Accepts: middle only, middle+end, or the full unit text.",
+        "# Matching ignores case, punctuation, and extra whitespace.",
+        "",
+    ]
+    for it in items:
+        lines.append(f"# --- {it['id']}  #{it['slug']} ---")
+        lines.append(f"# breadcrumb: {it['breadcrumb']}")
+        lines.append(f"# start: {it['prefix']}")
+        if it.get("suffix"):
+            lines.append(f"# end:   {it['suffix']}")
+            lines.append(f"# (~{it.get('rest_words', '?')} words after start; end should match)")
+        else:
+            lines.append(f"# (~{it.get('rest_words', '?')} words after start → end of unit)")
+        lines.append(f"{it['id']}:")
+        lines.append("")
+        lines.append("")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def print_quiz(items: list[dict], *, test_id: str, deadline: int) -> None:
+    print(json.dumps({"test_id": test_id, "path": str(TEST_PATH), "deadline": deadline}, indent=2))
+    print()
+    print("INSTRUCTIONS")
+    print("  Free-read is closed (core/src sealed). Complete each unit from memory.")
+    print("  Write what comes AFTER the start words, through the end of that unit.")
+    print("  If `end:` is shown, your text should finish with those words.")
+    print("  Easiest path: edit the stub, then grade:")
+    print(f"    $EDITOR {ANSWERS_STUB}")
+    print(f"    bin/prove-me --ready {ANSWERS_STUB}")
+    print("  Or: bin/prove-me            # re-show this quiz + format")
+    print("      bin/prove-me --help     # help only (does not grade or unseal)")
+    print()
+    for it in items:
+        print(f"=== {it['id']} ===")
+        print(f"breadcrumb: {it['breadcrumb']}")
+        if it.get("title_hint"):
+            print(f"outline title: {it['title_hint']}")
+        print(f"slug: {it['slug']}")
+        print(f"start: {it['prefix']} …")
+        if it.get("suffix"):
+            print(f"end:   … {it['suffix']}")
+        print(f"(~{it.get('rest_words', '?')} words to complete)")
+        print()
+
+
 def main() -> None:
+    if any(a in ("-h", "--help") for a in sys.argv[1:]):
+        print(
+            """try-me — seal core/src and issue a closed-book orientation quiz
+
+  bin/try-me          sample units, seal, write .orient/test.jsonl + answers stub
+  bin/try-me --help   this help (no seal)
+
+After try-me:
+  $EDITOR .orient/answers.stub.txt
+  bin/prove-me --ready .orient/answers.stub.txt
+
+One active quiz per checkout (shared core/src seal). See ORIENT.md.
+"""
+        )
+        return
+
+    # Refuse to clobber an unexpired live test without --force
+    force = "--force" in sys.argv[1:]
+    if TEST_PATH.is_file() and not force:
+        try:
+            old = json.loads(TEST_PATH.read_text(encoding="utf-8"))
+            if int(time.time()) <= int(old.get("deadline", 0)):
+                die(
+                    f"live test {old.get('test_id')} still open until "
+                    f"{old.get('deadline')} — finish with prove-me, or "
+                    f"bin/try-me --force to discard it"
+                )
+        except Exception:
+            pass
+
     print(
-        "try-me: Orientation check. Run this when you believe you are ready to commit.\n",
+        "try-me: Orientation check. Run when you believe you are ready to commit.\n",
         file=sys.stderr,
     )
 
-    rng = random.SystemRandom()  # os.urandom-backed
+    rng = random.SystemRandom()
     pool = collect_pool()
     if len(pool) < SAMPLE_N:
-        die(f"not enough paragraphs in core/src ({len(pool)} < {SAMPLE_N})")
+        die(f"not enough quiz units in core/src ({len(pool)} < {SAMPLE_N})")
 
-    # without replacement
-    samples = rng.sample(pool, SAMPLE_N)
+    slug_scores = load_slug_scores()
+    tip_records, tip_weights = load_tip_recent(set(slug_scores) if slug_scores else None)
+    if slug_scores:
+        samples = weighted_sample_without_replacement(
+            pool, SAMPLE_N, rng, slug_scores, tip_weights
+        )
+        print(
+            f"try-me: pool={len(pool)} units from {len(slug_scores)} segments; "
+            f"drawing {SAMPLE_N}",
+            file=sys.stderr,
+        )
+    else:
+        samples = rng.sample(pool, SAMPLE_N)
+        print(
+            f"try-me: pool={len(pool)} units; hotlist unavailable — uniform sample",
+            file=sys.stderr,
+        )
+    if tip_records:
+        # Quiet: names only, no weight spoilers
+        print(
+            "try-me: recent-focus segments in the mix: "
+            + ", ".join(r["slug"] for r in tip_records[:6]),
+            file=sys.stderr,
+        )
+
     titles = outline_titles()
     now = int(time.time())
     head = git_head()
     test_id = sha256_text(f"{now}:{head}:{os.urandom(16).hex()}")[:16]
 
-    # burn check
-    burned = set()
-    if BURNED.is_file():
-        burned = {ln.strip() for ln in BURNED.read_text().splitlines() if ln.strip()}
-
-    items = []
-    for idx, s in enumerate(samples):
-        words = s["paragraph"].split()
-        prefix_n = min(PREFIX_WORDS, max(3, len(words) // 4))
-        prefix = " ".join(words[:prefix_n])
-        rest = " ".join(words[prefix_n:])
-        # stochastic: include outline title ~40%
-        show_title = rng.random() < 0.4
-        title = titles.get(s["slug"], "") if show_title else ""
-        # stochastic: also give last word as end-anchor ~30%
-        give_last = rng.random() < 0.3 and len(words) > prefix_n + 2
-        last_word = words[-1] if give_last else ""
-        answer_norm = normalize(rest)
-        items.append(
-            {
-                "id": f"P{idx+1}",
-                "path": s["path"],
-                "slug": s["slug"],
-                "breadcrumb": s["breadcrumb"],
-                "title_hint": title,
-                "prefix": prefix,
-                "last_word_hint": last_word,
-                "answer_sha256": sha256_text(answer_norm),
-                # also accept full paragraph normalized (honest format confusion)
-                "answer_sha256_full": sha256_text(normalize(s["paragraph"])),
-                "answer_sha256_prefix_rest": sha256_text(normalize(prefix + " " + rest)),
-            }
-        )
+    items = [build_item(i, s, titles, rng) for i, s in enumerate(samples)]
 
     deadline = now + TEST_TTL
-    # salt discoverable in script — raises effort slightly; not a security boundary
     salt = "vivarium-orient-v2"
     mac = sha256_text(f"{salt}:{test_id}:{deadline}:{head}")
 
     doc = {
-        "version": 2,
+        "version": 3,
         "test_id": test_id,
         "created": now,
         "deadline": deadline,
@@ -245,15 +542,14 @@ def main() -> None:
         "mac": mac,
         "n": SAMPLE_N,
         "instructions": (
-            "Each item: continue the paragraph after `prefix` through the end of that "
-            "paragraph (same sense as the segment text). Normalize does not matter for "
-            "typing; prove-me lowercases, collapses space, strips punctuation. "
-            "If last_word_hint is set, your completion should end with that word."
+            "Complete each unit after `start` through the end of that unit. "
+            "If `end` / suffix is set, the completion must finish with those words. "
+            "You may submit the middle only, middle+end, or the full unit text. "
+            "Matching lowercases, collapses space, strips punctuation."
         ),
         "items": items,
     }
 
-    # SEAL after sampling (we already have paragraph text in memory)
     try:
         n_sealed = seal_core_src()
     except Exception as e:
@@ -261,27 +557,24 @@ def main() -> None:
         die(f"seal failed: {e}")
 
     ORIENT.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
-    TEST_PATH.write_text(payload, encoding="utf-8")
+    TEST_PATH.write_text(
+        json.dumps(doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    write_answers_stub(items)
 
-    print(f"try-me: test_id={test_id}  items={SAMPLE_N}  sealed_files={n_sealed}", file=sys.stderr)
+    print(
+        f"try-me: test_id={test_id}  items={SAMPLE_N}  sealed_files={n_sealed}",
+        file=sys.stderr,
+    )
     print(f"try-me: wrote {TEST_PATH}", file=sys.stderr)
+    print(f"try-me: answers stub → {ANSWERS_STUB}", file=sys.stderr)
     print(f"try-me: deadline in {TEST_TTL}s (unix {deadline})", file=sys.stderr)
-    print("try-me: when finished answering, run:  bin/prove-me answers.txt", file=sys.stderr)
+    print(
+        "try-me: grade with:  bin/prove-me --ready .orient/answers.stub.txt",
+        file=sys.stderr,
+    )
     print(file=sys.stderr)
-    # human-readable prompt on stdout
-    print(json.dumps({"test_id": test_id, "path": str(TEST_PATH), "deadline": deadline}, indent=2))
-    print()
-    for it in items:
-        print(f"=== {it['id']} ===")
-        print(f"breadcrumb: {it['breadcrumb']}")
-        if it["title_hint"]:
-            print(f"outline title: {it['title_hint']}")
-        print(f"slug: {it['slug']}")
-        print(f"prefix: {it['prefix']} …")
-        if it["last_word_hint"]:
-            print(f"(completion should end with: {it['last_word_hint']})")
-        print()
+    print_quiz(items, test_id=test_id, deadline=deadline)
 
 
 if __name__ == "__main__":

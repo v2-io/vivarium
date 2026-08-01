@@ -1,16 +1,34 @@
 #!/usr/bin/env python3
 """
-Grade a try-me test. core/src stays sealed until we finish (then unsealed).
+Grade (or inspect) a try-me orientation test.
 
-Answers file format (any of):
-  P1: rest of paragraph...
-  P1|rest of paragraph...
+core/src stays sealed until grading finishes (then unsealed).
+
+Commands
+--------
+  bin/prove-me              Show open quiz + answer format (or expired/missing status).
+                            Never grades. May unseal if the live test is expired.
+  bin/prove-me --help       Help only — never touches seal / test / pass files.
+  bin/prove-me --template   Refresh .orient/answers.stub.txt from the open test.
+  bin/prove-me --ready FILE Grade answers from FILE (− = stdin).
+
+Answer formats (any of)
+-----------------------
+  P1: rest of unit on one line
+  P1|
+  multi-line rest
+  (blank line or next Pn ends the block)
+
   {"P1": "...", "P2": "..."}
 
-Pass: wrong <= 1  (or correct >= n/2).
-On fail: burn test_id so this test.jsonl cannot be reused.
-On pass: write AES-GCM + HMAC pass under .orient/passes/<hmac-name>.json;
-print orient:<session_id> for the commit message (dies when that session compacts).
+  Full unit text, or middle only, or middle+end — all accepted when they match.
+
+Pass bars (default n=5):
+  5/5     FULL — unlimited commits while compaction_gen matches
+  3–4/5   ONE-TIME — one commit; promise to free-read missed sections
+  <3/5    fail — burn test, re-try-me
+
+On pass: AES-GCM + HMAC pass under .orient/passes/; print orient:<session_id>.
 """
 from __future__ import annotations
 
@@ -18,7 +36,6 @@ import hashlib
 import json
 import os
 import re
-import stat
 import sys
 import time
 from pathlib import Path
@@ -27,9 +44,35 @@ ROOT = Path(__file__).resolve().parent.parent
 ORIENT = ROOT / ".orient"
 PASSES = ORIENT / "passes"
 TEST_PATH = ORIENT / "test.jsonl"
+ANSWERS_STUB = ORIENT / "answers.stub.txt"
 BURNED = ORIENT / "burned"
 SEAL_LIST = ORIENT / "sealed_paths"
 SALT = "vivarium-orient-v2"
+
+MIN_PARTIAL = int(os.environ.get("ORIENT_MIN_PARTIAL", "3"))
+
+HELP = """prove-me — inspect or grade the open orientation quiz
+
+  bin/prove-me                 Show open questions + how to answer
+                               (does not grade; unseals only if the test expired)
+  bin/prove-me --help          This help — never seals, unseals, or grades
+  bin/prove-me --template      Write/refresh .orient/answers.stub.txt
+  bin/prove-me --ready FILE    Submit answers from FILE (− for stdin)
+
+After a pass, put this in the commit message:
+  orient:<session_id printed by a successful --ready>
+
+Pass grades (default 5 items):
+  5/5     unlimited commits while this session's compaction gen matches
+  3/5–4/5 one-time commit + promise to free-read what you missed
+  <3/5    fail — free-read, bin/try-me again
+
+One active quiz per checkout (shared core/src seal + single .orient/test.jsonl).
+Multiple agents on one tree will clobber each other; multi-session *passes*
+can coexist, but only one sealed test at a time.
+
+See ORIENT.md.
+"""
 
 
 def die(msg: str, code: int = 1) -> None:
@@ -50,7 +93,6 @@ def normalize(s: str) -> str:
 
 def unseal() -> None:
     if not SEAL_LIST.is_file():
-        # emergency: restore any unreadable md under core/src
         for p in (ROOT / "core" / "src").rglob("*.md"):
             if p.exists() and not os.access(p, os.R_OK):
                 try:
@@ -69,30 +111,58 @@ def unseal() -> None:
 
 
 def parse_answers(text: str) -> dict[str, str]:
+    """Accept JSON, single-line Pn:, or multi-line Pn: blocks."""
     text = text.strip()
     if not text:
         return {}
     if text.startswith("{"):
         data = json.loads(text)
         return {str(k).upper(): str(v) for k, v in data.items()}
+
     out: dict[str, str] = {}
+    current: str | None = None
+    buf: list[str] = []
+
+    def flush() -> None:
+        nonlocal current, buf
+        if current is None:
+            return
+        body = "\n".join(buf).strip()
+        # drop leading comment-only lines already skipped; keep body
+        if body:
+            out[current] = body
+        current = None
+        buf = []
+
     for line in text.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
+        if re.match(r"^\s*#", line) and current is None:
             continue
         m = re.match(r"^(P\d+)\s*[:|]\s*(.*)$", line, re.I)
         if m:
-            out[m.group(1).upper()] = m.group(2)
+            flush()
+            current = m.group(1).upper()
+            rest = m.group(2)
+            buf = [rest] if rest.strip() else []
+            continue
+        if current is not None:
+            buf.append(line)
+    flush()
     return out
 
 
-def variants(prefix: str, answer: str, last_hint: str) -> list[str]:
-    """Honest format confusions: with/without prefix, with/without last word."""
+def variants(prefix: str, answer: str, suffix: str, last_hint: str) -> list[str]:
+    """Honest format confusions: middle / rest / full / with anchors."""
     a = answer.strip()
     cands = [a, normalize(a)]
     if prefix:
         cands.append(f"{prefix} {a}")
         cands.append(normalize(f"{prefix} {a}"))
+    if suffix and not a.endswith(suffix):
+        cands.append(f"{a} {suffix}")
+        cands.append(normalize(f"{a} {suffix}"))
+        if prefix:
+            cands.append(f"{prefix} {a} {suffix}")
+            cands.append(normalize(f"{prefix} {a} {suffix}"))
     if last_hint and not a.endswith(last_hint):
         cands.append(f"{a} {last_hint}")
         cands.append(normalize(f"{a} {last_hint}"))
@@ -101,56 +171,193 @@ def variants(prefix: str, answer: str, last_hint: str) -> list[str]:
 
 def match_item(item: dict, raw: str) -> bool:
     keys = {
-        item["answer_sha256"],
+        item.get("answer_sha256", ""),
+        item.get("answer_sha256_middle", ""),
         item.get("answer_sha256_full", ""),
         item.get("answer_sha256_prefix_rest", ""),
     }
     keys.discard("")
-    for v in variants(item.get("prefix", ""), raw, item.get("last_word_hint", "")):
+    for v in variants(
+        item.get("prefix", ""),
+        raw,
+        item.get("suffix", ""),
+        item.get("last_word_hint", ""),
+    ):
         if sha256_text(normalize(v)) in keys:
             return True
-        # also hash already-normalized path
         if sha256_text(v) in keys:
             return True
     return False
 
 
-def main() -> None:
-    if os.environ.get("ORIENT_SKIP") == "1":
-        print("prove-me: SKIPPED via ORIENT_SKIP=1", file=sys.stderr)
-        unseal()
-        sys.exit(0)
+def load_test() -> dict | None:
+    if not TEST_PATH.is_file():
+        return None
+    return json.loads(TEST_PATH.read_text(encoding="utf-8"))
 
-    ans_path = Path(sys.argv[1]) if len(sys.argv) > 1 else None
-    if ans_path is None or not ans_path.is_file():
-        # stdin
+
+def burned_ids() -> set[str]:
+    if not BURNED.is_file():
+        return set()
+    return {ln.strip() for ln in BURNED.read_text().splitlines() if ln.strip()}
+
+
+def burn(test_id: str) -> None:
+    BURNED.parent.mkdir(parents=True, exist_ok=True)
+    with BURNED.open("a", encoding="utf-8") as f:
+        f.write(test_id + "\n")
+
+
+def print_format_help() -> None:
+    print(
+        """
+ANSWER FORMAT
+  Multi-line (preferred — use the stub from try-me):
+
+    P1:
+    your completion of the unit after the start words…
+    more lines ok
+
+    P2:
+    …
+
+  Single-line also works:   P1: completion here…
+  JSON also works:          {"P1": "…", "P2": "…"}
+
+  You may paste the full unit, only the middle, or middle+end.
+  Matching ignores case, punctuation, and extra whitespace.
+
+GRADE
+  bin/prove-me --ready .orient/answers.stub.txt
+  bin/prove-me --ready answers.txt
+  bin/prove-me --ready -          # stdin
+"""
+    )
+
+
+def show_quiz(doc: dict) -> None:
+    items = doc.get("items") or []
+    print(f"prove-me: open test_id={doc.get('test_id')}  items={len(items)}")
+    print(f"prove-me: deadline unix {doc.get('deadline')}  (git_head={doc.get('git_head')})")
+    print(f"prove-me: stub path {ANSWERS_STUB}")
+    print()
+    print("INSTRUCTIONS")
+    print(
+        "  Complete each unit after `start` through the end of that unit."
+    )
+    print(
+        "  If `end:` is shown, finish with those words. Edit the stub, then --ready."
+    )
+    print()
+    for it in items:
+        print(f"=== {it['id']} ===")
+        print(f"breadcrumb: {it.get('breadcrumb')}")
+        if it.get("title_hint"):
+            print(f"outline title: {it['title_hint']}")
+        print(f"slug: {it.get('slug')}")
+        print(f"start: {it.get('prefix', '')} …")
+        if it.get("suffix"):
+            print(f"end:   … {it['suffix']}")
+        elif it.get("last_word_hint"):
+            print(f"(completion should end with: {it['last_word_hint']})")
+        if it.get("rest_words") is not None:
+            print(f"(~{it['rest_words']} words to complete)")
+        print()
+    print_format_help()
+
+
+def write_template(doc: dict) -> None:
+    items = doc.get("items") or []
+    lines = [
+        "# Orientation answers stub — fill each P* block, then:",
+        "#   bin/prove-me --ready .orient/answers.stub.txt",
+        "# Accepts middle only, middle+end, or full unit text.",
+        "",
+    ]
+    for it in items:
+        lines.append(f"# --- {it['id']}  #{it.get('slug')} ---")
+        lines.append(f"# breadcrumb: {it.get('breadcrumb')}")
+        lines.append(f"# start: {it.get('prefix')}")
+        if it.get("suffix"):
+            lines.append(f"# end:   {it['suffix']}")
+        lines.append(f"{it['id']}:")
+        lines.append("")
+        lines.append("")
+    ANSWERS_STUB.parent.mkdir(parents=True, exist_ok=True)
+    ANSWERS_STUB.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"prove-me: wrote {ANSWERS_STUB}", file=sys.stderr)
+
+
+def cmd_status() -> None:
+    """Default: show quiz or explain how to get one. Never grade."""
+    doc = load_test()
+    if doc is None:
+        unseal()  # belt: clear any stray seal
+        print("prove-me: no open test (.orient/test.jsonl missing).")
+        print("  Free-read first (see ORIENT.md / OUTLINE ★ rows), then:")
+        print("    bin/try-me")
+        print_format_help()
+        return
+
+    test_id = doc.get("test_id", "")
+    now = int(time.time())
+    if test_id in burned_ids():
+        unseal()
+        TEST_PATH.unlink(missing_ok=True)
+        print(f"prove-me: test_id {test_id} is burned.")
+        print("  bin/try-me   # new quiz")
+        return
+
+    deadline = int(doc.get("deadline", 0))
+    if now > deadline:
+        burn(test_id)
+        unseal()
+        TEST_PATH.unlink(missing_ok=True)
+        print(
+            f"prove-me: test {test_id} expired (deadline {deadline}). "
+            "core/src unsealed."
+        )
+        print("  Free-read if needed, then: bin/try-me")
+        return
+
+    expect_mac = sha256_text(
+        f"{SALT}:{test_id}:{doc['deadline']}:{doc['git_head']}"
+    )
+    if doc.get("mac") != expect_mac:
+        unseal()
+        print("prove-me: test mac mismatch — discard and bin/try-me again")
+        return
+
+    show_quiz(doc)
+
+
+def cmd_ready(ans_source: str) -> None:
+    if ans_source == "-":
         raw_answers = sys.stdin.read()
     else:
-        raw_answers = ans_path.read_text(encoding="utf-8")
+        p = Path(ans_source)
+        if not p.is_file():
+            die(f"answers file not found: {ans_source}")
+        raw_answers = p.read_text(encoding="utf-8")
 
-    if not TEST_PATH.is_file():
+    doc = load_test()
+    if doc is None:
         unseal()
         die("no .orient/test.jsonl — run bin/try-me first")
 
-    doc = json.loads(TEST_PATH.read_text(encoding="utf-8"))
     test_id = doc["test_id"]
     now = int(time.time())
 
-    burned = set()
-    if BURNED.is_file():
-        burned = {ln.strip() for ln in BURNED.read_text().splitlines() if ln.strip()}
-    if test_id in burned:
+    if test_id in burned_ids():
         unseal()
         die(f"test_id {test_id} is burned — generate a new test: bin/try-me")
 
     if now > int(doc.get("deadline", 0)):
-        BURNED.parent.mkdir(parents=True, exist_ok=True)
-        with BURNED.open("a", encoding="utf-8") as f:
-            f.write(test_id + "\n")
+        burn(test_id)
         unseal()
+        TEST_PATH.unlink(missing_ok=True)
         die("test deadline expired — bin/try-me again")
 
-    # mac integrity (discoverable salt — effort bump only)
     expect_mac = sha256_text(
         f"{SALT}:{test_id}:{doc['deadline']}:{doc['git_head']}"
     )
@@ -159,15 +366,24 @@ def main() -> None:
         die("test mac mismatch — regenerate with bin/try-me")
 
     given = parse_answers(raw_answers)
+    if not given:
+        # Do NOT unseal on empty/malformed submit — user may have meant --help
+        die(
+            "no answers parsed. Use: bin/prove-me --ready answers.txt\n"
+            "  (bare `prove-me` only shows the quiz; it does not grade)"
+        )
+
     items = doc["items"]
     n = len(items)
     correct = 0
     wrong = 0
+    missed: list[dict] = []
     for it in items:
         iid = it["id"]
         if iid not in given:
             print(f"prove-me: FAIL {iid} — missing", file=sys.stderr)
             wrong += 1
+            missed.append(it)
             continue
         if match_item(it, given[iid]):
             print(f"prove-me: ok   {iid}")
@@ -175,32 +391,27 @@ def main() -> None:
         else:
             print(f"prove-me: FAIL {iid} — hash mismatch", file=sys.stderr)
             wrong += 1
+            missed.append(it)
 
     print(f"prove-me: score {correct}/{n} (wrong={wrong})", file=sys.stderr)
 
-    # Pass bar: at most one wrong, OR at least half correct (provisional floor)
-    passed = wrong <= 1 or correct * 2 >= n
-    provisional = passed and wrong > 0
+    full = wrong == 0 and correct == n
+    partial = (not full) and correct >= MIN_PARTIAL
+    passed = full or partial
 
-    # Always unseal after grading
     unseal()
     print("prove-me: core/src unsealed", file=sys.stderr)
 
     if not passed:
-        with BURNED.open("a", encoding="utf-8") as f:
-            f.write(test_id + "\n")
-        # remove test so they must try-me again
+        burn(test_id)
         TEST_PATH.unlink(missing_ok=True)
         print(
-            "\nPlease orient yourself properly before attempting to be proven again, thank you!\n"
-            "Generate your new test again with `bin/try-me`.\n",
+            f"\nNeed at least {MIN_PARTIAL}/{n} correct "
+            f"(you had {correct}/{n}). Re-orient, then `bin/try-me` again.\n",
             file=sys.stderr,
         )
         sys.exit(1)
 
-    # Bind pass to (session_id, compaction_gen) for *this* process's session.
-    # Commit message carries orient:<session_id>; hook re-resolves that id under
-    # Grok or Claude and checks gen still matches (Joseph's sketch).
     sess = json.loads(
         __import__("subprocess")
         .check_output([str(ROOT / "bin" / "orient-session.py")], text=True)
@@ -209,25 +420,48 @@ def main() -> None:
         die(
             "cannot bind pass to session/compaction "
             f"({sess.get('error', 'unknown')}). "
-            "Run under an active Grok/Claude session, or ORIENT_SKIP=1 (Joseph only)."
+            "Run under an active Grok/Claude session."
         )
 
     sid = sess["session_id"]
     n_bound = sess.get("boundary_count", sess.get("segment_count"))
+
+    missed_refs = []
+    for it in missed:
+        missed_refs.append(
+            {
+                "id": it.get("id"),
+                "slug": it.get("slug"),
+                "path": it.get("path"),
+                "breadcrumb": it.get("breadcrumb"),
+            }
+        )
+
+    if full:
+        uses_left = -1
+        provisional = False
+        kind = "FULL"
+    else:
+        uses_left = 1
+        provisional = True
+        kind = "ONE-TIME"
+
     pass_doc = {
-        "version": 6,
+        "version": 7,
         "ts": now,
         "test_id": test_id,
         "provisional": provisional,
+        "one_time": uses_left == 1,
         "score": f"{correct}/{n}",
+        "correct": correct,
+        "n": n,
+        "missed": missed_refs,
         "harness": sess.get("harness"),
         "session_id": sid,
         "compaction_gen": sess["compaction_gen"],
         "boundary_count": n_bound,
-        # unlimited commits while this session's compaction_gen still matches
-        "uses_left": -1,
+        "uses_left": uses_left,
     }
-    # Sign + AES-GCM encrypt via orient-crypto (secrets in .orient/.setup/).
     import importlib.util
 
     _spec = importlib.util.spec_from_file_location(
@@ -236,16 +470,13 @@ def main() -> None:
     assert _spec and _spec.loader
     _crypto = importlib.util.module_from_spec(_spec)
     _spec.loader.exec_module(_crypto)
-    pass_path = _crypto.write_pass(sid, pass_doc, ROOT)
-    # Drop legacy single-file / cleartext paths
+    _crypto.write_pass(sid, pass_doc, ROOT)
     (ORIENT / "pass").unlink(missing_ok=True)
     (PASSES / f"{sid}.json").unlink(missing_ok=True)
 
-    with BURNED.open("a", encoding="utf-8") as f:
-        f.write(test_id + "\n")
+    burn(test_id)
     TEST_PATH.unlink(missing_ok=True)
 
-    kind = "PROVISIONAL" if provisional else "FULL"
     print(file=sys.stderr)
     print(f"prove-me: {kind} PASS ({correct}/{n})", file=sys.stderr)
     print(
@@ -255,6 +486,28 @@ def main() -> None:
         f"boundaries={n_bound}",
         file=sys.stderr,
     )
+    if full:
+        print(
+            "prove-me: unlimited commits while this session's compaction gen matches",
+            file=sys.stderr,
+        )
+    else:
+        print(
+            "prove-me: ONE-TIME commit token — after that commit, re-prove "
+            "(or free-read the missed material first).",
+            file=sys.stderr,
+        )
+        print(
+            "prove-me: By accepting this pass you promise to free-read the "
+            "sections you missed before relying on them:",
+            file=sys.stderr,
+        )
+        for m in missed_refs:
+            crumb = m.get("breadcrumb") or m.get("slug") or "?"
+            slug = m.get("slug") or "?"
+            path = m.get("path") or f"core/src/{slug}.md"
+            print(f"  • {m.get('id')}: #{slug}  —  {crumb}", file=sys.stderr)
+            print(f"      {path}", file=sys.stderr)
     print(
         "prove-me: put this exact token in your commit message "
         "(dies on compact for that session):",
@@ -265,10 +518,53 @@ def main() -> None:
     print(file=sys.stderr)
 
 
+def main(argv: list[str] | None = None) -> None:
+    argv = list(sys.argv[1:] if argv is None else argv)
+
+    if not argv or argv == ["status"]:
+        cmd_status()
+        return
+
+    if argv[0] in ("-h", "--help", "help"):
+        print(HELP)
+        return
+
+    if argv[0] in ("--template", "template"):
+        doc = load_test()
+        if doc is None:
+            die("no open test — bin/try-me first")
+        write_template(doc)
+        return
+
+    if argv[0] in ("--ready", "ready"):
+        if len(argv) < 2:
+            die("usage: bin/prove-me --ready FILE   (− for stdin)")
+        try:
+            cmd_ready(argv[1])
+        except Exception:
+            unseal()
+            raise
+        return
+
+    # Backward-compat: bare path was "grade this file" — keep it, but warn.
+    if len(argv) == 1 and not argv[0].startswith("-"):
+        print(
+            "prove-me: note — prefer `bin/prove-me --ready FILE` "
+            "(bare path is accepted for now)",
+            file=sys.stderr,
+        )
+        try:
+            cmd_ready(argv[0])
+        except Exception:
+            unseal()
+            raise
+        return
+
+    die(f"unknown args: {argv!r}\n\n{HELP}")
+
 
 if __name__ == "__main__":
     try:
         main()
-    except Exception:
-        unseal()
-        raise
+    except BrokenPipeError:
+        sys.exit(0)

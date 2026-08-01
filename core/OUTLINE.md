@@ -10,6 +10,9 @@ The specification of what vivarium is and must do, written as **segments** in `c
 
 **Every session:** [`CLAUDE.md`](../CLAUDE.md) · this outline · [`LEXICON.udon`](../LEXICON.udon) for terms you touch · [`ETHICS.md`](../ETHICS.md) §0 / `#scope-moratorium-endogenous-emergence` · ASF gates `#scope-asf-reading-gates` (Level C hard-gates agent-seam work).
 
+> **Orientation free-read (★).** Rows marked ★ are the current high-importance set (~top 25 by recent/structural rank; refresh with `bin/orient-rank --mark-outline`). **Most quiz items are drawn from these.** Read them in *this* outline order — not by rank score. Also free-read whatever you are about to work on, even if unstarred. Stars move when importance moves.
+
+
 **Cross-member refs** use `#asf/1-aat/<slug>` etc. (FORMAT §5.2) — never bare paths, never `ASF.md §N` as law.
 
 ## Why this channel stays current
@@ -60,14 +63,14 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | discussion | Project | [#disc-aat-vivarium-object-map](src/disc-aat-vivarium-object-map.md) | AAT ↔ vivarium object map — unratified synthesis; do not cite as exact | draft |
 | scope | Project Critical | [#scope-moratorium-endogenous-emergence](src/scope-moratorium-endogenous-emergence.md) | No endogenous frontier / emergence-capable minds | draft |
 | scope | Project Critical | [#scope-asf-reading-gates](src/scope-asf-reading-gates.md) | ASF familiarity gates A/B/C; Level C hard-gates agent-seam work | draft |
-| postulate | Project Critical | [#post-determinism-as-ontology](src/post-determinism-as-ontology.md) | Determinism as ontology; fated noise | draft |
+| postulate | Project Critical | ★ [#post-determinism-as-ontology](src/post-determinism-as-ontology.md) | Determinism as ontology; fated noise | draft |
 | formulation | Project | [#form-lawful-steering](src/form-lawful-steering.md) | Lawful steering: exo-authored realization of a fated draw — conserving, recorded, permissible; goal-directed math home at sketch | draft |
 | formulation | Project Critical | [#form-core-view-wall](src/form-core-view-wall.md) | Core / view wall; views observe only | draft |
-| normative | Project Critical | [#norm-no-depiction-without-referent](src/norm-no-depiction-without-referent.md) | Nothing depicted without a world referent; the viewer's eye is an instrument to keep calibrated | draft |
+| normative | Project Critical | ★ [#norm-no-depiction-without-referent](src/norm-no-depiction-without-referent.md) | Nothing depicted without a world referent; the viewer's eye is an instrument to keep calibrated | draft |
 | postulate | Project Critical | [#post-represent-by-consequence](src/post-represent-by-consequence.md) | Represent by consequence | draft |
 | formulation | Project Critical | [#form-fidelity-invariant](src/form-fidelity-invariant.md) | Fidelity is lazy; materializations prove the macro with bounded deficiencies | draft |
 | formulation | Model | [#form-reductionist-fallback-cases](src/form-reductionist-fallback-cases.md) | Three reasons to leave pure reductionism; case C needs regime probes first | draft |
-| formulation | Model | [#form-fidelity-ladder](src/form-fidelity-ladder.md) | Climb to discover, descend to surrogate; model identity in the key | draft |
+| formulation | Model | ★ [#form-fidelity-ladder](src/form-fidelity-ladder.md) | Climb to discover, descend to surrogate; model identity in the key | draft |
 | discussion | Project | [#disc-unlawfulness-budget](src/disc-unlawfulness-budget.md) | Every Realization carries an unLawfulness budget; Realized ⟂ Lawful | draft |
 | normative | Ops Critical | [#norm-declaration-must-convict](src/norm-declaration-must-convict.md) | A declaration that cannot fail is a wish | draft |
 | normative | Ops Critical | [#norm-probes-before-claims](src/norm-probes-before-claims.md) | Probes before claims | draft |
@@ -76,16 +79,16 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | normative | Ops Critical | [#norm-regime-probes](src/norm-regime-probes.md) | Regime probes ship with every rung; known issues get the probe first | draft |
 | normative | Ops Critical | [#norm-declared-violation-is-not-license](src/norm-declared-violation-is-not-license.md) | Declared deficiency is disclosure, not permission; conservation ≠ fidelity rung | draft |
 | normative | Ops Critical | [#norm-decision-authority](src/norm-decision-authority.md) | Authority tags; evidence ≠ who decided; council-accepted | draft |
-| normative | Ops Critical | [#norm-caught-disciplines-become-mechanisms](src/norm-caught-disciplines-become-mechanisms.md) | A discipline caught failing becomes a mechanism (test/lint/refusing API); machine expedients live behind a named-fenced-retirable license | draft |
+| normative | Ops Critical | ★ [#norm-caught-disciplines-become-mechanisms](src/norm-caught-disciplines-become-mechanisms.md) | A discipline caught failing becomes a mechanism (test/lint/refusing API); machine expedients live behind a named-fenced-retirable license | draft |
 | normative | Model Critical | [#norm-bias-vs-noise](src/norm-bias-vs-noise.md) | Bias versus noise is the decisive discretisation audit | draft |
 | discussion | Model Critical | [#disc-algorithms-disguise-physics](src/disc-algorithms-disguise-physics.md) | Port the physical claim, not the paper costume | draft |
 | normative | Model Critical | [#norm-physics-not-knobs](src/norm-physics-not-knobs.md) | The real physical term over the magic-knob proxy: faster, similar size, terminal | draft |
 | discussion | Ops Critical | [#disc-check-the-ladder](src/disc-check-the-ladder.md) | Check the phase ladder before modern-Earth priors | draft |
-| discussion | Ops | [#disc-known-active-hotspots](src/disc-known-active-hotspots.md) | Evolving next-work ideation with rationale (leverage rank); molten-code notes secondary — not geography, not claim law | draft |
-| discussion | Ops Critical | [#disc-explorer-instrument-parity](src/disc-explorer-instrument-parity.md) | Minimal explorer↔world honesty bar (P0–P4); when eyes can convict the bed; not full LOD roadmap | draft |
-| discussion | Ops | [#disc-explorer-human-chrome](src/disc-explorer-human-chrome.md) | Human glance chrome (chips); dense on-globe text is not a HUD; attention is instrument honesty | draft |
+| discussion | Ops | ★ [#disc-known-active-hotspots](src/disc-known-active-hotspots.md) | Evolving next-work ideation with rationale (leverage rank); molten-code notes secondary — not geography, not claim law | draft |
+| discussion | Ops Critical | ★ [#disc-explorer-instrument-parity](src/disc-explorer-instrument-parity.md) | Minimal explorer↔world honesty bar (P0–P4); when eyes can convict the bed; not full LOD roadmap | draft |
+| discussion | Ops | ★ [#disc-explorer-human-chrome](src/disc-explorer-human-chrome.md) | Human glance chrome (chips); dense on-globe text is not a HUD; attention is instrument honesty | draft |
 | discussion | Ops | [#disc-explorer-debug-capture](src/disc-explorer-debug-capture.md) | Debug dump as durable capture pairs (udon+png); sightings prototype; vs changelog landing captures | draft |
-| discussion | Ops | [#ops-operator-hints](src/ops-operator-hints.md) | Operator hints: suggestions with origins (set/revoke edge log); not a next-action queue; family with provenance tooling | draft |
+| discussion | Ops | ★ [#ops-operator-hints](src/ops-operator-hints.md) | Operator hints: suggestions with origins (set/revoke edge log); not a next-action queue; family with provenance tooling | draft |
 | | | | *(#gap) Epistemology ladder / weak-tier-in-canon* | missing |
 | | | | *(#gap) Strengthen-before-soften as vivarium segment* | missing |
 | | | | *(#gap) Full ETHICS segmentation (harm triple, redeemer, …) — incl. the three BDD stress-test gaps with no live carrier (Joseph, 2026-07-29): exo-governance vs exo-access split; mourning-at-Adaptive-tier; the truth-death safety account. Ice: `.super-archive/from-archive/taxonomy-bdd-stress-test.md`* | missing |
@@ -102,15 +105,15 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | formulation | Machine Critical | [#form-complete-content-addressed-key](src/form-complete-content-addressed-key.md) | Complete key; over-key never under-key | draft |
 | formulation | Project | [#form-in-vivia-citation](src/form-in-vivia-citation.md) | Operational *in vivia* citation: seed + versions + phase memo + intervention script | draft |
 | formulation | Machine Critical | [#form-nomotheke-registry](src/form-nomotheke-registry.md) | Nomotheke is the registry contract; undeclared law is unlawful | draft |
-| formulation | Machine Critical | [#form-flux-web](src/form-flux-web.md) | Nomos couple by matched flux quantities + statistic/exactness; unmet = unrunnable | draft |
+| formulation | Machine Critical | ★ [#form-flux-web](src/form-flux-web.md) | Nomos couple by matched flux quantities + statistic/exactness; unmet = unrunnable | draft |
 | formulation | Project Critical | [#form-ordinum-governs-flux-web](src/form-ordinum-governs-flux-web.md) | Ladder promises are flux; `:kept-by` is the producer | draft |
 | formulation | Project Critical | [#form-kernel-imperative-boundary](src/form-kernel-imperative-boundary.md) | Kernel = only imperative escape hatch; rest is declaration data | draft |
 | formulation | Project | [#form-add-system-contract](src/form-add-system-contract.md) | Six-clause contract to add a composable world-system; CHONK prior art; domain-fixation guard | draft |
-| formulation | Model Critical | [#form-column-control-volume](src/form-column-control-volume.md) | Column is a control volume with sufficient statistics (frame; impl open) | draft |
+| formulation | Model Critical | ★ [#form-column-control-volume](src/form-column-control-volume.md) | Column is a control volume with sufficient statistics (frame; impl open) | draft |
 | formulation | Project Critical | [#form-manifest-prescribes-vivium](src/form-manifest-prescribes-vivium.md) | Manifest = per-vivium prescription; ordinum = kind floor; no regula artifact for now | draft |
 | discussion | Model Critical | [#disc-prime-question](src/disc-prime-question.md) | Prime Question = modified-equation analysis | draft |
 | sketch | Project | [#sketch-nomos-declaration-boxes](src/sketch-nomos-declaration-boxes.md) | Nomos boxes ②–⑤ — schema live on NomosDecl; earning procedures open | draft |
-| formulation | Project Critical | [#form-declared-boundary-contract](src/form-declared-boundary-contract.md) | A promise holds under a declared boundary contract; an undeclared edge is an unlawful edge (the flux web's measured blind spot) | draft |
+| formulation | Project Critical | ★ [#form-declared-boundary-contract](src/form-declared-boundary-contract.md) | A promise holds under a declared boundary contract; an undeclared edge is an unlawful edge (the flux web's measured blind spot) | draft |
 
 ---
 
@@ -120,9 +123,9 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
-| formulation | Machine Critical | [#form-store-as-save](src/form-store-as-save.md) | The store is the save; memo store is portable vivium state | draft |
+| formulation | Machine Critical | ★ [#form-store-as-save](src/form-store-as-save.md) | The store is the save; memo store is portable vivium state | draft |
 | formulation | Machine Critical | [#form-builder-admission](src/form-builder-admission.md) | Builder admits only flux-allowed work; explorers observe-only pull | draft |
-| formulation | Machine Critical | [#form-depend-by-key-never-latest](src/form-depend-by-key-never-latest.md) | Depend on neighbours by complete key only; never “finest available” | draft |
+| formulation | Machine Critical | ★ [#form-depend-by-key-never-latest](src/form-depend-by-key-never-latest.md) | Depend on neighbours by complete key only; never “finest available” | draft |
 | formulation | Machine Critical | [#form-pull-query-composition](src/form-pull-query-composition.md) | World law composes by pull of keyed nomos; pattern not generic engine | draft |
 | formulation | Machine Critical | [#form-three-scoped-runtime](src/form-three-scoped-runtime.md) | Spine / cones / edit-layer decomposition; time-in-key DAG; prefetch is pure optimization | draft |
 | observation | Machine Critical | [#obs-coarse-view-draws-the-uncarved-prior](src/obs-coarse-view-draws-the-uncarved-prior.md) | A read coarser than the build level falls through to the fated prior and reports nothing | draft |
@@ -155,22 +158,22 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
 | formulation | Math Critical | [#form-rl-closure-algebra](src/form-rl-closure-algebra.md) | Multiscale $U,u,R,L$ + three honesty laws; $R\circ L=\mathrm{id}$ with compliance debt | draft |
-| formulation | Math Critical | [#form-seam-flux-exchange](src/form-seam-flux-exchange.md) | Seams exchange fluxes, not states; one discipline on space × time | draft |
+| formulation | Math Critical | ★ [#form-seam-flux-exchange](src/form-seam-flux-exchange.md) | Seams exchange fluxes, not states; one discipline on space × time | draft |
 | formulation | Math | [#form-scale-separation-directional](src/form-scale-separation-directional.md) | Fast→slow weak block; declare multirate direction | draft |
 | formulation | Math Critical | [#form-face-flux-register](src/form-face-flux-register.md) | Hanging-node single-valued face flux; refluxing under three conditions | draft |
-| formulation | Math Critical | [#form-same-level-halo-exchange](src/form-same-level-halo-exchange.md) | Same-level tile seam: datum + flux; Jacobi halo at $(d,\sigma,\rho)$ supplies the datum; production path ships; flux/spill open | draft |
+| formulation | Math Critical | ★ [#form-same-level-halo-exchange](src/form-same-level-halo-exchange.md) | Same-level tile seam: datum + flux; Jacobi halo at $(d,\sigma,\rho)$ supplies the datum; production path ships; flux/spill open | draft |
 | formulation | Math Critical | [#form-seam-families](src/form-seam-families.md) | "Seam" names several interfaces; family table so repairs and briefs cannot merge them | draft |
 | observation | Math Critical | [#obs-mean-pin-manufactures-seam](src/obs-mean-pin-manufactures-seam.md) | Mean-pin manufactures seam ridge and mass; not $R\circ L=\mathrm{id}$ | draft |
 | observation | Math Critical | [#obs-the-two-point-defect-lives-on-the-panel-seam](src/obs-the-two-point-defect-lives-on-the-panel-seam.md) | The measured order $-0.5$ is ~99.5% a conforming panel-seam ring at $O(1/h)$; interior converges — a third seam defect, no hanging node needed | draft |
-| observation | Math Critical | [#obs-chart-edge-halo-clamps-to-the-face](src/obs-chart-edge-halo-clamps-to-the-face.md) | Multi-cell fluvial halo off a cube face clamps to the chart — boundary contract in force; $d\ge 2$ needs declared resampling | draft |
+| observation | Math Critical | ★ [#obs-chart-edge-halo-clamps-to-the-face](src/obs-chart-edge-halo-clamps-to-the-face.md) | Multi-cell fluvial halo off a cube face clamps to the chart — boundary contract in force; $d\ge 2$ needs declared resampling | draft |
 | formulation | Math Critical | [#form-grid-equiangular-staggered](src/form-grid-equiangular-staggered.md) | Equiangular cube-sphere + Arakawa-C + per-cell metrics (tentative keep); router open | draft |
 | formulation | Model Critical | [#form-declared-structure-tradeoff](src/form-declared-structure-tradeoff.md) | Structure preservation is a declared trade; structures conflict; linear-only seam crossing | draft |
-| formulation | Machine | [#form-cellid-chunk-patch](src/form-cellid-chunk-patch.md) | CellId canonical key; curve orders chunks; Cartesian patch + halo in hot loops | draft |
+| formulation | Machine | ★ [#form-cellid-chunk-patch](src/form-cellid-chunk-patch.md) | CellId canonical key; curve orders chunks; Cartesian patch + halo in hot loops | draft |
 | formulation | Model Critical | [#form-sphere-continuous-surface-fields](src/form-sphere-continuous-surface-fields.md) | Solid surface fields continuous on $S^2$; never per-face noise charts | draft |
 | sketch | Model | [#sketch-detail-abstract-reversion](src/sketch-detail-abstract-reversion.md) | Reversion frame; open: nonlinear closure for non-local flux (state half retired as measured) | draft |
 | sketch | Math | [#sketch-dynamic-exponent-seams](src/sketch-dynamic-exponent-seams.md) | Dynamic exponent $z$ per process; timestep-from-quadtree tactic — under investigation | draft |
 | sketch | Model | [#sketch-ml-surrogate-rungs](src/sketch-ml-surrogate-rungs.md) | Learned surrogates as fidelity-ladder rungs: keyed weights, flux-form outputs, leaf-coverage rarity as the envelope tripwire — exploratory | draft |
-| detail | Math | [#detail-seam-precedents](src/detail-seam-precedents.md) | Primary-read seam precedents (AMR / multirate / equation-free / HMM) | draft |
+| detail | Math | ★ [#detail-seam-precedents](src/detail-seam-precedents.md) | Primary-read seam precedents (AMR / multirate / equation-free / HMM) | draft |
 | detail | Math | [#detail-structure-scheme-map](src/detail-structure-scheme-map.md) | Structure→scheme catalogue + conflicts + consumer reconstructions | draft |
 | detail | Math | [#detail-info-theoretic-discretisation](src/detail-info-theoretic-discretisation.md) | Sampling / anti-alias / Jensen-vs-aliasing / fated-jitter / multires dictionary | draft |
 | detail | Math | [#detail-fvm-control-volume](src/detail-fvm-control-volume.md) | Cardiff FVM taxonomy: constructions, volume-exact reconstruction, null-space probe | draft |
@@ -184,7 +187,7 @@ Placement, in one pass: **reusable machinery for any multiscale world → §V to
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
 | normative | Ops | [#ops-audit-integration](src/ops-audit-integration.md) | Audit reports: verify, adjudicate, integrate, then `.integrated/` | draft |
-| normative | Ops | [#ops-changelog-is-the-acceptance-check](src/ops-changelog-is-the-acceptance-check.md) | User-facing change lands with a frozen captured entry; an unwritable entry queues the work or the missing instrument | draft |
+| normative | Ops | ★ [#ops-changelog-is-the-acceptance-check](src/ops-changelog-is-the-acceptance-check.md) | User-facing change lands with a frozen captured entry; an unwritable entry queues the work or the missing instrument | draft |
 | discussion | Project | [#disc-open-problem-census](src/disc-open-problem-census.md) | Open work derived from core gaps — index, not ranked superlatives | draft |
 | detail | Ops | [#detail-epistemics-toolchain](src/detail-epistemics-toolchain.md) | Structural vs harness tooling queue; wired clippy; skip reasons | draft |
 
@@ -214,8 +217,8 @@ Live floor data: [`tabularium/terrestris.ordinum.udon`](../tabularium/terrestris
 | observation | Model Critical | [#obs-routing-curl-spiral](src/obs-routing-curl-spiral.md) | Routing violates contour-orthogonality: ~2% flux spirals, level-independent | draft |
 | observation | Model Critical | [#obs-erosion-residual-is-driver-bound](src/obs-erosion-residual-is-driver-bound.md) | Uplift pins erosion's residual (no stationarity to gate on); most tiles are subaerially empty and do no fluvial work | draft |
 | observation | Model Critical | [#obs-chi-shape-is-erosions-criterion](src/obs-chi-shape-is-erosions-criterion.md) | $\chi$-linearity is a convergence criterion the driver-bound residual cannot supply; measured on the L13 settle history, one a-priori response time is ~a quarter of the approach, and the fitted slope misses pure SPL by the deposition term | draft |
-| observation | Physics Critical | [#obs-tile-outlets-grade-away-the-basins](src/obs-tile-outlets-grade-away-the-basins.md) | Edge-sink tiles grade to their own perimeter: tile-local basins capped at one tile (incision driver 3.25× starved); read through an honest reader, 63.5% of the beacon window is seam pits, and the two contracts carve beds 259 m apart there while agreeing within 10% at L9 | draft |
-| observation | Physics Critical | [#obs-exchange-repairs-the-seam-and-overlap-does-not](src/obs-exchange-repairs-the-seam-and-overlap-does-not.md) | A halo repairs the seam only if it is exchanged: one-shot overlap is worse than the shipped tiling at up to 4× compute, Jacobi exchange puts the seam step and mean elevation on a single-field carve's values, cadence outbuys depth, and Gauss–Seidel breaks build-order independence by 131 m over 94% of a block. Beneath all of it a chaos floor: +1 mm at 96 cells decorrelates 96.6% of a core | draft |
+| observation | Physics Critical | ★ [#obs-tile-outlets-grade-away-the-basins](src/obs-tile-outlets-grade-away-the-basins.md) | Edge-sink tiles grade to their own perimeter: tile-local basins capped at one tile (incision driver 3.25× starved); read through an honest reader, 63.5% of the beacon window is seam pits, and the two contracts carve beds 259 m apart there while agreeing within 10% at L9 | draft |
+| observation | Physics Critical | ★ [#obs-exchange-repairs-the-seam-and-overlap-does-not](src/obs-exchange-repairs-the-seam-and-overlap-does-not.md) | A halo repairs the seam only if it is exchanged: one-shot overlap is worse than the shipped tiling at up to 4× compute, Jacobi exchange puts the seam step and mean elevation on a single-field carve's values, cadence outbuys depth, and Gauss–Seidel breaks build-order independence by 131 m over 94% of a block. Beneath all of it a chaos floor: +1 mm at 96 cells decorrelates 96.6% of a core | draft |
 | observation | Physics Critical | [#obs-lakes-are-routed-over-not-carved-away](src/obs-lakes-are-routed-over-not-carved-away.md) | The epoch's depression fill is a routing surface the loop restores, so a closed basin survives the carve: the prior's 2.65% of land in closed basins settles at 0.47–0.51% over 40–300 epochs, deepest 212–635 m, against 0.02% under the composition that kept the raise. Three physics decisions declared (no incision under water, lake trapping efficiency 1, talus and creep on rock); the $\varepsilon$-fill's mass term retires with it; the cross-tile base level is what remains between the shipped tiling and its basins | draft |
 | observation | Physics Critical | [#obs-the-erodible-world-is-down-the-cooling-chain](src/obs-the-erodible-world-is-down-the-cooling-chain.md) | Land triples and stand gains a km by the chain's cold end, but emergence saturates inside the chain, suture belts stay thin, and the pour-grain ledger already removed a fifth to a whole s.d. of stand | draft |
 | formulation | Model | [#form-erosion-at-a-cooling-stage](src/form-erosion-at-a-cooling-stage.md) | Erosion keyed by $T_p$: a materialized-only chain over a law-evaluable one; stage-parallel vs chain-carried forks on the rock-mass ledger, not on cost — unbuilt design | draft |
@@ -225,12 +228,12 @@ Live floor data: [`tabularium/terrestris.ordinum.udon`](../tabularium/terrestris
 | Type | Aspect | Tag | Claim | Stage |
 | --- | --- | --- | --- | --- |
 | observation | Physics | [#obs-hydrosphere-box-nomos](src/obs-hydrosphere-box-nomos.md) | Box nomos proves representation-agnostic contract | draft |
-| formulation | Physics Critical | [#form-derived-sea-level](src/form-derived-sea-level.md) | Sea level = pour ocean into solid hypsometry; freeboard earns emerged land | draft |
+| formulation | Physics Critical | ★ [#form-derived-sea-level](src/form-derived-sea-level.md) | Sea level = pour ocean into solid hypsometry; freeboard earns emerged land | draft |
 | observation | Physics Critical | [#obs-halo-windows-overhang-the-chart-and-mint-nan](src/obs-halo-windows-overhang-the-chart-and-mint-nan.md) | 83 of 3552 `erosion-tile` roots hold non-finite heights in every cohort measured, 73 of 73 positions on a region perimeter and none interior, from finite inputs. A halo window overhangs the cube chart; the clamp that saves it from panicking is applied to *geometry* as well as data, so clamped cells share a centre and sit 0.0 m from a real neighbour (19 395.8 m apart when genuine) — $\Delta h/0$. The geometry never needed clamping: `cell_center_unit` and `cell_area_m2` extrapolate cleanly over the 16 rows the halo asks for. The low edge fails differently and silently: the window *slides* instead of padding, carving a 16-cell offset. NaN also acts as a wall in the ocean mask (+46% bad cells) | draft |
-| formulation | Physics Critical | [#form-ocean-is-connectivity-not-elevation](src/form-ocean-is-connectivity-not-elevation.md) | Below the datum is *submerged*; *ocean* is the submerged set the ocean can reach. Ocean is a drain, so a landlocked below-datum basin classified as sea holds nothing at any settle length or halo depth — the mechanism under the Caspian gap. Connectivity to the domain boundary, eight-connected; conditional on the domain containing the enclosing land ring, so a whole face adjudicates and a tile is biased toward calling lakes sea | draft |
-| observation | Physics Critical | [#obs-connectivity-fills-the-basins-the-threshold-drained](src/obs-connectivity-fills-the-basins-the-threshold-drained.md) | 1165 standing bodies, 976 865 km³, deepest 1271 m at whole-face L8 — all previously ocean-by-threshold and empty; every body level to the bit (analytic case exact at 100.000 m, spread 0.000000). The routing raise reports 4418/9216 cells wet on a surface with no depression. Carving destroys 88% of the prior's basins, so a view finer than the carve paints mostly undrained prior detail. Rebuild moved 30.0% of L9 erosion payloads and 94% of the beacon; the geography of that is unexplained | draft |
+| formulation | Physics Critical | ★ [#form-ocean-is-connectivity-not-elevation](src/form-ocean-is-connectivity-not-elevation.md) | Below the datum is *submerged*; *ocean* is the submerged set the ocean can reach. Ocean is a drain, so a landlocked below-datum basin classified as sea holds nothing at any settle length or halo depth — the mechanism under the Caspian gap. Connectivity to the domain boundary, eight-connected; conditional on the domain containing the enclosing land ring, so a whole face adjudicates and a tile is biased toward calling lakes sea | draft |
+| observation | Physics Critical | ★ [#obs-connectivity-fills-the-basins-the-threshold-drained](src/obs-connectivity-fills-the-basins-the-threshold-drained.md) | 1165 standing bodies, 976 865 km³, deepest 1271 m at whole-face L8 — all previously ocean-by-threshold and empty; every body level to the bit (analytic case exact at 100.000 m, spread 0.000000). The routing raise reports 4418/9216 cells wet on a surface with no depression. Carving destroys 88% of the prior's basins, so a view finer than the carve paints mostly undrained prior detail. Rebuild moved 30.0% of L9 erosion payloads and 94% of the beacon; the geography of that is unexplained | draft |
 | detail | Machine | [#detail-water-parallelism](src/detail-water-parallelism.md) | Gather-not-scatter; CPU reference; GPU as keyed rung | draft |
-| observation | Physics Critical | [#obs-water-fill-never-settles](src/obs-water-fill-never-settles.md) | The tile fill is 40 s of world time and its residual grows; the `stable_dt` clamp binds at kilometre cells | draft |
+| observation | Physics Critical | ★ [#obs-water-fill-never-settles](src/obs-water-fill-never-settles.md) | The tile fill is 40 s of world time and its residual grows; the `stable_dt` clamp binds at kilometre cells | draft |
 | | | | *(#gap) Water-kernel and climate nomos segments (beyond box + sea-level + measured envelopes on the NomosDecl)* | missing |
 
 **Materials & substrate**

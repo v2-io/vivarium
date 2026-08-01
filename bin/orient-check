@@ -10,13 +10,8 @@ ORIENT="$ROOT/.orient"
 PASSES="$ORIENT/passes"
 MODE="${1:-status}"
 
-if [[ "${ORIENT_SKIP:-}" == "1" ]]; then
-  echo "orient-check: SKIPPED via ORIENT_SKIP=1" >&2
-  exit 0
-fi
-
 pass_path_for() {
-  # $1 = session_id — mildly obscured stem (xor+hex), not the raw uuid
+  # $1 = session_id — HMAC-named path via orient-crypto
   python3 "$ROOT/bin/orient-session.py" --pass-path "$1"
 }
 
@@ -31,7 +26,7 @@ status)
       exit 1
     fi
     echo "orient-check: no pass — refuse" >&2
-    echo "  When ready: bin/try-me && bin/prove-me …  (see ORIENT.md)" >&2
+    echo "  When ready: bin/try-me && bin/prove-me --ready …  (see ORIENT.md)" >&2
     echo "  Commit message must include orient:<session_id from prove-me>" >&2
     exit 1
   fi
@@ -115,11 +110,54 @@ if pg != lg:
     )
     sys.exit(1)
 
+# uses_left: -1 unlimited; >0 remaining one-shot uses; 0 exhausted
+uses = p.get("uses_left", -1)
+try:
+    uses = int(uses)
+except (TypeError, ValueError):
+    uses = -1
+if uses == 0:
+    print(
+        "orient-check: one-time pass already spent — re-prove "
+        f"(score was {p.get('score', '?')})",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+if uses > 0:
+    # Consume one use and re-encrypt the pass (atomic enough for single agent).
+    p2 = dict(p)
+    p2["uses_left"] = uses - 1
+    try:
+        crypto.write_pass(sid, p2, root)
+    except Exception as e:
+        print(f"orient-check: failed to burn one-time use ({e})", file=sys.stderr)
+        sys.exit(1)
+    left = uses - 1
+    print(
+        f"orient-check: ok one-time "
+        f"(harness={lh} session={sid[:8]}… gen={lg[:12]}… "
+        f"uses_left_after={left} score={p.get('score')} "
+        f"provisional={p.get('provisional')})"
+    )
+    if p.get("missed"):
+        print(
+            "orient-check: reminder — free-read the sections you missed "
+            "before treating them as known:",
+            file=sys.stderr,
+        )
+        for m in p.get("missed") or []:
+            print(
+                f"  • {m.get('id')}: #{m.get('slug')} — {m.get('breadcrumb')}",
+                file=sys.stderr,
+            )
+    sys.exit(0)
+
 print(
     f"orient-check: ok "
     f"(harness={lh} session={sid[:8]}… gen={lg[:12]}… "
     f"boundaries={live.get('boundary_count')} "
-    f"provisional={p.get('provisional')})"
+    f"score={p.get('score')} provisional={p.get('provisional')})"
 )
 sys.exit(0)
 PY

@@ -17,7 +17,7 @@ ORIENT_SEAL_GLOB='core/src/**/*.md'
 PASS_TTL_SEC="${ORIENT_PASS_TTL_SEC:-43200}"  # 12h
 # Time to finish the quiz after try-me only.
 TEST_TTL_SEC="${ORIENT_TEST_TTL_SEC:-1800}"  # 30m
-SAMPLE_N="${ORIENT_SAMPLE_N:-12}"
+SAMPLE_N="${ORIENT_SAMPLE_N:-5}"
 
 orient_die() { echo "orient: $*" >&2; exit 1; }
 

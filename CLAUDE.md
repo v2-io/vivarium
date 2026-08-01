@@ -2,11 +2,9 @@
 
 ## Orientation gate (before any commit)
 
-Compaction (and ordinary overconfidence) can leave a *feeling* of orientation that is not the substance. When you believe you are ready, run the gate — do not invent your own substitute.
+Compaction (and ordinary overconfidence) can leave a *feeling* of orientation that is not the substance. Free-read **OUTLINE** (always) and its **★** rows (high-importance set; most quiz mass), plus whatever you will touch. When you believe you are ready, run the gate — do not invent a substitute, and do not read sealed files after `try-me`.
 
-See [`ORIENT.md`](ORIENT.md): `bin/try-me` → `bin/prove-me` → put the printed token in the commit message.
-
-**Joseph override only:** `ORIENT_SKIP=1 git commit …`
+See [`ORIENT.md`](ORIENT.md): `bin/try-me` → edit `.orient/answers.stub.txt` → `bin/prove-me --ready …` → put the printed token in the commit message. Bare `prove-me` re-shows the quiz; `prove-me --help` never grades.
 
 ## Telos (read first)
 
