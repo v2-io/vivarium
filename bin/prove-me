@@ -7,9 +7,9 @@ Answers file format (any of):
   P1|rest of paragraph...
   {"P1": "...", "P2": "..."}
 
-Pass: wrong <= 1  (or correct >= n/2 if n is large — see grade())
+Pass: wrong <= 1  (or correct >= n/2).
 On fail: burn test_id so this test.jsonl cannot be reused.
-On pass: print one-shot orient:<token> for the commit message; store only hash.
+On pass: write a multi-use pass (default 12h) — unlimited commits until expiry.
 """
 from __future__ import annotations
 

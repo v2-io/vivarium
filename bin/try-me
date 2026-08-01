@@ -5,8 +5,8 @@ Generate a closed-book orientation test from random segment paragraphs.
 Protocol (ORIENT.md):
   1. Read freely while core/src is open.
   2. bin/try-me  — samples paragraphs, SEALS core/src, writes .orient/test.jsonl
-  3. bin/prove-me — grade answers without re-opening segments
-  4. Put orient:<token> in the commit message (one-shot)
+  3. bin/prove-me — grade answers; grants a multi-hour commit pass
+  4. git commit (hooks check the pass has not expired)
 
 Randomness: os.urandom / SystemRandom (not hash of clock alone).
 """
