@@ -267,7 +267,7 @@ def main() -> None:
     print(f"try-me: test_id={test_id}  items={SAMPLE_N}  sealed_files={n_sealed}", file=sys.stderr)
     print(f"try-me: wrote {TEST_PATH}", file=sys.stderr)
     print(f"try-me: deadline in {TEST_TTL}s (unix {deadline})", file=sys.stderr)
-        print("try-me: when finished answering, run:  bin/prove-me answers.txt", file=sys.stderr)
+    print("try-me: when finished answering, run:  bin/prove-me answers.txt", file=sys.stderr)
     print(file=sys.stderr)
     # human-readable prompt on stdout
     print(json.dumps({"test_id": test_id, "path": str(TEST_PATH), "deadline": deadline}, indent=2))
