@@ -59,25 +59,33 @@ verify-msg)
     exit 1
   }
 
-  PASS="$(pass_path_for "$sid")"
-  if [[ ! -f "$PASS" ]]; then
-    # one more try: legacy single pass if session matches
-    if [[ -f "$ORIENT/pass" ]]; then
-      PASS="$ORIENT/pass"
-    else
-      echo "orient-check: no pass for session ${sid:0:8}… — run try-me / prove-me" >&2
-      exit 1
-    fi
-  fi
+  python3 - "$ROOT" "$live_json" "$sid" <<'PY'
+import importlib.util, json, sys
+from pathlib import Path
 
-  python3 - "$PASS" "$live_json" "$sid" <<'PY'
-import json, sys
-
-pass_path, live_s, sid = sys.argv[1], sys.argv[2], sys.argv[3]
-p = json.load(open(pass_path))
+root, live_s, sid = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
 live = json.loads(live_s)
 if not live.get("ok"):
     print(f"orient-check: session resolve failed: {live.get('error')}", file=sys.stderr)
+    sys.exit(1)
+
+spec = importlib.util.spec_from_file_location(
+    "orient_crypto", root / "bin" / "orient-crypto.py"
+)
+assert spec and spec.loader
+crypto = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(crypto)
+
+try:
+    p = crypto.read_pass(sid, root)
+except FileNotFoundError:
+    print(
+        f"orient-check: no pass for session {sid[:8]}… — run try-me / prove-me",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+except ValueError as e:
+    print(f"orient-check: pass unreadable ({e}) — re-prove", file=sys.stderr)
     sys.exit(1)
 
 ps, pg = p.get("session_id"), p.get("compaction_gen")

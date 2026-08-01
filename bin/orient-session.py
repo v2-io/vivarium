@@ -19,7 +19,7 @@ CLI
 ---
   bin/orient-session.py              → resolve *this* process's session
   bin/orient-session.py --id <uuid>  → resolve by id (commit-msg path)
-  bin/orient-session.py --pass-path <uuid>  → .orient/passes/<obscured>.json path
+  bin/orient-session.py --pass-path <uuid>  → HMAC-named pass path (via orient-crypto)
   ORIENT_SESSION_JSON=...            → override (tests)
 
 Prints JSON: {ok, harness, session_id, compaction_gen, boundary_count, ...}
@@ -34,26 +34,21 @@ import sys
 import urllib.parse
 from pathlib import Path
 
-# Mild filename obscuring only — not crypto. Stops `ls .orient/passes/` from
-# listing bare session UUIDs; commit still carries orient:<session_id> in clear.
-_PASS_XOR_KEY = b"vivarium-orient-pass-v1"
-
 
 def repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
-def obscure_session_id(session_id: str) -> str:
-    """XOR session_id with a fixed key, return lowercase hex (filename stem)."""
-    raw = session_id.encode("utf-8")
-    key = _PASS_XOR_KEY
-    xored = bytes(b ^ key[i % len(key)] for i, b in enumerate(raw))
-    return xored.hex()
-
-
 def pass_path_for(session_id: str, root: Path | None = None) -> Path:
-    root = root or repo_root()
-    return root / ".orient" / "passes" / f"{obscure_session_id(session_id)}.json"
+    """Delegate to orient-crypto (HMAC filename + secrets file)."""
+    import importlib.util
+
+    crypto_path = repo_root() / "bin" / "orient-crypto.py"
+    spec = importlib.util.spec_from_file_location("orient_crypto", crypto_path)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.pass_path_for(session_id, root or repo_root())
 
 
 def project_slug(cwd: Path) -> str:

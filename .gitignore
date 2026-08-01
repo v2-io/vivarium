@@ -35,3 +35,5 @@ export_presets.cfg
 
 # orientation gate (local study/pass; never commit)
 .orient/
+# per-machine HMAC/AES keys for pass store (auto-created; never commit)
+bin/orient-secrets
