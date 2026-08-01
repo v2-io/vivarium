@@ -15,6 +15,13 @@ you commit.
 Do **not** invent a substitute quiz. Do **not** dump sealed files after
 `try-me` — that is cheating and will get you fired.
 
+**Retry freely.** Reading more (or again) and re-running `try-me` is the
+intended path after a miss or thin free-read — no harm, no stigma. The gate
+exists to catch accidental false confidence about the claim surface, not to
+punish slow careful work. Gaming or bypassing free-read is another matter:
+that needs Joseph’s approval and/or a reason you can own with him — not
+“because I didn’t need to.” Claim home: `#ops-orientation-gate`.
+
 ## When you believe you are ready
 
 ```bash
