@@ -227,7 +227,7 @@ def main() -> None:
         # unlimited commits while this session's compaction_gen still matches
         "uses_left": -1,
     }
-    # Sign + AES-GCM encrypt via orient-crypto (secrets in bin/orient-secrets).
+    # Sign + AES-GCM encrypt via orient-crypto (secrets in .orient/.setup/).
     import importlib.util
 
     _spec = importlib.util.spec_from_file_location(

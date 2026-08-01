@@ -5,8 +5,8 @@ Not a fortress: keys live on disk next to the scripts. Goal is mild friction
 against casual `ls` / hand-editing, not protection from someone who reads
 this file.
 
-Secrets file (gitignored, auto-created):
-  bin/orient-secrets   JSON {version, hmac_key, aes_key, created_ts}
+Secrets file (under .orient, already gitignored; auto-created):
+  .orient/.setup/secrets   JSON {version, hmac_key, aes_key, created_ts}
 
 Pass file:
   .orient/passes/<hmac_filename>.json
@@ -34,7 +34,7 @@ except ImportError as e:  # pragma: no cover
     sys.exit(3)
 
 ROOT = Path(__file__).resolve().parent.parent
-SECRETS_PATH = ROOT / "bin" / "orient-secrets"
+SECRETS_PATH = ROOT / ".orient" / ".setup" / "secrets"
 PASSES_DIR = ROOT / ".orient" / "passes"
 
 # Domain separation for HMAC uses (so filename tag ≠ body tag).
@@ -193,7 +193,7 @@ def main() -> None:
     if not args or args[0] in ("-h", "--help"):
         print(
             "usage:\n"
-            "  bin/orient-crypto.py ensure-secrets   # create bin/orient-secrets if missing\n"
+            "  bin/orient-crypto.py ensure-secrets   # create .orient/.setup/secrets if missing\n"
             "  bin/orient-crypto.py pass-path <sid>\n"
             "  bin/orient-crypto.py read <sid>       # decrypt+verify → JSON stdout\n",
             file=sys.stderr,
