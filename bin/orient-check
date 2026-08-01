@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Gate: valid orientation pass (time window after prove-me).
-# Used by pre-commit / commit-msg. No per-commit token — multi-commit + multi-
-# compaction runs share one pass until it expires.
+# Gate: pass must match live Grok (session_id, compaction_count).
+# Not a wall-clock TTL. Compaction increments compactionCount → re-prove.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PASS="$ROOT/.orient/pass"
@@ -18,34 +17,61 @@ if [[ ! -f "$PASS" ]]; then
   exit 1
 fi
 
-read_pass_field() {
-  python3 -c "import json;p=json.load(open('$PASS'));print(p.get('$1',''))"
+# Live session state
+live_json=$(python3 "$ROOT/bin/orient-session.py" 2>/dev/null) || {
+  echo "orient-check: cannot resolve Grok session/compaction — refuse" >&2
+  echo "  (no active session for this cwd, or signals.json missing)" >&2
+  exit 1
 }
 
-PASS_EXP=$(read_pass_field expires)
-PASS_USES=$(read_pass_field uses_left)
-PASS_PROV=$(read_pass_field provisional)
-now=$(date +%s)
+python3 - "$PASS" "$live_json" "$MODE" <<'PY'
+import json, sys
 
-if [[ -z "$PASS_EXP" ]]; then
-  echo "orient-check: malformed pass" >&2
-  exit 1
-fi
-if (( now > PASS_EXP )); then
-  echo "orient-check: pass expired — run bin/try-me && bin/prove-me again" >&2
-  exit 1
-fi
-# uses_left: -1 or missing = unlimited until expires; 0 = spent (legacy one-shot)
-if [[ -n "${PASS_USES}" && "${PASS_USES}" != "-1" && "${PASS_USES}" -lt 1 ]]; then
-  echo "orient-check: pass exhausted — run bin/try-me && bin/prove-me again" >&2
-  exit 1
-fi
+pass_path, live_s, mode = sys.argv[1], sys.argv[2], sys.argv[3]
+p = json.load(open(pass_path))
+live = json.loads(live_s)
+if not live.get("ok"):
+    print(f"orient-check: session resolve failed: {live.get('error')}", file=sys.stderr)
+    sys.exit(1)
 
-if [[ "$MODE" == "status" || "$MODE" == "verify-msg" ]]; then
-  # verify-msg: no token required (v3); keep subcommand so hooks stay compatible
-  echo "orient-check: ok (provisional=${PASS_PROV:-} expires_in=$((PASS_EXP-now))s)"
-  exit 0
-fi
+ps, pc = p.get("session_id"), p.get("compaction_count")
+ls, lc = live.get("session_id"), live.get("compaction_count")
 
-echo "orient-check: unknown mode $MODE" >&2
-exit 2
+if ps is None or pc is None:
+    print(
+        "orient-check: pass is pre-v4 (TTL-era) — re-run try-me / prove-me",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+if ps != ls:
+    print(
+        f"orient-check: session changed (pass={ps[:8]}… live={ls[:8]}…) — re-prove",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+if int(pc) != int(lc):
+    print(
+        f"orient-check: context compacted "
+        f"(pass compaction_count={pc}, live={lc}) — re-prove",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+uses = p.get("uses_left", -1)
+if uses is not None and uses != -1 and int(uses) < 1:
+    print("orient-check: pass exhausted — re-prove", file=sys.stderr)
+    sys.exit(1)
+
+if mode in ("status", "verify-msg"):
+    print(
+        f"orient-check: ok "
+        f"(session={ls[:8]}… compaction_count={lc} "
+        f"provisional={p.get('provisional')})"
+    )
+    sys.exit(0)
+
+print(f"orient-check: unknown mode {mode}", file=sys.stderr)
+sys.exit(2)
+PY

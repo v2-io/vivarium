@@ -197,38 +197,50 @@ def main() -> None:
         )
         sys.exit(1)
 
-    # Access window: long enough for multi-compaction runs and hours between
-    # commits by the same oriented agent. Not one-shot — re-prove when expired
-    # or when you no longer trust the orientation (e.g. new mind, cold start).
-    # Default 12h; override ORIENT_PASS_TTL_SEC.
-    pass_ttl = int(os.environ.get("ORIENT_PASS_TTL_SEC", str(12 * 3600)))
+    # Bind pass to (session_id, compaction_count) — not wall-clock TTL.
+    # Grok bumps compactionCount on each compact; that is the mind discontinuity.
+    sess = json.loads(
+        __import__("subprocess")
+        .check_output([str(ROOT / "bin" / "orient-session.py")], text=True)
+    )
+    if not sess.get("ok"):
+        die(
+            "cannot bind pass to session/compaction "
+            f"({sess.get('error', 'unknown')}). "
+            "Run under an active Grok session, or ORIENT_SKIP=1 (Joseph only)."
+        )
+
     ORIENT.mkdir(parents=True, exist_ok=True)
     pass_doc = {
-        "version": 3,
+        "version": 4,
         "ts": now,
-        "expires": now + pass_ttl,
         "test_id": test_id,
         "provisional": provisional,
         "score": f"{correct}/{n}",
-        # unlimited commits until expires (not per-commit one-shot)
+        "session_id": sess["session_id"],
+        "compaction_count": sess["compaction_count"],
+        "signals_path": sess.get("signals_path", ""),
+        # unlimited commits while (session, compaction_count) still match live signals
         "uses_left": -1,
     }
     PASS_FILE.write_text(json.dumps(pass_doc, indent=2) + "\n", encoding="utf-8")
-    # burn this test_id so the same sheet cannot be re-proved
     with BURNED.open("a", encoding="utf-8") as f:
         f.write(test_id + "\n")
     TEST_PATH.unlink(missing_ok=True)
 
     kind = "PROVISIONAL" if provisional else "FULL"
-    hours = pass_ttl / 3600.0
     print(file=sys.stderr)
     print(f"prove-me: {kind} PASS ({correct}/{n})", file=sys.stderr)
     print(
-        f"prove-me: commit access until unix {pass_doc['expires']} "
-        f"(~{hours:.1f}h; ORIENT_PASS_TTL_SEC).",
+        f"prove-me: bound to session={sess['session_id'][:8]}… "
+        f"compaction_count={sess['compaction_count']}",
         file=sys.stderr,
     )
-    print("prove-me: re-run try-me / prove-me when that window ends.", file=sys.stderr)
+    print(
+        "prove-me: pass dies on context compaction (or new session); "
+        "same generation may commit freely.",
+        file=sys.stderr,
+    )
 
 
 if __name__ == "__main__":
