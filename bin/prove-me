@@ -9,24 +9,29 @@ Commands
   bin/prove-me              Show open quiz + answer format (or expired/missing status).
                             Never grades. May unseal if the live test is expired.
   bin/prove-me --help       Help only — never touches seal / test / pass files.
-  bin/prove-me --template   Refresh .orient/answers.stub.txt from the open test.
+  bin/prove-me --template   Refresh .orient/answers.stub.udon from the open test.
   bin/prove-me --ready FILE Grade answers from FILE (− = stdin).
 
-Answer formats (any of)
------------------------
-  P1: rest of unit on one line
-  P1|
-  multi-line rest
-  (blank line or next Pn ends the block)
+Answers — vanilla udon (no advanced syntax)
+-------------------------------------------
+  |answer[P1]
+    completion prose indented under the element…
+    more lines ok
 
-  {"P1": "...", "P2": "..."}
+  |answer[P2]
+    …
 
-  Full unit text, or middle only, or middle+end — all accepted when they match.
+  Full unit text, middle only, or middle+end — all match when they normalize equal.
+  `;` comments are ignored. Recognition is line/indent only (same spirit as
+  DECISIONS.decision-log.udon greps — not a full udon engine).
 
 Pass bars (default n=5):
   5/5     FULL — unlimited commits while compaction_gen matches
   3–4/5   ONE-TIME — one commit; promise to free-read missed sections
   <3/5    fail — burn test, re-try-me
+
+Soft reject (exit 2): empty/format/misunderstanding while deadline remains —
+does NOT burn, does NOT unseal; fix the file and re --ready.
 
 On pass: AES-GCM + HMAC pass under .orient/passes/; print orient:<session_id>.
 """
@@ -44,20 +49,52 @@ ROOT = Path(__file__).resolve().parent.parent
 ORIENT = ROOT / ".orient"
 PASSES = ORIENT / "passes"
 TEST_PATH = ORIENT / "test.jsonl"
-ANSWERS_STUB = ORIENT / "answers.stub.txt"
+ANSWERS_STUB = ORIENT / "answers.stub.udon"
+QUIZ_UDON = ORIENT / "quiz.udon"
 BURNED = ORIENT / "burned"
 SEAL_LIST = ORIENT / "sealed_paths"
 SALT = "vivarium-orient-v2"
 
+
+def _udon_quiz():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "orient_udon_quiz", ROOT / "bin" / "orient-udon-quiz.py"
+    )
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
 MIN_PARTIAL = int(os.environ.get("ORIENT_MIN_PARTIAL", "3"))
+# Soft-reject unless this many expected |answer bodies look like real attempts.
+MIN_ATTEMPT = int(os.environ.get("ORIENT_MIN_ATTEMPT", "3"))
+MIN_BODY_CHARS = int(os.environ.get("ORIENT_MIN_BODY_CHARS", "5"))
+
+# Top-level |answer[Pn]  (optional same-line attrs ignored after ])
+# No \b after ] — ] is non-word; \b would fail at EOL / before space.
+ANSWER_OPEN = re.compile(r"^\|answer\[(P\d+)\](?:\s|:|$)", re.I)
+# Any other column-0 element ends the previous answer body
+OTHER_ELEMENT = re.compile(r"^\|[A-Za-z_]")
 
 HELP = """prove-me — inspect or grade the open orientation quiz
 
-  bin/prove-me                 Show open questions + how to answer
-                               (does not grade; unseals only if the test expired)
+  bin/prove-me                 Print open quiz as vanilla udon (no grade)
   bin/prove-me --help          This help — never seals, unseals, or grades
-  bin/prove-me --template      Write/refresh .orient/answers.stub.txt
+  bin/prove-me --template      Refresh .orient/quiz.udon + answers.stub.udon
   bin/prove-me --ready FILE    Submit answers from FILE (− for stdin)
+
+Quiz and answers are both vanilla udon (see .orient/quiz.udon after try-me):
+
+  |quiz[…]
+    |item[P1]
+      :slug …
+      :start "first words…"
+      :end "last words…"     ; when the completion is long
+
+  |answer[P1]
+    your completion after :start…
 
 After a pass, put this in the commit message:
   orient:<session_id printed by a successful --ready>
@@ -67,11 +104,10 @@ Pass grades (default 5 items):
   3/5–4/5 one-time commit + promise to free-read what you missed
   <3/5    fail — free-read, bin/try-me again
 
-One active quiz per checkout (shared core/src seal + single .orient/test.jsonl).
-Multiple agents on one tree will clobber each other; multi-session *passes*
-can coexist, but only one sealed test at a time.
+Soft reject (exit 2): empty/wrong format, or fewer than 3 substantial
+answers (>5 chars each) — test stays live and sealed while time remains.
 
-See ORIENT.md.
+One active quiz per checkout. See ORIENT.md.
 """
 
 
@@ -110,14 +146,44 @@ def unseal() -> None:
     SEAL_LIST.unlink(missing_ok=True)
 
 
+def _dedent_body(lines: list[str]) -> str:
+    """Strip common leading indent; drop pure-comment and empty-only noise."""
+    # Keep structure: comments that are whole lines (`; …` after indent) out.
+    kept: list[str] = []
+    for ln in lines:
+        raw = ln.rstrip("\n")
+        stripped = raw.lstrip()
+        if not stripped:
+            kept.append("")
+            continue
+        if stripped.startswith(";"):
+            continue  # udon comment owns the line
+        kept.append(raw)
+    # drop leading/trailing blank lines
+    while kept and not kept[0].strip():
+        kept.pop(0)
+    while kept and not kept[-1].strip():
+        kept.pop()
+    if not kept:
+        return ""
+    indents = [
+        len(ln) - len(ln.lstrip(" \t"))
+        for ln in kept
+        if ln.strip()
+    ]
+    pad = min(indents) if indents else 0
+    body = "\n".join(ln[pad:] if len(ln) >= pad else ln for ln in kept)
+    return body.strip()
+
+
 def parse_answers(text: str) -> dict[str, str]:
-    """Accept JSON, single-line Pn:, or multi-line Pn: blocks."""
-    text = text.strip()
-    if not text:
+    """Vanilla udon answers: column-0 |answer[Pn] + indented prose body.
+
+    Same recognition level as DECISIONS greps — not a full udon engine.
+    Optional same-line attributes after ] are ignored.
+    """
+    if not text or not text.strip():
         return {}
-    if text.startswith("{"):
-        data = json.loads(text)
-        return {str(k).upper(): str(v) for k, v in data.items()}
 
     out: dict[str, str] = {}
     current: str | None = None
@@ -127,27 +193,171 @@ def parse_answers(text: str) -> dict[str, str]:
         nonlocal current, buf
         if current is None:
             return
-        body = "\n".join(buf).strip()
-        # drop leading comment-only lines already skipped; keep body
+        body = _dedent_body(buf)
         if body:
             out[current] = body
         current = None
         buf = []
 
     for line in text.splitlines():
-        if re.match(r"^\s*#", line) and current is None:
-            continue
-        m = re.match(r"^(P\d+)\s*[:|]\s*(.*)$", line, re.I)
-        if m:
-            flush()
-            current = m.group(1).upper()
-            rest = m.group(2)
-            buf = [rest] if rest.strip() else []
-            continue
+        # Column-0 answer open
+        if line.startswith("|"):
+            m = ANSWER_OPEN.match(line)
+            if m:
+                flush()
+                current = m.group(1).upper()
+                buf = []
+                continue
+            # Another top-level element ends the current body
+            if current is not None and OTHER_ELEMENT.match(line):
+                flush()
+                # ignore unknown top-level; do not start a new answer
+                continue
         if current is not None:
-            buf.append(line)
+            # Body: blank, indented, or (lenient) non-pipe continuation
+            if (
+                not line.strip()
+                or line[0] in " \t"
+                or not line.startswith("|")
+            ):
+                buf.append(line)
+            else:
+                flush()
     flush()
     return out
+
+
+def _looks_like_placeholder(body: str) -> bool:
+    b = body.strip()
+    if not b:
+        return True
+    low = b.lower()
+    if low in {"...", "…", "todo", "tbd", "pass", "answer", "your completion here"}:
+        return True
+    if low.startswith("replace this") or low.startswith("fill in"):
+        return True
+    # Still the quiz file / attribute dump, not a completion
+    if re.match(r"^:(start|end|slug|section|words)\b", low):
+        return True
+    if low.startswith("|item[") or low.startswith("|quiz[") or low.startswith("|answer["):
+        return True
+    return False
+
+
+def _substantial_answers(
+    given: dict[str, str],
+    expected: set[str],
+) -> dict[str, str]:
+    """Expected-id bodies that look like a real attempt (not stub noise)."""
+    out: dict[str, str] = {}
+    for k, v in given.items():
+        if k.upper() not in expected:
+            continue
+        body = (v or "").strip()
+        if len(body) <= MIN_BODY_CHARS:
+            continue
+        if _looks_like_placeholder(body):
+            continue
+        out[k] = v
+    return out
+
+
+def soft_reject_reason(
+    raw: str,
+    given: dict[str, str],
+    expected_ids: list[str],
+) -> str | None:
+    """If this looks like format/parse confusion or an incomplete draft
+    (not a real graded attempt), return a human reason. Caller keeps the
+    test live (no burn/unseal) while deadline remains.
+
+    Returns None when the submit is a real graded attempt: at least
+    MIN_ATTEMPT expected |answer bodies with length > MIN_BODY_CHARS.
+    """
+    raw = raw or ""
+    raw_stripped = raw.strip()
+    expected = {e.upper() for e in expected_ids}
+    need = min(MIN_ATTEMPT, len(expected) or MIN_ATTEMPT)
+
+    substantial = _substantial_answers(given, expected)
+    if len(substantial) >= need:
+        return None  # graded attempt — score it
+
+    # --- below: fewer than `need` real bodies ---
+
+    if not raw_stripped:
+        return "empty submit (no file content)"
+
+    # Only comments / blanks
+    non_comment = [
+        ln
+        for ln in raw.splitlines()
+        if ln.strip() and not ln.lstrip().startswith(";")
+    ]
+    if not non_comment:
+        return "file is only ; comments / blank lines (stub unfilled)"
+
+    # Classic ad-hoc / JSON (pre-udon or confused)
+    if re.search(r'(?m)^(P\d+)\s*[:|]', raw) or raw_stripped.startswith("{"):
+        return (
+            "looks like legacy P1: / JSON, not vanilla udon |answer[Pn] blocks"
+        )
+
+    # Filled the quiz document instead of the answers stub
+    if re.search(r"(?m)^\s*\|quiz\[", raw) or re.search(
+        r"(?m)^\s*\|item\[P\d+\]", raw
+    ):
+        return (
+            "looks like the quiz file (|quiz / |item) — "
+            "fill |answer[Pn] in answers.stub.udon instead"
+        )
+
+    # Close misspellings of the element name
+    if re.search(r"(?m)^\s*\|(answers?|ans|a|response|item)\[P\d+\]", raw, re.I):
+        if not re.search(r"(?m)^\s*\|answer\[P\d+\]", raw, re.I):
+            return (
+                "saw a near-miss element name — need column-0 |answer[P1] "
+                "(exact spelling), indented body under it"
+            )
+
+    # Headers present but bodies empty / short / placeholder
+    headers = re.findall(r"(?m)^\s*\|answer\[(P\d+)\]", raw, re.I)
+    if headers and not substantial:
+        return (
+            f"found |answer[…] headers ({', '.join(h.upper() for h in headers)}) "
+            "but no substantial completion body under them — "
+            "indent the prose under each |answer[Pn]"
+        )
+
+    # Some real bodies, but not enough to count as "ready"
+    if substantial:
+        have = len(substantial)
+        return (
+            f"only {have} substantial answer(s) "
+            f"(need at least {need} with more than {MIN_BODY_CHARS} characters) — "
+            "not grading yet; finish more items and re-submit. "
+            "Test stays live."
+        )
+
+    # Bodies only under wrong ids
+    if given and not substantial:
+        wrong_keys = sorted(k for k in given if k.upper() not in expected)
+        if wrong_keys:
+            return (
+                f"parsed keys {wrong_keys} but expected {sorted(expected)} — "
+                "use |answer[P1] … matching the quiz"
+            )
+        return "only placeholder / too-short bodies under |answer[…]"
+
+    if not given:
+        return (
+            "no |answer[Pn] blocks parsed — expected vanilla udon:\n"
+            "    |answer[P1]\n"
+            "      completion after :start…\n"
+            "  See .orient/quiz.udon and .orient/answers.stub.udon"
+        )
+
+    return "no usable answers for the open quiz items (format / empty / incomplete)"
 
 
 def variants(prefix: str, answer: str, suffix: str, last_hint: str) -> list[str]:
@@ -208,84 +418,54 @@ def burn(test_id: str) -> None:
         f.write(test_id + "\n")
 
 
-def print_format_help() -> None:
-    print(
-        """
-ANSWER FORMAT
-  Multi-line (preferred — use the stub from try-me):
-
-    P1:
-    your completion of the unit after the start words…
-    more lines ok
-
-    P2:
-    …
-
-  Single-line also works:   P1: completion here…
-  JSON also works:          {"P1": "…", "P2": "…"}
-
-  You may paste the full unit, only the middle, or middle+end.
-  Matching ignores case, punctuation, and extra whitespace.
-
-GRADE
-  bin/prove-me --ready .orient/answers.stub.txt
-  bin/prove-me --ready answers.txt
-  bin/prove-me --ready -          # stdin
-"""
-    )
-
-
 def show_quiz(doc: dict) -> None:
+    """Print the open quiz as vanilla udon (from disk if present, else rebuild)."""
     items = doc.get("items") or []
-    print(f"prove-me: open test_id={doc.get('test_id')}  items={len(items)}")
-    print(f"prove-me: deadline unix {doc.get('deadline')}  (git_head={doc.get('git_head')})")
-    print(f"prove-me: stub path {ANSWERS_STUB}")
-    print()
-    print("INSTRUCTIONS")
     print(
-        "  Complete each unit after `start` through the end of that unit."
+        f"prove-me: open test_id={doc.get('test_id')}  "
+        f"items={len(items)}  stub={ANSWERS_STUB}",
+        file=sys.stderr,
     )
-    print(
-        "  If `end:` is shown, finish with those words. Edit the stub, then --ready."
+    # Prefer the written quiz.udon so stdout matches what try-me left on disk.
+    if QUIZ_UDON.is_file():
+        text = QUIZ_UDON.read_text(encoding="utf-8")
+        sys.stdout.write(text if text.endswith("\n") else text + "\n")
+        return
+    uq = _udon_quiz()
+    sys.stdout.write(
+        uq.format_quiz_udon(
+            items,
+            test_id=str(doc.get("test_id", "")),
+            deadline=doc.get("deadline", ""),
+            git_head=str(doc.get("git_head") or ""),
+            stub_path=".orient/answers.stub.udon",
+            n=doc.get("n"),
+        )
     )
-    print()
-    for it in items:
-        print(f"=== {it['id']} ===")
-        print(f"breadcrumb: {it.get('breadcrumb')}")
-        if it.get("title_hint"):
-            print(f"outline title: {it['title_hint']}")
-        print(f"slug: {it.get('slug')}")
-        print(f"start: {it.get('prefix', '')} …")
-        if it.get("suffix"):
-            print(f"end:   … {it['suffix']}")
-        elif it.get("last_word_hint"):
-            print(f"(completion should end with: {it['last_word_hint']})")
-        if it.get("rest_words") is not None:
-            print(f"(~{it['rest_words']} words to complete)")
-        print()
-    print_format_help()
 
 
 def write_template(doc: dict) -> None:
     items = doc.get("items") or []
-    lines = [
-        "# Orientation answers stub — fill each P* block, then:",
-        "#   bin/prove-me --ready .orient/answers.stub.txt",
-        "# Accepts middle only, middle+end, or full unit text.",
-        "",
-    ]
-    for it in items:
-        lines.append(f"# --- {it['id']}  #{it.get('slug')} ---")
-        lines.append(f"# breadcrumb: {it.get('breadcrumb')}")
-        lines.append(f"# start: {it.get('prefix')}")
-        if it.get("suffix"):
-            lines.append(f"# end:   {it['suffix']}")
-        lines.append(f"{it['id']}:")
-        lines.append("")
-        lines.append("")
+    uq = _udon_quiz()
     ANSWERS_STUB.parent.mkdir(parents=True, exist_ok=True)
-    ANSWERS_STUB.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    ANSWERS_STUB.write_text(
+        uq.format_answers_stub(items, test_id=str(doc.get("test_id") or "")),
+        encoding="utf-8",
+    )
+    # Keep quiz.udon in sync when regenerating the stub
+    QUIZ_UDON.write_text(
+        uq.format_quiz_udon(
+            items,
+            test_id=str(doc.get("test_id", "")),
+            deadline=doc.get("deadline", ""),
+            git_head=str(doc.get("git_head") or ""),
+            stub_path=".orient/answers.stub.udon",
+            n=doc.get("n"),
+        ),
+        encoding="utf-8",
+    )
     print(f"prove-me: wrote {ANSWERS_STUB}", file=sys.stderr)
+    print(f"prove-me: wrote {QUIZ_UDON}", file=sys.stderr)
 
 
 def cmd_status() -> None:
@@ -365,16 +545,30 @@ def cmd_ready(ans_source: str) -> None:
         unseal()
         die("test mac mismatch — regenerate with bin/try-me")
 
-    given = parse_answers(raw_answers)
-    if not given:
-        # Do NOT unseal on empty/malformed submit — user may have meant --help
-        die(
-            "no answers parsed. Use: bin/prove-me --ready answers.txt\n"
-            "  (bare `prove-me` only shows the quiz; it does not grade)"
-        )
-
     items = doc["items"]
+    expected_ids = [it["id"] for it in items]
     n = len(items)
+    given = parse_answers(raw_answers)
+
+    # Soft reject: format / empty / misunderstanding — keep seal + test while
+    # deadline remains. Hard fail (burn) only after a real graded attempt.
+    soft = soft_reject_reason(raw_answers, given, expected_ids)
+    if soft:
+        left = int(doc.get("deadline", 0)) - now
+        print(f"prove-me: not graded — {soft}", file=sys.stderr)
+        print(
+            "prove-me: test still LIVE "
+            f"(test_id={test_id}, ~{max(0, left)}s left, core/src still sealed).",
+            file=sys.stderr,
+        )
+        print(
+            "  Fix the answers file, then:  bin/prove-me --ready <file>\n"
+            "  Re-print quiz:               bin/prove-me\n"
+            "  Format help:                 bin/prove-me --help",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
     correct = 0
     wrong = 0
     missed: list[dict] = []
@@ -399,10 +593,10 @@ def cmd_ready(ans_source: str) -> None:
     partial = (not full) and correct >= MIN_PARTIAL
     passed = full or partial
 
-    unseal()
-    print("prove-me: core/src unsealed", file=sys.stderr)
-
     if not passed:
+        # Real graded fail — burn and unseal
+        unseal()
+        print("prove-me: core/src unsealed", file=sys.stderr)
         burn(test_id)
         TEST_PATH.unlink(missing_ok=True)
         print(
@@ -411,6 +605,9 @@ def cmd_ready(ans_source: str) -> None:
             file=sys.stderr,
         )
         sys.exit(1)
+
+    unseal()
+    print("prove-me: core/src unsealed", file=sys.stderr)
 
     sess = json.loads(
         __import__("subprocess")

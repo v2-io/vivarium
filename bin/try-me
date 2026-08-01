@@ -5,7 +5,7 @@ Generate a closed-book orientation test from claim-segment prose units.
 Protocol (ORIENT.md):
   1. Free-read (OUTLINE ★ rows + work-local segments) while core/src is open.
   2. bin/try-me  — samples units, SEALS core/src, writes .orient/test.jsonl
-  3. bin/prove-me --ready answers.txt — grade; grants commit pass
+  3. bin/prove-me --ready answers.stub.udon — grade; grants commit pass
   4. git commit with orient:<session_id> from prove-me
 
 One active quiz per checkout (shared seal of core/src + single test.jsonl).
@@ -29,7 +29,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 ORIENT = ROOT / ".orient"
 TEST_PATH = ORIENT / "test.jsonl"
-ANSWERS_STUB = ORIENT / "answers.stub.txt"
+ANSWERS_STUB = ORIENT / "answers.stub.udon"
+QUIZ_UDON = ORIENT / "quiz.udon"
 BURNED = ORIENT / "burned"
 SEAL_LIST = ORIENT / "sealed_paths"
 # Default 5 items: prove-me treats 5/5 as unlimited pass, ≥3/5 as one-time.
@@ -49,17 +50,16 @@ TIP_TOP_N = int(os.environ.get("ORIENT_TIP_TOP_N", "6"))
 TIP_STRENGTH = float(os.environ.get("ORIENT_TIP_STRENGTH", "3.0"))
 
 
-def _load_chunker():
-    spec = importlib.util.spec_from_file_location(
-        "orient_chunk", ROOT / "bin" / "orient-chunk.py"
-    )
+def _load_mod(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
 
 
-_chunker = _load_chunker()
+_chunker = _load_mod("orient_chunk", ROOT / "bin" / "orient-chunk.py")
+_udon_quiz = _load_mod("orient_udon_quiz", ROOT / "bin" / "orient-udon-quiz.py")
 
 
 def die(msg: str, code: int = 1) -> None:
@@ -405,55 +405,24 @@ def build_item(idx: int, s: dict, titles: dict[str, str], rng: random.SystemRand
     }
 
 
-def write_answers_stub(items: list[dict], path: Path = ANSWERS_STUB) -> None:
-    lines = [
-        "# Orientation answers stub — fill each P* block, then:",
-        "#   bin/prove-me --ready .orient/answers.stub.txt",
-        "# (or copy to answers.txt). Multi-line values OK after P1:",
-        "# Accepts: middle only, middle+end, or the full unit text.",
-        "# Matching ignores case, punctuation, and extra whitespace.",
-        "",
-    ]
-    for it in items:
-        lines.append(f"# --- {it['id']}  #{it['slug']} ---")
-        lines.append(f"# breadcrumb: {it['breadcrumb']}")
-        lines.append(f"# start: {it['prefix']}")
-        if it.get("suffix"):
-            lines.append(f"# end:   {it['suffix']}")
-            lines.append(f"# (~{it.get('rest_words', '?')} words after start; end should match)")
-        else:
-            lines.append(f"# (~{it.get('rest_words', '?')} words after start → end of unit)")
-        lines.append(f"{it['id']}:")
-        lines.append("")
-        lines.append("")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
-def print_quiz(items: list[dict], *, test_id: str, deadline: int) -> None:
-    print(json.dumps({"test_id": test_id, "path": str(TEST_PATH), "deadline": deadline}, indent=2))
-    print()
-    print("INSTRUCTIONS")
-    print("  Free-read is closed (core/src sealed). Complete each unit from memory.")
-    print("  Write what comes AFTER the start words, through the end of that unit.")
-    print("  If `end:` is shown, your text should finish with those words.")
-    print("  Easiest path: edit the stub, then grade:")
-    print(f"    $EDITOR {ANSWERS_STUB}")
-    print(f"    bin/prove-me --ready {ANSWERS_STUB}")
-    print("  Or: bin/prove-me            # re-show this quiz + format")
-    print("      bin/prove-me --help     # help only (does not grade or unseal)")
-    print()
-    for it in items:
-        print(f"=== {it['id']} ===")
-        print(f"breadcrumb: {it['breadcrumb']}")
-        if it.get("title_hint"):
-            print(f"outline title: {it['title_hint']}")
-        print(f"slug: {it['slug']}")
-        print(f"start: {it['prefix']} …")
-        if it.get("suffix"):
-            print(f"end:   … {it['suffix']}")
-        print(f"(~{it.get('rest_words', '?')} words to complete)")
-        print()
+def print_quiz(
+    items: list[dict],
+    *,
+    test_id: str,
+    deadline: int,
+    git_head: str,
+) -> None:
+    """Emit the quiz as vanilla udon on stdout (and it is also on disk)."""
+    print(
+        _udon_quiz.format_quiz_udon(
+            items,
+            test_id=test_id,
+            deadline=deadline,
+            git_head=git_head,
+            stub_path=".orient/answers.stub.udon",
+        ),
+        end="",
+    )
 
 
 def main() -> None:
@@ -461,12 +430,14 @@ def main() -> None:
         print(
             """try-me — seal core/src and issue a closed-book orientation quiz
 
-  bin/try-me          sample units, seal, write .orient/test.jsonl + answers stub
+  bin/try-me          sample units, seal, write quiz as vanilla udon
   bin/try-me --help   this help (no seal)
 
 After try-me:
-  $EDITOR .orient/answers.stub.txt
-  bin/prove-me --ready .orient/answers.stub.txt
+  .orient/quiz.udon           — questions (|item[Pn])
+  .orient/answers.stub.udon   — empty |answer[Pn] bodies
+  $EDITOR .orient/answers.stub.udon
+  bin/prove-me --ready .orient/answers.stub.udon
 
 One active quiz per checkout (shared core/src seal). See ORIENT.md.
 """
@@ -560,21 +531,28 @@ One active quiz per checkout (shared core/src seal). See ORIENT.md.
     TEST_PATH.write_text(
         json.dumps(doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
-    write_answers_stub(items)
+    quiz_path, stub_path = _udon_quiz.write_pair(
+        items,
+        test_id=test_id,
+        deadline=deadline,
+        git_head=head,
+        orient_dir=ORIENT,
+    )
 
     print(
         f"try-me: test_id={test_id}  items={SAMPLE_N}  sealed_files={n_sealed}",
         file=sys.stderr,
     )
-    print(f"try-me: wrote {TEST_PATH}", file=sys.stderr)
-    print(f"try-me: answers stub → {ANSWERS_STUB}", file=sys.stderr)
+    print(f"try-me: machine state → {TEST_PATH}", file=sys.stderr)
+    print(f"try-me: quiz (udon)   → {quiz_path}", file=sys.stderr)
+    print(f"try-me: answers stub  → {stub_path}", file=sys.stderr)
     print(f"try-me: deadline in {TEST_TTL}s (unix {deadline})", file=sys.stderr)
     print(
-        "try-me: grade with:  bin/prove-me --ready .orient/answers.stub.txt",
+        "try-me: grade with:  bin/prove-me --ready .orient/answers.stub.udon",
         file=sys.stderr,
     )
     print(file=sys.stderr)
-    print_quiz(items, test_id=test_id, deadline=deadline)
+    print_quiz(items, test_id=test_id, deadline=deadline, git_head=head)
 
 
 if __name__ == "__main__":

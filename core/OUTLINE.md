@@ -13,6 +13,7 @@ The specification of what vivarium is and must do, written as **segments** in `c
 > **Orientation free-read (★).** Rows marked ★ are the current high-importance set (~top 25 by recent/structural rank; refresh with `bin/orient-rank --mark-outline`). **Most quiz items are drawn from these.** Read them in *this* outline order — not by rank score. Also free-read whatever you are about to work on, even if unstarred. Stars move when importance moves.
 
 
+
 **Cross-member refs** use `#asf/1-aat/<slug>` etc. (FORMAT §5.2) — never bare paths, never `ASF.md §N` as law.
 
 ## Why this channel stays current
