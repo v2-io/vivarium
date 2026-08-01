@@ -197,8 +197,9 @@ def main() -> None:
         )
         sys.exit(1)
 
-    # Bind pass to (session_id, compaction_count) — not wall-clock TTL.
-    # Grok bumps compactionCount on each compact; that is the mind discontinuity.
+    # Bind pass to (session_id, compaction_gen) — not wall-clock TTL.
+    # compaction_gen = sha256 of Grok session compaction/segment_* listing
+    # (new segment file after compact → gen moves → re-prove).
     sess = json.loads(
         __import__("subprocess")
         .check_output([str(ROOT / "bin" / "orient-session.py")], text=True)
@@ -212,15 +213,15 @@ def main() -> None:
 
     ORIENT.mkdir(parents=True, exist_ok=True)
     pass_doc = {
-        "version": 4,
+        "version": 5,
         "ts": now,
         "test_id": test_id,
         "provisional": provisional,
         "score": f"{correct}/{n}",
         "session_id": sess["session_id"],
-        "compaction_count": sess["compaction_count"],
-        "signals_path": sess.get("signals_path", ""),
-        # unlimited commits while (session, compaction_count) still match live signals
+        "compaction_gen": sess["compaction_gen"],
+        "segment_count": sess.get("segment_count"),
+        # unlimited commits while (session, compaction_gen) still match live listing
         "uses_left": -1,
     }
     PASS_FILE.write_text(json.dumps(pass_doc, indent=2) + "\n", encoding="utf-8")
@@ -233,12 +234,13 @@ def main() -> None:
     print(f"prove-me: {kind} PASS ({correct}/{n})", file=sys.stderr)
     print(
         f"prove-me: bound to session={sess['session_id'][:8]}… "
-        f"compaction_count={sess['compaction_count']}",
+        f"gen={sess['compaction_gen'][:12]}… "
+        f"segments={sess.get('segment_count')}",
         file=sys.stderr,
     )
     print(
-        "prove-me: pass dies on context compaction (or new session); "
-        "same generation may commit freely.",
+        "prove-me: pass dies when compaction/segment_* listing changes "
+        "(or new session); same generation may commit freely.",
         file=sys.stderr,
     )
 
