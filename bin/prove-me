@@ -9,7 +9,7 @@ Answers file format (any of):
 
 Pass: wrong <= 1  (or correct >= n/2).
 On fail: burn test_id so this test.jsonl cannot be reused.
-On pass: write .orient/passes/<session_id>.json bound to compaction gen;
+On pass: write .orient/passes/<xor-hex(session_id)>.json bound to compaction gen;
 print orient:<session_id> for the commit message (dies when that session compacts).
 """
 from __future__ import annotations
@@ -227,11 +227,21 @@ def main() -> None:
         # unlimited commits while this session's compaction_gen still matches
         "uses_left": -1,
     }
-    PASSES.mkdir(parents=True, exist_ok=True)
-    pass_path = PASSES / f"{sid}.json"
+    # Filename is mildly obscured (xor+hex); body still holds session_id.
+    pass_path = Path(
+        __import__("subprocess")
+        .check_output(
+            [str(ROOT / "bin" / "orient-session.py"), "--pass-path", sid],
+            text=True,
+        )
+        .strip()
+    )
+    pass_path.parent.mkdir(parents=True, exist_ok=True)
     pass_path.write_text(json.dumps(pass_doc, indent=2) + "\n", encoding="utf-8")
     # Drop legacy single-file pass so status doesn't keep rejecting multi-session.
     (ORIENT / "pass").unlink(missing_ok=True)
+    # Drop any unobscured legacy per-session path if present
+    (PASSES / f"{sid}.json").unlink(missing_ok=True)
     with BURNED.open("a", encoding="utf-8") as f:
         f.write(test_id + "\n")
     TEST_PATH.unlink(missing_ok=True)

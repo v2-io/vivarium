@@ -19,6 +19,7 @@ CLI
 ---
   bin/orient-session.py              → resolve *this* process's session
   bin/orient-session.py --id <uuid>  → resolve by id (commit-msg path)
+  bin/orient-session.py --pass-path <uuid>  → .orient/passes/<obscured>.json path
   ORIENT_SESSION_JSON=...            → override (tests)
 
 Prints JSON: {ok, harness, session_id, compaction_gen, boundary_count, ...}
@@ -33,9 +34,26 @@ import sys
 import urllib.parse
 from pathlib import Path
 
+# Mild filename obscuring only — not crypto. Stops `ls .orient/passes/` from
+# listing bare session UUIDs; commit still carries orient:<session_id> in clear.
+_PASS_XOR_KEY = b"vivarium-orient-pass-v1"
+
 
 def repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
+
+
+def obscure_session_id(session_id: str) -> str:
+    """XOR session_id with a fixed key, return lowercase hex (filename stem)."""
+    raw = session_id.encode("utf-8")
+    key = _PASS_XOR_KEY
+    xored = bytes(b ^ key[i % len(key)] for i, b in enumerate(raw))
+    return xored.hex()
+
+
+def pass_path_for(session_id: str, root: Path | None = None) -> Path:
+    root = root or repo_root()
+    return root / ".orient" / "passes" / f"{obscure_session_id(session_id)}.json"
 
 
 def project_slug(cwd: Path) -> str:
@@ -297,6 +315,9 @@ def main() -> None:
         return
 
     args = sys.argv[1:]
+    if args and args[0] == "--pass-path" and len(args) >= 2:
+        print(pass_path_for(args[1]))
+        return
     if args and args[0] in ("--id", "-i") and len(args) >= 2:
         out = resolve_by_id(args[1])
     elif args and not args[0].startswith("-"):

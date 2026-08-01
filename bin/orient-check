@@ -16,8 +16,8 @@ if [[ "${ORIENT_SKIP:-}" == "1" ]]; then
 fi
 
 pass_path_for() {
-  # $1 = session_id
-  echo "$PASSES/$1.json"
+  # $1 = session_id — mildly obscured stem (xor+hex), not the raw uuid
+  python3 "$ROOT/bin/orient-session.py" --pass-path "$1"
 }
 
 case "$MODE" in
