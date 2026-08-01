@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
-# Install:  git config core.hooksPath hooks   (from repo root)
-# Or:       ln -sf ../../hooks/pre-commit "$(git rev-parse --git-path hooks)/pre-commit"
-#
-# Refuses commit unless closed-book orientation pass is valid (bin/orient-check).
+# Soft gate: ensure a pass exists before editor opens. Real check is commit-msg.
 set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-if [[ -z "$ROOT" ]]; then
-  # submodule: show-toplevel may be superproject; prefer this hooks dir's parent
+if [[ -z "$ROOT" || ! -x "$ROOT/bin/orient-check" ]]; then
   ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 fi
 cd "$ROOT"
-if [[ ! -x bin/orient-check ]]; then
-  echo "pre-commit: bin/orient-check missing — refuse" >&2
+if [[ "${ORIENT_SKIP:-}" == "1" ]]; then
+  echo "pre-commit: orient SKIPPED" >&2
+  exit 0
+fi
+if [[ ! -f .orient/pass ]]; then
+  echo "pre-commit: no orientation pass" >&2
+  echo "  bin/try-me && bin/prove-me answers.txt" >&2
+  echo "  commit message must include orient:<token>" >&2
   exit 1
 fi
-exec bin/orient-check
+bin/orient-check status || exit 1
+exit 0

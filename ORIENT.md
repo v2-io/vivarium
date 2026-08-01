@@ -1,91 +1,77 @@
-# Agent orientation gate — prove Level A before any commit
+# Agent orientation gate (v2 — random segment completion)
 
-## Why this exists
+## Problem
 
-After context compaction (and often without it), an agent can feel fully oriented
-while being **blind to the largest holes**. Restating "read Claude.md" is a
-discipline; disciplines fail under false coherence
-(`#norm-caught-disciplines-become-mechanisms`).
+After context compaction an agent can feel oriented while being blind to real
+segment content. Outline-only confidence is especially dangerous. Fixed quizzes
+are gameable; open-book “quote this range” is gameable if tools can re-read
+between Q and A.
 
-This gate **refuses `git commit`** until a **closed-book** prove passes against
-the **current** Level-A corpus. Open-book tricks (read a range after the
-question appears) are **rejected by protocol**: required files are **unreadable
-for the duration of the prove**, so answers must already be in the session's
-working memory from a prior full read.
+## Protocol
 
-## Protocol (do not skip steps)
-
-### 1. Study (open files; read fully)
-
-Read every path listed by:
-
-```bash
-bin/orient-study --list
+```
+1. Read freely (core/src, Claude.md, FORMAT, ETHICS, …)
+2. bin/try-me
+     - samples ~12 paragraphs at random (SystemRandom / os.urandom)
+       from core/src/**/*.md  WITHOUT REPLACEMENT
+     - does NOT use core/OUTLINE.md as a passage source
+     - SEALS core/src (chmod a-r) so segments cannot be re-opened
+     - writes .orient/test.jsonl  (prefix hints + answer hashes only)
+3. Write answers from memory (completion after each prefix)
+4. bin/prove-me answers.txt
+     - same normalization as try-me (lower, collapse space, strip punct)
+     - flexible match (prefix prepending, etc.)
+     - wrong <= 1  → pass (provisional if any wrong)
+     - else burn test_id, must try-me again
+     - prints  orient:<32-hex>   once; stores only the hash
+5. git commit -m "orient:TOKEN …"
+     - commit-msg hook verifies token, consumes it (one-shot)
 ```
 
-Then record that the bytes you studied match the tree **now**:
+### Why not “session id on a whitelist”?
+
+Session ids often **survive compaction**. A disk whitelist then re-grants commit
+to a mind that no longer holds the segments. Instead:
+
+- **Raw token is only in prove-me stdout / agent context**, not stored on disk.
+- Disk keeps `sha256(token)` + uses_left=1.
+- Commit message must present the raw token; hook burns the pass.
+- After compaction the agent **forgets the token** → must try-me / prove-me again.
+
+### Emergency unseal
+
+If a process crashes mid-seal:
 
 ```bash
-bin/orient-study
+bin/orient-unseal
 ```
 
-This writes `.orient/study` with content digests. It does **not** grant commit
-permission. It only freezes *which* corpus you claim to have read.
-
-### 2. Prove (closed-book; files sealed)
+### Joseph override
 
 ```bash
-bin/orient-prove
+ORIENT_SKIP=1 git commit …
 ```
 
-What happens:
+## Commands
 
-1. Verifies `.orient/study` is present, **fresh** (default ≤ 2 hours), and
-   digests still match disk (any edit to Level A invalidates study).
-2. **Seals** every required path (`chmod a-r`) so tool reads fail mid-quiz.
-3. Prints questions **only after** seal.
-4. Reads **all answers in one batch** from stdin (or `--answers FILE` prepared
-   **before** invoke only if you already know them — not by opening sealed files).
-5. Checks answers against **SHA-256 of normalized text** (plaintext answers are
-   **not** in the repo).
-6. **Unseals** always (trap on exit).
-7. On success writes `.orient/pass` (short-lived token + corpus hash).
-
-If you compacted after study: you still have digests, but not the content —
-prove fails. That is the point. Re-read, re-study, prove again.
-
-### 3. Commit
-
-```bash
-git commit ...   # pre-commit runs bin/orient-check
-```
-
-`bin/orient-check` requires a valid `.orient/pass` whose corpus hash matches
-disk and whose age is within the pass TTL (default 60 minutes).
-
-## What this proves / does not prove
-
-| Proves | Does not prove |
+| Command | Role |
 |---|---|
-| You processed current Level-A bytes (study digests) | Perfect understanding |
-| You can answer norm/telos questions **without re-reading during the quiz** | Good taste on every task |
-| Compaction amnesia fails the gate | Humans cannot override (use `ORIENT_SKIP=1` only Joseph) |
+| `bin/try-me` | Random sealed test → `.orient/test.jsonl` |
+| `bin/prove-me [answers]` | Grade; print one-shot `orient:TOKEN` |
+| `bin/orient-check` | Status / commit-msg verify |
+| `bin/orient-unseal` | Restore core/src read bits |
 
-## Files
+## Residual attacks (honest)
 
-| Path | Role |
+| Attack | Notes |
 |---|---|
-| `ORIENT.md` | This protocol |
-| `bin/orient-study` | List + digest commitment |
-| `bin/orient-prove` | Seal → quiz → unseal → pass |
-| `bin/orient-check` | Pre-commit / CI gate |
-| `bin/orient-quiz.sha` | Question ids + accepted answer hashes (no plaintext) |
-| `.orient/` | Local study/pass state (**gitignored**) |
+| Pre-extract answers before try-me | Requires having read; still must pass random items |
+| Paste token from a log file | Operational hygiene; token is one-shot |
+| ORIENT_SKIP | Joseph only |
+| chmod restore during quiz | Parallel tool race; residual |
 
-## Joseph override
+## Install hooks
 
 ```bash
-ORIENT_SKIP=1 git commit ...
+git config core.hooksPath hooks
 ```
-
-Logged to stderr. Not for agents.

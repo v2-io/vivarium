@@ -16,8 +16,8 @@ bin/check-decision-refs
 echo "== check-provenance (cohort digests, git revisions, capture embeds must resolve) =="
 bin/check-provenance
 
-echo "== orient-check (Level-A closed-book pass; see ORIENT.md) =="
-bin/orient-check
+echo "== orient-check (see ORIENT.md — status only; commit needs orient:TOKEN) =="
+bin/orient-check status || echo "(no pass yet — ok for bin/check; required at git commit)"
 
 echo "== null-space gate (examples/null_space_gate — can-fail, exits nonzero on a spurious zero mode) =="
 cargo run -p vivarium-world --release --example null_space_gate --quiet

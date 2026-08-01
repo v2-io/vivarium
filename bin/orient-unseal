@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Emergency: restore read bits on core/src after a crashed try-me/prove-me.
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+LIST="$ROOT/.orient/sealed_paths"
+if [[ -f "$LIST" ]]; then
+  while IFS= read -r f; do
+    [[ -e "$f" ]] || continue
+    chmod 644 "$f" 2>/dev/null || true
+  done <"$LIST"
+  rm -f "$LIST"
+  echo "orient-unseal: restored from sealed_paths"
+fi
+# belt-and-suspenders
+find "$ROOT/core/src" -type f -name '*.md' ! -perm -u+r -exec chmod 644 {} \; 2>/dev/null || true
+echo "orient-unseal: done"

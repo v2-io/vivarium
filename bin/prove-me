@@ -1,0 +1,241 @@
+#!/usr/bin/env python3
+"""
+Grade a try-me test. core/src stays sealed until we finish (then unsealed).
+
+Answers file format (any of):
+  P1: rest of paragraph...
+  P1|rest of paragraph...
+  {"P1": "...", "P2": "..."}
+
+Pass: wrong <= 1  (or correct >= n/2 if n is large — see grade())
+On fail: burn test_id so this test.jsonl cannot be reused.
+On pass: print one-shot orient:<token> for the commit message; store only hash.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import re
+import secrets
+import stat
+import sys
+import time
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+ORIENT = ROOT / ".orient"
+TEST_PATH = ORIENT / "test.jsonl"
+PASS_FILE = ORIENT / "pass"
+BURNED = ORIENT / "burned"
+SEAL_LIST = ORIENT / "sealed_paths"
+SALT = "vivarium-orient-v2"
+
+
+def die(msg: str, code: int = 1) -> None:
+    print(f"prove-me: {msg}", file=sys.stderr)
+    sys.exit(code)
+
+
+def sha256_text(s: str) -> str:
+    return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+
+def normalize(s: str) -> str:
+    s = s.strip().lower()
+    s = re.sub(r"\s+", " ", s)
+    s = re.sub(r"[^\w\s]", "", s)
+    return s.strip()
+
+
+def unseal() -> None:
+    if not SEAL_LIST.is_file():
+        # emergency: restore any unreadable md under core/src
+        for p in (ROOT / "core" / "src").rglob("*.md"):
+            if p.exists() and not os.access(p, os.R_OK):
+                try:
+                    p.chmod(0o644)
+                except OSError:
+                    pass
+        return
+    for line in SEAL_LIST.read_text(encoding="utf-8").splitlines():
+        p = Path(line)
+        if p.exists():
+            try:
+                p.chmod(0o644)
+            except OSError:
+                pass
+    SEAL_LIST.unlink(missing_ok=True)
+
+
+def parse_answers(text: str) -> dict[str, str]:
+    text = text.strip()
+    if not text:
+        return {}
+    if text.startswith("{"):
+        data = json.loads(text)
+        return {str(k).upper(): str(v) for k, v in data.items()}
+    out: dict[str, str] = {}
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        m = re.match(r"^(P\d+)\s*[:|]\s*(.*)$", line, re.I)
+        if m:
+            out[m.group(1).upper()] = m.group(2)
+    return out
+
+
+def variants(prefix: str, answer: str, last_hint: str) -> list[str]:
+    """Honest format confusions: with/without prefix, with/without last word."""
+    a = answer.strip()
+    cands = [a, normalize(a)]
+    if prefix:
+        cands.append(f"{prefix} {a}")
+        cands.append(normalize(f"{prefix} {a}"))
+    if last_hint and not a.endswith(last_hint):
+        cands.append(f"{a} {last_hint}")
+        cands.append(normalize(f"{a} {last_hint}"))
+    return cands
+
+
+def match_item(item: dict, raw: str) -> bool:
+    keys = {
+        item["answer_sha256"],
+        item.get("answer_sha256_full", ""),
+        item.get("answer_sha256_prefix_rest", ""),
+    }
+    keys.discard("")
+    for v in variants(item.get("prefix", ""), raw, item.get("last_word_hint", "")):
+        if sha256_text(normalize(v)) in keys:
+            return True
+        # also hash already-normalized path
+        if sha256_text(v) in keys:
+            return True
+    return False
+
+
+def main() -> None:
+    if os.environ.get("ORIENT_SKIP") == "1":
+        print("prove-me: SKIPPED via ORIENT_SKIP=1", file=sys.stderr)
+        unseal()
+        sys.exit(0)
+
+    ans_path = Path(sys.argv[1]) if len(sys.argv) > 1 else None
+    if ans_path is None or not ans_path.is_file():
+        # stdin
+        raw_answers = sys.stdin.read()
+    else:
+        raw_answers = ans_path.read_text(encoding="utf-8")
+
+    if not TEST_PATH.is_file():
+        unseal()
+        die("no .orient/test.jsonl — run bin/try-me first")
+
+    doc = json.loads(TEST_PATH.read_text(encoding="utf-8"))
+    test_id = doc["test_id"]
+    now = int(time.time())
+
+    burned = set()
+    if BURNED.is_file():
+        burned = {ln.strip() for ln in BURNED.read_text().splitlines() if ln.strip()}
+    if test_id in burned:
+        unseal()
+        die(f"test_id {test_id} is burned — generate a new test: bin/try-me")
+
+    if now > int(doc.get("deadline", 0)):
+        BURNED.parent.mkdir(parents=True, exist_ok=True)
+        with BURNED.open("a", encoding="utf-8") as f:
+            f.write(test_id + "\n")
+        unseal()
+        die("test deadline expired — bin/try-me again")
+
+    # mac integrity (discoverable salt — effort bump only)
+    expect_mac = sha256_text(
+        f"{SALT}:{test_id}:{doc['deadline']}:{doc['git_head']}"
+    )
+    if doc.get("mac") != expect_mac:
+        unseal()
+        die("test mac mismatch — regenerate with bin/try-me")
+
+    given = parse_answers(raw_answers)
+    items = doc["items"]
+    n = len(items)
+    correct = 0
+    wrong = 0
+    for it in items:
+        iid = it["id"]
+        if iid not in given:
+            print(f"prove-me: FAIL {iid} — missing", file=sys.stderr)
+            wrong += 1
+            continue
+        if match_item(it, given[iid]):
+            print(f"prove-me: ok   {iid}")
+            correct += 1
+        else:
+            print(f"prove-me: FAIL {iid} — hash mismatch", file=sys.stderr)
+            wrong += 1
+
+    print(f"prove-me: score {correct}/{n} (wrong={wrong})", file=sys.stderr)
+
+    # Pass bar: at most one wrong, OR at least half correct (provisional floor)
+    passed = wrong <= 1 or correct * 2 >= n
+    provisional = passed and wrong > 0
+
+    # Always unseal after grading
+    unseal()
+    print("prove-me: core/src unsealed", file=sys.stderr)
+
+    if not passed:
+        with BURNED.open("a", encoding="utf-8") as f:
+            f.write(test_id + "\n")
+        # remove test so they must try-me again
+        TEST_PATH.unlink(missing_ok=True)
+        print(
+            "\nPlease orient yourself properly before attempting to be proven again, thank you!\n"
+            "Generate your new test again with `bin/try-me`.\n",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # One-shot token: shown once; only hash stored. Commit message must carry it.
+    token = secrets.token_hex(16)
+    token_hash = sha256_text(token)
+    ORIENT.mkdir(parents=True, exist_ok=True)
+    pass_doc = {
+        "version": 2,
+        "ts": now,
+        "expires": now + int(os.environ.get("ORIENT_PASS_TTL_SEC", "1800")),
+        "test_id": test_id,
+        "token_sha256": token_hash,
+        "provisional": provisional,
+        "score": f"{correct}/{n}",
+        "uses_left": 1,
+    }
+    PASS_FILE.write_text(json.dumps(pass_doc, indent=2) + "\n", encoding="utf-8")
+    # burn this test_id so the same sheet cannot be re-proved
+    with BURNED.open("a", encoding="utf-8") as f:
+        f.write(test_id + "\n")
+    TEST_PATH.unlink(missing_ok=True)
+
+    kind = "PROVISIONAL" if provisional else "FULL"
+    print(file=sys.stderr)
+    print(f"prove-me: {kind} PASS ({correct}/{n})", file=sys.stderr)
+    print("prove-me: put this exact token in your commit message:", file=sys.stderr)
+    print(file=sys.stderr)
+    print(f"orient:{token}")
+    print(file=sys.stderr)
+    print(
+        "prove-me: one-shot — token is burned after a successful commit.\n"
+        "          After context compaction you will not remember it; re-run try-me/prove-me.\n"
+        "          Disk does not store the raw token (only its hash).",
+        file=sys.stderr,
+    )
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception:
+        unseal()
+        raise

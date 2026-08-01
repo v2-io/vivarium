@@ -4,37 +4,28 @@
 
 ORIENT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ORIENT_DIR="$ORIENT_ROOT/.orient"
-STUDY_FILE="$ORIENT_DIR/study"
+TEST_FILE="$ORIENT_DIR/test.jsonl"
 PASS_FILE="$ORIENT_DIR/pass"
-QUIZ_FILE="$ORIENT_ROOT/bin/orient-quiz.sha"
-# Required Level-A corpus (full-file digests). Edit carefully — agents must re-study.
-ORIENT_REQUIRED=(
-  "Claude.md"
-  "FORMAT.md"
-  "ETHICS.md"
-  "core/OUTLINE.md"
-  "core/src/scope-moratorium-endogenous-emergence.md"
-  "core/src/norm-no-depiction-without-referent.md"
-  "core/src/norm-decision-authority.md"
-  "core/src/norm-probes-before-claims.md"
-  "core/src/scope-segment-canon.md"
-  "core/src/disc-known-active-hotspots.md"
-  "core/src/form-time-indexed-stage-chains.md"
-  "core/src/form-core-view-wall.md"
-)
+BURN_FILE="$ORIENT_DIR/burned"
+SEAL_LIST="$ORIENT_DIR/sealed_paths"
 
-STUDY_TTL_SEC="${ORIENT_STUDY_TTL_SEC:-7200}"   # 2h
-PASS_TTL_SEC="${ORIENT_PASS_TTL_SEC:-3600}"     # 1h
+# Seal scope: all markdown under core/src (NOT core/OUTLINE.md).
+# Outline alone is not enough; the trap is confident outline-only "orientation."
+ORIENT_SEAL_GLOB='core/src/**/*.md'
+
+STUDY_TTL_SEC="${ORIENT_STUDY_TTL_SEC:-7200}"
+PASS_TTL_SEC="${ORIENT_PASS_TTL_SEC:-1800}"   # 30m — short; one-shot commit
+TEST_TTL_SEC="${ORIENT_TEST_TTL_SEC:-300}"   # 5m to complete prove after try-me
+SAMPLE_N="${ORIENT_SAMPLE_N:-12}"
 
 orient_die() { echo "orient: $*" >&2; exit 1; }
 
 orient_norm() {
-  # stdin → normalized answer for hashing
-  tr '[:upper:]' '[:lower:]' | tr -s '[:space:]' ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+  tr '[:upper:]' '[:lower:]' | tr -s '[:space:]' ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+    | tr -d '[:punct:]'
 }
 
 orient_sha_file() {
-  # portable sha256 of file contents
   local f="$1"
   if command -v shasum >/dev/null 2>&1; then
     shasum -a 256 "$f" | awk '{print $1}'
@@ -52,46 +43,40 @@ orient_sha_str() {
   fi
 }
 
-orient_corpus_hash() {
-  # ordered digest of path=filehash lines
-  local acc="" p
-  for p in "${ORIENT_REQUIRED[@]}"; do
-    local f="$ORIENT_ROOT/$p"
-    [[ -f "$f" ]] || orient_die "missing required path: $p"
-    acc+="${p}=$(orient_sha_file "$f")"$'\n'
-  done
-  orient_sha_str "$acc"
+orient_list_segment_md() {
+  # All claim segments; exclude nothing under core/src that is .md
+  find "$ORIENT_ROOT/core/src" -type f -name '*.md' | sort
 }
 
-orient_seal() {
-  local p f
+orient_seal_core_src() {
   mkdir -p "$ORIENT_DIR"
-  : >"$ORIENT_DIR/sealed.$$"
-  for p in "${ORIENT_REQUIRED[@]}"; do
-    f="$ORIENT_ROOT/$p"
+  : >"$SEAL_LIST"
+  local f
+  while IFS= read -r f; do
     [[ -f "$f" ]] || continue
-    echo "$f" >>"$ORIENT_DIR/sealed.$$"
-    chmod a-r "$f" || orient_die "failed to seal $p"
-  done
+    echo "$f" >>"$SEAL_LIST"
+    chmod a-r "$f" || orient_die "failed to seal $f"
+  done < <(orient_list_segment_md)
+  echo "orient: sealed $(wc -l <"$SEAL_LIST" | tr -d ' ') files under core/src/" >&2
 }
 
-orient_unseal() {
-  local list="$ORIENT_DIR/sealed.$$"
-  # Also recover a leaked seal from a crashed prove (any sealed.* leftover).
+orient_unseal_core_src() {
   local f
-  if [[ -f "$list" ]]; then
+  if [[ -f "$SEAL_LIST" ]]; then
     while IFS= read -r f; do
       [[ -e "$f" ]] || continue
       chmod 644 "$f" 2>/dev/null || chmod u+r "$f" 2>/dev/null || true
-    done <"$list"
-    rm -f "$list"
+    done <"$SEAL_LIST"
+    rm -f "$SEAL_LIST"
   fi
-  # Emergency: if Claude.md is unreadable, restore all required paths.
-  if [[ -f "$ORIENT_ROOT/Claude.md" ]] && [[ ! -r "$ORIENT_ROOT/Claude.md" ]]; then
-    for p in "${ORIENT_REQUIRED[@]}"; do
-      f="$ORIENT_ROOT/$p"
-      [[ -e "$f" ]] || continue
+  # emergency restore if any core/src md still unreadable
+  while IFS= read -r f; do
+    if [[ -e "$f" && ! -r "$f" ]]; then
       chmod 644 "$f" 2>/dev/null || true
-    done
-  fi
+    fi
+  done < <(orient_list_segment_md 2>/dev/null || true)
+}
+
+orient_git_head() {
+  git -C "$ORIENT_ROOT" rev-parse --short HEAD 2>/dev/null || echo "nogit"
 }
